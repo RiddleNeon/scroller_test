@@ -1,7 +1,6 @@
 import 'dart:math';
 
 import 'package:flutter/material.dart';
-import 'package:flutter/scheduler.dart';
 import 'package:scroller_test/ui/overlays.dart';
 import 'package:tiktoklikescroller/tiktoklikescroller.dart';
 
