@@ -1,5 +1,5 @@
 import 'package:flutter/material.dart';
-import 'package:scroller_test/scrolling_container.dart';
+import 'package:scroller_test/ui/scrolling_container.dart';
 
 void main() {
   runApp(const MyApp());
@@ -12,11 +12,11 @@ class MyApp extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     return MaterialApp(
-      title: 'Flutter Demo',
+      title: 'Lerntok halt',
       theme: ThemeData(
         colorScheme: .dark(),
       ),
-      home: const MyHomePage(title: 'Flutter Demo Home Page'),
+      home: const MyHomePage(title: 'Tiktok fürs lernen oder so'),
       debugShowCheckedModeBanner: false,
     );
   }

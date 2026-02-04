@@ -1,6 +1,7 @@
 import 'dart:math';
 
 import 'package:flutter/material.dart';
+import 'package:scroller_test/ui/overlays.dart';
 import 'package:tiktoklikescroller/tiktoklikescroller.dart';
 
 class ScrollingContainer extends StatefulWidget {
@@ -13,16 +14,15 @@ class ScrollingContainer extends StatefulWidget {
 }
 
 class _ScrollingContainerState extends State<ScrollingContainer> {
-
   late Controller _controller;
   bool _isResetting = false;
-  
+
   int resets = 0;
   static const int refreshFrequency = 30;
-  
+
   int get currentIndex => _controller.getScrollPosition() + resets * refreshFrequency;
-  
-  int translateIndex(int index) => index + resets*refreshFrequency;
+
+  int translateIndex(int index) => index + resets * refreshFrequency;
 
   @override
   void initState() {
@@ -39,19 +39,21 @@ class _ScrollingContainerState extends State<ScrollingContainer> {
   @override
   Widget build(BuildContext context) {
     return TikTokStyleFullPageScroller(
-      contentSize: refreshFrequency+5,
+      contentSize: refreshFrequency + 5,
       builder: (context, modIndex) {
-        int index = translateIndex(modIndex % (refreshFrequency+1));
+        int index = translateIndex(modIndex % (refreshFrequency + 1));
         return Center(
           child: AspectRatio(
             aspectRatio: 9 / 16,
             child: Container(
               color: Colors.accents[Random(index).nextInt(Colors.accents.length)],
-              child: Center(
-                child: Text(
-                  "Video $index",
-                  style: TextStyle(fontSize: 32, color: Colors.white),
-                ),
+              child: Stack(
+                children: [
+                  Center(
+                    child: Text("Video $index", style: TextStyle(fontSize: 32, color: Colors.white)),
+                  ),
+                  PageOverlay()
+                ],
               ),
             ),
           ),
@@ -67,7 +69,7 @@ class _ScrollingContainerState extends State<ScrollingContainer> {
 
   void _onScroll(ScrollEvent event) {
     if (_isResetting) return;
-    
+
     if ((event.pageNo ?? 0) >= refreshFrequency) {
       _isResetting = true;
 
