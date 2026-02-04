@@ -25,7 +25,7 @@ jobs:
 
       - name: Build Web
         run: |
-          flutter build web --release --wasm --base-href /mpg_achievements_app/
+          flutter build web --release --wasm --base-href /scroller_test/
         
           cp web/coi-serviceworker.js build/web/
         shell: bash
