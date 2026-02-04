@@ -18,7 +18,7 @@ class _ScrollingContainerState extends State<ScrollingContainer> {
   bool _isResetting = false;
   
   int resets = 0;
-  static const int refreshFrequency = 3;
+  static const int refreshFrequency = 30;
   
   int get currentIndex => _controller.getScrollPosition() + resets * refreshFrequency;
   
@@ -41,9 +41,21 @@ class _ScrollingContainerState extends State<ScrollingContainer> {
     return TikTokStyleFullPageScroller(
       contentSize: refreshFrequency+5,
       builder: (context, modIndex) {
-        int index = modIndex % (refreshFrequency+1);
-        return Container(
-          color: Colors.accents[Random(translateIndex(index)).nextInt(Colors.accents.length)], child: Text("${translateIndex(index)}"));
+        int index = translateIndex(modIndex % (refreshFrequency+1));
+        return Center(
+          child: AspectRatio(
+            aspectRatio: 9 / 16,
+            child: Container(
+              color: Colors.accents[Random(index).nextInt(Colors.accents.length)],
+              child: Center(
+                child: Text(
+                  "Video $index",
+                  style: TextStyle(fontSize: 32, color: Colors.white),
+                ),
+              ),
+            ),
+          ),
+        );
       },
       controller: _controller,
     );
