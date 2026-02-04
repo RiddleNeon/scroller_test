@@ -1,4 +1,4 @@
-name: Gh-Pages
+name: Flutter Web to GitHub Pages
 
 on:
   push:
@@ -15,36 +15,25 @@ jobs:
 
     steps:
       - uses: actions/checkout@v4
-      - uses: actions/upload-pages-artifact@v3
-      - uses: actions/deploy-pages@v4
 
       - uses: subosito/flutter-action@v2
         with:
           channel: 'beta'
 
-      - name: Prepare Flutter
-        run: |
-          flutter config --enable-web --enable-native-assets
-        shell: bash
+      - run: flutter config --enable-web
 
-      - name: Build Web
-        run: |
-          flutter build web --release --wasm --base-href /scroller_test/
-        
-          cp web/coi-serviceworker.js build/web/
-        shell: bash
+      - run: flutter build web --release --wasm --base-href /mpg_achievements_app/
 
-      - name: Deploy to gh-pages
-        run: |
-          git config user.name "github-actions[bot]"
-          git config user.email "github-actions[bot]@users.noreply.github.com"
+      - run: cp web/coi-serviceworker.js build/web/
 
-          git fetch origin gh-pages || true
-          git checkout --orphan gh-pages
-          git --work-tree build/web add --all
-          git commit -m "Automatic deployment by GitHub Actions"
-          git push origin HEAD:gh-pages --force
-        env:
-          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
-        shell: bash
+      - uses: actions/upload-pages-artifact@v3
+        with:
+          path: build/web
 
+  deploy:
+    needs: build
+    runs-on: ubuntu-latest
+    environment:
+      name: github-pages
+    steps:
+      - uses: actions/deploy-pages@v4
