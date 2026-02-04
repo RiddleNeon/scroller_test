@@ -1,0 +1,46 @@
+name: Gh-Pages
+
+on:
+  push:
+    branches: [ main ]
+
+permissions:
+  contents: write
+
+jobs:
+  build:
+    runs-on: ubuntu-latest
+
+    steps:
+      - uses: actions/checkout@v4
+      
+      - uses: subosito/flutter-action@v2
+        with:
+          channel: 'beta'
+
+      - name: Prepare Flutter
+        run: |
+          flutter config --enable-web --enable-native-assets
+        shell: bash
+
+      - name: Build Web
+        run: |
+          flutter build web --release --wasm --base-href /mpg_achievements_app/
+        
+          cp web/coi-serviceworker.js build/web/
+        shell: bash
+
+      - name: Deploy to gh-pages
+        run: |
+          git config user.name "github-actions[bot]"
+          git config user.email "github-actions[bot]@users.noreply.github.com"
+
+          git fetch origin gh-pages || true
+          git checkout --orphan gh-pages
+          git --work-tree build/web add --all
+          git commit -m "Automatic deployment by GitHub Actions"
+          git push origin HEAD:gh-pages --force
+        env:
+          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+        shell: bash
+

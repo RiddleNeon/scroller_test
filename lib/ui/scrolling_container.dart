@@ -1,6 +1,7 @@
 import 'dart:math';
 
 import 'package:flutter/material.dart';
+import 'package:flutter/scheduler.dart';
 import 'package:scroller_test/ui/overlays.dart';
 import 'package:tiktoklikescroller/tiktoklikescroller.dart';
 
@@ -13,7 +14,7 @@ class ScrollingContainer extends StatefulWidget {
   State<ScrollingContainer> createState() => _ScrollingContainerState();
 }
 
-class _ScrollingContainerState extends State<ScrollingContainer> {
+class _ScrollingContainerState extends State<ScrollingContainer> with TickerProviderStateMixin {
   late Controller _controller;
   bool _isResetting = false;
 
@@ -52,7 +53,7 @@ class _ScrollingContainerState extends State<ScrollingContainer> {
                   Center(
                     child: Text("Video $index", style: TextStyle(fontSize: 32, color: Colors.white)),
                   ),
-                  PageOverlay()
+                  PageOverlay(provider: this)
                 ],
               ),
             ),

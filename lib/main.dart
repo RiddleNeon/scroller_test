@@ -1,4 +1,5 @@
 import 'package:flutter/material.dart';
+import 'package:lottie/lottie.dart';
 import 'package:scroller_test/ui/scrolling_container.dart';
 
 void main() {

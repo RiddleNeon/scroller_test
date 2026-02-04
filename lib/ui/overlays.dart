@@ -1,7 +1,9 @@
 import 'package:flutter/cupertino.dart';
+import 'package:scroller_test/ui/overlay_buttons/like_button.dart';
 
 class PageOverlay extends StatelessWidget {
-  const PageOverlay({super.key});
+  final TickerProvider provider;
+  const PageOverlay({super.key, required this.provider});
 
   @override
   Widget build(BuildContext context) {
@@ -11,7 +13,7 @@ class PageOverlay extends StatelessWidget {
         mainAxisAlignment: MainAxisAlignment.center,
         spacing: 32,
         children: [
-          Icon(CupertinoIcons.hand_thumbsup_fill),
+          LikeButton(provider: provider),
           Icon(CupertinoIcons.hand_thumbsdown_fill),
           Icon(CupertinoIcons.ellipses_bubble),
           Icon(CupertinoIcons.share),
