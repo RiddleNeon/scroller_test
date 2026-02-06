@@ -1,4 +1,4 @@
-package com.RiddleNeon.scroller_test
+package de.riddleNeon.wurp
 
 import io.flutter.embedding.android.FlutterActivity
 

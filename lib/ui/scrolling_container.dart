@@ -1,8 +1,10 @@
 import 'dart:math';
 
 import 'package:flutter/material.dart';
-import 'package:scroller_test/ui/overlays.dart';
+import 'package:tiktoklikescroller/controller.dart';
 import 'package:tiktoklikescroller/tiktoklikescroller.dart';
+
+import 'overlays.dart';
 
 class ScrollingContainer extends StatefulWidget {
   static const List<Color> colors = [Colors.green, Colors.blue, Colors.cyan, Colors.red, Colors.purple];

@@ -1,11 +1,11 @@
 {
-    "name": "scroller_test",
-    "short_name": "scroller_test",
+    "name": "wurp",
+    "short_name": "wurp",
     "start_url": ".",
     "display": "standalone",
     "background_color": "#0175C2",
     "theme_color": "#0175C2",
-    "description": "Test Tiktok-like scroller for a school project",
+    "description": "A new Flutter project.",
     "orientation": "portrait-primary",
     "prefer_related_applications": false,
     "icons": [

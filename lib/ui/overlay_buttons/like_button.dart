@@ -19,8 +19,8 @@ class _LikeButtonState extends State<LikeButton> {
     AnimationController controller = AnimationController(vsync: widget.provider, upperBound: 0.5);
     LottieBuilder builder = Lottie.asset("assets/like.json", width: 64, controller: controller,
         height: 64, onLoaded: (p0) => (controller..duration = p0.duration));
-    
-    
+
+
     return Padding(
       padding: EdgeInsetsGeometry.all(5),
       child: InkWell(

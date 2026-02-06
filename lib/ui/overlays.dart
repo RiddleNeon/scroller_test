@@ -1,5 +1,6 @@
 import 'package:flutter/cupertino.dart';
-import 'package:scroller_test/ui/overlay_buttons/like_button.dart';
+
+import 'overlay_buttons/like_button.dart';
 
 class PageOverlay extends StatelessWidget {
   final TickerProvider provider;

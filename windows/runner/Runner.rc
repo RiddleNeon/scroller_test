@@ -89,13 +89,13 @@ BEGIN
     BEGIN
         BLOCK "040904e4"
         BEGIN
-            VALUE "CompanyName", "com.RiddleNeon" "\0"
-            VALUE "FileDescription", "scroller_test" "\0"
+            VALUE "CompanyName", "de.riddleNeon" "\0"
+            VALUE "FileDescription", "wurp" "\0"
             VALUE "FileVersion", VERSION_AS_STRING "\0"
-            VALUE "InternalName", "scroller_test" "\0"
-            VALUE "LegalCopyright", "Copyright (C) 2026 com.RiddleNeon. All rights reserved." "\0"
-            VALUE "OriginalFilename", "scroller_test.exe" "\0"
-            VALUE "ProductName", "scroller_test" "\0"
+            VALUE "InternalName", "wurp" "\0"
+            VALUE "LegalCopyright", "Copyright (C) 2026 de.riddleNeon. All rights reserved." "\0"
+            VALUE "OriginalFilename", "wurp.exe" "\0"
+            VALUE "ProductName", "wurp" "\0"
             VALUE "ProductVersion", VERSION_AS_STRING "\0"
         END
     END
