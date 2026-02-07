@@ -54,7 +54,7 @@ class _ScrollingContainerState extends State<ScrollingContainer> with TickerProv
                   Center(
                     child: Text("Video $index", style: TextStyle(fontSize: 32, color: Colors.white)),
                   ),
-                  PageOverlay(provider: this)
+                  PageOverlay(provider: this, key: GlobalObjectKey(index), index: index),
                 ],
               ),
             ),

@@ -74,7 +74,7 @@ class _LoginScreenState extends State<LoginScreen> {
   }
   
   void completeLogin() {
-    Navigator.of(context).pushReplacement(MaterialPageRoute(builder: (context) => const MyHomePage(title: "scroller test")));
+    Navigator.of(context).pushReplacement(MaterialPageRoute(builder: (context) => const MyHomePage()));
   }
 
   @override

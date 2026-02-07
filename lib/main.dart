@@ -29,7 +29,7 @@ class MyApp extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     if(auth?.currentUser != null) {
-      return MaterialApp(title: 'Lerntok halt', home: const MyHomePage(title: 'scroller test',), debugShowCheckedModeBanner: false, theme: ThemeData(
+      return MaterialApp(title: 'Lerntok halt', home: const MyHomePage(), debugShowCheckedModeBanner: false, theme: ThemeData(
         primarySwatch: Colors.blue,
       ));
     }
