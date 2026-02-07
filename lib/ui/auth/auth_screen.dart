@@ -1,5 +1,5 @@
-
-import 'package:firebase_auth/firebase_auth.dart';
+import 'package:wurp/logic/entities/user.dart';
+import 'package:firebase_auth/firebase_auth.dart' hide User;
 import 'package:flutter/cupertino.dart';
 import 'package:flutter/foundation.dart';
 import 'package:flutter/material.dart';
@@ -22,9 +22,9 @@ class _LoginScreenState extends State<LoginScreen> {
 
   Future<String?> _authUser(LoginData data) async {
     print("login data ${data.name}, ${data.password}");
-
+    UserCredential? credential;
     try {
-      await FirebaseAuth.instance.signInWithEmailAndPassword(email: data.name, password: data.password);
+      credential = await FirebaseAuth.instance.signInWithEmailAndPassword(email: data.name, password: data.password);
     } on FirebaseAuthException catch (e) {
       String? fullMessage = e.message;
       print("$fullMessage");
@@ -38,15 +38,18 @@ class _LoginScreenState extends State<LoginScreen> {
       print("unknown signup error! $e");
       return "an unknown error has occurred!";
     }
+
+    User user = await userRepository!.getUser(credential.user!.uid);
+    print(user);
   }
 
   Future<String?> _signupUser(SignupData data) async {
     print("signup data ${data.name}, ${data.password}, additional: ${data.additionalSignupData}");
 
     if (data.password == null || data.name == null) return "please enter a valid email or password!";
-
+    UserCredential? credential;
     try {
-      await FirebaseAuth.instance.createUserWithEmailAndPassword(email: data.name!, password: data.password!);
+      credential = await FirebaseAuth.instance.createUserWithEmailAndPassword(email: data.name!, password: data.password!);
     } on FirebaseAuthException catch (e) {
       String? fullMessage = e.message;
       print("$fullMessage");
@@ -55,6 +58,9 @@ class _LoginScreenState extends State<LoginScreen> {
       print("unknown signup error! $e");
       return "an unknown error has occurred!";
     }
+    
+    User user = await userRepository!.createUser(id: credential.user!.uid, username: "default");
+    print(user);
   }
 
   Future<String?> _recoverPassword(String email) async {
@@ -65,16 +71,6 @@ class _LoginScreenState extends State<LoginScreen> {
     } on FirebaseAuthException catch (e) {
       return e.message ?? 'Password reset failed';
     }
-  }
-
-  Future<String?> _sendCode(String email) async {
-    try {
-      await FirebaseAuth.instance.sendPasswordResetEmail(email: email);
-    } on FirebaseAuthException catch (e) {
-      print("Password Recovery error! $e");
-      return e.message;
-    }
-    return null;
   }
 
   @override
