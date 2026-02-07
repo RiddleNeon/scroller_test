@@ -1,6 +1,6 @@
+import 'package:flutter/cupertino.dart';
 import 'package:flutter/foundation.dart';
 import 'package:flutter/material.dart';
-import 'package:flutter/src/scheduler/ticker.dart';
 import 'package:lottie/lottie.dart';
 
 class LikeButton extends StatefulWidget {
@@ -14,24 +14,50 @@ class LikeButton extends StatefulWidget {
 
 class _LikeButtonState extends State<LikeButton> {
   bool liked = false;
+  late AnimationController controller;
+
+  @override
+  void initState() {
+    super.initState();
+    controller = AnimationController(
+      vsync: widget.provider,
+      upperBound: 0.5,
+    );
+  }
+
+  @override
+  void dispose() {
+    controller.dispose();
+    super.dispose();
+  }
   @override
   Widget build(BuildContext context) {
-    AnimationController controller = AnimationController(vsync: widget.provider, upperBound: 0.5);
-    LottieBuilder builder = Lottie.asset("assets/like.json", width: 64, controller: controller,
-        height: 64, onLoaded: (p0) => (controller..duration = p0.duration));
+    LottieBuilder builder = Lottie.asset(
+      "assets/like.json",
+      controller: controller,
+      onLoaded: (composition) {
+        controller.duration = composition.duration;
+      },
+      fit: BoxFit.contain,
+      filterQuality: FilterQuality.low,
+    );
 
-
-    return Padding(
-      padding: EdgeInsetsGeometry.all(5),
-      child: InkWell(
-          onTap: () {
-            if (kDebugMode) {
-              print("like!");
-            }
-            controller.animateTo(liked ? controller.lowerBound : controller.upperBound, duration: Duration(milliseconds: 600));
-            liked = !liked;
-          },
-          child: builder
+    return InkWell(
+      onTap: () {
+        if (kDebugMode) {
+          print("like!");
+        }
+        controller.animateTo(
+          liked ? controller.lowerBound : controller.upperBound,
+          duration: const Duration(milliseconds: 600),
+        );
+        setState(() {
+          liked = !liked;
+        });
+      },
+      child: Transform.scale(
+        scale: 2,
+        child: SizedBox(width: 32, height: 32, child: builder),
       ),
     );
   }

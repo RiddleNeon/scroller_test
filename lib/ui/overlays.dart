@@ -1,5 +1,6 @@
 import 'package:flutter/cupertino.dart';
 
+import 'overlay_buttons/dislike_button.dart';
 import 'overlay_buttons/like_button.dart';
 
 class PageOverlay extends StatelessWidget {
@@ -12,10 +13,10 @@ class PageOverlay extends StatelessWidget {
       alignment: AlignmentGeometry.centerRight,
       child: Column(
         mainAxisAlignment: MainAxisAlignment.center,
-        spacing: 32,
+        spacing: 8,
         children: [
           LikeButton(provider: provider),
-          Icon(CupertinoIcons.hand_thumbsdown_fill),
+          LikeButton(provider: provider),
           Icon(CupertinoIcons.ellipses_bubble),
           Icon(CupertinoIcons.share),
         ],

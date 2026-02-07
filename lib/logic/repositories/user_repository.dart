@@ -44,51 +44,60 @@ class UserRepository {
     DocumentReference userRef = _firestore.collection('users').doc(userId);
     DocumentReference targetUserRef = _firestore.collection('users').doc(targetUserId);
     DocumentReference followingRef = userRef.collection('following').doc(targetUserId);
-    DocumentReference followerRef = targetUserRef.collection('followers').doc(userId);
-
-    print("got refs");
     
     await _firestore.runTransaction((transaction) async {
-      print("running transaction");
       
       DocumentSnapshot userSnapshot = await transaction.get(userRef);
       DocumentSnapshot targetUserSnapshot = await transaction.get(targetUserRef);
       DocumentSnapshot followingSnapshot = await transaction.get(followingRef);
       
-      print("got snapshots");
-
       if (!userSnapshot.exists || !targetUserSnapshot.exists) {
         print("one of the users does not exist");
         throw Exception("One of the users does not exist");
       }
       
-      print("users exist");
-
       if (followingSnapshot.exists) {
         throw Exception("Already following this user");
       }
       
-      print("not already following");
-
       int followersCount = targetUserSnapshot['followersCount'] ?? 0;
-
-      transaction.set(followingRef, {
-        'createdAt': FieldValue.serverTimestamp(),
-      });
       
-      print("set following ref");
-
-      transaction.set(followerRef, {
-        'createdAt': FieldValue.serverTimestamp(),
-      });
-      
-      print("set follower ref");
-
       transaction.update(targetUserRef, {
         'followersCount': followersCount + 1,
       });
-      
-      print("transaction complete");
+    });
+  }
+
+  Future<void> unfollowUser(String userId, String targetUserId) async {
+    DocumentReference userRef = _firestore.collection('users').doc(userId);
+    DocumentReference targetUserRef = _firestore.collection('users').doc(targetUserId);
+    DocumentReference followingRef = userRef.collection('following').doc(targetUserId);
+    DocumentReference followerRef = targetUserRef.collection('followers').doc(userId);
+
+    await _firestore.runTransaction((transaction) async {
+      DocumentSnapshot userSnapshot = await transaction.get(userRef);
+      DocumentSnapshot targetUserSnapshot = await transaction.get(targetUserRef);
+      DocumentSnapshot followingSnapshot = await transaction.get(followingRef);
+
+      if (!userSnapshot.exists || !targetUserSnapshot.exists) {
+        print("one of the users does not exist");
+        throw Exception("One of the users does not exist");
+      }
+
+      if (!followingSnapshot.exists) {
+        print("not following this user");
+        throw Exception("Not following this user");
+      }
+
+      int targetFollowersCount = targetUserSnapshot['followersCount'] ?? 0;
+
+      print("targetFollowersCount: $targetFollowersCount");
+      transaction.delete(followingRef);
+      transaction.delete(followerRef);
+
+      transaction.update(targetUserRef, {
+        'followersCount': targetFollowersCount > 0 ? targetFollowersCount - 1 : 0,
+      });
     });
   }
 }

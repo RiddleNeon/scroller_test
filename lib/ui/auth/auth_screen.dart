@@ -40,8 +40,6 @@ class _LoginScreenState extends State<LoginScreen> {
     }
 
     UserProfile user = await userRepository!.getUser(credential.user!.uid);
-    await userRepository!.followUser(user.id, "YSIYCypDCndAu2yJUcjaFiQvcQz1");
-    print("following: ${await user.getFollowingIds()}");
     print(user);
   }
 
@@ -66,13 +64,17 @@ class _LoginScreenState extends State<LoginScreen> {
   }
 
   Future<String?> _recoverPassword(String email) async {
-    try {
+    try {      
       await FirebaseAuth.instance.sendPasswordResetEmail(email: email.trim());
       print("sent to '$email'");
       return null;
     } on FirebaseAuthException catch (e) {
       return e.message ?? 'Password reset failed';
     }
+  }
+  
+  void completeLogin() {
+    Navigator.of(context).pushReplacement(MaterialPageRoute(builder: (context) => const MyHomePage(title: "scroller test")));
   }
 
   @override
@@ -83,11 +85,9 @@ class _LoginScreenState extends State<LoginScreen> {
       onRecoverPassword: _recoverPassword,
       onConfirmRecover: null,
       onResendCode: null,
-
-      onSubmitAnimationCompleted: () {
-        Navigator.of(context).pushReplacement(MaterialPageRoute(builder: (context) => const MyHomePage(title: "scroller test")));
-      },
-
+      theme: LoginTheme(primaryColor: Colors.blueAccent),
+      messages: LoginMessages(recoverPasswordDescription: "Enter your email to receive a password reset link.", recoverPasswordSuccess: "Password reset email sent!"),
+      onSubmitAnimationCompleted: completeLogin,
       loginProviders: <LoginProvider>[
         if (notWindows || kIsWeb)
           LoginProvider(
