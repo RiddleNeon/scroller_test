@@ -1,7 +1,9 @@
 import 'package:firebase_auth/firebase_auth.dart';
 import 'package:firebase_core/firebase_core.dart';
+import 'package:flutter/foundation.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter_login/flutter_login.dart';
+import 'package:font_awesome_flutter/font_awesome_flutter.dart';
 import 'package:wurp/firebase_options.dart';
 import 'package:wurp/ui/scrolling_container.dart';
 
@@ -70,12 +72,9 @@ class _LoginScreenState extends State<LoginScreen> {
     }
   }
 
-
   Future<String?> _recoverPassword(String email) async {
     try {
-      await FirebaseAuth.instance.sendPasswordResetEmail(
-        email: email.trim(),
-      );
+      await FirebaseAuth.instance.sendPasswordResetEmail(email: email.trim());
       print("sent to '$email'");
       return null;
     } on FirebaseAuthException catch (e) {
@@ -83,11 +82,10 @@ class _LoginScreenState extends State<LoginScreen> {
     }
   }
 
-  
-  Future<String?> _sendCode(String email) async{
+  Future<String?> _sendCode(String email) async {
     try {
       await FirebaseAuth.instance.sendPasswordResetEmail(email: email);
-    } on FirebaseAuthException catch(e) {
+    } on FirebaseAuthException catch (e) {
       print("Password Recovery error! $e");
       return e.message;
     }
@@ -105,9 +103,37 @@ class _LoginScreenState extends State<LoginScreen> {
 
       onSubmitAnimationCompleted: () {
         Navigator.of(context).pushReplacement(MaterialPageRoute(builder: (context) => const MyHomePage(title: "scroller test")));
-      }
+      },
+
+      loginProviders: <LoginProvider>[
+        if (notWindows || kIsWeb)
+          LoginProvider(
+            icon: FontAwesomeIcons.google,
+            label: 'Google',
+            callback: () => signInWithProvider(GoogleAuthProvider()),
+          ),
+      ],
     );
   }
+  
+  Future<String?> signInWithProvider(AuthProvider provider) async{
+    try {
+      if (kIsWeb) {
+        await FirebaseAuth.instance.signInWithPopup(GoogleAuthProvider());
+      } else if (defaultTargetPlatform == TargetPlatform.android || defaultTargetPlatform == TargetPlatform.iOS) {
+        print("trying to log in with provider");
+        await FirebaseAuth.instance.signInWithProvider(provider);
+      } else {
+        return "Unsupported Device! Please use regular login!";
+      }
+    } on FirebaseAuthException catch(e) {
+      return e.message;
+    }
+    return null;
+  }
+
+  bool get notWindows =>
+      defaultTargetPlatform != TargetPlatform.windows && defaultTargetPlatform != TargetPlatform.macOS && defaultTargetPlatform != TargetPlatform.linux;
 }
 
 class ResetPasswordButton extends StatelessWidget {
@@ -119,7 +145,7 @@ class ResetPasswordButton extends StatelessWidget {
       onTap: () => showMenu(
         context: context,
         items: [PopupMenuItem(child: ResetPasswordPopup())],
-        position: RelativeRect.fill
+        position: RelativeRect.fill,
       ),
       child: Text("forgot password"),
     );
@@ -130,7 +156,7 @@ class ResetPasswordPopup extends StatelessWidget {
   const ResetPasswordPopup({super.key});
 
   @override
-  Widget build(BuildContext context) => Card(child: Text("send email"), margin: EdgeInsets.all(10),);
+  Widget build(BuildContext context) => Card(child: Text("send email"), margin: EdgeInsets.all(10));
 }
 
 class MyApp extends StatelessWidget {

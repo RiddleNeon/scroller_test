@@ -12,7 +12,12 @@
           "package_name": "de.riddleNeon.wurp"
         }
       },
-      "oauth_client": [],
+      "oauth_client": [
+        {
+          "client_id": "418845388234-pp5j93fnr3mn1nposq9o9iv7rnlm5qq6.apps.googleusercontent.com",
+          "client_type": 3
+        }
+      ],
       "api_key": [
         {
           "current_key": "AIzaSyBzAXDJUkGDZebgmqC4T4K7lSKUQ8omw-w"
@@ -20,7 +25,19 @@
       ],
       "services": {
         "appinvite_service": {
-          "other_platform_oauth_client": []
+          "other_platform_oauth_client": [
+            {
+              "client_id": "418845388234-pp5j93fnr3mn1nposq9o9iv7rnlm5qq6.apps.googleusercontent.com",
+              "client_type": 3
+            },
+            {
+              "client_id": "418845388234-akc2e36is9iaktrbjgfpa9ne7pbv2e27.apps.googleusercontent.com",
+              "client_type": 2,
+              "ios_info": {
+                "bundle_id": "de.riddleNeon.wurp"
+              }
+            }
+          ]
         }
       }
     }
