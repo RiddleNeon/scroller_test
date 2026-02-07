@@ -1,4 +1,3 @@
-import 'package:wurp/logic/entities/user.dart';
 import 'package:firebase_auth/firebase_auth.dart' hide User;
 import 'package:flutter/cupertino.dart';
 import 'package:flutter/foundation.dart';
@@ -6,6 +5,7 @@ import 'package:flutter/material.dart';
 import 'package:flutter_login/flutter_login.dart';
 import 'package:font_awesome_flutter/font_awesome_flutter.dart';
 
+import '../../logic/models/user_model.dart';
 import '../../main.dart';
 import '../screens/home_screen.dart';
 
@@ -39,7 +39,9 @@ class _LoginScreenState extends State<LoginScreen> {
       return "an unknown error has occurred!";
     }
 
-    User user = await userRepository!.getUser(credential.user!.uid);
+    UserProfile user = await userRepository!.getUser(credential.user!.uid);
+    await userRepository!.followUser(user.id, "YSIYCypDCndAu2yJUcjaFiQvcQz1");
+    print("following: ${await user.getFollowingIds()}");
     print(user);
   }
 
@@ -58,8 +60,8 @@ class _LoginScreenState extends State<LoginScreen> {
       print("unknown signup error! $e");
       return "an unknown error has occurred!";
     }
-    
-    User user = await userRepository!.createUser(id: credential.user!.uid, username: "default");
+
+    UserProfile user = await userRepository!.createUser(id: credential.user!.uid, username: credential.user?.displayName ?? credential.user!.email!.split("@").first);
     print(user);
   }
 

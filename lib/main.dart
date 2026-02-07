@@ -1,3 +1,4 @@
+import 'package:cloud_firestore/cloud_firestore.dart';
 import 'package:firebase_auth/firebase_auth.dart';
 import 'package:firebase_core/firebase_core.dart';
 import 'package:flutter/material.dart';
@@ -14,6 +15,7 @@ void main() async {
   WidgetsFlutterBinding.ensureInitialized();
   app = await Firebase.initializeApp(options: DefaultFirebaseOptions.currentPlatform);
   auth = FirebaseAuth.instanceFor(app: app!);
+  await FirebaseFirestore.instance.runTransaction((transaction) async {});
   
   runApp(const MyApp());
 }

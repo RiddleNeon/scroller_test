@@ -1,99 +1,94 @@
 import 'package:cloud_firestore/cloud_firestore.dart';
 
-import '../entities/user.dart';
 import '../models/user_model.dart';
 
 class UserRepository {
   final FirebaseFirestore _firestore = FirebaseFirestore.instance;
 
-  Future<User> getUser(String userId, {bool loadFollowers = false}) async {
+  Future<UserProfile> getUser(String userId, {bool loadFollowers = false}) async {
     DocumentSnapshot doc = await _firestore.collection('users').doc(userId).get();
-    UserModel model = UserModel.fromFirestore(doc);
-
-    List<User> following = [];
-    if (loadFollowers) {
-      for (String followerId in model.followingIds) {
-        following.add(await getUser(followerId, loadFollowers: false));
-      }
-    }
+    UserProfile model = UserProfile.fromFirestore(doc);
     
-    return User(
-      id: model.id,
-      username: model.username,
-      profileImageUrl: model.profileImageUrl,
-      followingIds: model.followingIds,
-      following: following,
-      followersCount: model.followersCount,
-      createdAt: model.createdAt,
-      bio: model.bio,
-    );
+    return model;
   }
   
   
   static const String noProfileImageUrl = "https://img.freepik.com/premium-psd/contact-icon-illustration-isolated_23-2151903357.jpg?semt=ais_hybrid&w=740&q=80";
   
-  Future<User> createUser({
+  Future<UserProfile> createUser({
     required String id,
     required String username,
     String profileImageUrl = noProfileImageUrl,
     String bio = '',
   }) async {
-    UserModel model = UserModel(
+    
+    await _firestore.collection('users').doc(id).set({
+      'username': username,
+      'profileImageUrl': profileImageUrl,
+      'bio': bio,
+      'followersCount': 0,
+      'createdAt': FieldValue.serverTimestamp(),
+    });
+    
+    return UserProfile(
       id: id,
       username: username,
       profileImageUrl: profileImageUrl,
       bio: bio,
-      followersCount: 0,
-      followingIds: [],
       createdAt: DateTime.now(),
-    );
-
-    await _firestore.collection('users').doc(id).set(model.toFirestore());
-
-    return User(
-      id: model.id,
-      username: model.username,
-      profileImageUrl: model.profileImageUrl,
-      followingIds: model.followingIds,
-      followersCount: model.followersCount,
-      createdAt: model.createdAt,
-      bio: model.bio,
+      followersCount: 0,
     );
   }
-  
-  
-  
 
-  Stream<User> getFollowedUsers(User user) async* {
-    List<String> followingIds = user.followingIds;
-    const batchSize = 50;
+  Future<void> followUser(String userId, String targetUserId) async {
+    DocumentReference userRef = _firestore.collection('users').doc(userId);
+    DocumentReference targetUserRef = _firestore.collection('users').doc(targetUserId);
+    DocumentReference followingRef = userRef.collection('following').doc(targetUserId);
+    DocumentReference followerRef = targetUserRef.collection('followers').doc(userId);
 
-    for (int i = 0; i < followingIds.length; i += batchSize) {
-      int end = (i + batchSize < followingIds.length)
-          ? i + batchSize
-          : followingIds.length;
+    print("got refs");
+    
+    await _firestore.runTransaction((transaction) async {
+      print("running transaction");
+      
+      DocumentSnapshot userSnapshot = await transaction.get(userRef);
+      DocumentSnapshot targetUserSnapshot = await transaction.get(targetUserRef);
+      DocumentSnapshot followingSnapshot = await transaction.get(followingRef);
+      
+      print("got snapshots");
 
-      List<String> batch = followingIds.sublist(i, end);
-
-      QuerySnapshot snapshot = await _firestore
-          .collection('users')
-          .where(FieldPath.documentId, whereIn: batch)
-          .get();
-
-      for (var doc in snapshot.docs) {
-        UserModel model = UserModel.fromFirestore(doc);
-        yield User(
-          id: model.id,
-          username: model.username,
-          profileImageUrl: model.profileImageUrl,
-          followingIds: model.followingIds,
-          followersCount: model.followersCount,
-          createdAt: model.createdAt,
-          bio: model.bio,
-        );
+      if (!userSnapshot.exists || !targetUserSnapshot.exists) {
+        print("one of the users does not exist");
+        throw Exception("One of the users does not exist");
       }
-    }
-  }
+      
+      print("users exist");
 
-  Future<void> followUser(String userId, String targetUserId) async {}
+      if (followingSnapshot.exists) {
+        throw Exception("Already following this user");
+      }
+      
+      print("not already following");
+
+      int followersCount = targetUserSnapshot['followersCount'] ?? 0;
+
+      transaction.set(followingRef, {
+        'createdAt': FieldValue.serverTimestamp(),
+      });
+      
+      print("set following ref");
+
+      transaction.set(followerRef, {
+        'createdAt': FieldValue.serverTimestamp(),
+      });
+      
+      print("set follower ref");
+
+      transaction.update(targetUserRef, {
+        'followersCount': followersCount + 1,
+      });
+      
+      print("transaction complete");
+    });
+  }
 }
