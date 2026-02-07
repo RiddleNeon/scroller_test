@@ -43,3 +43,8 @@ app.*.map.json
 /android/app/debug
 /android/app/profile
 /android/app/release
+/android/app/
+/android/app/src/debug/
+/android/app/src/main/
+/._git/
+**/flutter/

@@ -1,0 +1,122 @@
+
+import 'package:firebase_auth/firebase_auth.dart';
+import 'package:flutter/cupertino.dart';
+import 'package:flutter/foundation.dart';
+import 'package:flutter/material.dart';
+import 'package:flutter_login/flutter_login.dart';
+import 'package:font_awesome_flutter/font_awesome_flutter.dart';
+
+import '../../main.dart';
+import '../screens/home_screen.dart';
+
+class LoginScreen extends StatefulWidget {
+  const LoginScreen({super.key});
+
+  @override
+  State<LoginScreen> createState() => _LoginScreenState();
+}
+
+class _LoginScreenState extends State<LoginScreen> {
+  Duration get loginTime => const Duration(milliseconds: 2250);
+  bool enteredPasswordIncorrectly = false;
+
+  Future<String?> _authUser(LoginData data) async {
+    print("login data ${data.name}, ${data.password}");
+
+    try {
+      await FirebaseAuth.instance.signInWithEmailAndPassword(email: data.name, password: data.password);
+    } on FirebaseAuthException catch (e) {
+      String? fullMessage = e.message;
+      print("$fullMessage");
+      if (fullMessage?.contains("internal") ?? false) {
+        setState(() {
+          enteredPasswordIncorrectly = true;
+        });
+      }
+      return fullMessage ?? "An unknown error has occurred!";
+    } catch (e) {
+      print("unknown signup error! $e");
+      return "an unknown error has occurred!";
+    }
+  }
+
+  Future<String?> _signupUser(SignupData data) async {
+    print("signup data ${data.name}, ${data.password}, additional: ${data.additionalSignupData}");
+
+    if (data.password == null || data.name == null) return "please enter a valid email or password!";
+
+    try {
+      await FirebaseAuth.instance.createUserWithEmailAndPassword(email: data.name!, password: data.password!);
+    } on FirebaseAuthException catch (e) {
+      String? fullMessage = e.message;
+      print("$fullMessage");
+      return fullMessage ?? "An unknown error has occurred!";
+    } catch (e) {
+      print("unknown signup error! $e");
+      return "an unknown error has occurred!";
+    }
+  }
+
+  Future<String?> _recoverPassword(String email) async {
+    try {
+      await FirebaseAuth.instance.sendPasswordResetEmail(email: email.trim());
+      print("sent to '$email'");
+      return null;
+    } on FirebaseAuthException catch (e) {
+      return e.message ?? 'Password reset failed';
+    }
+  }
+
+  Future<String?> _sendCode(String email) async {
+    try {
+      await FirebaseAuth.instance.sendPasswordResetEmail(email: email);
+    } on FirebaseAuthException catch (e) {
+      print("Password Recovery error! $e");
+      return e.message;
+    }
+    return null;
+  }
+
+  @override
+  Widget build(BuildContext context) {
+    return FlutterLogin(
+      onLogin: _authUser,
+      onSignup: _signupUser,
+      onRecoverPassword: _recoverPassword,
+      onConfirmRecover: null,
+      onResendCode: null,
+
+      onSubmitAnimationCompleted: () {
+        Navigator.of(context).pushReplacement(MaterialPageRoute(builder: (context) => const MyHomePage(title: "scroller test")));
+      },
+
+      loginProviders: <LoginProvider>[
+        if (notWindows || kIsWeb)
+          LoginProvider(
+            icon: FontAwesomeIcons.google,
+            label: 'Google',
+            callback: () => signInWithProvider(GoogleAuthProvider()),
+          ),
+      ],
+    );
+  }
+
+  Future<String?> signInWithProvider(AuthProvider provider) async{
+    try {
+      if (kIsWeb) {
+        await FirebaseAuth.instance.signInWithPopup(GoogleAuthProvider());
+      } else if (defaultTargetPlatform == TargetPlatform.android || defaultTargetPlatform == TargetPlatform.iOS) {
+        print("trying to log in with provider");
+        await FirebaseAuth.instance.signInWithProvider(provider);
+      } else {
+        return "Unsupported Device! Please use regular login!";
+      }
+    } on FirebaseAuthException catch(e) {
+      return e.message;
+    }
+    return null;
+  }
+
+  bool get notWindows =>
+      defaultTargetPlatform != TargetPlatform.windows && defaultTargetPlatform != TargetPlatform.macOS && defaultTargetPlatform != TargetPlatform.linux;
+}
