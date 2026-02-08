@@ -3,8 +3,9 @@ import 'package:flutter/material.dart';
 class DislikeButton extends StatefulWidget {
   final bool initiallyDisliked;
   final void Function(bool)? onDislikeChanged;
+  final bool initiallyPlayingAnimation;
 
-  const DislikeButton({super.key, this.initiallyDisliked = false, this.onDislikeChanged});
+  const DislikeButton({super.key, this.initiallyDisliked = false, this.onDislikeChanged, this.initiallyPlayingAnimation = false});
 
   @override
   State<DislikeButton> createState() => _DislikeButtonState();
@@ -30,6 +31,10 @@ class _DislikeButtonState extends State<DislikeButton> with SingleTickerProvider
       TweenSequenceItem(tween: Tween(begin: 0.0, end: -0.15).chain(CurveTween(curve: Curves.easeOut)), weight: 40),
       TweenSequenceItem(tween: Tween(begin: -0.15, end: 0.0).chain(CurveTween(curve: Curves.easeIn)), weight: 60),
     ]).animate(_ctrl);
+    
+    if (widget.initiallyPlayingAnimation) {
+      _ctrl.forward(from: 0.0);
+    }
   }
 
   @override

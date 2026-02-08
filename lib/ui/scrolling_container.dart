@@ -43,6 +43,7 @@ class _ScrollingContainerState extends State<ScrollingContainer> with TickerProv
       contentSize: refreshFrequency + 5,
       builder: (context, modIndex) {
         int index = translateIndex(modIndex % (refreshFrequency + 1));
+        print("actual index: $index (modIndex: $modIndex, resets: $resets)");
         return Center(
           child: AspectRatio(
             aspectRatio: 9 / 16,
@@ -53,7 +54,7 @@ class _ScrollingContainerState extends State<ScrollingContainer> with TickerProv
                   Center(
                     child: Text("Video $index", style: TextStyle(fontSize: 32, color: Colors.white)),
                   ),
-                  PageOverlay(provider: this, index: index),
+                  PageOverlay(provider: this, index: index, key: ObjectKey("overlay_$index"),),
                 ],
               ),
             ),

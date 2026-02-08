@@ -20,6 +20,7 @@ class RecommendationVideoProvider implements VideoProvider {
   final VideoRecommender _recommender;
   final List<Video> _videoCache = [];
   final Set<String> _loadedVideoIds = {};
+  // ignore: unused_field
   int _currentIndex = 0;
 
   static const int _preloadThreshold = 5; // Preload when this many videos left
