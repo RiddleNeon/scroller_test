@@ -41,6 +41,7 @@ class _LoginScreenState extends State<LoginScreen> {
 
     UserProfile user = await userRepository!.getUser(credential.user!.uid);
     print(user);
+    return null; //no error message -> success
   }
 
   Future<String?> _signupUser(SignupData data) async {
@@ -61,6 +62,7 @@ class _LoginScreenState extends State<LoginScreen> {
 
     UserProfile user = await userRepository!.createUser(id: credential.user!.uid, username: credential.user?.displayName ?? credential.user!.email!.split("@").first);
     print(user);
+    return null; //no error message -> success
   }
 
   Future<String?> _recoverPassword(String email) async {
