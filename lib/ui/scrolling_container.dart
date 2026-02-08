@@ -1,7 +1,6 @@
 import 'dart:math';
 
 import 'package:flutter/material.dart';
-import 'package:tiktoklikescroller/controller.dart';
 import 'package:tiktoklikescroller/tiktoklikescroller.dart';
 
 import 'overlays.dart';
@@ -54,7 +53,7 @@ class _ScrollingContainerState extends State<ScrollingContainer> with TickerProv
                   Center(
                     child: Text("Video $index", style: TextStyle(fontSize: 32, color: Colors.white)),
                   ),
-                  PageOverlay(provider: this, key: GlobalObjectKey(index), index: index),
+                  PageOverlay(provider: this, index: index),
                 ],
               ),
             ),

@@ -2,15 +2,17 @@ import 'package:flutter/foundation.dart';
 import 'package:flutter/material.dart';
 
 class DislikeButton extends StatefulWidget {
-  const DislikeButton({super.key});
+  final bool initiallyDisliked;
+  final void Function(bool)? onDislikeChanged;
+
+  const DislikeButton({super.key, this.initiallyDisliked = false, this.onDislikeChanged});
 
   @override
   State<DislikeButton> createState() => _DislikeButtonState();
 }
 
-class _DislikeButtonState extends State<DislikeButton>
-    with SingleTickerProviderStateMixin {
-  bool disliked = false;
+class _DislikeButtonState extends State<DislikeButton> with SingleTickerProviderStateMixin {
+  late bool disliked = widget.initiallyDisliked;
   late final AnimationController _ctrl;
   late final Animation<double> _scale;
   late final Animation<double> _rotate;
@@ -18,10 +20,7 @@ class _DislikeButtonState extends State<DislikeButton>
   @override
   void initState() {
     super.initState();
-    _ctrl = AnimationController(
-      vsync: this,
-      duration: const Duration(milliseconds: 350),
-    );
+    _ctrl = AnimationController(vsync: this, duration: const Duration(milliseconds: 350));
 
     _scale = TweenSequence<double>([
       TweenSequenceItem(tween: Tween(begin: 1.0, end: 1.2).chain(CurveTween(curve: Curves.easeOut)), weight: 40),
@@ -43,8 +42,8 @@ class _DislikeButtonState extends State<DislikeButton>
   void _onTap() {
     setState(() {
       disliked = !disliked;
+      widget.onDislikeChanged?.call(disliked);
     });
-    if (kDebugMode) print('dislike: $disliked');
     _ctrl.forward(from: 0.0);
   }
 
@@ -65,11 +64,7 @@ class _DislikeButtonState extends State<DislikeButton>
               angle: _rotate.value,
               child: Transform.scale(
                 scale: _scale.value,
-                child: Icon(
-                  iconData,
-                  size: 32,
-                  color: iconColor,
-                ),
+                child: Icon(iconData, size: 32, color: iconColor),
               ),
             );
           },

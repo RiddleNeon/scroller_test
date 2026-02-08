@@ -1,14 +1,14 @@
 import 'package:cloud_firestore/cloud_firestore.dart';
 
-class VideoModel {
+class Video {
   final String title;
   final String description;
   final String videoUrl;
   final String thumbnailUrl;
   final String authorId;
   final DateTime createdAt;
-  
-  VideoModel({
+
+  Video({
     required this.title,
     required this.description,
     required this.videoUrl,
@@ -17,9 +17,9 @@ class VideoModel {
     required this.createdAt,
   });
   
-  factory VideoModel.fromFirestore(DocumentSnapshot doc) {
+  factory Video.fromFirestore(DocumentSnapshot doc) {
     Map data = doc.data() as Map<String, dynamic>;
-    return VideoModel(
+    return Video(
       title: data['title'] ?? '',
       description: data['description'] ?? '',
       videoUrl: data['videoUrl'] ?? '',

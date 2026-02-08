@@ -1,6 +1,7 @@
 import 'package:cloud_firestore/cloud_firestore.dart';
 import 'package:firebase_auth/firebase_auth.dart';
 import 'package:firebase_core/firebase_core.dart';
+import 'package:flutter/foundation.dart';
 import 'package:flutter/material.dart';
 import 'package:wurp/firebase_options.dart';
 import 'package:wurp/logic/repositories/user_repository.dart';
@@ -16,9 +17,9 @@ void main() async {
   WidgetsFlutterBinding.ensureInitialized();
   app = await Firebase.initializeApp(options: DefaultFirebaseOptions.currentPlatform);
   auth = FirebaseAuth.instanceFor(app: app!);
-  auth!.setPersistence(Persistence.LOCAL);
+  if(kIsWeb) auth!.setPersistence(Persistence.LOCAL);
   print(auth?.currentUser);
-  await FirebaseFirestore.instance.runTransaction((transaction) async {});
+  await FirebaseFirestore.instance.runTransaction((transaction) async {}); //whyever it fixes a crash on windows
   
   runApp(const MyApp());
 }

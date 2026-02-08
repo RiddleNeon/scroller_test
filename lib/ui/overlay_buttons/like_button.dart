@@ -1,28 +1,25 @@
-import 'package:flutter/cupertino.dart';
-import 'package:flutter/foundation.dart';
 import 'package:flutter/material.dart';
 import 'package:lottie/lottie.dart';
 
 class LikeButton extends StatefulWidget {
   final TickerProvider provider;
+  final bool initiallyLiked;
+  final void Function(bool)? onLikeChanged;
 
-  const LikeButton({super.key, required this.provider});
+  const LikeButton({super.key, required this.provider, this.initiallyLiked = false, this.onLikeChanged});
 
   @override
   State<LikeButton> createState() => _LikeButtonState();
 }
 
 class _LikeButtonState extends State<LikeButton> {
-  bool liked = false;
+  late bool liked = widget.initiallyLiked;
   late AnimationController controller;
 
   @override
   void initState() {
     super.initState();
-    controller = AnimationController(
-      vsync: widget.provider,
-      upperBound: 0.5,
-    );
+    controller = AnimationController(vsync: widget.provider, upperBound: 0.5);
   }
 
   @override
@@ -30,6 +27,7 @@ class _LikeButtonState extends State<LikeButton> {
     controller.dispose();
     super.dispose();
   }
+
   @override
   Widget build(BuildContext context) {
     LottieBuilder builder = Lottie.asset(
@@ -44,21 +42,13 @@ class _LikeButtonState extends State<LikeButton> {
 
     return InkWell(
       onTap: () {
-        if (kDebugMode) {
-          print("like!");
-        }
-        controller.animateTo(
-          liked ? controller.lowerBound : controller.upperBound,
-          duration: const Duration(milliseconds: 600),
-        );
+        controller.animateTo(liked ? controller.lowerBound : controller.upperBound, duration: const Duration(milliseconds: 600));
         setState(() {
           liked = !liked;
+          widget.onLikeChanged?.call(liked);
         });
       },
-      child: Transform.scale(
-        scale: 2,
-        child: SizedBox(width: 32, height: 32, child: builder),
-      ),
+      child: Transform.scale(scale: 2, child: SizedBox(width: 32, height: 32, child: builder)),
     );
   }
 }
