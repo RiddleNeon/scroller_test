@@ -128,7 +128,6 @@ class RecommendationVideoProvider implements VideoProvider {
 class BaseAlgorithmVideoProvider implements VideoProvider {
   @override
   Future<Video?> getVideoByIndex(int index) async {
-    // Placeholder implementation
     return null;
   }
 

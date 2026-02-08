@@ -14,28 +14,21 @@ FirebaseAuth? auth;
 UserRepository? userRepository = UserRepository();
 
 void main() async {
+  print("MAIN FUNCTION STARTED");
   WidgetsFlutterBinding.ensureInitialized();
   app = await Firebase.initializeApp(options: DefaultFirebaseOptions.currentPlatform);
   auth = FirebaseAuth.instanceFor(app: app!);
-  if(kIsWeb) auth!.setPersistence(Persistence.LOCAL);
+  if (kIsWeb) auth!.setPersistence(Persistence.LOCAL);
   print(auth?.currentUser);
   await FirebaseFirestore.instance.runTransaction((transaction) async {}); //whyever it fixes a crash on windows
-  
-  runApp(const MyApp());
-}
 
-class MyApp extends StatelessWidget {
-  const MyApp({super.key});
-  
-  @override
-  Widget build(BuildContext context) {
-    if(auth?.currentUser != null) {
-      return MaterialApp(title: 'Lerntok halt', home: const MyHomePage(), debugShowCheckedModeBanner: false, theme: ThemeData(
-        primarySwatch: Colors.blue,
-      ));
-    }
-    return MaterialApp(title: 'Lerntok halt', home: const LoginScreen(), debugShowCheckedModeBanner: false, theme: ThemeData(
-      primarySwatch: Colors.blue,
-    ));
-  }
+  runApp(
+      MaterialApp(
+        debugShowCheckedModeBanner: false,
+        theme: ThemeData(primarySwatch: Colors.blue),
+        home: auth?.currentUser == null
+            ? const LoginScreen()
+            : MyHomePage(),
+      )
+  );
 }
