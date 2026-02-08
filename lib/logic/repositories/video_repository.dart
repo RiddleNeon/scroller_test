@@ -1,4 +1,5 @@
 import 'package:cloud_firestore/cloud_firestore.dart';
+import 'package:wurp/logic/batches/batch_service.dart';
 import 'package:wurp/logic/video/video.dart';
 
 
@@ -17,139 +18,247 @@ class VideoRepository {
     return snapshot.docs.map((doc) => doc.id).toList();
   }
 
+  final FirestoreBatchQueue _batchQueue = FirestoreBatchQueue();
 
-  Future<void> likeVideo(String userId, String videoId) async {
-    final batch = _firestore.batch();
+  /// Like a video
+  void likeVideo(String userId, String videoId) {
+    // User's liked videos
+    _batchQueue.set(
+      _firestore
+          .collection('users')
+          .doc(userId)
+          .collection('liked_videos')
+          .doc(videoId),
+      {
+        'likedAt': FieldValue.serverTimestamp(),
+      },
+    );
 
-    try {
-      batch.set(
-        _firestore
-            .collection('users')
-            .doc(userId)
-            .collection('liked_videos')
-            .doc(videoId),
-        {
-          'likedAt': FieldValue.serverTimestamp(),
-        },
-      );
+    // Video's likes
+    _batchQueue.set(
+      _firestore
+          .collection('videos')
+          .doc(videoId)
+          .collection('likes')
+          .doc(userId),
+      {
+        'likedAt': FieldValue.serverTimestamp(),
+      },
+    );
 
-      batch.set(
-        _firestore
-            .collection('videos')
-            .doc(videoId)
-            .collection('likes')
-            .doc(userId),
-        {
-          'likedAt': FieldValue.serverTimestamp(),
-        },
-      );
-
-      batch.update(
-        _firestore.collection('videos').doc(videoId),
-        {
-          'likesCount': FieldValue.increment(1),
-        },
-      );
-
-      await batch.commit();
-    } catch (e) {
-      print('Error liking video: $e');
-      throw e;
-    }
+    // Increment likes count
+    _batchQueue.update(
+      _firestore.collection('videos').doc(videoId),
+      {
+        'likesCount': FieldValue.increment(1),
+      },
+    );
   }
 
-  Future<void> unlikeVideo(String userId, String videoId) async {
-    final batch = _firestore.batch();
+  /// Unlike a video
+  void unlikeVideo(String userId, String videoId) {
+    _batchQueue.delete(
+      _firestore
+          .collection('users')
+          .doc(userId)
+          .collection('liked_videos')
+          .doc(videoId),
+    );
 
-    try {
-      batch.delete(
-        _firestore
-            .collection('users')
-            .doc(userId)
-            .collection('liked_videos')
-            .doc(videoId),
-      );
+    _batchQueue.delete(
+      _firestore
+          .collection('videos')
+          .doc(videoId)
+          .collection('likes')
+          .doc(userId),
+    );
 
-      batch.delete(
-        _firestore
-            .collection('videos')
-            .doc(videoId)
-            .collection('likes')
-            .doc(userId),
-      );
-
-      batch.update(
-        _firestore.collection('videos').doc(videoId),
-        {
-          'likesCount': FieldValue.increment(-1),
-        },
-      );
-
-      await batch.commit();
-    } catch (e) {
-      print('Error unliking video: $e');
-      rethrow;
-    }
+    _batchQueue.update(
+      _firestore.collection('videos').doc(videoId),
+      {
+        'likesCount': FieldValue.increment(-1),
+      },
+    );
   }
 
-  Future<void> incrementViewCount(String videoId) async {
-    try {
-      await _firestore.collection('videos').doc(videoId).update({
+  /// Follow a user
+  void followUser(String followerId, String followeeId) {
+    if (followerId == followeeId) {
+      throw Exception('Cannot follow yourself');
+    }
+
+    _batchQueue.set(
+      _firestore
+          .collection('users')
+          .doc(followerId)
+          .collection('following')
+          .doc(followeeId),
+      {
+        'followedAt': FieldValue.serverTimestamp(),
+      },
+    );
+
+    _batchQueue.set(
+      _firestore
+          .collection('users')
+          .doc(followeeId)
+          .collection('followers')
+          .doc(followerId),
+      {
+        'followedAt': FieldValue.serverTimestamp(),
+      },
+    );
+
+    _batchQueue.update(
+      _firestore.collection('users').doc(followerId),
+      {
+        'followingCount': FieldValue.increment(1),
+      },
+    );
+
+    _batchQueue.update(
+      _firestore.collection('users').doc(followeeId),
+      {
+        'followersCount': FieldValue.increment(1),
+      },
+    );
+  }
+
+  /// Unfollow a user
+  void unfollowUser(String followerId, String followeeId) {
+    _batchQueue.delete(
+      _firestore
+          .collection('users')
+          .doc(followerId)
+          .collection('following')
+          .doc(followeeId),
+    );
+
+    _batchQueue.delete(
+      _firestore
+          .collection('users')
+          .doc(followeeId)
+          .collection('followers')
+          .doc(followerId),
+    );
+
+    _batchQueue.update(
+      _firestore.collection('users').doc(followerId),
+      {
+        'followingCount': FieldValue.increment(-1),
+      },
+    );
+
+    _batchQueue.update(
+      _firestore.collection('users').doc(followeeId),
+      {
+        'followersCount': FieldValue.increment(-1),
+      },
+    );
+  }
+
+  /// Increment view count
+  void incrementViewCount(String videoId) {
+    _batchQueue.update(
+      _firestore.collection('videos').doc(videoId),
+      {
         'viewsCount': FieldValue.increment(1),
-      });
-    } catch (e) {
-      print('Error incrementing view count: $e');
-    }
+      },
+    );
   }
 
-  Future<void> incrementShareCount(String videoId) async {
-    try {
-      await _firestore.collection('videos').doc(videoId).update({
+  /// Increment share count
+  void incrementShareCount(String videoId) {
+    _batchQueue.update(
+      _firestore.collection('videos').doc(videoId),
+      {
         'sharesCount': FieldValue.increment(1),
-      });
-    } catch (e) {
-      print('Error incrementing share count: $e');
-    }
+      },
+    );
   }
 
-  Future<void> addComment(
+  /// Add a comment
+  void addComment(
       String userId,
       String videoId,
       String commentText,
-      ) async {
-    final batch = _firestore.batch();
+      ) {
+    final commentRef = _firestore
+        .collection('videos')
+        .doc(videoId)
+        .collection('comments')
+        .doc();
 
-    try {
-      final commentRef = _firestore
-          .collection('videos')
-          .doc(videoId)
-          .collection('comments')
-          .doc();
+    _batchQueue.set(commentRef, {
+      'userId': userId,
+      'text': commentText,
+      'createdAt': FieldValue.serverTimestamp(),
+      'likesCount': 0,
+    });
 
-      batch.set(commentRef, {
-        'userId': userId,
-        'text': commentText,
-        'createdAt': FieldValue.serverTimestamp(),
-        'likesCount': 0,
-      });
-
-      batch.update(
-        _firestore.collection('videos').doc(videoId),
-        {
-          'commentsCount': FieldValue.increment(1),
-        },
-      );
-
-      await batch.commit();
-    } catch (e) {
-      print('Error adding comment: $e');
-      rethrow;
-    }
+    _batchQueue.update(
+      _firestore.collection('videos').doc(videoId),
+      {
+        'commentsCount': FieldValue.increment(1),
+      },
+    );
   }
 
+  /// Save video
+  void saveVideo(String userId, String videoId) {
+    _batchQueue.set(
+      _firestore
+          .collection('users')
+          .doc(userId)
+          .collection('saved_videos')
+          .doc(videoId),
+      {
+        'savedAt': FieldValue.serverTimestamp(),
+      },
+    );
+  }
+
+  /// Unsave video
+  void unsaveVideo(String userId, String videoId) {
+    _batchQueue.delete(
+      _firestore
+          .collection('users')
+          .doc(userId)
+          .collection('saved_videos')
+          .doc(videoId),
+    );
+  }
+
+  /// Report a video
+  void reportVideo(
+      String userId,
+      String videoId,
+      String reason,
+      ) {
+    _batchQueue.set(
+      _firestore.collection('video_reports').doc(),
+      {
+        'userId': userId,
+        'videoId': videoId,
+        'reason': reason,
+        'reportedAt': FieldValue.serverTimestamp(),
+        'status': 'pending',
+      },
+    );
+  }
+
+  /// Force commit all pending operations
+  Future<void> flush() async {
+    await _batchQueue.commit();
+  }
+
+  /// Get current queue size
+  int get pendingOperations => _batchQueue.queueSize;
+
+
+  /// Get video feed for a user (following feed)
   Future<List<Video>> getFollowingFeed(String userId, {int limit = 20}) async {
     try {
-      // Get following list
       final followingSnapshot = await _firestore
           .collection('users')
           .doc(userId)
@@ -160,10 +269,9 @@ class VideoRepository {
 
       if (followingIds.isEmpty) return [];
 
-      // Get videos from followed users
       final videosSnapshot = await _firestore
           .collection('videos')
-          .where('authorId', whereIn: followingIds.take(100).toList())
+          .where('authorId', whereIn: followingIds.take(10).toList())
           .orderBy('createdAt', descending: true)
           .limit(limit)
           .get();
@@ -177,6 +285,7 @@ class VideoRepository {
     }
   }
 
+  /// Get trending videos
   Future<List<Video>> getTrendingVideos({int limit = 20}) async {
     try {
       final oneDayAgo = DateTime.now().subtract(Duration(days: 1));
@@ -185,14 +294,13 @@ class VideoRepository {
           .collection('videos')
           .where('createdAt', isGreaterThan: Timestamp.fromDate(oneDayAgo))
           .orderBy('createdAt', descending: true)
-          .limit(limit * 3) // Get more to sort by engagement
+          .limit(limit * 3)
           .get();
 
       final videos = snapshot.docs
           .map((doc) => Video.fromFirestore(doc))
           .toList();
 
-      // Sort by engagement rate
       videos.sort((a, b) => b.engagementRate.compareTo(a.engagementRate));
 
       return videos.take(limit).toList();
@@ -202,6 +310,7 @@ class VideoRepository {
     }
   }
 
+  /// Search videos by title or tags
   Future<List<Video>> searchVideos(String query, {int limit = 20}) async {
     try {
       final snapshot = await _firestore
@@ -220,6 +329,7 @@ class VideoRepository {
     }
   }
 
+  /// Get videos by specific tags
   Future<List<Video>> getVideosByTags(
       List<String> tags, {
         int limit = 20,
@@ -241,6 +351,7 @@ class VideoRepository {
     }
   }
 
+  /// Get related videos based on tags
   Future<List<Video>> getRelatedVideos(
       Video video, {
         int limit = 10,
@@ -252,66 +363,17 @@ class VideoRepository {
           .collection('videos')
           .where('tags', arrayContainsAny: video.tags.take(3).toList())
           .orderBy('createdAt', descending: true)
-          .limit(limit + 1) // +1 to exclude the current video
+          .limit(limit + 1)
           .get();
 
       return snapshot.docs
           .map((doc) => Video.fromFirestore(doc))
-          .where((v) => v.id != video.id) // Exclude current video
+          .where((v) => v.id != video.id)
           .take(limit)
           .toList();
     } catch (e) {
       print('Error getting related videos: $e');
       return [];
-    }
-  }
-
-  Future<void> reportVideo(
-      String userId,
-      String videoId,
-      String reason,
-      ) async {
-    try {
-      await _firestore.collection('video_reports').add({
-        'userId': userId,
-        'videoId': videoId,
-        'reason': reason,
-        'reportedAt': FieldValue.serverTimestamp(),
-        'status': 'pending',
-      });
-    } catch (e) {
-      print('Error reporting video: $e');
-      rethrow;
-    }
-  }
-
-  Future<void> saveVideo(String userId, String videoId) async {
-    try {
-      await _firestore
-          .collection('users')
-          .doc(userId)
-          .collection('saved_videos')
-          .doc(videoId)
-          .set({
-        'savedAt': FieldValue.serverTimestamp(),
-      });
-    } catch (e) {
-      print('Error saving video: $e');
-      rethrow;
-    }
-  }
-
-  Future<void> unsaveVideo(String userId, String videoId) async {
-    try {
-      await _firestore
-          .collection('users')
-          .doc(userId)
-          .collection('saved_videos')
-          .doc(videoId)
-          .delete();
-    } catch (e) {
-      print('Error unsaving video: $e');
-      rethrow;
     }
   }
 
