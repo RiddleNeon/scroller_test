@@ -177,7 +177,6 @@ class FirestoreBatchQueue {
       }
     }
 
-    print("Auth at commit: ${FirebaseAuth.instance.currentUser?.uid}");
     await batch.commit();
   }
 
