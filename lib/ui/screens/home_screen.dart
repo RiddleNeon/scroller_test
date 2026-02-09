@@ -1,8 +1,9 @@
-import 'dart:ui';
-
 import 'package:flutter/material.dart';
-import 'package:wurp/ui/misc/glowScreen.dart';
+import 'package:wurp/main.dart';
+import 'package:wurp/ui/misc/glow_screen.dart';
 import 'package:wurp/ui/scrolling_container.dart';
+
+import '../../logic/video/video_provider.dart';
 
 
 class MyHomePage extends StatefulWidget {
@@ -19,6 +20,6 @@ class _MyHomePageState extends State<MyHomePage> {
 
   @override
   Widget build(BuildContext context) {
-    return Glowscreen(child: ScrollingContainer());
+    return Glowscreen(child: ScrollingContainer(videoProvider: RecommendationVideoProvider(userId: auth!.currentUser!.uid)));
   }
 }

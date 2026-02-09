@@ -1,6 +1,5 @@
 import 'dart:ui';
 
-import 'package:flutter/cupertino.dart';
 import 'package:flutter/material.dart';
 
 class Glowscreen extends StatefulWidget{
@@ -13,13 +12,7 @@ class Glowscreen extends StatefulWidget{
 
 class _GlowscreenState extends State<Glowscreen> {
 
-  Color _dominantColor = Colors.grey;
-
-  void _updateGlowColor(Color color) {
-    setState(() {
-      _dominantColor = color;
-    });
-  }
+  final Color _dominantColor = Colors.grey;
   
   @override
   Widget build(BuildContext context) => Scaffold(

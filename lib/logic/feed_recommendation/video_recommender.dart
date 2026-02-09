@@ -232,14 +232,12 @@ class VideoRecommender {
   /// Calculate recency score (exponential decay)
   double _calculateRecencyScore(int ageInHours) {
     // Videos lose 50% score every 24 hours
-    return exp(-0.029 * ageInHours); // ln(0.5)/24 ≈ -0.029
+    return exp(-0.029 * ageInHours); 
   }
 
   /// Calculate global engagement score
   double _calculateGlobalEngagementScore(Video video) {
-    // In real implementation, fetch likes, shares, comments, views from DB
-    // For now, return neutral score
-    return 0.5;
+    return 0.5; //TODO use the stuff from the video document (likes, shares, comments, ...)
   }
 
   /// Calculate personalization score based on user preferences
@@ -251,13 +249,12 @@ class VideoRecommender {
     final preferredAuthors = userProfile['preferredAuthors'] as Map<String, double>;
 
     if (preferredTags.isEmpty && preferredAuthors.isEmpty) {
-      return 0.5; // Neutral score for new users
+      return 0.5;
     }
 
     double score = 0.0;
     int factors = 0;
 
-    // Tag matching
     if (video.tags.isNotEmpty && preferredTags.isNotEmpty) {
       double tagScore = 0.0;
       for (final tag in video.tags) {
@@ -286,14 +283,10 @@ class VideoRecommender {
       ) {
     if (recentInteractions.isEmpty) return 1.0;
 
-    // Get last 10 interactions for diversity check
     final recentTags = <String>{};
     final recentAuthors = <String>{};
 
-    // Note: In real implementation, fetch video details for recent interactions
-    // For now, we'll use a simplified approach
 
-    // Penalize if tags or author are too similar to recent videos
     int similarityCount = 0;
 
     if (recentAuthors.contains(video.authorId)) {

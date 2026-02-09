@@ -7,7 +7,6 @@ import 'package:wurp/firebase_options.dart';
 import 'package:wurp/logic/repositories/user_repository.dart';
 import 'package:wurp/ui/auth/auth_screen.dart';
 import 'package:wurp/ui/screens/home_screen.dart';
-
 FirebaseApp? app;
 FirebaseAuth? auth;
 

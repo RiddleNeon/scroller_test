@@ -53,7 +53,6 @@ class PageOverlayController extends ChangeNotifier {
   PageOverlayController(this.index, {required this.provider}) {
     pageOverlays[index] = this;
     buildContent();
-    print("created controller for video $index");
   }
 
   bool liked = false;
@@ -92,7 +91,6 @@ class PageOverlayController extends ChangeNotifier {
       buildContent();
       notifyListeners();
       switched = false;
-      print("Liked video $index, reset dislike");
     }
   }
 
