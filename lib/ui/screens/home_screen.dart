@@ -20,6 +20,6 @@ class _MyHomePageState extends State<MyHomePage> {
 
   @override
   Widget build(BuildContext context) {
-    return Glowscreen(child: ScrollingContainer(videoProvider: RecommendationVideoProvider(userId: auth!.currentUser!.uid)));
+    return Glowscreen(child: ScrollingContainer());
   }
 }

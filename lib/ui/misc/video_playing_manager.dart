@@ -1,9 +1,7 @@
 import 'package:better_player_plus/better_player_plus.dart';
 import 'package:flutter/cupertino.dart';
 
-import 'debug.dart';
-
-class VideoManager extends ChangeNotifier {
+class VideoManager {
   static final VideoManager _instance = VideoManager._internal();
   factory VideoManager() => _instance;
   VideoManager._internal();
@@ -11,191 +9,98 @@ class VideoManager extends ChangeNotifier {
   BetterPlayerController? _currentPlayer;
   BetterPlayerController? _nextPlayer;
 
-  int _currentIndex = 0;
-  int _nextIndex = 1;
+  bool _isSwitching = false;
 
-  bool _isInitialized = false;
-
-  final Map<int, String> _videoUrls = {};
+  final Map<int, ValueNotifier<BetterPlayerController?>> _controllerNotifiers = {};
   final Map<int, ValueNotifier<bool>> _playingNotifiers = {};
 
-  void _ensureInitialized() {
-    if (_isInitialized) return;
-
-    _currentPlayer = _createPlayer(0);
-    _nextPlayer = _createPlayer(1);
-    _isInitialized = true;
-  }
-
-  BetterPlayerController _createPlayer(int index) {
-    final controller = BetterPlayerController(
-      BetterPlayerConfiguration(
-        autoPlay: false,
-        looping: false,
-        aspectRatio: 9 / 16,
-        autoDispose: false,
-        fit: BoxFit.cover,
-        controlsConfiguration: const BetterPlayerControlsConfiguration(
-          showControls: false,
-        ),
-      ),
-    );
-
-    controller.addEventsListener((event) {
-      if (event.betterPlayerEventType == BetterPlayerEventType.play) {
-        _updatePlayingState();
-      } else if (event.betterPlayerEventType == BetterPlayerEventType.pause) {
-        _updatePlayingState();
-      }
-    });
-
-    return controller;
-  }
-
-  void _updatePlayingState() {
-    _playingNotifiers[_currentIndex]?.value = _currentPlayer?.isPlaying() ?? false;
-    _playingNotifiers[_nextIndex]?.value = _nextPlayer?.isPlaying() ?? false;
+  ValueNotifier<BetterPlayerController?> getControllerNotifier(int index) {
+    return _controllerNotifiers.putIfAbsent(index, () => ValueNotifier<BetterPlayerController?>(null));
   }
 
   ValueNotifier<bool> getPlayingNotifier(int index) {
-    return _playingNotifiers.putIfAbsent(index, () => ValueNotifier<bool>(true));
+    return _playingNotifiers.putIfAbsent(index, () => ValueNotifier<bool>(false));
   }
 
-  void registerVideo(int index, String videoUrl) {
-    _videoUrls[index] = videoUrl;
+  void _ensureInitialized() {
+    if (_currentPlayer != null) return;
+    _currentPlayer = _createPlayer();
+    _nextPlayer = _createPlayer();
   }
 
-  BetterPlayerController? getPlayerForIndex(int index) {
-    _ensureInitialized();
-
-    if (index == _currentIndex) {
-      return _currentPlayer;
-    } else if (index == _nextIndex) {
-      return _nextPlayer;
-    }
-
-    return null;
-  }
-
-  void initializeFirst(int index, String videoUrl) {
-    _ensureInitialized();
-
-    _currentIndex = index;
-    _videoUrls[index] = videoUrl;
-
-    _currentPlayer!.setupDataSource(
-      BetterPlayerDataSource(
-        BetterPlayerDataSourceType.network,
-        videoUrl,
+  BetterPlayerController _createPlayer() {
+    return BetterPlayerController(
+      const BetterPlayerConfiguration(
+        autoPlay: false,
+        looping: true,
+        aspectRatio: 9 / 16,
+        handleLifecycle: false,
+        autoDispose: false,
+        fit: BoxFit.cover,
+        controlsConfiguration: BetterPlayerControlsConfiguration(showControls: false),
       ),
-    );
-
-    notifyListeners();
+    )..addEventsListener((event) {
+      _updatePlayingStates();
+    });
   }
 
-  void preloadNext(int index, String videoUrl) {
+  void _updatePlayingStates() {
+    _playingNotifiers.forEach((index, notifier) {
+      if (index == _currentIndex) notifier.value = _currentPlayer?.isPlaying() ?? false;
+      if (index == _nextIndex) notifier.value = _nextPlayer?.isPlaying() ?? false;
+    });
+  }
+
+  int _currentIndex = -1;
+  int _nextIndex = -1;
+
+  void initializeFirst(int index, String url) {
     _ensureInitialized();
+    _currentIndex = index;
+    _currentPlayer!.setupDataSource(BetterPlayerDataSource(BetterPlayerDataSourceType.network, url));
+    getControllerNotifier(index).value = _currentPlayer;
+  }
 
-    if (_nextIndex == index && _videoUrls[index] == videoUrl) {
-      return; 
-    }
-
+  void preloadNext(int index, String url) {
+    _ensureInitialized();
     _nextIndex = index;
-    _videoUrls[index] = videoUrl;
-    
-    BetterPlayerDataSource source =       BetterPlayerDataSource(
-      BetterPlayerDataSourceType.network,
-      videoUrl,
-    );
-
-    _nextPlayer!.setupDataSource(
-      source
-    );
-    _nextPlayer?.preCache(source);
-
-    notifyListeners();
+    _nextPlayer!.setupDataSource(BetterPlayerDataSource(BetterPlayerDataSourceType.network, url));
+    getControllerNotifier(index).value = _nextPlayer;
   }
 
-  void switchToIndex(int newIndex, String videoUrl, int followingIndex, String followingUrl) async {
-    _ensureInitialized();
+  Future<void> switchToIndex(int newIndex, String url, int followingIndex, String followingUrl) async {
+    if (_isSwitching || newIndex == _currentIndex) return;
+    _isSwitching = true;
 
-    if (newIndex == _currentIndex) return;
+    try {
+      final oldIndex = _currentIndex;
 
-    final isForward = newIndex > _currentIndex;
-
-    if (isForward && newIndex == _nextIndex) {
+      // Controller Rollen tauschen
       final temp = _currentPlayer;
       _currentPlayer = _nextPlayer;
       _nextPlayer = temp;
 
-      final oldCurrentIndex = _currentIndex;
       _currentIndex = newIndex;
       _nextIndex = followingIndex;
 
-      _nextPlayer!.pause();
+      // UI-Updates: Erst den alten Controller auf null setzen, dann den neuen zuweisen
+      getControllerNotifier(oldIndex).value = null;
+      getControllerNotifier(_currentIndex).value = _currentPlayer;
+      getControllerNotifier(_nextIndex).value = _nextPlayer;
 
-      _playingNotifiers[oldCurrentIndex]?.value = false;
-      _playingNotifiers[_currentIndex]?.value = _currentPlayer?.isPlaying() ?? false;
-
-      _videoUrls[followingIndex] = followingUrl;
-      await _nextPlayer!.setupDataSource(
-        BetterPlayerDataSource(
-          BetterPlayerDataSourceType.network,
-          followingUrl,
-        ),
-      );
-      notifyListeners();
-    } else {
-      _currentPlayer!.pause();
-      _nextPlayer!.pause();
-
-      final oldCurrentIndex = _currentIndex;
-      _currentIndex = newIndex;
-      _nextIndex = followingIndex;
-
-      _playingNotifiers[oldCurrentIndex]?.value = false;
-
-      _videoUrls[newIndex] = videoUrl;
-      _currentPlayer!.setupDataSource(
-        BetterPlayerDataSource(
-          BetterPlayerDataSourceType.network,
-          videoUrl,
-        ),
-      );
-
-      _videoUrls[followingIndex] = followingUrl;
-      _nextPlayer!.setupDataSource(
-        BetterPlayerDataSource(
-          BetterPlayerDataSourceType.network,
-          followingUrl,
-        ),
-      );
-
-      notifyListeners();
+      // Neues Video im Hintergrund laden
+      await _nextPlayer!.setupDataSource(BetterPlayerDataSource(BetterPlayerDataSourceType.network, followingUrl));
+    } finally {
+      _isSwitching = false;
     }
   }
 
-  int get currentIndex => _currentIndex;
-  int get nextIndex => _nextIndex;
-
-  void pauseAll() {
-    if (_currentPlayer != null) _currentPlayer!.pause();
-    if (_nextPlayer != null) _nextPlayer!.pause();
-    _updatePlayingState();
-  }
-
-  @override
   void dispose() {
     _currentPlayer?.dispose();
     _nextPlayer?.dispose();
-    _currentPlayer = null;
-    _nextPlayer = null;
-    _videoUrls.clear();
-    for (var notifier in _playingNotifiers.values) {
-      notifier.dispose();
-    }
+    for (var n in _controllerNotifiers.values) { n.value = null; n.dispose(); }
+    for (var n in _playingNotifiers.values) { n.dispose(); }
+    _controllerNotifiers.clear();
     _playingNotifiers.clear();
-    _isInitialized = false;
-    super.dispose();
   }
 }
