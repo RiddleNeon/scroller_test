@@ -1,50 +1,70 @@
+/*
 import 'package:flutter/material.dart';
-import 'package:better_player_plus/better_player_plus.dart';
 import 'package:wurp/ui/misc/video_playing_manager.dart';
+import 'package:video_player/video_player.dart';
 
-class VideoPlayer extends StatelessWidget {
+class ShortVideoPlayer extends StatefulWidget {
   final int videoIndex;
   final bool isActive;
 
-  const VideoPlayer({
+  const ShortVideoPlayer({
     super.key,
     required this.videoIndex,
     required this.isActive,
   });
 
   @override
+  State<ShortVideoPlayer> createState() => _ShortVideoPlayerState();
+}
+
+class _ShortVideoPlayerState extends State<ShortVideoPlayer> {
+  bool paused = false;
+
+  @override
   Widget build(BuildContext context) {
     return Container(
       color: Colors.black,
-      // Dieser Builder hört NUR auf den Controller für DIESEN Index
-      child: ValueListenableBuilder<BetterPlayerController?>(
-        valueListenable: VideoManager().getControllerNotifier(videoIndex),
+      child: ValueListenableBuilder<VideoPlayerController?>(
+        valueListenable: VideoManager().getControllerNotifier(widget.videoIndex),
         builder: (context, controller, child) {
           if (controller == null) {
             return const Center(child: CircularProgressIndicator(color: Colors.white, strokeWidth: 2));
           }
-
-          // Nur abspielen, wenn das Widget wirklich aktiv im Viewport ist
+          
           WidgetsBinding.instance.addPostFrameCallback((timeStamp) {
-            if (isActive) {
-              controller.play();
-            } else {
-              controller.pause();
-            }
+            Future.doWhile(
+              () async {
+                await Future.delayed(const Duration(milliseconds: 1000));
+                if (widget.isActive) {
+                  controller.play();
+                  print("Playing video ${widget.videoIndex}");
+                  return false;
+                } else {
+                  controller.pause();
+                }
+                return true;
+              },
+            );
           });
-
-
-          return Stack(
-            fit: StackFit.expand,
-            children: [
-              Center(
-                child: AspectRatio(
-                  aspectRatio: 9 / 16,
-                  child: BetterPlayer(controller: controller),
-                ),
-              ),
-              _PlayPauseOverlay(index: videoIndex),
-            ],
+          
+          
+          return 
+            InkWell(
+              onTap: () => setState(() {
+                paused = !paused;
+              }),
+              child: Stack(
+                  fit: StackFit.expand,
+                  children: [
+                    Center(
+                      child: AspectRatio(
+                        aspectRatio: 9 / 16,
+                        child: VideoPlayer(controller),
+                      ),
+                    ),
+                    if(paused) _PlayPauseOverlay(index: widget.videoIndex),
+                  ],
+            )
           );
         },
       ),
@@ -61,7 +81,7 @@ class _PlayPauseOverlay extends StatelessWidget {
     return ValueListenableBuilder<bool>(
       valueListenable: VideoManager().getPlayingNotifier(index),
       builder: (context, isPlaying, _) {
-        return IgnorePointer( // Damit das Icon Klicks nicht abfängt
+        return IgnorePointer(
           child: AnimatedOpacity(
             opacity: isPlaying ? 0.0 : 1.0,
             duration: const Duration(milliseconds: 200),
@@ -73,4 +93,4 @@ class _PlayPauseOverlay extends StatelessWidget {
       },
     );
   }
-}
+}*/

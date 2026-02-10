@@ -1,9 +1,7 @@
 import 'package:flutter/material.dart';
-import 'package:wurp/main.dart';
 import 'package:wurp/ui/misc/glow_screen.dart';
 import 'package:wurp/ui/scrolling_container.dart';
 
-import '../../logic/video/video_provider.dart';
 
 
 class MyHomePage extends StatefulWidget {

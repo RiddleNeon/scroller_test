@@ -1,32 +1,40 @@
-import 'dart:math';
-
+import 'package:flutter/cupertino.dart';
 import 'package:flutter/material.dart';
-import 'package:wurp/logic/video/video.dart';
+import 'package:video_player/video_player.dart';
 
-import '../overlays.dart';
-
-class VideoWidget extends StatelessWidget {
+class VideoItem extends StatelessWidget {
   final int index;
-  final TickerProvider provider;
-  final Video video;
+  final ValueNotifier<int> focusedIndex;
+  final VideoPlayerController controller;
 
-  const VideoWidget({super.key, required this.index, required this.provider, required this.video});
-  
-  
+  const VideoItem({
+    super.key,
+    required this.index,
+    required this.focusedIndex,
+    required this.controller,
+  });
+
   @override
-  Widget build(BuildContext context) =>
-      AspectRatio(
-        aspectRatio: 9 / 16,
-        child: Container(
-          color: Colors.accents[Random(index).nextInt(Colors.accents.length)],
-          child: Stack(
-            children: [
-              Center(
-                child: Text("Video $index with id ${video.id}, created at ${video.createdAt}, title: ${video.title}, author: ${video.authorId}", style: TextStyle(fontSize: 32, color: Colors.white)),
-              ),
-              PageOverlay(provider: provider, index: index, key: ObjectKey("overlay_$index"),),
-            ],
-          ),
-        ),
-      );
+  Widget build(BuildContext context) {
+    return RepaintBoundary(
+      child: ValueListenableBuilder<int>(
+        valueListenable: focusedIndex,
+        builder: (context, focused, _) {
+          if (focused != index && focused != index - 1) {
+            return const SizedBox.expand();
+          }
+
+          return ValueListenableBuilder<VideoPlayerValue>(
+            valueListenable: controller,
+            builder: (_, value, _) {
+              if (!value.isInitialized) {
+                return const Center(child: CircularProgressIndicator());
+              }
+              return VideoPlayer(controller);
+            },
+          );
+        },
+      ),
+    );
+  }
 }

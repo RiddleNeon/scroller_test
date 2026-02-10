@@ -1,7 +1,8 @@
 import 'package:flutter/material.dart';
 import 'package:tiktoklikescroller/tiktoklikescroller.dart';
-import 'package:wurp/ui/misc/video_playing_manager.dart';
-import 'misc/video_playing_widget.dart';
+
+import 'misc/video_controller_pool.dart';
+import 'misc/video_widget.dart';
 
 class ScrollingContainer extends StatefulWidget {
   const ScrollingContainer({super.key});
@@ -9,57 +10,64 @@ class ScrollingContainer extends StatefulWidget {
   @override
   State<ScrollingContainer> createState() => _ScrollingContainerState();
 }
-
 class _ScrollingContainerState extends State<ScrollingContainer> {
-  late Controller _controller;
-  int _focusedIndex = 0;
-  final String _dummyUrl = "https://cdn.pixabay.com/video/2024/10/13/236256_large.mp4";
+  late final Controller _scrollController;
+  late final VideoControllerPool _videoPool;
+
+  final _url =
+      "https://cdn.pixabay.com/video/2024/10/13/236256_large.mp4";
 
   @override
   void initState() {
     super.initState();
-    _controller = Controller()..addListener(_onScroll);
-
-    // Setup beim Start
-    WidgetsBinding.instance.addPostFrameCallback((_) {
-      VideoManager().initializeFirst(0, _dummyUrl);
-      VideoManager().preloadNext(1, _dummyUrl);
-    });
+    _scrollController = Controller()..addListener(_onScroll);
+    _videoPool = VideoControllerPool(_url);
   }
-
+  
+  final ValueNotifier<int> focusedIndex = ValueNotifier(0);
   void _onScroll(ScrollEvent event) {
     if (event.pageNo == null) return;
 
-    final newIndex = event.pageNo!;
-    if (newIndex != _focusedIndex) {
-      // Nur updaten, wenn der Index sich wirklich geändert hat
-      setState(() {
-        _focusedIndex = newIndex;
+    if (focusedIndex.value != event.pageNo) {
+      focusedIndex.value = event.pageNo!;
+      _videoPool.playOnly(event.pageNo!);
+      _videoPool.keepOnly({
+        event.pageNo! - 1,
+        event.pageNo!,
+        event.pageNo! + 1,
       });
-      VideoManager().switchToIndex(newIndex, _dummyUrl, newIndex + 1, _dummyUrl);
+    }
+    if(event.pageNo! > 997) {
+      setState(() {});
+      focusedIndex.value = 0;
+      _videoPool.playOnly(0);
+      _videoPool.keepOnly({0, 1, 999});
     }
   }
+
 
   @override
   Widget build(BuildContext context) {
     return TikTokStyleFullPageScroller(
+      controller: _scrollController,
       contentSize: 1000,
       builder: (context, index) {
-        return VideoPlayer(
-          key: ValueKey('v_$index'), // Wichtig für Flutter's Element-Tree
-          videoIndex: index,
-          isActive: index == _focusedIndex,
+        final controller = _videoPool.get(index);
+        print("Building item $index");
+        return VideoItem(
+          index: index,
+          focusedIndex: focusedIndex,
+          controller: controller,
         );
       },
-      controller: _controller,
     );
   }
 
   @override
   void dispose() {
-    _controller.disposeListeners();
-    // VideoManager nicht hier disposen, wenn die App noch läuft, 
-    // sondern nur wenn die gesamte View zerstört wird.
+    focusedIndex.dispose();
+    _videoPool.dispose();
+    _scrollController.disposeListeners();
     super.dispose();
   }
 }

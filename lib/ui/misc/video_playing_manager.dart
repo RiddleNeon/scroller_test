@@ -1,21 +1,22 @@
-import 'package:better_player_plus/better_player_plus.dart';
+/*
 import 'package:flutter/cupertino.dart';
+import 'package:video_player/video_player.dart';
 
 class VideoManager {
   static final VideoManager _instance = VideoManager._internal();
   factory VideoManager() => _instance;
   VideoManager._internal();
 
-  BetterPlayerController? _currentPlayer;
-  BetterPlayerController? _nextPlayer;
+  VideoPlayerController? _currentPlayer;
+  VideoPlayerController? _nextPlayer;
 
   bool _isSwitching = false;
 
-  final Map<int, ValueNotifier<BetterPlayerController?>> _controllerNotifiers = {};
+  final Map<int, ValueNotifier<VideoPlayerController?>> _controllerNotifiers = {};
   final Map<int, ValueNotifier<bool>> _playingNotifiers = {};
 
-  ValueNotifier<BetterPlayerController?> getControllerNotifier(int index) {
-    return _controllerNotifiers.putIfAbsent(index, () => ValueNotifier<BetterPlayerController?>(null));
+  ValueNotifier<VideoPlayerController?> getControllerNotifier(int index) {
+    return _controllerNotifiers.putIfAbsent(index, () => ValueNotifier<VideoPlayerController?>(null));
   }
 
   ValueNotifier<bool> getPlayingNotifier(int index) {
@@ -28,17 +29,9 @@ class VideoManager {
     _nextPlayer = _createPlayer();
   }
 
-  BetterPlayerController _createPlayer() {
-    return BetterPlayerController(
-      const BetterPlayerConfiguration(
-        autoPlay: false,
-        looping: true,
-        aspectRatio: 9 / 16,
-        handleLifecycle: false,
-        autoDispose: false,
-        fit: BoxFit.cover,
-        controlsConfiguration: BetterPlayerControlsConfiguration(showControls: false),
-      ),
+  VideoPlayerController _createPlayer() {
+    return VideoPlayerController.networkUrl(
+      Uri.https(),
     )..addEventsListener((event) {
       _updatePlayingStates();
     });
@@ -75,7 +68,6 @@ class VideoManager {
     try {
       final oldIndex = _currentIndex;
 
-      // Controller Rollen tauschen
       final temp = _currentPlayer;
       _currentPlayer = _nextPlayer;
       _nextPlayer = temp;
@@ -83,12 +75,10 @@ class VideoManager {
       _currentIndex = newIndex;
       _nextIndex = followingIndex;
 
-      // UI-Updates: Erst den alten Controller auf null setzen, dann den neuen zuweisen
       getControllerNotifier(oldIndex).value = null;
       getControllerNotifier(_currentIndex).value = _currentPlayer;
       getControllerNotifier(_nextIndex).value = _nextPlayer;
 
-      // Neues Video im Hintergrund laden
       await _nextPlayer!.setupDataSource(BetterPlayerDataSource(BetterPlayerDataSourceType.network, followingUrl));
     } finally {
       _isSwitching = false;
@@ -103,4 +93,4 @@ class VideoManager {
     _controllerNotifiers.clear();
     _playingNotifiers.clear();
   }
-}
+}*/

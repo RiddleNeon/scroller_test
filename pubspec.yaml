@@ -40,7 +40,8 @@ dependencies:
   cloud_firestore: ^6.1.2
   firebase_storage: ^13.0.6
   lottie: ^3.3.0
-  better_player_plus: ^1.1.5
+  video_player: ^2.10.1
+  
   
 
 dev_dependencies:
