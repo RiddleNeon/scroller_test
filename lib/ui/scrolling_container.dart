@@ -1,5 +1,7 @@
 import 'package:flutter/gestures.dart';
 import 'package:flutter/material.dart';
+import 'package:wurp/logic/video/video_provider.dart';
+import 'package:wurp/main.dart';
 import 'package:wurp/ui/misc/video_widget.dart';
 
 import 'misc/video_controller_pool.dart';
@@ -21,7 +23,7 @@ class _ScrollingContainerState extends State<ScrollingContainer> {
   void initState() {
     super.initState();
     _scrollController = PageController();
-    _videoPool = VideoControllerPool(_url);
+    _videoPool = VideoControllerPool(RecommendationVideoProvider(userId: auth!.currentUser!.uid));
   }
 
   final ValueNotifier<int> focusedIndex = ValueNotifier(0);
@@ -69,9 +71,14 @@ class _ScrollingContainerState extends State<ScrollingContainer> {
           controller: _scrollController,
           scrollDirection: Axis.vertical,
           physics: const PageScrollPhysics(),
-          itemCount: 20,
+          itemCount: 2000,
           itemBuilder: (context, index) {
-            return VideoItem(index: index, focusedIndex: focusedIndex, controller: _videoPool.get(index));
+            return FutureBuilder(
+              future: _videoPool.get(index),
+              builder: (context, snapshot) => snapshot.data == null
+                  ? Center(child: CircularProgressIndicator())
+                  : VideoItem(index: index, focusedIndex: focusedIndex, controller: snapshot.data!),
+            );
           },
           onPageChanged: _onScroll,
         ),

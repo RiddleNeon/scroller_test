@@ -23,7 +23,7 @@ class VideoRepository {
     required String title,
     required String description,
     required String videoUrl,
-    required String thumbnailUrl,
+    String? thumbnailUrl,
     required String authorId,
     List<String> tags = const [],
   }) {

@@ -1,8 +1,9 @@
-import 'package:flutter/foundation.dart';
 import 'package:flutter/material.dart';
 import 'package:wurp/main.dart';
 import 'package:wurp/ui/misc/glow_screen.dart';
 import 'package:wurp/ui/scrolling_container.dart';
+
+import '../../tools/video_generator/video_generator.dart';
 
 
 

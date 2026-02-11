@@ -31,7 +31,6 @@ class RecommendationVideoProvider implements VideoProvider {
 
   @override
   Future<Video?> getVideoByIndex(int index) async {
-    print("getting video for index $index (cache size: ${_videoCache.length})");
     // Initialize cache if empty
     if (_videoCache.isEmpty) {
       await _loadInitialVideos();

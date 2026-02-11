@@ -7,7 +7,7 @@ class Video {
   final String title;
   final String description;
   final String videoUrl;
-  final String thumbnailUrl;
+  final String? thumbnailUrl;
   final String authorId;
   final DateTime createdAt;
   final List<String> tags;
@@ -23,7 +23,7 @@ class Video {
     required this.title,
     required this.description,
     required this.videoUrl,
-    required this.thumbnailUrl,
+    this.thumbnailUrl,
     required this.authorId,
     required this.createdAt,
     required this.tags,
@@ -40,7 +40,7 @@ class Video {
       title: data['title'] ?? '',
       description: data['description'] ?? '',
       videoUrl: data['videoUrl'] ?? '',
-      thumbnailUrl: data['thumbnailUrl'] ?? '',
+      thumbnailUrl: data['thumbnailUrl'],
       authorId: data['authorId'] ?? '',
       createdAt: (data['createdAt'] as Timestamp).toDate(),
       tags: data['tags'] != null ? List<String>.from(data['tags']) : [],
