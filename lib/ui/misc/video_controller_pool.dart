@@ -25,6 +25,10 @@ class VideoControllerPool {
       }
     }
   }
+  
+  void reset(int index) {
+    _controllers[index]?.seekTo(Duration.zero);
+  }
 
   void keepOnly(Set<int> keep) {
     keep.forEach(get);

@@ -6,24 +6,18 @@ class VideoItem extends StatelessWidget {
   final ValueNotifier<int> focusedIndex;
   final VideoPlayerController controller;
 
-  const VideoItem({
-    super.key,
-    required this.index,
-    required this.focusedIndex,
-    required this.controller,
-  });
+  const VideoItem({super.key, required this.index, required this.focusedIndex, required this.controller});
 
   @override
   Widget build(BuildContext context) {
     return RepaintBoundary(
       child: ValueListenableBuilder<int>(
         valueListenable: focusedIndex,
-        builder: (_, focused, __) {
+        builder: (_, focused, _) {
           final bool isActive = focused == index;
-
+      
           if (isActive) {
-            if (!controller.value.isPlaying &&
-                controller.value.isInitialized) {
+            if (!controller.value.isPlaying && controller.value.isInitialized) {
               controller.play();
             }
           } else {
@@ -31,32 +25,16 @@ class VideoItem extends StatelessWidget {
               controller.pause();
             }
           }
-
-          return IgnorePointer(
-            ignoring: !isActive,
-            child: ValueListenableBuilder<VideoPlayerValue>(
-              valueListenable: controller,
-              builder: (_, value, __) {
-                if (!value.isInitialized) {
-                  return const SizedBox.expand(
-                    child: Center(
-                      child: CircularProgressIndicator(strokeWidth: 2),
-                    ),
-                  );
-                }
-
-                return SizedBox.expand(
-                  child: FittedBox(
-                    fit: BoxFit.cover,
-                    child: SizedBox(
-                      width: value.size.width,
-                      height: value.size.height,
-                      child: VideoPlayer(controller),
-                    ),
-                  ),
+      
+          return ValueListenableBuilder<VideoPlayerValue>(
+            valueListenable: controller,
+            builder: (_, value, _) {
+              return Center(
+                child: value.size.width == 0 || value.size.height == 0
+                    ? const SizedBox()
+                    : AspectRatio(aspectRatio: 9/16, child: VideoPlayer(controller)),
                 );
-              },
-            ),
+              }
           );
         },
       ),

@@ -1,8 +1,6 @@
-import 'dart:ui';
-
 import 'package:flutter/gestures.dart';
 import 'package:flutter/material.dart';
-import 'package:flutter/rendering.dart';
+import 'package:wurp/ui/misc/video_widget.dart';
 
 import 'misc/video_controller_pool.dart';
 
@@ -29,14 +27,15 @@ class _ScrollingContainerState extends State<ScrollingContainer> {
   final ValueNotifier<int> focusedIndex = ValueNotifier(0);
   final ValueNotifier<ScrollEventType> focusedScrollType = ValueNotifier(ScrollEventType.stay);
 
-  void _onScroll(int index) {
-    final double page = _scrollController.page ?? 0;
-    final int pageNo = page.floor();
-    final double fraction = _scrollController.page! - pageNo;
-    focusedScrollType.value = getScrollTypeOfViewportFraction(fraction);
+  void _onScroll(int pageNo) {
     if (focusedIndex.value != pageNo) {
       focusedIndex.value = pageNo;
+
+      final double fraction = _scrollController.page! - pageNo;
+      focusedScrollType.value = getScrollTypeOfViewportFraction(fraction);
+
       _videoPool.playOnly(pageNo);
+      _videoPool.reset(pageNo);
       _videoPool.keepOnly({pageNo - 1, pageNo, pageNo + 1});
     }
   }
@@ -46,37 +45,19 @@ class _ScrollingContainerState extends State<ScrollingContainer> {
     if (fraction > 0) return ScrollEventType.scrollDown;
     return ScrollEventType.scrollUp;
   }
-  
-  bool _isAnimating = false;
-  
+
   void _handlePointerSignal(PointerSignalEvent event) {
     if (event is! PointerScrollEvent) return;
     if (!_scrollController.hasClients) return;
-    if (_isAnimating) return;
-
-    _isAnimating = true;
 
     final isScrollDown = event.scrollDelta.dy > 0;
 
     WidgetsBinding.instance.addPostFrameCallback((timeStamp) {
-      final future = isScrollDown
-          ? _scrollController.nextPage(
-        duration: const Duration(milliseconds: 300),
-        curve: Curves.easeOut,
-      )
-          : _scrollController.previousPage(
-        duration: const Duration(milliseconds: 300),
-        curve: Curves.easeOut,
-      );
-
-      future.whenComplete(() {
-        _isAnimating = false;
-      });
+      isScrollDown
+          ? _scrollController.nextPage(duration: const Duration(milliseconds: 300), curve: Curves.easeOut)
+          : _scrollController.previousPage(duration: const Duration(milliseconds: 300), curve: Curves.easeOut);
     });
-    
-    
   }
-
 
   @override
   Widget build(BuildContext context) {
@@ -90,10 +71,9 @@ class _ScrollingContainerState extends State<ScrollingContainer> {
           physics: const PageScrollPhysics(),
           itemCount: 20,
           itemBuilder: (context, index) {
-            return Container(
-              color: Colors.primaries[index % Colors.primaries.length],
-            );
+            return VideoItem(index: index, focusedIndex: focusedIndex, controller: _videoPool.get(index));
           },
+          onPageChanged: _onScroll,
         ),
       ),
     );
@@ -111,19 +91,12 @@ enum ScrollEventType { stay, scrollDown, scrollUp }
 
 class NoWheelScrollBehavior extends MaterialScrollBehavior {
   @override
-  Widget buildScrollbar(
-      BuildContext context,
-      Widget child,
-      ScrollableDetails details) {
+  Widget buildScrollbar(BuildContext context, Widget child, ScrollableDetails details) {
     return child;
   }
 
   @override
-  Set<PointerDeviceKind> get dragDevices => {
-    PointerDeviceKind.touch,
-    PointerDeviceKind.mouse,
-    PointerDeviceKind.trackpad,
-  };
+  Set<PointerDeviceKind> get dragDevices => {PointerDeviceKind.touch, PointerDeviceKind.mouse, PointerDeviceKind.trackpad};
 
   @override
   ScrollPhysics getScrollPhysics(BuildContext context) {

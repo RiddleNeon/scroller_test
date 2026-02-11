@@ -1,4 +1,6 @@
+import 'package:flutter/foundation.dart';
 import 'package:flutter/material.dart';
+import 'package:wurp/main.dart';
 import 'package:wurp/ui/misc/glow_screen.dart';
 import 'package:wurp/ui/scrolling_container.dart';
 
@@ -18,6 +20,10 @@ class _MyHomePageState extends State<MyHomePage> {
 
   @override
   Widget build(BuildContext context) {
-    return Glowscreen(child: ScrollingContainer());
+    if(!runningOnMobile) {
+      return Glowscreen(child: ScrollingContainer());
+    } else {
+      return ScrollingContainer();
+    }
   }
 }

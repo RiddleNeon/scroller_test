@@ -20,7 +20,6 @@ class _LoginScreenState extends State<LoginScreen> {
   bool enteredPasswordIncorrectly = false;
 
   Future<String?> _authUser(LoginData data) async {
-    print("login data ${data.name}, ${data.password}");
     UserCredential? credential;
     try {
       credential = await FirebaseAuth.instance.signInWithEmailAndPassword(email: data.name, password: data.password);
@@ -44,8 +43,6 @@ class _LoginScreenState extends State<LoginScreen> {
   }
 
   Future<String?> _signupUser(SignupData data) async {
-    print("signup data ${data.name}, ${data.password}, additional: ${data.additionalSignupData}");
-
     if (data.password == null || data.name == null) return "please enter a valid email or password!";
     UserCredential? credential;
     try {
@@ -67,7 +64,6 @@ class _LoginScreenState extends State<LoginScreen> {
   Future<String?> _recoverPassword(String email) async {
     try {      
       await FirebaseAuth.instance.sendPasswordResetEmail(email: email.trim());
-      print("sent to '$email'");
       return null;
     } on FirebaseAuthException catch (e) {
       return e.message ?? 'Password reset failed';

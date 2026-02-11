@@ -31,3 +31,5 @@ void main() async {
       )
   );
 }
+
+bool runningOnMobile = defaultTargetPlatform == TargetPlatform.iOS || defaultTargetPlatform == TargetPlatform.android;
