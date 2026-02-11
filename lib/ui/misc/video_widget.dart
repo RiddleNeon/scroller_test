@@ -1,4 +1,3 @@
-import 'package:flutter/cupertino.dart';
 import 'package:flutter/material.dart';
 import 'package:video_player/video_player.dart';
 
@@ -19,19 +18,45 @@ class VideoItem extends StatelessWidget {
     return RepaintBoundary(
       child: ValueListenableBuilder<int>(
         valueListenable: focusedIndex,
-        builder: (context, focused, _) {
-          if (focused != index && focused != index - 1) {
-            return const SizedBox.expand();
+        builder: (_, focused, __) {
+          final bool isActive = focused == index;
+
+          if (isActive) {
+            if (!controller.value.isPlaying &&
+                controller.value.isInitialized) {
+              controller.play();
+            }
+          } else {
+            if (controller.value.isPlaying) {
+              controller.pause();
+            }
           }
 
-          return ValueListenableBuilder<VideoPlayerValue>(
-            valueListenable: controller,
-            builder: (_, value, _) {
-              if (!value.isInitialized) {
-                return const Center(child: CircularProgressIndicator());
-              }
-              return VideoPlayer(controller);
-            },
+          return IgnorePointer(
+            ignoring: !isActive,
+            child: ValueListenableBuilder<VideoPlayerValue>(
+              valueListenable: controller,
+              builder: (_, value, __) {
+                if (!value.isInitialized) {
+                  return const SizedBox.expand(
+                    child: Center(
+                      child: CircularProgressIndicator(strokeWidth: 2),
+                    ),
+                  );
+                }
+
+                return SizedBox.expand(
+                  child: FittedBox(
+                    fit: BoxFit.cover,
+                    child: SizedBox(
+                      width: value.size.width,
+                      height: value.size.height,
+                      child: VideoPlayer(controller),
+                    ),
+                  ),
+                );
+              },
+            ),
           );
         },
       ),

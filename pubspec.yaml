@@ -31,7 +31,6 @@ dependencies:
   flutter:
     sdk: flutter
     
-  tiktoklikescroller: ^0.2.8
   firebase_core: ^4.4.0
   firebase_auth: ^6.1.4
   cupertino_icons: ^1.0.8

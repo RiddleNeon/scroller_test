@@ -1,8 +1,10 @@
+import 'dart:ui';
+
+import 'package:flutter/gestures.dart';
 import 'package:flutter/material.dart';
-import 'package:tiktoklikescroller/tiktoklikescroller.dart';
+import 'package:flutter/rendering.dart';
 
 import 'misc/video_controller_pool.dart';
-import 'misc/video_widget.dart';
 
 class ScrollingContainer extends StatefulWidget {
   const ScrollingContainer({super.key});
@@ -10,56 +12,90 @@ class ScrollingContainer extends StatefulWidget {
   @override
   State<ScrollingContainer> createState() => _ScrollingContainerState();
 }
+
 class _ScrollingContainerState extends State<ScrollingContainer> {
-  late final Controller _scrollController;
+  late final PageController _scrollController;
   late final VideoControllerPool _videoPool;
 
-  final _url =
-      "https://cdn.pixabay.com/video/2024/10/13/236256_large.mp4";
+  final _url = "https://cdn.pixabay.com/video/2024/10/13/236256_large.mp4";
 
   @override
   void initState() {
     super.initState();
-    _scrollController = Controller()..addListener(_onScroll);
+    _scrollController = PageController();
     _videoPool = VideoControllerPool(_url);
   }
-  
-  final ValueNotifier<int> focusedIndex = ValueNotifier(0);
-  void _onScroll(ScrollEvent event) {
-    if (event.pageNo == null) return;
 
-    if (focusedIndex.value != event.pageNo) {
-      focusedIndex.value = event.pageNo!;
-      _videoPool.playOnly(event.pageNo!);
-      _videoPool.keepOnly({
-        event.pageNo! - 1,
-        event.pageNo!,
-        event.pageNo! + 1,
+  final ValueNotifier<int> focusedIndex = ValueNotifier(0);
+  final ValueNotifier<ScrollEventType> focusedScrollType = ValueNotifier(ScrollEventType.stay);
+
+  void _onScroll(int index) {
+    final double page = _scrollController.page ?? 0;
+    final int pageNo = page.floor();
+    final double fraction = _scrollController.page! - pageNo;
+    focusedScrollType.value = getScrollTypeOfViewportFraction(fraction);
+    if (focusedIndex.value != pageNo) {
+      focusedIndex.value = pageNo;
+      _videoPool.playOnly(pageNo);
+      _videoPool.keepOnly({pageNo - 1, pageNo, pageNo + 1});
+    }
+  }
+
+  ScrollEventType getScrollTypeOfViewportFraction(double fraction) {
+    if (fraction == 0) return ScrollEventType.stay;
+    if (fraction > 0) return ScrollEventType.scrollDown;
+    return ScrollEventType.scrollUp;
+  }
+  
+  bool _isAnimating = false;
+  
+  void _handlePointerSignal(PointerSignalEvent event) {
+    if (event is! PointerScrollEvent) return;
+    if (!_scrollController.hasClients) return;
+    if (_isAnimating) return;
+
+    _isAnimating = true;
+
+    final isScrollDown = event.scrollDelta.dy > 0;
+
+    WidgetsBinding.instance.addPostFrameCallback((timeStamp) {
+      final future = isScrollDown
+          ? _scrollController.nextPage(
+        duration: const Duration(milliseconds: 300),
+        curve: Curves.easeOut,
+      )
+          : _scrollController.previousPage(
+        duration: const Duration(milliseconds: 300),
+        curve: Curves.easeOut,
+      );
+
+      future.whenComplete(() {
+        _isAnimating = false;
       });
-    }
-    if(event.pageNo! > 997) {
-      setState(() {});
-      focusedIndex.value = 0;
-      _videoPool.playOnly(0);
-      _videoPool.keepOnly({0, 1, 999});
-    }
+    });
+    
+    
   }
 
 
   @override
   Widget build(BuildContext context) {
-    return TikTokStyleFullPageScroller(
-      controller: _scrollController,
-      contentSize: 1000,
-      builder: (context, index) {
-        final controller = _videoPool.get(index);
-        print("Building item $index");
-        return VideoItem(
-          index: index,
-          focusedIndex: focusedIndex,
-          controller: controller,
-        );
-      },
+    return ScrollConfiguration(
+      behavior: NoWheelScrollBehavior(),
+      child: Listener(
+        onPointerSignal: _handlePointerSignal,
+        child: PageView.builder(
+          controller: _scrollController,
+          scrollDirection: Axis.vertical,
+          physics: const PageScrollPhysics(),
+          itemCount: 20,
+          itemBuilder: (context, index) {
+            return Container(
+              color: Colors.primaries[index % Colors.primaries.length],
+            );
+          },
+        ),
+      ),
     );
   }
 
@@ -67,7 +103,30 @@ class _ScrollingContainerState extends State<ScrollingContainer> {
   void dispose() {
     focusedIndex.dispose();
     _videoPool.dispose();
-    _scrollController.disposeListeners();
     super.dispose();
+  }
+}
+
+enum ScrollEventType { stay, scrollDown, scrollUp }
+
+class NoWheelScrollBehavior extends MaterialScrollBehavior {
+  @override
+  Widget buildScrollbar(
+      BuildContext context,
+      Widget child,
+      ScrollableDetails details) {
+    return child;
+  }
+
+  @override
+  Set<PointerDeviceKind> get dragDevices => {
+    PointerDeviceKind.touch,
+    PointerDeviceKind.mouse,
+    PointerDeviceKind.trackpad,
+  };
+
+  @override
+  ScrollPhysics getScrollPhysics(BuildContext context) {
+    return const PageScrollPhysics();
   }
 }
