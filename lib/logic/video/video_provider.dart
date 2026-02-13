@@ -81,6 +81,8 @@ class RecommendationVideoProvider implements VideoProvider {
         limit: _preloadBatchSize,
         excludeVideoIds: _loadedVideoIds.toList(),
       );
+      
+      print("excludeVideoIds for preload: ${_loadedVideoIds.toList()}");
 
       _videoCache.addAll(newVideos);
       _loadedVideoIds.addAll(newVideos.map((v) => v.id));

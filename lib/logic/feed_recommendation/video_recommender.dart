@@ -18,9 +18,9 @@ class VideoScore {
 class VideoRecommender extends VideoRecommenderBase {
 
   // Algorithm parameters
-  static const double _recencyWeight = 0.20;
-  static const double _engagementWeight = 0.30;
-  static const double _diversityWeight = 0.20;
+  static const double _recencyWeight = 0.15;
+  static const double _engagementWeight = 0.40;
+  static const double _diversityWeight = 0.15;
   static const double _personalizedWeight = 0.30;
   static const int _candidatePoolSize = 10;
   static const int _recommendationBatchSize = 3;
@@ -71,6 +71,7 @@ class VideoRecommender extends VideoRecommenderBase {
   Future<List<Video>> _getCandidateVideos({required List<String> excludeIds, required UserPreferences userPreferences, required int limit}) async {
     // For new users, get trending videos
     if (userPreferences.isNewUser) {
+      print("New User! getting trending videos for user $userId...");
       return getTrendingVideos(limit);
     }
 
@@ -103,6 +104,7 @@ class VideoRecommender extends VideoRecommenderBase {
       }
     }
 
+    print("Not enough videos from preferred tags for user $userId, got ${excludeIds.length} excluded videos. Getting recent videos as fallback...");
     // Fallback: get recent videos
     final snapshot = await firestore
         .collection('videos')
@@ -163,9 +165,13 @@ class VideoRecommender extends VideoRecommenderBase {
 
   /// Calculate global engagement score from video metrics
   double _calculateGlobalEngagementScore(Video video) {
-    // TODO: Replace with actual video metrics from Firestore
-    // Placeholder implementation
-    return 0.5;
+    final views = video.viewsCount ?? 1;
+    final likes = video.likesCount ?? 0;
+    final shares = video.sharesCount ?? 0;
+    final comments = video.commentsCount ?? 0;
+
+    final engagementRate = (likes + shares * 2 + comments * 1.5) / views;
+    return (engagementRate * 100).clamp(0.0, 1.0);
   }
 
   /// Calculate diversity score to avoid echo chamber
@@ -207,7 +213,8 @@ class VideoRecommender extends VideoRecommenderBase {
 
       // Allow max 2 videos from same author in a batch
       final currentAuthorCount = authorCount[video.authorId] ?? 0;
-      if (currentAuthorCount >= 2) continue;
+      final maxPerAuthor = (scoredVideos.length / 5).ceil();
+      if (currentAuthorCount >= maxPerAuthor) continue;
 
       // Check tag diversity (don't repeat same tag combinations too often)
       final tagKey = video.tags.toSet().toString();

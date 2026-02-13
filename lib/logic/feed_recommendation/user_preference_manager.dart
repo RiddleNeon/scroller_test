@@ -6,7 +6,7 @@ class UserPreferenceManager {
   final FirebaseFirestore _firestore = FirebaseFirestore.instance;
   final String userId;
 
-  static const double _learningRate = 0.15;
+  static const double _learningRate = 0.5;
   static const int _maxTagPreferences = 30;
   static const int _maxAuthorPreferences = 20;
 
@@ -19,8 +19,14 @@ class UserPreferenceManager {
   int _cachedTotalInteractions = 0;
   bool _cacheLoaded = false;
 
-  UserPreferenceManager({required this.userId});
+  static final Map<String, UserPreferenceManager> _instances = {};
 
+  factory UserPreferenceManager({required String userId}) {
+    return _instances.putIfAbsent(userId, () => UserPreferenceManager._internal(userId));
+  }
+
+  UserPreferenceManager._internal(this.userId);
+  
   Future<void> _loadCache() async {
     print("getting cache for user $userId...");
     if (_cacheLoaded) return;

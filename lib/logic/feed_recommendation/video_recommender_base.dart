@@ -77,6 +77,8 @@ abstract class VideoRecommenderBase {
       'commented': commented,
       'saved': saved,
       'timestamp': FieldValue.serverTimestamp(),
+      'authorId': video.authorId,
+      'tags': video.tags,
     });
 
     print("Recent interaction saved");
@@ -114,7 +116,7 @@ abstract class VideoRecommenderBase {
     }).toList();
   }
 
-  /// Calculate personalization score (optimized with pre-aggregated preferences)
+  /// Calculate personalization score
   double calculatePersonalizationScore(Video video, UserPreferences userPreferences) {
     final preferredTags = userPreferences.tagPreferences;
     final preferredAuthors = userPreferences.authorPreferences;
@@ -159,7 +161,6 @@ abstract class VideoRecommenderBase {
   /// Fallback: Get trending videos
   Future<List<Video>> getTrendingVideos(int limit) async {
     final snapshot = await firestore.collection('videos').orderBy('createdAt', descending: true).limit(limit).get();
-
     return snapshot.docs.map((doc) => Video.fromFirestore(doc)).toList();
   }
 
