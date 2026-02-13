@@ -4,9 +4,11 @@ import '../feed_recommendation/video_recommender.dart';
 
 abstract class VideoProvider {
   Future<Video?> getVideoByIndex(int index);
+
   Future<List<Video>> preloadVideos(int count);
+
   void trackVideoInteraction({
-    required String videoId,
+    required Video video,
     required double watchTime,
     required double videoDuration,
     bool liked = false,
@@ -20,6 +22,7 @@ class RecommendationVideoProvider implements VideoProvider {
   final VideoRecommender _recommender;
   final List<Video> _videoCache = [];
   final Set<String> _loadedVideoIds = {};
+
   // ignore: unused_field
   int _currentIndex = 0;
 
@@ -66,7 +69,7 @@ class RecommendationVideoProvider implements VideoProvider {
       );
 
       _videoCache.addAll(videos);
-      _loadedVideoIds.addAll(videos.map((v) => v.videoUrl));
+      _loadedVideoIds.addAll(videos.map((v) => v.id));
     } catch (e) {
       print('Error loading initial videos: $e');
     }
@@ -80,15 +83,15 @@ class RecommendationVideoProvider implements VideoProvider {
       );
 
       _videoCache.addAll(newVideos);
-      _loadedVideoIds.addAll(newVideos.map((v) => v.videoUrl));
+      _loadedVideoIds.addAll(newVideos.map((v) => v.id));
     } catch (e) {
       print('Error preloading videos: $e');
     }
   }
 
   @override
-  void trackVideoInteraction({
-    required String videoId,
+  Future<void> trackVideoInteraction({
+    required Video video,
     required double watchTime,
     required double videoDuration,
     bool liked = false,
@@ -97,14 +100,14 @@ class RecommendationVideoProvider implements VideoProvider {
     bool saved = false,
   }) {
     // Track asynchronously without waiting
-    _recommender.trackInteraction(
-      videoId: videoId,
+    return _recommender.trackInteraction(
       watchTime: watchTime,
       videoDuration: videoDuration,
       liked: liked,
       shared: shared,
       commented: commented,
       saved: saved,
+      video: video,
     ).catchError((e) {
       print('Error tracking interaction: $e');
     });
@@ -139,7 +142,7 @@ class BaseAlgorithmVideoProvider implements VideoProvider {
 
   @override
   void trackVideoInteraction({
-    required String videoId,
+    required Video video,
     required double watchTime,
     required double videoDuration,
     bool liked = false,

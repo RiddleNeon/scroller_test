@@ -1,5 +1,6 @@
 import 'package:flutter/gestures.dart';
 import 'package:flutter/material.dart';
+import 'package:wurp/logic/batches/batch_service.dart';
 import 'package:wurp/logic/video/video_provider.dart';
 import 'package:wurp/main.dart';
 import 'package:wurp/ui/misc/video_widget.dart';
@@ -13,7 +14,7 @@ class ScrollingContainer extends StatefulWidget {
   State<ScrollingContainer> createState() => _ScrollingContainerState();
 }
 
-class _ScrollingContainerState extends State<ScrollingContainer> {
+class _ScrollingContainerState extends State<ScrollingContainer> with TickerProviderStateMixin {
   late final PageController _scrollController;
   late final VideoControllerPool _videoPool;
 
@@ -40,6 +41,7 @@ class _ScrollingContainerState extends State<ScrollingContainer> {
       _videoPool.reset(pageNo);
       _videoPool.keepOnly({pageNo - 1, pageNo, pageNo + 1});
     }
+    FirestoreBatchQueue.instance.commit();
   }
 
   ScrollEventType getScrollTypeOfViewportFraction(double fraction) {
@@ -75,9 +77,18 @@ class _ScrollingContainerState extends State<ScrollingContainer> {
           itemBuilder: (context, index) {
             return FutureBuilder(
               future: _videoPool.get(index),
-              builder: (context, snapshot) => snapshot.data == null
-                  ? Center(child: CircularProgressIndicator())
-                  : VideoItem(index: index, focusedIndex: focusedIndex, controller: snapshot.data!),
+              builder: (context, snapshot) {
+                if(snapshot.data != null) print("🎬 Building VideoItem for index $index with video URL: ${snapshot.data!.video.videoUrl} and tags ${snapshot.data!.video.tags}, name: ${snapshot.data!.video.title}");
+                return snapshot.data == null
+                    ? Center(child: CircularProgressIndicator())
+                    : VideoItem(index: index,
+                    videoProvider: _videoPool.provider,
+                    focusedIndex: focusedIndex,
+                    controller: snapshot.data!,
+                    video: snapshot.data!.video,
+                    userId: auth!.currentUser!.uid,
+                    provider: this);
+              }
             );
           },
           onPageChanged: _onScroll,

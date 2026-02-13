@@ -3,15 +3,17 @@ import 'dart:async';
 import 'package:video_player/video_player.dart';
 import 'package:wurp/logic/video/video_provider.dart';
 
+import '../../logic/video/video.dart';
+
 class VideoControllerPool {
-  final Map<int, FutureOr<VideoPlayerController>> _controllers = {};
-  final VideoProvider provider;
+  final Map<int, FutureOr<VideoWidgetController>> _controllers = {};
+  final RecommendationVideoProvider provider;
 
   VideoControllerPool(this.provider);
 
-  Future<VideoPlayerController> get(int index) async {
+  Future<VideoWidgetController> get(int index) async {
     return _controllers.putIfAbsent(index, () async {
-      final c = VideoPlayerController.networkUrl(Uri.parse((await provider.getVideoByIndex(index))!.videoUrl));
+      final c = VideoWidgetController((await provider.getVideoByIndex(index))!);
       await c.initialize().then((_) {
         c.setLooping(true);
       });
@@ -22,14 +24,14 @@ class VideoControllerPool {
   void playOnly(int index) {
     for (final e in _controllers.entries) {
       if(e.value is Future) {
-        Future<VideoPlayerController> future = e.value as Future<VideoPlayerController>;
+        Future<VideoWidgetController> future = e.value as Future<VideoWidgetController>;
         if (e.key == index) {
           future.then((value) => value.play);
         } else {
           future.then((value) => value.play);
         }
       } else {
-        VideoPlayerController val = e.value as VideoPlayerController;
+        VideoWidgetController val = e.value as VideoWidgetController;
         if (e.key == index) {
           val.play();
         } else {
@@ -40,7 +42,7 @@ class VideoControllerPool {
   }
   
   void reset(int index) {
-    FutureOr<VideoPlayerController>? futureOr = _controllers[index];
+    FutureOr<VideoWidgetController>? futureOr = _controllers[index];
     if(futureOr == null) return;
     if(futureOr is Future) {
       (futureOr as Future).then((value) => value.seekTo(Duration.zero));
@@ -56,7 +58,7 @@ class VideoControllerPool {
       if(_controllers[k] is Future) {
         (_controllers[k] as Future).then((value) => value.dispose());
       } else {
-        (_controllers[k] as VideoPlayerController).dispose();
+        (_controllers[k] as VideoWidgetController).dispose();
       }
       _controllers.remove(k);
     }
@@ -72,4 +74,10 @@ class VideoControllerPool {
     }
     _controllers.clear();
   }
+}
+
+
+class VideoWidgetController extends VideoPlayerController {
+  Video video;
+  VideoWidgetController(this.video) : super.networkUrl(Uri.parse(video.videoUrl));
 }
