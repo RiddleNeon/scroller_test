@@ -22,7 +22,7 @@ class VideoRecommender extends VideoRecommenderBase {
   static const double _engagementWeight = 0.40;
   static const double _diversityWeight = 0.15;
   static const double _personalizedWeight = 0.30;
-  static const int _candidatePoolSize = 10;
+  static const int _candidatePoolSize = 80;
   static const int _recommendationBatchSize = 3;
   
   VideoRecommender({required super.userId});
@@ -86,9 +86,6 @@ class VideoRecommender extends VideoRecommenderBase {
 
       final snapshot = await firestore
           .collection('videos')
-          .where('createdAt', isGreaterThan: Timestamp.fromDate(weekAgo))
-          .where('tags', arrayContainsAny: preferredTags)
-          .orderBy('createdAt', descending: true)
           .limit(limit * 3)
           .get();
 

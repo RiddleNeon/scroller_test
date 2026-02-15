@@ -3,21 +3,20 @@ import '../batches/batch_service.dart';
 import '../video/video.dart';
 
 class UserPreferenceManager {
-  final FirebaseFirestore _firestore = FirebaseFirestore.instance;
+  final FirebaseFirestore  _firestore = FirebaseFirestore.instance;
   final String userId;
 
   static const double _learningRate = 0.5;
   static const int _maxTagPreferences = 30;
   static const int _maxAuthorPreferences = 20;
 
-  static const double defaultMaxEngagementScore = 5;
+  static const double defaultMaxEngagementScore = 10;
 
   // Cache
   Map<String, double> _cachedTagPrefs = {};
   Map<String, double> _cachedAuthorPrefs = {};
   double _cachedAvgCompletion = 0.0;
   int _cachedTotalInteractions = 0;
-  bool _cacheLoaded = false;
 
   static final Map<String, UserPreferenceManager> _instances = {};
 
@@ -26,12 +25,15 @@ class UserPreferenceManager {
   }
 
   UserPreferenceManager._internal(this.userId);
-  
+
+  Future<void>? _loadFuture;
+  Future<void> loadCache() async {
+    _loadFuture ??= _loadCache();
+    return _loadFuture!;
+  }
+
   Future<void> _loadCache() async {
     print("getting cache for user $userId...");
-    if (_cacheLoaded) return;
-    _cacheLoaded = true;
-
     try {
       final userRef = _firestore
           .collection('users')
@@ -62,7 +64,6 @@ class UserPreferenceManager {
     required double normalizedEngagementScore,
   }) async {
     print("🎯 Update for video ${video.id}, tags: ${video.tags}, engagement: $normalizedEngagementScore");
-
     await _loadCache();
 
     // Update tags
@@ -105,7 +106,6 @@ class UserPreferenceManager {
         (_cachedTotalInteractions + 1);
     _cachedTotalInteractions++;
 
-    // BATCH SERVICE nutzen
     final userRef = _firestore
         .collection('users')
         .doc(userId)
@@ -124,7 +124,6 @@ class UserPreferenceManager {
 
     print("Batched update (queue: ${FirestoreBatchQueue().queueSize})");
 
-    // Force commit alle 5 Interaktionen
     if (_cachedTotalInteractions % 5 == 0) {
       await FirestoreBatchQueue().commit();
       print("Forced batch commit at interaction #$_cachedTotalInteractions");
