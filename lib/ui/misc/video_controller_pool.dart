@@ -13,7 +13,7 @@ class VideoControllerPool {
 
   Future<VideoWidgetController> get(int index) async {
     return _controllers.putIfAbsent(index, () async {
-      final c = VideoWidgetController((await provider.getVideoByIndex(index))!);
+      final c = VideoWidgetController(await provider.getVideoByIndex(index));
       await c.initialize().then((_) {
         c.setLooping(true);
       });

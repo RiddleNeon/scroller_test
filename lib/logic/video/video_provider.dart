@@ -1,6 +1,7 @@
 import 'package:wurp/logic/video/video.dart';
 
 import '../feed_recommendation/video_recommender.dart';
+import '../local_storage/local_seen_service.dart';
 
 abstract class VideoProvider {
   Future<Video?> getVideoByIndex(int index);
@@ -33,7 +34,7 @@ class RecommendationVideoProvider implements VideoProvider {
       : _recommender = VideoRecommender(userId: userId);
 
   @override
-  Future<Video?> getVideoByIndex(int index) async {
+  Future<Video> getVideoByIndex(int index) async {
     // Initialize cache if empty
     if (_videoCache.isEmpty) {
       await _loadInitialVideos();
@@ -49,8 +50,7 @@ class RecommendationVideoProvider implements VideoProvider {
       _currentIndex = index;
       return _videoCache[index];
     }
-
-    return null;
+    throw Exception('Video index out of range: $index');
   }
 
   @override
@@ -77,9 +77,13 @@ class RecommendationVideoProvider implements VideoProvider {
 
   Future<void> _preloadMoreVideos() async {
     try {
+
+      final excludeIds = _loadedVideoIds.toList()
+        ..addAll(LocalSeenService.allSeenIds);
+
       final newVideos = await _recommender.getRecommendedVideos(
         limit: _preloadBatchSize,
-        excludeVideoIds: _loadedVideoIds.toList(),
+        excludeVideoIds: excludeIds,
       );
       
       print("excludeVideoIds for preload: ${_loadedVideoIds.toList()}");
@@ -102,6 +106,8 @@ class RecommendationVideoProvider implements VideoProvider {
     bool saved = false,
   }) {
     // Track asynchronously without waiting
+    LocalSeenService.markAsSeen(video.id);
+    
     return _recommender.trackInteraction(
       watchTime: watchTime,
       videoDuration: videoDuration,

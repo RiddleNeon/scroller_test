@@ -3,14 +3,10 @@ import 'package:wurp/main.dart';
 import 'package:wurp/ui/misc/glow_screen.dart';
 import 'package:wurp/ui/scrolling_container.dart';
 
-import '../../tools/video_generator/video_generator.dart';
-
 
 
 class MyHomePage extends StatefulWidget {
-  MyHomePage({super.key}) {
-    //videoPublishTest();
-  }
+  const MyHomePage({super.key});
 
   @override
   State<MyHomePage> createState() => _MyHomePageState();

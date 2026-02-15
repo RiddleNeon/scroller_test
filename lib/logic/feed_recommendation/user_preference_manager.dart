@@ -64,7 +64,7 @@ class UserPreferenceManager {
     required double normalizedEngagementScore,
   }) async {
     print("🎯 Update for video ${video.id}, tags: ${video.tags}, engagement: $normalizedEngagementScore");
-    await _loadCache();
+    await loadCache();
 
     // Update tags
     int updated = 0;

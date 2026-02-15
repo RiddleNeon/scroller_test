@@ -1,6 +1,5 @@
 import 'dart:math';
 
-import 'package:cloud_firestore/cloud_firestore.dart';
 import 'package:wurp/logic/feed_recommendation/user_interaction.dart';
 import 'package:wurp/logic/feed_recommendation/user_preferences.dart';
 import 'package:wurp/logic/feed_recommendation/video_recommender_base.dart';
@@ -23,7 +22,7 @@ class VideoRecommender extends VideoRecommenderBase {
   static const double _diversityWeight = 0.15;
   static const double _personalizedWeight = 0.30;
   static const int _candidatePoolSize = 80;
-  static const int _recommendationBatchSize = 3;
+  static const int _recommendationBatchSize = 10;
   
   VideoRecommender({required super.userId});
 
@@ -35,13 +34,9 @@ class VideoRecommender extends VideoRecommenderBase {
       // 1. Get user preferences
       final userPreferences = await getUserPreferences();
       
-      print("User preferences for user $userId: $userPreferences");
-
       // 2. Get recent interactions for diversity (limited to last N)
       final recentInteractions = await getRecentInteractions();
       
-      print("Recent interactions for user $userId: ${recentInteractions.length} interactions, sample: ${recentInteractions.take(5).toList()}");
-
       // 3. Get candidate videos
       final candidateVideos = await _getCandidateVideos(excludeIds: excludeVideoIds, userPreferences: userPreferences, limit: _candidatePoolSize);
       
@@ -50,8 +45,6 @@ class VideoRecommender extends VideoRecommenderBase {
       // 4. Score each video
       final scoredVideos = _scoreVideos(candidateVideos, userPreferences, recentInteractions);
       
-      print("Scored videos for user $userId: ${scoredVideos.length} videos, sample: ${scoredVideos.take(5).map((vs) => {'videoUrl': vs.video.videoUrl, 'score': vs.score}).toList()}");
-
       // 5. Apply diversity filter
       final diversifiedVideos = _applyDiversityFilter(scoredVideos);
       
@@ -66,51 +59,56 @@ class VideoRecommender extends VideoRecommenderBase {
     }
   }
   
-
+  
   /// Get candidate videos with smart filtering based on user preferences
-  Future<List<Video>> _getCandidateVideos({required List<String> excludeIds, required UserPreferences userPreferences, required int limit}) async {
-    // For new users, get trending videos
+  Future<List<Video>> _getCandidateVideos({
+    required List<String> excludeIds,
+    required UserPreferences userPreferences,
+    required int limit
+  }) async {
     if (userPreferences.isNewUser) {
       print("New User! getting trending videos for user $userId...");
       return getTrendingVideos(limit);
     }
 
-    // Get videos from last 7 days
-    final weekAgo = DateTime.now().subtract(Duration(days: 7));
-
-    // Try to get videos with preferred tags (if we have preferences)
     if (userPreferences.tagPreferences.isNotEmpty) {
-      final topTags = userPreferences.tagPreferences.entries.toList()..sort((a, b) => b.value.compareTo(a.value));
+      final topTags = userPreferences.tagPreferences.entries.toList()
+        ..sort((a, b) => b.value.compareTo(a.value));
+      final preferredTags = topTags.take(10).map((e) => e.key).toList();
 
-      final preferredTags = topTags.take(5).map((e) => e.key).toList();
+      print("Searching for videos with preferred tags: $preferredTags");
 
       final snapshot = await firestore
           .collection('videos')
+          .orderBy('createdAt', descending: true)
           .limit(limit * 3)
           .get();
 
       final videos = snapshot.docs
           .map((doc) => Video.fromFirestore(doc))
           .where((video) => !excludeIds.contains(video.id))
-          .take(limit)
-          .toList();
+          .toList()
+          ..sort((a, b) => _calculateGlobalEngagementScore(b).compareTo(_calculateGlobalEngagementScore(a)));
 
-      // If we got enough videos, return them
       if (videos.length >= limit * 0.7) {
-        return videos;
+        return videos.take(limit).toList();
+      } else {
+        print("Not enough videos from preferred tags, got ${videos.length}, need at least ${limit * 0.7}. Falling back to recency-based candidates.");
       }
     }
 
-    print("Not enough videos from preferred tags for user $userId, got ${excludeIds.length} excluded videos. Getting recent videos as fallback...");
-    // Fallback: get recent videos
+    print("Fallback: Getting recent videos...");
     final snapshot = await firestore
         .collection('videos')
-        .where('createdAt', isGreaterThan: Timestamp.fromDate(weekAgo))
         .orderBy('createdAt', descending: true)
-        .limit(limit)
+        .limit(limit * 2)
         .get();
 
-    return snapshot.docs.map((doc) => Video.fromFirestore(doc)).where((video) => !excludeIds.contains(video.id)).toList();
+    return snapshot.docs
+        .map((doc) => Video.fromFirestore(doc))
+        .where((video) => !excludeIds.contains(video.id))
+        .take(limit)
+        .toList();
   }
 
   /// Score videos based on multiple factors
@@ -167,7 +165,8 @@ class VideoRecommender extends VideoRecommenderBase {
     final shares = video.sharesCount ?? 0;
     final comments = video.commentsCount ?? 0;
 
-    final engagementRate = (likes + shares * 2 + comments * 1.5) / views;
+    final engagementRate = (likes + shares * 2 + comments * 1.5 + 1) / views;
+    print("Calculating engagement score for video ${video.id}: views=$views, likes=$likes, shares=$shares, comments=$comments, engagementRate=$engagementRate");
     return (engagementRate * 100).clamp(0.0, 1.0);
   }
 

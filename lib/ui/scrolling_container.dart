@@ -17,14 +17,12 @@ class ScrollingContainer extends StatefulWidget {
 class _ScrollingContainerState extends State<ScrollingContainer> with TickerProviderStateMixin {
   late final PageController _scrollController;
   late final VideoControllerPool _videoPool;
-
-  final _url = "https://cdn.pixabay.com/video/2024/10/13/236256_large.mp4";
-
+  
   @override
   void initState() {
     super.initState();
     _scrollController = PageController();
-    _videoPool = VideoControllerPool(RecommendationVideoProvider(userId: auth!.currentUser!.uid));
+    _videoPool = VideoControllerPool(RecommendationVideoProvider(userId: auth!.currentUser!.uid)..refreshRecommendations());
   }
 
   final ValueNotifier<int> focusedIndex = ValueNotifier(0);

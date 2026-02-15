@@ -27,9 +27,9 @@ class _GlowscreenState extends State<Glowscreen> {
                 center: Alignment.center,
                 radius: 1.2,
                 colors: [
-                  _dominantColor.withOpacity(0.4),
-                  _dominantColor.withOpacity(0.2),
-                  _dominantColor.withOpacity(0.1),
+                  _dominantColor.withValues(alpha: 0.4),
+                  _dominantColor.withValues(alpha: 0.2),
+                  _dominantColor.withValues(alpha: 0.1),
                   Colors.transparent,
                 ],
                 stops: const [0.0, 0.3, 0.6, 1.0],

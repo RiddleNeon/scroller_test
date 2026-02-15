@@ -69,9 +69,26 @@ class _LoginScreenState extends State<LoginScreen> {
       return e.message ?? 'Password reset failed';
     }
   }
+
+  void completeLogin() async {
+    print("completing login...");
+    try {
+      await onUserLogin();
+      Navigator.of(context).pushReplacement(
+        MaterialPageRoute(builder: (_) => MyHomePage()),
+      );
+    } catch (e, st) {
+      print('Login failed: $e\n$st');
+    }
+  }
   
-  void completeLogin() {
-    Navigator.of(context).pushReplacement(MaterialPageRoute(builder: (context) => MyHomePage()));
+  
+  Widget _buildLoadingScreen() {
+    return Scaffold(
+      body: Center(
+        child: CircularProgressIndicator(),
+      ),
+    );
   }
 
   @override

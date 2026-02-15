@@ -6,7 +6,6 @@ import 'package:video_player/video_player.dart';
 import 'package:wurp/logic/video/video_provider.dart';
 
 import '../../logic/batches/batch_service.dart';
-import '../../logic/feed_recommendation/video_recommender.dart';
 import '../../logic/video/video.dart';
 import '../overlays.dart';
 
