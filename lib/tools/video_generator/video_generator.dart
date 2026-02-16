@@ -1,5 +1,6 @@
 import 'dart:convert';
 
+import 'package:cloud_firestore/cloud_firestore.dart';
 import 'package:flutter/services.dart';
 import 'package:wurp/logic/repositories/video_repository.dart';
 
@@ -9,13 +10,25 @@ import '../../main.dart';
 class VideoGenerator {}
 
 void videoPublishTest() async {
+  print("starting video publish test...");
+  print("removing all current videos...");
+  await removeAllCurrentVideos();
+  print("removing all users except julian...");
+  await removeAllUsers();
+  print("removing all preferences of current user...");
+  await removeAllPreferencesOfCurrentUser();
+  
+  
   VideoRepository videoRepo = VideoRepository();
   Map<String, dynamic> json = await loadJson();
   final videos = (json['data'] as List)
       .map((e) => Map<String, dynamic>.from(e))
       .toList();
+  int i = 0;
   for (var videoData in videos) {
     await getVideoFromJsonDataObject(videoData, videoRepo);
+    i++;
+    print("published video $i/${videos.length} - ${videoData['title']}");
   }
 }
 
@@ -24,6 +37,34 @@ Future<Map<String, dynamic>> loadJson() async {
   return jsonDecode(data);
 }
 
+Future<void> removeAllCurrentVideos() async {
+  FirebaseFirestore firestore = FirebaseFirestore.instance;
+  QuerySnapshot snapshot = await firestore.collection('videos').get();
+  for (DocumentSnapshot doc in snapshot.docs) {
+    await doc.reference.delete();
+  }
+}
+Future<void> removeAllUsers() async {
+  FirebaseFirestore firestore = FirebaseFirestore.instance;
+  QuerySnapshot snapshot = await firestore.collection('users').where("username", isNotEqualTo: "julian").get();
+  for (DocumentSnapshot doc in snapshot.docs) {
+    await doc.reference.delete();
+  }
+}
+Future<void> removeAllPreferencesOfCurrentUser() async {
+  FirebaseFirestore firestore = FirebaseFirestore.instance;
+  String userId = auth!.currentUser!.uid;
+  DocumentReference<Map<String, dynamic>> profilePreferences = firestore.collection('users').doc(userId).collection("profile").doc("preferences");
+  profilePreferences.set({
+    "recommendationProfile": {
+      "tagVector": {},
+      "authorVector": {},
+      "avgCompletionRate": 0.0,
+      "totalInteractions": 0,
+      "lastUpdated": FieldValue.serverTimestamp(),
+    }
+  }, SetOptions(merge: true));
+}
 
 Future<void> getVideoFromJsonDataObject(Map<String, dynamic> data, VideoRepository videoRepo) async {
   await createDummyUserModel(data['author'], "${data['author_id']}", data['thumbnail']);

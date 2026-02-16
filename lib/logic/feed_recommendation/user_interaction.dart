@@ -30,18 +30,19 @@ class UserInteraction {
   double get completionRate => (watchTime / videoDuration).clamp(0.0, 2.0);
 
   double get engagementScore {
-    double score = completionRate * 2.5;
-    if (liked) score += 3.5;
-    if (shared) score += 4.0;
-    if (commented) score += 3.5;
-    if (saved) score += 3.0;
+    double score = completionRate * 10.0;
+
+    if (liked) score += 5.0;
+    if (shared) score += 6.0;
+    if (commented) score += 5.0;
+    if (saved) score += 4.0;
+
     return score;
   }
 
-  /// Normalize engagement score to 0-1 range for preference updates
   double get normalizedEngagementScore {
-    // Max possible score: 1.0 (completion) + 2.0 + 3.0 + 2.5 + 2.0 = 10.5
-    return (engagementScore / UserPreferenceManager.defaultMaxEngagementScore).clamp(0.0, 1.0);
+    const maxScore = 30.0; // 10 + 5 + 6 + 5 + 4
+    return (engagementScore / maxScore).clamp(0.0, 1.0);
   }
 
   @override

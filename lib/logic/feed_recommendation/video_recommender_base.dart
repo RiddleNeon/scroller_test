@@ -90,7 +90,7 @@ abstract class VideoRecommenderBase {
 
 
   /// Get only recent interactions (limited query)
-  Future<List<UserInteraction>> getRecentInteractions() async {
+  Future<List<UserInteraction>> getRecentInteractions() async { //todo use cached preferences to limit this query
     final snapshot = await firestore
         .collection('users')
         .doc(userId)
@@ -136,7 +136,7 @@ abstract class VideoRecommenderBase {
 
       for (final tag in video.tags) {
         if (preferredTags.containsKey(tag)) {
-          tagScore += preferredTags[tag]!;
+          tagScore += preferredTags[tag]! - 0.5; // Center around 0 (neutral) instead of 0.5
           matchedTags++;
         }
       }
@@ -150,7 +150,7 @@ abstract class VideoRecommenderBase {
 
     // Author matching
     if (preferredAuthors.containsKey(video.authorId)) {
-      score += preferredAuthors[video.authorId]!;
+      score += preferredAuthors[video.authorId]! - 0.5;
       factors++;
     }
 

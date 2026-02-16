@@ -22,7 +22,7 @@ class VideoInteractionTracker {
   }) async {
 
     final completionRate =
-    (watchTime / 10).clamp(0.0, 2.0);
+    (watchTime / 5).clamp(0.0, 2.0);
 
     final engagementScore =
     _calculateEngagementScore(type, completionRate);

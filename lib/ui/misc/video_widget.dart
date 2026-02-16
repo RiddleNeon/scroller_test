@@ -3,6 +3,7 @@ import 'dart:async';
 import 'package:cloud_firestore/cloud_firestore.dart';
 import 'package:flutter/material.dart';
 import 'package:video_player/video_player.dart';
+import 'package:wurp/logic/local_storage/local_seen_service.dart';
 import 'package:wurp/logic/video/video_provider.dart';
 
 import '../../logic/batches/batch_service.dart';
@@ -73,7 +74,7 @@ class _VideoItemState extends State<VideoItem> {
 
     // Track view after 3 seconds
     if (!_hasTrackedView) {
-      Future.delayed(const Duration(seconds: 3), () {
+      Future.delayed(const Duration(milliseconds: 400), () {
         if (mounted && widget.focusedIndex.value == widget.index) {
           _trackView();
           _hasTrackedView = true;
@@ -127,7 +128,7 @@ class _VideoItemState extends State<VideoItem> {
     currentlySaving = true;
 
     // Only save if user actually watched something
-    if (_totalWatchTime < 2.5 && !_isLiked && !_isDisliked && !_hasShared && !_hasSaved) {
+    if (_totalWatchTime < .4 && !_isLiked && !_isDisliked && !_hasShared && !_hasSaved) {
       return;
     }
 
@@ -151,7 +152,7 @@ class _VideoItemState extends State<VideoItem> {
         "watchTime=${_totalWatchTime.toStringAsFixed(1)}s, "
         "liked=$_isLiked, shared=$_hasShared",
       );
-
+      
       // Reset for next viewing session
       _totalWatchTime = 0.0;
     } catch (e) {

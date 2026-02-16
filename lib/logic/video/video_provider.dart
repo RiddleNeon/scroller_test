@@ -22,7 +22,6 @@ abstract class VideoProvider {
 class RecommendationVideoProvider implements VideoProvider {
   final VideoRecommender _recommender;
   final List<Video> _videoCache = [];
-  final Set<String> _loadedVideoIds = {};
 
   // ignore: unused_field
   int _currentIndex = 0;
@@ -35,14 +34,13 @@ class RecommendationVideoProvider implements VideoProvider {
 
   @override
   Future<Video> getVideoByIndex(int index) async {
-    // Initialize cache if empty
-    if (_videoCache.isEmpty) {
-      await _loadInitialVideos();
-    }
-
     // Preload more videos if we're running low
     if (index >= _videoCache.length - _preloadThreshold) {
-      _preloadMoreVideos();
+      Future loadingFuture = _preloadMoreVideos();
+      if(index >= _videoCache.length) {
+        // If requested index is beyond current cache, wait for preload to finish
+        await loadingFuture;
+      }
     }
 
     // Return video if available
@@ -60,8 +58,16 @@ class RecommendationVideoProvider implements VideoProvider {
     }
     return _videoCache.take(count).toList();
   }
+  
+  Future<void> _loadInitialVideos() {
+    _currentInitVideoLoadingTask ??= _loadInitialVideosInternal();
+    return _currentInitVideoLoadingTask!;
+  }
 
-  Future<void> _loadInitialVideos() async {
+  Future<void>? _currentInitVideoLoadingTask;
+  Future<void> _loadInitialVideosInternal() async {
+    if (_currentInitVideoLoadingTask != null) return _currentInitVideoLoadingTask;
+    print("LOADING INITIAL VIDEOS");
     try {
       // For new users, use cold start videos
       final videos = await _recommender.getColdStartVideos(
@@ -69,27 +75,28 @@ class RecommendationVideoProvider implements VideoProvider {
       );
 
       _videoCache.addAll(videos);
-      _loadedVideoIds.addAll(videos.map((v) => v.id));
     } catch (e) {
       print('Error loading initial videos: $e');
     }
   }
 
-  Future<void> _preloadMoreVideos() async {
-    try {
-
-      final excludeIds = _loadedVideoIds.toList()
-        ..addAll(LocalSeenService.allSeenIds);
+  Future<void>? _currentPreloadTask;
+  Future<void> _preloadMoreVideos() {
+    _currentPreloadTask ??= _preloadMoreVideosInternal().whenComplete(() => _currentPreloadTask = null);
+    return _currentPreloadTask!;
+  }
+  
+  Future<void> _preloadMoreVideosInternal() async {
+    try {      
+      final excludeIds = LocalSeenService.allSeenIds;
 
       final newVideos = await _recommender.getRecommendedVideos(
         limit: _preloadBatchSize,
         excludeVideoIds: excludeIds,
       );
       
-      print("excludeVideoIds for preload: ${_loadedVideoIds.toList()}");
 
       _videoCache.addAll(newVideos);
-      _loadedVideoIds.addAll(newVideos.map((v) => v.id));
     } catch (e) {
       print('Error preloading videos: $e');
     }
@@ -124,7 +131,6 @@ class RecommendationVideoProvider implements VideoProvider {
   /// Refresh recommendations (call this when user preferences might have changed)
   Future<void> refreshRecommendations() async {
     _videoCache.clear();
-    _loadedVideoIds.clear();
     _currentIndex = 0;
     await _loadInitialVideos();
   }
@@ -132,7 +138,6 @@ class RecommendationVideoProvider implements VideoProvider {
   /// Clear cache
   void clearCache() {
     _videoCache.clear();
-    _loadedVideoIds.clear();
     _currentIndex = 0;
   }
 }

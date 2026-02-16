@@ -1,16 +1,17 @@
 import 'package:cloud_firestore/cloud_firestore.dart';
+import 'package:wurp/util/extensions/num_distance.dart';
 import '../batches/batch_service.dart';
 import '../video/video.dart';
 
 class UserPreferenceManager {
-  final FirebaseFirestore  _firestore = FirebaseFirestore.instance;
+  final FirebaseFirestore _firestore = FirebaseFirestore.instance;
   final String userId;
 
-  static const double _learningRate = 0.5;
-  static const int _maxTagPreferences = 30;
+  static const double _learningRate = 0.25;
+  static const int _maxTagPreferences = 380;
   static const int _maxAuthorPreferences = 20;
 
-  static const double defaultMaxEngagementScore = 10;
+  static const double defaultMaxEngagementScore = 6;
 
   // Cache
   Map<String, double> _cachedTagPrefs = {};
@@ -24,15 +25,17 @@ class UserPreferenceManager {
     return _instances.putIfAbsent(userId, () => UserPreferenceManager._internal(userId));
   }
 
-  UserPreferenceManager._internal(this.userId);
+  UserPreferenceManager._internal(this.userId){
+    loadCache();
+  }
 
   Future<void>? _loadFuture;
   Future<void> loadCache() async {
-    _loadFuture ??= _loadCache();
-    return _loadFuture!;
+    _loadFuture ??= _loadCacheInternal();
+    return await _loadFuture!;
   }
 
-  Future<void> _loadCache() async {
+  Future<void> _loadCacheInternal() async {
     print("getting cache for user $userId...");
     try {
       final userRef = _firestore
@@ -66,41 +69,56 @@ class UserPreferenceManager {
     print("🎯 Update for video ${video.id}, tags: ${video.tags}, engagement: $normalizedEngagementScore");
     await loadCache();
 
+
+    double adaptiveLR(double currentScore) {
+      final distance = (currentScore - 0.5).abs();
+      return _learningRate * (1.0 + (1.0 - distance * 2));
+    }
+    
     // Update tags
     int updated = 0;
     for (final tag in video.tags) {
       if (tag.isEmpty) continue;
-
       final oldScore = _cachedTagPrefs[tag] ?? 0.5;
-      final newScore = oldScore + _learningRate * (normalizedEngagementScore - oldScore);
-      _cachedTagPrefs[tag] = newScore;
+      final lr = adaptiveLR(oldScore);
+      final newScore = oldScore + lr * (normalizedEngagementScore - oldScore);
+      _cachedTagPrefs[tag] = newScore.clamp(0.0, 1.0);
       updated++;
-      print("Tag '$tag': $oldScore -> $newScore");
     }
 
     if (updated == 0) {
       print("NO TAGS UPDATED! video.tags = ${video.tags}");
     }
 
+    
+    Map<String, double>? networkTagEffects;
     // Trim tags
     if (_cachedTagPrefs.length > _maxTagPreferences) {
       final sorted = _cachedTagPrefs.entries.toList()
-        ..sort((a, b) => b.value.compareTo(a.value));
-      _cachedTagPrefs = Map.fromEntries(sorted.take(_maxTagPreferences));
+        ..sort((a, b) => b.value.distanceTo(0.5).compareTo(a.value.distanceTo(0.5))); // Keep tags with scores farthest from neutral (0.5)
+      networkTagEffects = Map.fromEntries(sorted.take(_maxTagPreferences));
+      print("removed tags: ${sorted.skip(_maxTagPreferences).map((e) => "${e.key}: ${e.value.toStringAsPrecision(2)}").toList()}");
     }
+    
+    networkTagEffects ??= _cachedTagPrefs;
 
     // Update author
     final oldAuthor = _cachedAuthorPrefs[video.authorId] ?? 0.5;
+    final lr = adaptiveLR(oldAuthor);
     _cachedAuthorPrefs[video.authorId] =
-        oldAuthor + _learningRate * (normalizedEngagementScore - oldAuthor);
+        (oldAuthor + lr * (normalizedEngagementScore - oldAuthor)).clamp(0.0, 1.0);
     print("👤 Author '${video.authorId}': $oldAuthor -> ${_cachedAuthorPrefs[video.authorId]}");
 
-    // Trim authors
+    Map<String, double>? networkAuthorEffects;
+    
     if (_cachedAuthorPrefs.length > _maxAuthorPreferences) {
       final sorted = _cachedAuthorPrefs.entries.toList()
-        ..sort((a, b) => b.value.compareTo(a.value));
-      _cachedAuthorPrefs = Map.fromEntries(sorted.take(_maxAuthorPreferences));
+        ..sort((a, b) => b.value.distanceTo(0.5).compareTo(a.value.distanceTo(0.5))); // Keep tags with scores farthest from neutral (0.5)
+      networkAuthorEffects = Map.fromEntries(sorted.take(_maxAuthorPreferences));
+      print("removed tags: ${sorted.skip(_maxAuthorPreferences).map((e) => "${e.key}: ${e.value.toStringAsPrecision(2)}").toList()}");
     }
+
+    networkAuthorEffects ??= _cachedAuthorPrefs;
 
     _cachedAvgCompletion = (_cachedAvgCompletion * _cachedTotalInteractions + normalizedEngagementScore) /
         (_cachedTotalInteractions + 1);
@@ -114,8 +132,8 @@ class UserPreferenceManager {
 
     userRef.batchSet({
       'recommendationProfile': {
-        'tagVector': _cachedTagPrefs,
-        'authorVector': _cachedAuthorPrefs,
+        'tagVector': networkTagEffects,
+        'authorVector': networkAuthorEffects,
         'avgCompletionRate': _cachedAvgCompletion,
         'totalInteractions': _cachedTotalInteractions,
         'lastUpdated': FieldValue.serverTimestamp(),

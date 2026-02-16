@@ -6,6 +6,7 @@ import 'package:flutter/material.dart';
 import 'package:wurp/firebase_options.dart';
 import 'package:wurp/logic/local_storage/local_seen_service.dart';
 import 'package:wurp/logic/repositories/user_repository.dart';
+import 'package:wurp/tools/video_generator/video_generator.dart';
 import 'package:wurp/ui/auth/auth_screen.dart';
 import 'package:wurp/ui/screens/home_screen.dart';
 FirebaseApp? app;
@@ -42,6 +43,8 @@ void main() async {
 Future<void> onUserLogin() async {
   print("login!");
   await LocalSeenService.init();
+  //videoPublishTest();
+  //removeAllPreferencesOfCurrentUser();
 }
 
 bool runningOnMobile = defaultTargetPlatform == TargetPlatform.iOS || defaultTargetPlatform == TargetPlatform.android;

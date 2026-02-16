@@ -87,16 +87,15 @@ class _LikeButtonState extends State<LikeButton> {
           upperBound,
           duration: Duration(milliseconds: (liked ? 400 : 600)),
         );
+        
 
         setState(() {
           liked = !liked;
         });
 
-        // Notify parent widget (VideoItem) about like state change
         widget.onLikeChanged?.call(liked);
 
-        // Update Firestore immediately for UI consistency
-        // But DON'T create interaction document here - that's handled by VideoItem
+
         _updateLikeInFirestore(liked);
       },
       child: Transform.scale(

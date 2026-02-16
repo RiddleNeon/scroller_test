@@ -81,15 +81,6 @@ class _LoginScreenState extends State<LoginScreen> {
       print('Login failed: $e\n$st');
     }
   }
-  
-  
-  Widget _buildLoadingScreen() {
-    return Scaffold(
-      body: Center(
-        child: CircularProgressIndicator(),
-      ),
-    );
-  }
 
   @override
   Widget build(BuildContext context) {

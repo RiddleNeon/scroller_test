@@ -79,10 +79,10 @@ class _DislikeButtonState extends State<DislikeButton>
       disliked = !disliked;
     });
 
-    _ctrl.forward(from: 0.0);
+    _ctrl.forward(from: 0.0).then((value) => widget.onDislikeChanged?.call(disliked));
 
     // Notify parent widget (VideoItem) about dislike state change
-    widget.onDislikeChanged?.call(disliked);
+    
 
     // Update Firestore immediately for UI consistency
     // But DON'T create interaction document here - that's handled by VideoItem
@@ -129,7 +129,7 @@ class _DislikeButtonState extends State<DislikeButton>
     final Color iconColor =
     disliked ? Colors.redAccent : Colors.grey.shade700;
     final IconData iconData =
-    disliked ? Icons.thumb_down : Icons.thumb_down_outlined;
+    disliked ? Icons.thumb_down : Icons.thumb_down;
 
     return Padding(
       padding: const EdgeInsets.all(4),

@@ -29,7 +29,10 @@ class VideoRecommender extends VideoRecommenderBase {
 
 
   /// Main recommendation function
-  Future<List<Video>> getRecommendedVideos({int limit = 20, List<String> excludeVideoIds = const []}) async {
+  Future<List<Video>> getRecommendedVideos({int limit = 20, Set<String> excludeVideoIds = const {}}) async {
+    
+    print("getting recommendations for user $userId with limit $limit, excluding ${excludeVideoIds.length} videos...");
+    
     try {
       // 1. Get user preferences
       final userPreferences = await getUserPreferences();
@@ -62,7 +65,7 @@ class VideoRecommender extends VideoRecommenderBase {
   
   /// Get candidate videos with smart filtering based on user preferences
   Future<List<Video>> _getCandidateVideos({
-    required List<String> excludeIds,
+    required Set<String> excludeIds,
     required UserPreferences userPreferences,
     required int limit
   }) async {
@@ -90,10 +93,10 @@ class VideoRecommender extends VideoRecommenderBase {
           .toList()
           ..sort((a, b) => _calculateGlobalEngagementScore(b).compareTo(_calculateGlobalEngagementScore(a)));
 
-      if (videos.length >= limit * 0.7) {
+      if (videos.length >= limit * 0.1) {
         return videos.take(limit).toList();
       } else {
-        print("Not enough videos from preferred tags, got ${videos.length}, need at least ${limit * 0.7}. Falling back to recency-based candidates.");
+        print("Not enough videos from preferred tags, got ${videos.length}, need at least ${limit * 0.1}. Falling back to recency-based candidates.");
       }
     }
 
@@ -160,13 +163,13 @@ class VideoRecommender extends VideoRecommenderBase {
 
   /// Calculate global engagement score from video metrics
   double _calculateGlobalEngagementScore(Video video) {
-    final views = video.viewsCount ?? 1;
+    int views = video.viewsCount ?? 1;
     final likes = video.likesCount ?? 0;
     final shares = video.sharesCount ?? 0;
     final comments = video.commentsCount ?? 0;
+    if(views == 0) views = 1; // Avoid division by zero
 
     final engagementRate = (likes + shares * 2 + comments * 1.5 + 1) / views;
-    print("Calculating engagement score for video ${video.id}: views=$views, likes=$likes, shares=$shares, comments=$comments, engagementRate=$engagementRate");
     return (engagementRate * 100).clamp(0.0, 1.0);
   }
 
