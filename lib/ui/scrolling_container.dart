@@ -18,12 +18,12 @@ class ScrollingContainer extends StatefulWidget {
 class _ScrollingContainerState extends State<ScrollingContainer> with TickerProviderStateMixin {
   late final PageController _scrollController;
   late final VideoControllerPool _videoPool;
-  
+
   @override
   void initState() {
     super.initState();
     _scrollController = PageController();
-    _videoPool = VideoControllerPool(RecommendationVideoProvider(userId: auth!.currentUser!.uid)..refreshRecommendations());
+    _videoPool = VideoControllerPool(RecommendationVideoProvider(userId: auth!.currentUser!.uid)..preloadVideos(5));
   }
 
   final ValueNotifier<int> focusedIndex = ValueNotifier(0);
@@ -32,15 +32,17 @@ class _ScrollingContainerState extends State<ScrollingContainer> with TickerProv
   void _onScroll(int pageNo) {
     if (focusedIndex.value != pageNo) {
       focusedIndex.value = pageNo;
+      print("Focused index changed to $pageNo");
 
       final double fraction = _scrollController.page! - pageNo;
       focusedScrollType.value = getScrollTypeOfViewportFraction(fraction);
 
+      _videoPool.keepOnly({pageNo, pageNo + 1});
       _videoPool.playOnly(pageNo);
       _videoPool.reset(pageNo);
-      _videoPool.keepOnly({pageNo - 1, pageNo, pageNo + 1});
+      
     }
-    FirestoreBatchQueue.instance.commit();
+    Future.microtask(() => FirestoreBatchQueue.instance.commit());
   }
 
   ScrollEventType getScrollTypeOfViewportFraction(double fraction) {
@@ -74,20 +76,28 @@ class _ScrollingContainerState extends State<ScrollingContainer> with TickerProv
           physics: const PageScrollPhysics(),
           itemCount: 2000,
           itemBuilder: (context, index) {
+            print("building index $index");
             return FutureBuilder(
               future: _videoPool.get(index),
               builder: (context, snapshot) {
-                if(snapshot.data != null) print("🎬 Building VideoItem for index $index with video name: ${snapshot.data!.video.title}, in cache? ${LocalSeenService.hasSeen(snapshot.data!.video.id)}");
+                if (snapshot.data != null) {
+                  print(
+                    "🎬 Building VideoItem for index $index with video name: ${snapshot.data!.video.title}, in cache? ${LocalSeenService.hasSeen(snapshot.data!.video.id)}",
+                  );
+                }
+                print("building page for index $index, focusedIndex: ${focusedIndex.value}, scrollType: ${focusedScrollType.value}");
                 return snapshot.data == null
                     ? Center(child: CircularProgressIndicator())
-                    : VideoItem(index: index,
-                    videoProvider: _videoPool.provider,
-                    focusedIndex: focusedIndex,
-                    controller: snapshot.data!,
-                    video: snapshot.data!.video,
-                    userId: auth!.currentUser!.uid,
-                    provider: this);
-              }
+                    : VideoItem(
+                  index: index,
+                  videoProvider: _videoPool.provider,
+                  focusedIndex: focusedIndex,
+                  controller: snapshot.data!,
+                  video: snapshot.data!.video,
+                  userId: auth!.currentUser!.uid,
+                  provider: this,
+                );
+              },
             );
           },
           onPageChanged: _onScroll,

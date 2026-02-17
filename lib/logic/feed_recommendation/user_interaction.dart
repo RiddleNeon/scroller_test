@@ -1,5 +1,3 @@
-import 'package:wurp/logic/feed_recommendation/user_preference_manager.dart';
-
 /// Represents a single user interaction with a video
 class UserInteraction {
   final String videoId;

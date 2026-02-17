@@ -44,7 +44,7 @@ Future<void> onUserLogin() async {
   print("login!");
   await LocalSeenService.init();
   //videoPublishTest();
-  //removeAllPreferencesOfCurrentUser();
+  removeAllPreferencesOfCurrentUser();
 }
 
 bool runningOnMobile = defaultTargetPlatform == TargetPlatform.iOS || defaultTargetPlatform == TargetPlatform.android;

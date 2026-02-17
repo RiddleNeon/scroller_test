@@ -3,7 +3,6 @@ import 'dart:async';
 import 'package:cloud_firestore/cloud_firestore.dart';
 import 'package:flutter/material.dart';
 import 'package:video_player/video_player.dart';
-import 'package:wurp/logic/local_storage/local_seen_service.dart';
 import 'package:wurp/logic/video/video_provider.dart';
 
 import '../../logic/batches/batch_service.dart';
@@ -26,7 +25,7 @@ class VideoItem extends StatefulWidget {
     required this.controller,
     required this.video,
     required this.userId,
-    required this.provider, 
+    required this.provider,
     required this.videoProvider,
   });
 
@@ -44,15 +43,19 @@ class _VideoItemState extends State<VideoItem> {
   bool _hasShared = false;
   bool _hasCommented = false;
   bool _hasSaved = false;
+  late VideoPlayerValue _lastValue;
 
   @override
   void initState() {
     super.initState();
+    _lastValue = widget.controller.value;
+    widget.controller.addListener(_onVideoChanged);
     widget.focusedIndex.addListener(_onFocusChanged);
   }
 
   @override
   void dispose() {
+    widget.controller.removeListener(_onVideoChanged);
     widget.focusedIndex.removeListener(_onFocusChanged);
     _trackingTimer?.cancel();
     _saveInteraction();
@@ -112,15 +115,14 @@ class _VideoItemState extends State<VideoItem> {
     // Only increment view count on video
     final videoRef = firestore.collection('videos').doc(widget.video.id);
     batchQueue.update(videoRef, {'views': FieldValue.increment(1)});
-
-    print("Tracked view for video ${widget.video.id} by user ${widget.userId}");
   }
 
   bool currentlySaving = false;
+
   /// Save complete interaction when user leaves video
   /// This creates ONE interaction document with all data
   void _saveInteraction() async {
-    if(currentlySaving) return;
+    if (currentlySaving) return;
     if (_startWatchTime != null) {
       final elapsed = DateTime.now().difference(_startWatchTime!).inSeconds.toDouble();
       _totalWatchTime += elapsed;
@@ -137,7 +139,7 @@ class _VideoItemState extends State<VideoItem> {
     try {
       // Use VideoRecommender to track interaction
       // This handles BOTH recent_interactions AND preference updates
-      await widget.videoProvider.trackVideoInteraction(
+      widget.videoProvider.trackVideoInteraction(
         video: widget.video,
         watchTime: _totalWatchTime,
         videoDuration: videoDuration > 0 ? videoDuration : 1.0,
@@ -149,10 +151,10 @@ class _VideoItemState extends State<VideoItem> {
 
       print(
         "Saved interaction for video ${widget.video.id}: "
-        "watchTime=${_totalWatchTime.toStringAsFixed(1)}s, "
-        "liked=$_isLiked, shared=$_hasShared",
+            "watchTime=${_totalWatchTime.toStringAsFixed(1)}s, "
+            "liked=$_isLiked, shared=$_hasShared",
       );
-      
+
       // Reset for next viewing session
       _totalWatchTime = 0.0;
     } catch (e) {
@@ -196,55 +198,98 @@ class _VideoItemState extends State<VideoItem> {
     });
   }
 
+  void _onVideoChanged() {
+    final current = widget.controller.value;
+
+    if (_lastValue.isInitialized != current.isInitialized || _lastValue.size != current.size || _lastValue.hasError != current.hasError) {
+      setState(() {
+        _lastValue = current;
+      });
+    }
+  }
+
   @override
   Widget build(BuildContext context) {
+    print("starting video widget build");
+
+    final bool isActive = widget.focusedIndex.value == widget.index;
+
+    WidgetsBinding.instance.addPostFrameCallback((_) {
+      if (mounted) {
+        if (isActive && !widget.controller.value.isPlaying && widget.controller.value.isInitialized) {
+          widget.controller.play();
+        } else if (!isActive && widget.controller.value.isPlaying) {
+          widget.controller.pause();
+        }
+      }
+    });
+
     return RepaintBoundary(
-      child: ValueListenableBuilder<int>(
-        valueListenable: widget.focusedIndex,
-        builder: (_, focused, _) {
-          final bool isActive = focused == widget.index;
+      child: Center(
+        child: _lastValue.size.width == 0 || _lastValue.size.height == 0
+            ? const SizedBox()
+            : RepaintBoundary(
+          child: AspectRatio(
+            aspectRatio: 9 / 16,
+            child: LayoutBuilder(
+              builder: (context, constraints) {
+                final videoWidth = _lastValue.size.width;
+                final videoHeight = _lastValue.size.height;
+                final videoPixels = videoWidth * videoHeight;
 
-          if (isActive) {
-            if (!widget.controller.value.isPlaying && widget.controller.value.isInitialized) {
-              widget.controller.play();
-            }
-          } else {
-            if (widget.controller.value.isPlaying) {
-              widget.controller.pause();
-            }
-          }
+                const targetPixels = 800 * 400;
 
-          return ValueListenableBuilder<VideoPlayerValue>(
-            valueListenable: widget.controller,
-            builder: (_, value, _) {
-              return Center(
-                child: value.size.width == 0 || value.size.height == 0
-                    ? const SizedBox()
-                    : AspectRatio(
-                        aspectRatio: 9 / 16,
-                        child: Stack(
-                          children: [
-                            PageOverlay(
-                              provider: widget.provider,
-                              index: widget.index,
-                              video: widget.video,
-                              // Pass callbacks to overlay so it can notify us
-                              onLikeChanged: onLikeChanged,
-                              onDislikeChanged: onDislikeChanged,
-                              onShareChanged: onShareChanged,
-                              onSaveChanged: onSaveChanged,
-                              onCommentChanged: onCommentChanged, 
-                              initiallyLiked: false, //todo 
-                              initiallyDisliked: false, //todo
-                              child: VideoPlayer(widget.controller),
+                double scaleFactor = 1.0;
+                if (videoPixels > targetPixels) {
+                  scaleFactor = (targetPixels / videoPixels).clamp(0.3, 1.0);
+                  print('📐 Scaling video from ${videoWidth.toInt()}x${videoHeight.toInt()} by ${(scaleFactor * 100).toInt()}%');
+                }
+
+                final renderWidth = constraints.maxWidth * scaleFactor*0.5;
+                final renderHeight = constraints.maxHeight * scaleFactor*0.5;
+
+                return Stack(
+                  children: [
+                    RepaintBoundary(
+                      child: Center(
+                        child: SizedBox(
+                          width: renderWidth,
+                          height: renderHeight,
+                          child: OverflowBox(
+                            minWidth: constraints.maxWidth,
+                            maxWidth: constraints.maxWidth,
+                            minHeight: constraints.maxHeight,
+                            maxHeight: constraints.maxHeight,
+                            child: Transform.scale(
+                              scale: 1 / scaleFactor * 0.5,
+                              child: VideoPlayer(
+                                widget.controller,
+                                key: ValueKey(widget.video.id),
+                              ),
                             ),
-                          ],
+                          ),
                         ),
                       ),
-              );
-            },
-          );
-        },
+                    ),
+                    PageOverlay(
+                      provider: widget.provider,
+                      index: widget.index,
+                      video: widget.video,
+                      onLikeChanged: onLikeChanged,
+                      onDislikeChanged: onDislikeChanged,
+                      onShareChanged: onShareChanged,
+                      onSaveChanged: onSaveChanged,
+                      onCommentChanged: onCommentChanged,
+                      initiallyLiked: false,
+                      initiallyDisliked: false,
+                      child: Container(),
+                    ),
+                  ],
+                );
+              },
+            ),
+          ),
+        ),
       ),
     );
   }

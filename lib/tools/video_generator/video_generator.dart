@@ -28,6 +28,7 @@ void videoPublishTest() async {
   for (var videoData in videos) {
     await getVideoFromJsonDataObject(videoData, videoRepo);
     i++;
+    await Future.delayed(Duration(milliseconds: 200));
     print("published video $i/${videos.length} - ${videoData['title']}");
   }
 }
@@ -68,7 +69,7 @@ Future<void> removeAllPreferencesOfCurrentUser() async {
 
 Future<void> getVideoFromJsonDataObject(Map<String, dynamic> data, VideoRepository videoRepo) async {
   await createDummyUserModel(data['author'], "${data['author_id']}", data['thumbnail']);
-  videoRepo.publishVideo(title: data['title'] ?? 'Video by ${data['author'] ?? '[Unknown User]'}', description: data['description'] ?? 'No Description Provided', videoUrl: data['url']!, thumbnailUrl: null, authorId: "${data['author_id']}", tags: List<String>.from(data['tags'] ?? []));
+  await videoRepo.publishVideo(title: data['title'] ?? 'Video by ${data['author'] ?? '[Unknown User]'}', description: data['description'] ?? 'No Description Provided', videoUrl: data['url']!, thumbnailUrl: null, authorId: "${data['author_id']}", tags: List<String>.from(data['tags'] ?? []));
 }
 Set<String> createdUserIds = {};
 Future<UserProfile?> createDummyUserModel(String name, String id, String profileImageUrl) async {

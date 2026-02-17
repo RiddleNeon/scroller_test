@@ -18,15 +18,15 @@ class VideoRepository {
     return snapshot.docs.map((doc) => doc.id).toList();
   }
   
-  
-  void publishVideo({
+  int videoQueueLength = 0;
+  Future<void> publishVideo({
     required String title,
     required String description,
     required String videoUrl,
     String? thumbnailUrl,
     required String authorId,
     List<String> tags = const [],
-  }) {
+  }) async {
     final videoRef = _firestore.collection('videos').doc();
 
     _batchQueue.set(videoRef, {
@@ -53,6 +53,11 @@ class VideoRepository {
         'createdAt': FieldValue.serverTimestamp(),
       },
     );
+    videoQueueLength++;
+    if(videoQueueLength >= 10) {
+      await flush();
+      videoQueueLength = 0;
+    }
   }
   
 

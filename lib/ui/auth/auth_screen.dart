@@ -74,9 +74,11 @@ class _LoginScreenState extends State<LoginScreen> {
     print("completing login...");
     try {
       await onUserLogin();
-      Navigator.of(context).pushReplacement(
-        MaterialPageRoute(builder: (_) => MyHomePage()),
-      );
+      if(mounted) {
+        Navigator.of(context).pushReplacement(
+          MaterialPageRoute(builder: (_) => MyHomePage()),
+        );
+      }
     } catch (e, st) {
       print('Login failed: $e\n$st');
     }

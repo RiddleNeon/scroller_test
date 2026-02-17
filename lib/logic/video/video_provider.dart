@@ -6,7 +6,7 @@ import '../local_storage/local_seen_service.dart';
 abstract class VideoProvider {
   Future<Video?> getVideoByIndex(int index);
 
-  Future<List<Video>> preloadVideos(int count);
+  Future<void> preloadVideos(int count);
 
   void trackVideoInteraction({
     required Video video,
@@ -36,7 +36,7 @@ class RecommendationVideoProvider implements VideoProvider {
   Future<Video> getVideoByIndex(int index) async {
     // Preload more videos if we're running low
     if (index >= _videoCache.length - _preloadThreshold) {
-      Future loadingFuture = _preloadMoreVideos();
+      Future loadingFuture = preloadVideos(_preloadBatchSize);
       if(index >= _videoCache.length) {
         // If requested index is beyond current cache, wait for preload to finish
         await loadingFuture;
@@ -49,14 +49,6 @@ class RecommendationVideoProvider implements VideoProvider {
       return _videoCache[index];
     }
     throw Exception('Video index out of range: $index');
-  }
-
-  @override
-  Future<List<Video>> preloadVideos(int count) async {
-    if (_videoCache.isEmpty) {
-      await _loadInitialVideos();
-    }
-    return _videoCache.take(count).toList();
   }
   
   Future<void> _loadInitialVideos() {
@@ -81,22 +73,24 @@ class RecommendationVideoProvider implements VideoProvider {
   }
 
   Future<void>? _currentPreloadTask;
-  Future<void> _preloadMoreVideos() {
-    _currentPreloadTask ??= _preloadMoreVideosInternal().whenComplete(() => _currentPreloadTask = null);
+  @override
+  Future<void> preloadVideos(int count) {
+    _currentPreloadTask ??= _preloadMoreVideosInternal(count).whenComplete(() => _currentPreloadTask = null);
     return _currentPreloadTask!;
   }
   
-  Future<void> _preloadMoreVideosInternal() async {
+  Future<void> _preloadMoreVideosInternal(int count) async {
     try {      
-      final excludeIds = LocalSeenService.allSeenIds;
 
       final newVideos = await _recommender.getRecommendedVideos(
-        limit: _preloadBatchSize,
-        excludeVideoIds: excludeIds,
+        limit: count,
       );
       
 
       _videoCache.addAll(newVideos);
+      for (var value in newVideos) {
+        LocalSeenService.markAsSeen(value.id);
+      }
     } catch (e) {
       print('Error preloading videos: $e');
     }
@@ -111,10 +105,7 @@ class RecommendationVideoProvider implements VideoProvider {
     bool shared = false,
     bool commented = false,
     bool saved = false,
-  }) {
-    // Track asynchronously without waiting
-    LocalSeenService.markAsSeen(video.id);
-    
+  }) {    
     return _recommender.trackInteraction(
       watchTime: watchTime,
       videoDuration: videoDuration,
@@ -149,9 +140,7 @@ class BaseAlgorithmVideoProvider implements VideoProvider {
   }
 
   @override
-  Future<List<Video>> preloadVideos(int count) async {
-    return [];
-  }
+  Future<void> preloadVideos(int count) async {}
 
   @override
   void trackVideoInteraction({

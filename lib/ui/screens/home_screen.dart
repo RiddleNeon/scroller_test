@@ -20,7 +20,10 @@ class _MyHomePageState extends State<MyHomePage> {
     if(!runningOnMobile) {
       return Glowscreen(child: ScrollingContainer());
     } else {
-      return ScrollingContainer();
+      return Scaffold(
+        backgroundColor: Colors.black,
+        body: ScrollingContainer(),
+      );
     }
   }
 }

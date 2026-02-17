@@ -1,3 +1,5 @@
+import com.android.build.gradle.internal.crash.afterEvaluate
+
 allprojects {
     repositories {
         google()

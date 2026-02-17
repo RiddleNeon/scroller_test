@@ -5,6 +5,8 @@ import 'package:wurp/logic/feed_recommendation/user_preferences.dart';
 import 'package:wurp/logic/feed_recommendation/video_recommender_base.dart';
 import 'package:wurp/logic/video/video.dart';
 
+import '../local_storage/local_seen_service.dart';
+
 class VideoScore {
   final double score;
   final Video video;
@@ -29,10 +31,7 @@ class VideoRecommender extends VideoRecommenderBase {
 
 
   /// Main recommendation function
-  Future<List<Video>> getRecommendedVideos({int limit = 20, Set<String> excludeVideoIds = const {}}) async {
-    
-    print("getting recommendations for user $userId with limit $limit, excluding ${excludeVideoIds.length} videos...");
-    
+  Future<Set<Video>> getRecommendedVideos({int limit = 20}) async {
     try {
       // 1. Get user preferences
       final userPreferences = await getUserPreferences();
@@ -41,9 +40,9 @@ class VideoRecommender extends VideoRecommenderBase {
       final recentInteractions = await getRecentInteractions();
       
       // 3. Get candidate videos
-      final candidateVideos = await _getCandidateVideos(excludeIds: excludeVideoIds, userPreferences: userPreferences, limit: _candidatePoolSize);
+      final candidateVideos = await _getCandidateVideos(userPreferences: userPreferences, limit: _candidatePoolSize);
       
-      print("Candidate videos for user $userId: ${candidateVideos.length} videos, sample: ${candidateVideos.take(5).map((v) => v.videoUrl).toList()}");
+      print("Candidate videos for user $userId: ${candidateVideos.length} videos, sample: ${candidateVideos.map((v) => v.id).toList()}");
 
       // 4. Score each video
       final scoredVideos = _scoreVideos(candidateVideos, userPreferences, recentInteractions);
@@ -54,7 +53,7 @@ class VideoRecommender extends VideoRecommenderBase {
       print("Diversified videos for user $userId: ${diversifiedVideos.length} videos, sample: ${diversifiedVideos.take(5).map((vs) => {'videoUrl': vs.video.videoUrl, 'score': vs.score}).toList()}");
 
       // 6. Return top N videos
-      return diversifiedVideos.take(limit).map((vs) => vs.video).toList();
+      return diversifiedVideos.take(limit).map((vs) => vs.video).toSet();
     } catch (e) {
       print('Error getting recommendations: $e. stacktrace: ${StackTrace.current}');
       // Fallback to trending videos
@@ -64,8 +63,7 @@ class VideoRecommender extends VideoRecommenderBase {
   
   
   /// Get candidate videos with smart filtering based on user preferences
-  Future<List<Video>> _getCandidateVideos({
-    required Set<String> excludeIds,
+  Future<Set<Video>> _getCandidateVideos({
     required UserPreferences userPreferences,
     required int limit
   }) async {
@@ -73,49 +71,57 @@ class VideoRecommender extends VideoRecommenderBase {
       print("New User! getting trending videos for user $userId...");
       return getTrendingVideos(limit);
     }
+    
+    print("Getting candidate videos, last seen timestamps: newest=${LocalSeenService.getNewestSeenTimestamp()}, oldest=${LocalSeenService.getOldestSeenTimestamp()})");
 
-    if (userPreferences.tagPreferences.isNotEmpty) {
-      final topTags = userPreferences.tagPreferences.entries.toList()
-        ..sort((a, b) => b.value.compareTo(a.value));
-      final preferredTags = topTags.take(10).map((e) => e.key).toList();
+    final Set<Video> candidates = {};
 
-      print("Searching for videos with preferred tags: $preferredTags");
+    final newestTimestamp = LocalSeenService.getNewestSeenTimestamp();
+    final newVideos = await fetchNewVideos(newestTimestamp, limit);
 
-      final snapshot = await firestore
-          .collection('videos')
-          .orderBy('createdAt', descending: true)
-          .limit(limit * 3)
-          .get();
+    if (newVideos.isNotEmpty) {
+      print("Found ${newVideos.length} new videos");
+      candidates.addAll(newVideos);
+      await LocalSeenService.saveNewestSeenTimestamp(newVideos.first.createdAt);
+    }
 
-      final videos = snapshot.docs
-          .map((doc) => Video.fromFirestore(doc))
-          .where((video) => !excludeIds.contains(video.id))
-          .toList()
-          ..sort((a, b) => _calculateGlobalEngagementScore(b).compareTo(_calculateGlobalEngagementScore(a)));
+    //trending videos
+    if (candidates.length < limit * 0.5) {
+      final trendingCursor = LocalSeenService.getTrendingCursor();
+      final trendingVideos = await fetchTrendingVideos(
+        cursor: trendingCursor,
+        limit: (limit - candidates.length) ~/ 2,
+      );
 
-      if (videos.length >= limit * 0.1) {
-        return videos.take(limit).toList();
-      } else {
-        print("Not enough videos from preferred tags, got ${videos.length}, need at least ${limit * 0.1}. Falling back to recency-based candidates.");
+      if (trendingVideos.isNotEmpty) {
+        candidates.addAll(trendingVideos.where((v) => !candidates.any((v2) => v2.id == v.id)));
+        await LocalSeenService.saveTrendingCursor(trendingVideos.last.createdAt);
       }
     }
 
-    print("Fallback: Getting recent videos...");
-    final snapshot = await firestore
-        .collection('videos')
-        .orderBy('createdAt', descending: true)
-        .limit(limit * 2)
-        .get();
+    // Backfill with older videos if we don't have enough recent ones
+    if (candidates.length < limit) {
+      final oldestTimestamp = LocalSeenService.getOldestSeenTimestamp();
+      final oldVideos = await fetchOldVideos(oldestTimestamp, limit - candidates.length);
 
-    return snapshot.docs
-        .map((doc) => Video.fromFirestore(doc))
-        .where((video) => !excludeIds.contains(video.id))
-        .take(limit)
-        .toList();
+      if (oldVideos.isNotEmpty) {
+        print("Backfilling with ${oldVideos.length} older videos");
+        candidates.addAll(oldVideos);
+        await LocalSeenService.saveOldestSeenTimestamp(oldVideos.last.createdAt);
+      } else {
+        print("No more old videos available");
+      }
+    }
+
+    final unseenCandidates = candidates
+        .where((video) => !LocalSeenService.hasSeen(video.id))
+        .toSet();
+    
+    return unseenCandidates;
   }
 
   /// Score videos based on multiple factors
-  List<VideoScore> _scoreVideos(List<Video> videos, UserPreferences userPreferences, List<UserInteraction> recentInteractions) {
+  List<VideoScore> _scoreVideos(Set<Video> videos, UserPreferences userPreferences, List<UserInteraction> recentInteractions) {
     final now = DateTime.now();
     final scoredVideos = <VideoScore>[];
 
@@ -131,7 +137,7 @@ class VideoRecommender extends VideoRecommenderBase {
       score += recencyScore * _recencyWeight;
 
       // 2. Engagement Score (based on video metrics)
-      final engagementScore = _calculateGlobalEngagementScore(video);
+      final engagementScore = calculateGlobalEngagementScore(video);
       score += engagementScore * _engagementWeight;
 
       // 3. Personalization Score (optimized with preferences)
@@ -159,18 +165,6 @@ class VideoRecommender extends VideoRecommenderBase {
   double _calculateRecencyScore(int ageInHours) {
     // Videos lose 50% score every 24 hours
     return exp(-0.029 * ageInHours);
-  }
-
-  /// Calculate global engagement score from video metrics
-  double _calculateGlobalEngagementScore(Video video) {
-    int views = video.viewsCount ?? 1;
-    final likes = video.likesCount ?? 0;
-    final shares = video.sharesCount ?? 0;
-    final comments = video.commentsCount ?? 0;
-    if(views == 0) views = 1; // Avoid division by zero
-
-    final engagementRate = (likes + shares * 2 + comments * 1.5 + 1) / views;
-    return (engagementRate * 100).clamp(0.0, 1.0);
   }
 
   /// Calculate diversity score to avoid echo chamber

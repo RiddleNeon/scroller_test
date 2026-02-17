@@ -8,59 +8,104 @@ import '../../logic/video/video.dart';
 class VideoControllerPool {
   final Map<int, FutureOr<VideoWidgetController>> _controllers = {};
   final RecommendationVideoProvider provider;
+  int _lastFocusedIndex = 0;
 
   VideoControllerPool(this.provider);
-
+  
   Future<VideoWidgetController> get(int index) async {
     return _controllers.putIfAbsent(index, () async {
-      final c = VideoWidgetController(await provider.getVideoByIndex(index));
-      await c.initialize().then((_) {
-        c.setLooping(true);
+      print("initializing video controller for index $index");
+      final c = provider.getVideoByIndex(index).then((video) {
+        final c = VideoWidgetController(video);
+        c.initialize().then((_) {
+          print("initialized video controller for index $index");
+          if (_lastFocusedIndex == index) {
+            c.play();
+          }
+        }).catchError((e) {
+          print('Failed to initialize video controller for index $index: $e');
+          throw e;
+        });
+        return c;
+      }).catchError((e) {
+        print('Failed to get video for index $index: $e');
+        throw e;
       });
       return c;
     });
   }
 
   void playOnly(int index) {
+    if (_lastFocusedIndex != index) {
+      _lastFocusedIndex = index;
+    }
+
     for (final e in _controllers.entries) {
       if(e.value is Future) {
         Future<VideoWidgetController> future = e.value as Future<VideoWidgetController>;
         if (e.key == index) {
-          future.then((value) => value.play);
+          future.then((value) {
+            if (value.value.isInitialized) value.play();
+          });
         } else {
-          future.then((value) => value.play);
+          future.then((value) {
+            if (value.value.isInitialized) value.pause();
+          });
         }
       } else {
         VideoWidgetController val = e.value as VideoWidgetController;
         if (e.key == index) {
-          val.play();
+          if (val.value.isInitialized) val.play();
         } else {
-          val.pause();
+          if (val.value.isInitialized) val.pause();
         }
       }
     }
   }
-  
+
   void reset(int index) {
     FutureOr<VideoWidgetController>? futureOr = _controllers[index];
     if(futureOr == null) return;
     if(futureOr is Future) {
-      (futureOr as Future).then((value) => value.seekTo(Duration.zero));
+      (futureOr as Future).then((value) {
+        if (value.value.isInitialized) {
+          value.seekTo(Duration.zero);
+        }
+      });
     } else {
-      futureOr.seekTo(Duration.zero);
+      if (futureOr.value.isInitialized) {
+        futureOr.seekTo(Duration.zero);
+      }
     }
   }
 
   void keepOnly(Set<int> keep) {
-    keep.forEach(get);
-    final remove = _controllers.keys.where((k) => !keep.contains(k)).toList();
+    final extendedKeep = <int>{};
+    for (final k in keep) {
+      extendedKeep.add(k);
+      extendedKeep.add(k + 1);
+    }
+    
+    extendedKeep.forEach((element) => get(element)); // ensure all controllers to keep are created
+
+    final remove = _controllers.keys.where((k) => !extendedKeep.contains(k)).toList();
+
     for (final k in remove) {
-      if(_controllers[k] is Future) {
-        (_controllers[k] as Future).then((value) => value.dispose());
-      } else {
-        (_controllers[k] as VideoWidgetController).dispose();
+      final controllerOrFuture = _controllers.remove(k);
+
+      if (controllerOrFuture != null) {
+        if (controllerOrFuture is Future) {
+          (controllerOrFuture as Future).then((controller) {
+            Future.delayed(Duration(milliseconds: 200), () {
+              controller.dispose();
+            });
+          });
+        } else {
+          Future.delayed(Duration(milliseconds: 200), () {
+            (controllerOrFuture).dispose();
+          });
+        }
       }
-      _controllers.remove(k);
     }
   }
 
@@ -79,5 +124,23 @@ class VideoControllerPool {
 
 class VideoWidgetController extends VideoPlayerController {
   Video video;
-  VideoWidgetController(this.video) : super.networkUrl(Uri.parse(video.videoUrl));
+
+  VideoWidgetController(this.video) : super.networkUrl(
+    Uri.parse(video.videoUrl),
+    videoPlayerOptions: VideoPlayerOptions(
+      mixWithOthers: false,
+      allowBackgroundPlayback: false,
+    ),
+  );
+
+  @override
+  Future<void> initialize() async {
+    try {
+      await super.initialize();
+      setVolume(1.0);
+
+    } catch (e) {
+      rethrow;
+    }
+  }
 }

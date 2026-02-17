@@ -3,6 +3,7 @@ import 'package:wurp/logic/feed_recommendation/user_interaction.dart';
 import 'package:wurp/logic/feed_recommendation/user_preference_manager.dart';
 import 'package:wurp/logic/feed_recommendation/user_preferences.dart';
 
+import '../local_storage/local_seen_service.dart';
 import '../video/video.dart';
 
 abstract class VideoRecommenderBase {
@@ -63,9 +64,6 @@ abstract class VideoRecommenderBase {
     );
 
     print("trackInteraction - Video ID: ${video.id}");
-    print("Video URL: ${video.videoUrl}");
-    print("Video Tags (from Video object): ${video.tags}");
-    print("Video Author: ${video.authorId}");
 
     // 1. Store recent interaction (with automatic cleanup via TTL in Firestore rules)
     await firestore.collection('users').doc(userId).collection('recent_interactions').add({
@@ -85,7 +83,6 @@ abstract class VideoRecommenderBase {
 
     // 2. Update user preferences (batched)
     await preferenceManager.updatePreferences(video: video, normalizedEngagementScore: interaction.normalizedEngagementScore);
-    print("Preferences update called");
   }
 
 
@@ -101,7 +98,7 @@ abstract class VideoRecommenderBase {
 
     return snapshot.docs.map((doc) {
       final data = doc.data();
-      print("videoId: ${data['videoId']}, watchTime: ${data['watchTime']}, videoDuration: ${data['videoDuration']}, liked: ${data['liked']}, shared: ${data['shared']}, commented: ${data['commented']}, saved: ${data['saved']}, timestamp: ${data['timestamp']}, authorId: ${data['authorId']}, tags: ${data['tags']}");
+      //print("videoId: ${data['videoId']}, watchTime: ${data['watchTime']}, videoDuration: ${data['videoDuration']}, liked: ${data['liked']}, shared: ${data['shared']}, commented: ${data['commented']}, saved: ${data['saved']}, timestamp: ${data['timestamp']}, authorId: ${data['authorId']}, tags: ${data['tags']}");
       return UserInteraction(
         videoId: data['videoId'] ?? '',
         watchTime: (data['watchTime'] ?? 0).toDouble(),
@@ -159,9 +156,9 @@ abstract class VideoRecommenderBase {
 
 
   /// Fallback: Get trending videos
-  Future<List<Video>> getTrendingVideos(int limit) async {
+  Future<Set<Video>> getTrendingVideos(int limit) async {
     final snapshot = await firestore.collection('videos').orderBy('createdAt', descending: true).limit(limit).get();
-    return snapshot.docs.map((doc) => Video.fromFirestore(doc)).toList();
+    return snapshot.docs.map((doc) => Video.fromFirestore(doc)).toSet();
   }
 
   ///Get videos for new users
@@ -183,4 +180,76 @@ abstract class VideoRecommenderBase {
 
     return videos.take(limit).toList();
   }
+
+
+  Future<List<Video>> fetchNewVideos(DateTime? newestSeen, int limit) async {
+    Query query = firestore
+        .collection('videos')
+        .orderBy('createdAt', descending: true)
+        .limit(limit);
+
+    if (newestSeen != null) {
+      query = query.where('createdAt', isGreaterThan: Timestamp.fromDate(newestSeen));
+    }
+
+    final snapshot = await query.get();
+    return snapshot.docs.map((doc) => Video.fromFirestore(doc)).toList();
+  }
+
+  Future<List<Video>> fetchOldVideos(DateTime? oldestSeen, int limit) async {
+    Query query = firestore
+        .collection('videos')
+        .orderBy('createdAt', descending: true)
+        .limit(limit);
+
+    if (oldestSeen != null) {
+      query = query.where('createdAt', isLessThan: Timestamp.fromDate(oldestSeen));
+    }
+
+    final snapshot = await query.get();
+    return snapshot.docs.map((doc) => Video.fromFirestore(doc)).toList();
+  }
+
+  Future<List<Video>> fetchTrendingVideos({
+    DateTime? cursor,
+    required int limit,
+  }) async {
+    final weekAgo = DateTime.now().subtract(Duration(days: 7));
+
+    Query query = firestore
+        .collection('videos')
+        .where('createdAt', isGreaterThan: Timestamp.fromDate(weekAgo))
+        .orderBy('createdAt', descending: true)
+        .limit(limit * 3);
+    
+    if (cursor != null) {
+      query = query.where('createdAt', isLessThan: Timestamp.fromDate(cursor));
+    }
+
+    final snapshot = await query.get();
+
+    final videos = snapshot.docs
+        .map((doc) => Video.fromFirestore(doc))
+        .where((v) => !LocalSeenService.hasSeen(v.id))
+        .toList();
+
+    videos.sort((a, b) =>
+        calculateGlobalEngagementScore(b).compareTo(calculateGlobalEngagementScore(a))
+    );
+
+    return videos.take(limit).toList();
+  }
+
+  /// Calculate global engagement score from video metrics
+  double calculateGlobalEngagementScore(Video video) {
+    int views = video.viewsCount ?? 1;
+    final likes = video.likesCount ?? 0;
+    final shares = video.sharesCount ?? 0;
+    final comments = video.commentsCount ?? 0;
+    if(views == 0) views = 1; // Avoid division by zero
+
+    final engagementRate = (likes + shares * 2 + comments * 1.5 + 1) / views;
+    return (engagementRate * 100).clamp(0.0, 1.0);
+  }
+  
 }

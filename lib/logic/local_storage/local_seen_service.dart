@@ -5,8 +5,10 @@ import 'package:wurp/main.dart';
 class LocalSeenService {
   static const String _seenBoxName = 'seen_videos';
   static const String _settingsBoxName = 'seen_settings';
+  static const String _cursorBoxName = 'feed_cursors';
   static late Box<DateTime> _seenBox;
-  static late Box<DateTime> _settingsBox;
+  static late Box _settingsBox;
+  static late Box _cursorBox;
 
   static final FirebaseFirestore _firestore = FirebaseFirestore.instance;
   static late final String userId;
@@ -15,11 +17,12 @@ class LocalSeenService {
     print("starting initialization of LocalSeenService...");
     await Hive.initFlutter();
     _seenBox = await Hive.openBox<DateTime>(_seenBoxName);
-    _settingsBox = await Hive.openBox<DateTime>(_settingsBoxName);
+    _settingsBox = await Hive.openBox(_settingsBoxName);
+    _cursorBox = await Hive.openBox(_cursorBoxName);
     userId = auth!.currentUser!.uid;
     await syncWithFirestore();
     await cleanUpOldEntries();
-    print("initialized LocalSeenService with ${_seenBox.length} seen videos for user $userId");
+    print("initialized LocalSeenService with ${_seenBox.length} seen videos for user $userId, last sync: ${_settingsBox.get('lastSyncTimestamp')}");
   }
 
   static void markAsSeen(String videoId) {
@@ -76,4 +79,35 @@ class LocalSeenService {
     final latestInteractionTime = (snapshot.docs.first.data()['timestamp'] as Timestamp).toDate();
     await _settingsBox.put('lastSyncTimestamp', latestInteractionTime);
   }
+
+
+
+  static DateTime? getNewestSeenTimestamp() {
+    return _cursorBox.get('newestSeenTimestamp') as DateTime?;
+  }
+
+  static Future<void> saveNewestSeenTimestamp(DateTime timestamp) async {
+    await _cursorBox.put('newestSeenTimestamp', timestamp);
+  }
+
+  static DateTime? getOldestSeenTimestamp() {
+    return _cursorBox.get('oldestSeenTimestamp') as DateTime?;
+  }
+
+  static Future<void> saveOldestSeenTimestamp(DateTime timestamp) async {
+    await _cursorBox.put('oldestSeenTimestamp', timestamp);
+  }
+
+  static DateTime? getTrendingCursor() {
+    return _cursorBox.get('trendingCursor') as DateTime?;
+  }
+
+  static Future<void> saveTrendingCursor(DateTime timestamp) async {
+    await _cursorBox.put('trendingCursor', timestamp);
+  }
+
+  static Future<void> resetCursors() async {
+    await _cursorBox.clear();
+  }
+  
 }
