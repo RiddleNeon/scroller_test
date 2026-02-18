@@ -201,7 +201,9 @@ class _VideoItemState extends State<VideoItem> {
   void _onVideoChanged() {
     final current = widget.controller.value;
 
-    if (_lastValue.isInitialized != current.isInitialized || _lastValue.size != current.size || _lastValue.hasError != current.hasError) {
+    if (_lastValue.isInitialized != current.isInitialized ||
+        _lastValue.hasError != current.hasError ||
+        (_lastValue.size != current.size && current.size != Size.zero)) {
       setState(() {
         _lastValue = current;
       });
@@ -212,9 +214,8 @@ class _VideoItemState extends State<VideoItem> {
   Widget build(BuildContext context) {
     print("starting video widget build");
 
-    final bool isActive = widget.focusedIndex.value == widget.index;
-
-    WidgetsBinding.instance.addPostFrameCallback((_) {
+    Future.delayed(Duration(milliseconds: 20), () {
+      final bool isActive = widget.focusedIndex.value == widget.index;
       if (mounted) {
         if (isActive && !widget.controller.value.isPlaying && widget.controller.value.isInitialized) {
           widget.controller.play();
@@ -222,7 +223,7 @@ class _VideoItemState extends State<VideoItem> {
           widget.controller.pause();
         }
       }
-    });
+    },);
 
     return RepaintBoundary(
       child: Center(
@@ -233,40 +234,15 @@ class _VideoItemState extends State<VideoItem> {
             aspectRatio: 9 / 16,
             child: LayoutBuilder(
               builder: (context, constraints) {
-                final videoWidth = _lastValue.size.width;
-                final videoHeight = _lastValue.size.height;
-                final videoPixels = videoWidth * videoHeight;
-
-                const targetPixels = 800 * 400;
-
-                double scaleFactor = 1.0;
-                if (videoPixels > targetPixels) {
-                  scaleFactor = (targetPixels / videoPixels).clamp(0.3, 1.0);
-                  print('📐 Scaling video from ${videoWidth.toInt()}x${videoHeight.toInt()} by ${(scaleFactor * 100).toInt()}%');
-                }
-
-                final renderWidth = constraints.maxWidth * scaleFactor*0.5;
-                final renderHeight = constraints.maxHeight * scaleFactor*0.5;
-
                 return Stack(
                   children: [
                     RepaintBoundary(
                       child: Center(
-                        child: SizedBox(
-                          width: renderWidth,
-                          height: renderHeight,
-                          child: OverflowBox(
-                            minWidth: constraints.maxWidth,
-                            maxWidth: constraints.maxWidth,
-                            minHeight: constraints.maxHeight,
-                            maxHeight: constraints.maxHeight,
-                            child: Transform.scale(
-                              scale: 1 / scaleFactor * 0.5,
-                              child: VideoPlayer(
-                                widget.controller,
-                                key: ValueKey(widget.video.id),
-                              ),
-                            ),
+                        child: AspectRatio(
+                          aspectRatio: _lastValue.size.aspectRatio,
+                          child: VideoPlayer(
+                            widget.controller,
+                            key: ValueKey(widget.video.id),
                           ),
                         ),
                       ),

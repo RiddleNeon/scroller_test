@@ -1,146 +1,187 @@
 import 'dart:async';
-
+import 'dart:collection';
 import 'package:video_player/video_player.dart';
+import 'package:wurp/logic/video/video.dart';
 import 'package:wurp/logic/video/video_provider.dart';
 
-import '../../logic/video/video.dart';
-
 class VideoControllerPool {
-  final Map<int, FutureOr<VideoWidgetController>> _controllers = {};
   final RecommendationVideoProvider provider;
-  int _lastFocusedIndex = 0;
+  final Map<int, VideoControllerEntry> _cache = {};
+  final Queue<int> _initializationQueue = Queue();
+  bool _isProcessingQueue = false;
+
+  static const int maxCacheSize = 5;
+  static const int preloadDistance = 1;
 
   VideoControllerPool(this.provider);
-  
-  Future<VideoWidgetController> get(int index) async {
-    return _controllers.putIfAbsent(index, () async {
-      print("initializing video controller for index $index");
-      final c = provider.getVideoByIndex(index).then((video) {
-        final c = VideoWidgetController(video);
-        c.initialize().then((_) {
-          print("initialized video controller for index $index");
-          if (_lastFocusedIndex == index) {
-            c.play();
-          }
-        }).catchError((e) {
-          print('Failed to initialize video controller for index $index: $e');
-          throw e;
-        });
-        return c;
-      }).catchError((e) {
-        print('Failed to get video for index $index: $e');
-        throw e;
-      });
-      return c;
-    });
+
+  Future<VideoControllerEntry?> get(int index) async {    
+    if (_cache.containsKey(index)) {
+      final entry = _cache[index]!;
+      entry.lastAccessed = DateTime.now();
+
+      if (entry.isInitialized) {
+        return entry;
+      }
+
+      if (entry.initializationCompleter != null) {
+        return await entry.initializationCompleter!.future;
+      }
+    }
+
+    return await _createController(index);
+  }
+
+  Future<VideoControllerEntry?> _createController(int index) async {
+    try {
+      final video = await provider.getVideoByIndex(index);
+
+      final controller = VideoPlayerController.networkUrl(
+        Uri.parse(video.videoUrl),
+        videoPlayerOptions: VideoPlayerOptions(
+          mixWithOthers: true,
+          allowBackgroundPlayback: false,
+        ),
+      );
+
+      final entry = VideoControllerEntry(
+        controller: controller,
+        video: video,
+        index: index,
+      );
+      _cache[index] = entry;
+
+      _addToInitializationQueue(index);
+
+      return await entry.initializationCompleter!.future;
+    } catch (e) {
+      print('Error creating controller for index $index: $e');
+      return null;
+    }
+  }
+
+  void _addToInitializationQueue(int index) {
+    if (!_initializationQueue.contains(index)) {
+      _initializationQueue.add(index);
+      _processInitializationQueue();
+    }
+  }
+
+  Future<void> _processInitializationQueue() async {
+    if (_isProcessingQueue) return;
+    _isProcessingQueue = true;
+
+    while (_initializationQueue.isNotEmpty) {
+      final batch = <int>[];
+      for (int i = 0; i < 2 && _initializationQueue.isNotEmpty; i++) {
+        batch.add(_initializationQueue.removeFirst());
+      }
+
+      await Future.wait(
+        batch.map((index) => _initializeController(index)),
+        eagerError: false,
+      );
+    }
+
+    _isProcessingQueue = false;
+  }
+
+  Future<void> _initializeController(int index) async {
+    final entry = _cache[index];
+    if (entry == null || entry.isInitialized) return;
+
+    try {
+      await entry.controller.initialize();
+
+      entry.isInitialized = true;
+      entry.controller.setLooping(true);
+      entry.controller.setVolume(1.0);
+
+      entry.initializationCompleter?.complete(entry);
+
+      print('✅ Initialized video $index: ${entry.video.title}');
+    } catch (e) {
+      print('❌ Error initializing video $index: $e');
+      entry.initializationCompleter?.completeError(e);
+    }
   }
 
   void playOnly(int index) {
-    if (_lastFocusedIndex != index) {
-      _lastFocusedIndex = index;
-    }
-
-    for (final e in _controllers.entries) {
-      if(e.value is Future) {
-        Future<VideoWidgetController> future = e.value as Future<VideoWidgetController>;
-        if (e.key == index) {
-          future.then((value) {
-            if (value.value.isInitialized) value.play();
-          });
-        } else {
-          future.then((value) {
-            if (value.value.isInitialized) value.pause();
-          });
-        }
-      } else {
-        VideoWidgetController val = e.value as VideoWidgetController;
-        if (e.key == index) {
-          if (val.value.isInitialized) val.play();
-        } else {
-          if (val.value.isInitialized) val.pause();
-        }
+    for (final entry in _cache.entries) {
+      if (entry.key == index && entry.value.isInitialized) {
+        entry.value.controller.play();
+      } else if (entry.value.isInitialized) {
+        entry.value.controller.pause();
       }
     }
   }
 
   void reset(int index) {
-    FutureOr<VideoWidgetController>? futureOr = _controllers[index];
-    if(futureOr == null) return;
-    if(futureOr is Future) {
-      (futureOr as Future).then((value) {
-        if (value.value.isInitialized) {
-          value.seekTo(Duration.zero);
-        }
-      });
-    } else {
-      if (futureOr.value.isInitialized) {
-        futureOr.seekTo(Duration.zero);
-      }
+    final entry = _cache[index];
+    if (entry?.isInitialized == true) {
+      entry!.controller.seekTo(Duration.zero);
     }
   }
 
-  void keepOnly(Set<int> keep) {
-    final extendedKeep = <int>{};
-    for (final k in keep) {
-      extendedKeep.add(k);
-      extendedKeep.add(k + 1);
+  void keepOnly(Set<int> indices) {
+    final toRemove = <int>[];
+
+    for (final entry in _cache.entries) {
+      if (!indices.contains(entry.key)) {
+        toRemove.add(entry.key);
+      }
     }
-    
-    extendedKeep.forEach((element) => get(element)); // ensure all controllers to keep are created
 
-    final remove = _controllers.keys.where((k) => !extendedKeep.contains(k)).toList();
+    if (_cache.length > maxCacheSize) {
+      final sorted = _cache.entries.toList()
+        ..sort((a, b) => a.value.lastAccessed.compareTo(b.value.lastAccessed));
 
-    for (final k in remove) {
-      final controllerOrFuture = _controllers.remove(k);
-
-      if (controllerOrFuture != null) {
-        if (controllerOrFuture is Future) {
-          (controllerOrFuture as Future).then((controller) {
-            Future.delayed(Duration(milliseconds: 200), () {
-              controller.dispose();
-            });
-          });
-        } else {
-          Future.delayed(Duration(milliseconds: 200), () {
-            (controllerOrFuture).dispose();
-          });
+      for (int i = 0; i < sorted.length - maxCacheSize; i++) {
+        if (!indices.contains(sorted[i].key)) {
+          toRemove.add(sorted[i].key);
         }
       }
+    }
+
+    for (final index in toRemove) {
+      _disposeController(index);
+    }
+  }
+
+  void preloadAround(int currentIndex) {
+    for (int i = 1; i <= preloadDistance; i++) {
+      get(currentIndex + i); // Fire and forget
+    }
+  }
+
+  void _disposeController(int index) {
+    final entry = _cache.remove(index);
+    if (entry != null) {
+      entry.controller.dispose();
+      print('🗑️ Disposed controller $index');
     }
   }
 
   void dispose() {
-    for (final c in _controllers.values) {
-      if(c is Future) {
-        (c as Future).then((value) => value.dispose());
-      } else {
-        c.dispose();
-      }
+    for (final entry in _cache.values) {
+      entry.controller.dispose();
     }
-    _controllers.clear();
+    _cache.clear();
+    _initializationQueue.clear();
   }
 }
 
+class VideoControllerEntry {
+  final VideoPlayerController controller;
+  final Video video;
+  final int index;
+  bool isInitialized = false;
+  DateTime lastAccessed = DateTime.now();
+  Completer<VideoControllerEntry>? initializationCompleter = Completer();
 
-class VideoWidgetController extends VideoPlayerController {
-  Video video;
-
-  VideoWidgetController(this.video) : super.networkUrl(
-    Uri.parse(video.videoUrl),
-    videoPlayerOptions: VideoPlayerOptions(
-      mixWithOthers: false,
-      allowBackgroundPlayback: false,
-    ),
-  );
-
-  @override
-  Future<void> initialize() async {
-    try {
-      await super.initialize();
-      setVolume(1.0);
-
-    } catch (e) {
-      rethrow;
-    }
-  }
+  VideoControllerEntry({
+    required this.controller,
+    required this.video,
+    required this.index,
+  });
 }

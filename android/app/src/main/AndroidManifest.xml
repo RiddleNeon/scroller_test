@@ -2,9 +2,7 @@
     <application
         android:label="wurp"
         android:name="${applicationName}"
-        android:icon="@mipmap/ic_launcher"
-        android:largeHeap="true"
-        android:hardwareAccelerated="true">
+        android:icon="@mipmap/ic_launcher">
         <activity
             android:name=".MainActivity"
             android:exported="true"

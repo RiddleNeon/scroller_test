@@ -159,7 +159,7 @@ class PageOverlayController extends ChangeNotifier {
       userId: auth!.currentUser!.uid,
       videoId: videoId,
       provider: provider,
-      key: GlobalObjectKey("pressed_like_$index"),
+      key: GlobalObjectKey("pressed_like_${index % 4}"),
       initiallyLiked: true,
       onLikeChanged: onLikeChanged,
       initiallyPlayingAnimation: initiallyPlayingAnimation,
@@ -170,7 +170,7 @@ class PageOverlayController extends ChangeNotifier {
   LikeButton getUnpressedLikeButton(TickerProvider provider, {bool initiallyPlayingAnimation = false}) {
     unPressedLikeButton ??= LikeButton(
       provider: provider,
-      key: GlobalObjectKey("unpressed_like_$index"),
+      key: GlobalObjectKey("unpressed_like_${index % 4}"),
       initiallyLiked: false,
       onLikeChanged: onLikeChanged,
       initiallyPlayingAnimation: initiallyPlayingAnimation,
@@ -182,7 +182,7 @@ class PageOverlayController extends ChangeNotifier {
 
   DislikeButton getPressedDislikeButton({bool initiallyPlayingAnimation = false}) {
     pressedDislikeButton ??= DislikeButton(
-      key: GlobalObjectKey("pressed_dislike_$index"),
+      key: GlobalObjectKey("pressed_dislike_${index % 4}"),
       initiallyDisliked: true,
       onDislikeChanged: onDislikeChanged,
       initiallyPlayingAnimation: initiallyPlayingAnimation,
@@ -194,7 +194,7 @@ class PageOverlayController extends ChangeNotifier {
 
   DislikeButton getUnpressedDislikeButton({bool initiallyPlayingAnimation = false}) {
     unPressedDislikeButton ??= DislikeButton(
-      key: GlobalObjectKey("unpressed_dislike_$index"),
+      key: GlobalObjectKey("unpressed_dislike_${index % 4}"),
       initiallyDisliked: false,
       onDislikeChanged: onDislikeChanged,
       initiallyPlayingAnimation: initiallyPlayingAnimation,

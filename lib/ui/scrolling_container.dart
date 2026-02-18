@@ -1,10 +1,9 @@
+/*
 import 'package:flutter/gestures.dart';
 import 'package:flutter/material.dart';
-import 'package:wurp/logic/batches/batch_service.dart';
-import 'package:wurp/logic/local_storage/local_seen_service.dart';
-import 'package:wurp/logic/video/video_provider.dart';
-import 'package:wurp/main.dart';
-import 'package:wurp/ui/misc/video_widget.dart';
+import 'package:preload_page_view/preload_page_view.dart' hide PageScrollPhysics;
+
+
 
 import 'misc/video_controller_pool.dart';
 
@@ -16,14 +15,13 @@ class ScrollingContainer extends StatefulWidget {
 }
 
 class _ScrollingContainerState extends State<ScrollingContainer> with TickerProviderStateMixin {
-  late final PageController _scrollController;
+  late final PreloadPageController _scrollController;
   late final VideoControllerPool _videoPool;
 
   @override
   void initState() {
     super.initState();
-    _scrollController = PageController();
-    _videoPool = VideoControllerPool(RecommendationVideoProvider(userId: auth!.currentUser!.uid)..preloadVideos(5));
+    _scrollController = PreloadPageController();
   }
 
   final ValueNotifier<int> focusedIndex = ValueNotifier(0);
@@ -33,16 +31,7 @@ class _ScrollingContainerState extends State<ScrollingContainer> with TickerProv
     if (focusedIndex.value != pageNo) {
       focusedIndex.value = pageNo;
       print("Focused index changed to $pageNo");
-
-      final double fraction = _scrollController.page! - pageNo;
-      focusedScrollType.value = getScrollTypeOfViewportFraction(fraction);
-
-      _videoPool.keepOnly({pageNo, pageNo + 1});
-      _videoPool.playOnly(pageNo);
-      _videoPool.reset(pageNo);
-      
     }
-    Future.microtask(() => FirestoreBatchQueue.instance.commit());
   }
 
   ScrollEventType getScrollTypeOfViewportFraction(double fraction) {
@@ -70,35 +59,15 @@ class _ScrollingContainerState extends State<ScrollingContainer> with TickerProv
       behavior: NoWheelScrollBehavior(),
       child: Listener(
         onPointerSignal: _handlePointerSignal,
-        child: PageView.builder(
+        child: PreloadPageView.builder(
+          preloadPagesCount: 1,
           controller: _scrollController,
           scrollDirection: Axis.vertical,
           physics: const PageScrollPhysics(),
           itemCount: 2000,
           itemBuilder: (context, index) {
             print("building index $index");
-            return FutureBuilder(
-              future: _videoPool.get(index),
-              builder: (context, snapshot) {
-                if (snapshot.data != null) {
-                  print(
-                    "🎬 Building VideoItem for index $index with video name: ${snapshot.data!.video.title}, in cache? ${LocalSeenService.hasSeen(snapshot.data!.video.id)}",
-                  );
-                }
-                print("building page for index $index, focusedIndex: ${focusedIndex.value}, scrollType: ${focusedScrollType.value}");
-                return snapshot.data == null
-                    ? Center(child: CircularProgressIndicator())
-                    : VideoItem(
-                  index: index,
-                  videoProvider: _videoPool.provider,
-                  focusedIndex: focusedIndex,
-                  controller: snapshot.data!,
-                  video: snapshot.data!.video,
-                  userId: auth!.currentUser!.uid,
-                  provider: this,
-                );
-              },
-            );
+            return ShortVideoPlayer();
           },
           onPageChanged: _onScroll,
         ),
@@ -130,3 +99,4 @@ class NoWheelScrollBehavior extends MaterialScrollBehavior {
     return const PageScrollPhysics();
   }
 }
+*/

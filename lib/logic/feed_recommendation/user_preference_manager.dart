@@ -92,16 +92,16 @@ class UserPreferenceManager {
       print("NO TAGS UPDATED! video.tags = ${video.tags}");
     }
 
-    Map<String, TagInteraction>? networkTagEffects;
+    Map<String, double>? networkTagEffects;
     // Trim tags
     if (_cachedTagPrefs.length > _maxTagPreferences) {
       final sorted = sortByRelevancy(_cachedTagPrefs);
-      networkTagEffects = Map.fromEntries(sorted.take(_maxTagPreferences));
+      networkTagEffects = Map.fromEntries(sorted.take(_maxTagPreferences).map((e) => MapEntry(e.key, e.value.engagementScore)));
       print("removed tags: ${sorted.skip(_maxTagPreferences).map((e) => "${e.key}: ${e.value.engagementScore.toStringAsPrecision(2)}").toList()}");
-      print("kept tags: ${networkTagEffects.entries.map((e) => "${e.key}: ${e.value.engagementScore.toStringAsPrecision(2)}").toList()}");
+      print("kept tags: ${networkTagEffects.entries.map((e) => "${e.key}: ${e.value.toStringAsPrecision(2)}").toList()}");
     }
 
-    networkTagEffects ??= _cachedTagPrefs;
+    networkTagEffects ??= _cachedTagPrefs.map((key, value) => MapEntry(key, value.engagementScore));
 
     // Update author
     final oldAuthor = _cachedAuthorPrefs[video.authorId]?.engagementScore ?? 0.5;
@@ -109,15 +109,15 @@ class UserPreferenceManager {
     _cachedAuthorPrefs[video.authorId] = TagInteraction(engagementScore: (oldAuthor + lr * (normalizedEngagementScore - oldAuthor)).clamp(0.0, 1.0));
     print("👤 Author '${video.authorId}': $oldAuthor -> ${_cachedAuthorPrefs[video.authorId]}");
 
-    Map<String, TagInteraction>? networkAuthorEffects;
+    Map<String, double>? networkAuthorEffects;
 
     if (_cachedAuthorPrefs.length > _maxAuthorPreferences) {
       final sorted = sortByRelevancy(_cachedAuthorPrefs);
-      networkAuthorEffects = Map.fromEntries(sorted.take(_maxAuthorPreferences));
+      networkAuthorEffects = Map.fromEntries(sorted.take(_maxAuthorPreferences).map((e) => MapEntry(e.key, e.value.engagementScore)));
       print("removed authors: ${sorted.skip(_maxAuthorPreferences).map((e) => "${e.key}: ${e.value.engagementScore.toStringAsPrecision(2)}").toList()}");
     }
 
-    networkAuthorEffects ??= _cachedAuthorPrefs;
+    networkAuthorEffects ??= _cachedAuthorPrefs.map((key, value) => MapEntry(key, value.engagementScore));
 
     _cachedAvgCompletion = (_cachedAvgCompletion * _cachedTotalInteractions + normalizedEngagementScore) / (_cachedTotalInteractions + 1);
     _cachedTotalInteractions++;

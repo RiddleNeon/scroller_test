@@ -18,6 +18,7 @@ void main() async {
   print("MAIN FUNCTION STARTED");
   WidgetsFlutterBinding.ensureInitialized();
   app = await Firebase.initializeApp(options: DefaultFirebaseOptions.currentPlatform);
+  await FirebaseFirestore.instance.runTransaction((transaction) async {}); //whyever it fixes a crash on windows
   auth = FirebaseAuth.instanceFor(app: app!);
 
   if(auth?.currentUser != null) {
@@ -37,7 +38,6 @@ void main() async {
   
   if (kIsWeb) auth!.setPersistence(Persistence.LOCAL);
   print(auth?.currentUser);
-  await FirebaseFirestore.instance.runTransaction((transaction) async {}); //whyever it fixes a crash on windows
 }
 
 Future<void> onUserLogin() async {
