@@ -1,0 +1,46 @@
+{
+  "project_info": {
+    "project_number": "418845388234",
+    "project_id": "scroller-wurp",
+    "storage_bucket": "scroller-wurp.firebasestorage.app"
+  },
+  "client": [
+    {
+      "client_info": {
+        "mobilesdk_app_id": "1:418845388234:android:7596e04b7e5a068760b333",
+        "android_client_info": {
+          "package_name": "de.riddleNeon.wurp"
+        }
+      },
+      "oauth_client": [
+        {
+          "client_id": "418845388234-pp5j93fnr3mn1nposq9o9iv7rnlm5qq6.apps.googleusercontent.com",
+          "client_type": 3
+        }
+      ],
+      "api_key": [
+        {
+          "current_key": "AIzaSyBzAXDJUkGDZebgmqC4T4K7lSKUQ8omw-w"
+        }
+      ],
+      "services": {
+        "appinvite_service": {
+          "other_platform_oauth_client": [
+            {
+              "client_id": "418845388234-pp5j93fnr3mn1nposq9o9iv7rnlm5qq6.apps.googleusercontent.com",
+              "client_type": 3
+            },
+            {
+              "client_id": "418845388234-akc2e36is9iaktrbjgfpa9ne7pbv2e27.apps.googleusercontent.com",
+              "client_type": 2,
+              "ios_info": {
+                "bundle_id": "de.riddleNeon.wurp"
+              }
+            }
+          ]
+        }
+      }
+    }
+  ],
+  "configuration_version": "1"
+}
