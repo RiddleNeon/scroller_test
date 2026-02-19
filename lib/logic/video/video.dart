@@ -39,7 +39,7 @@ class Video {
       id: doc.id,
       title: data['title'] ?? '',
       description: data['description'] ?? '',
-      videoUrl: data['videoUrl'] ?? '',
+      videoUrl: (data['videoUrl'] ?? '').toString().replaceAll("_large.", "_tiny.").replaceAll("_medium.", "_tiny.").replaceAll("_small.", "_tiny."),
       thumbnailUrl: data['thumbnailUrl'],
       authorId: data['authorId'] ?? '',
       createdAt: (data['createdAt'] as Timestamp).toDate(),

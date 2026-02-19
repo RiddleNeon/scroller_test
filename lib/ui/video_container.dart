@@ -1,3 +1,5 @@
+import 'dart:async';
+
 import 'package:video_player/video_player.dart';
 import 'package:wurp/logic/video/video.dart';
 
@@ -8,7 +10,7 @@ class VideoContainer {
   VideoContainer({required this.video});
 
   Future<void> loadController() async {
-    final controller = VideoPlayerController.networkUrl(
+    controller = VideoPlayerController.networkUrl(
       Uri.parse(video.videoUrl),
       videoPlayerOptions: VideoPlayerOptions(
         mixWithOthers: true,
@@ -17,10 +19,9 @@ class VideoContainer {
     );
 
     print("loading video ${video.videoUrl}");
-    await controller.initialize();
+    await controller!.initialize();
 
-    await controller.setLooping(true);
-
-    this.controller = controller;
+    return controller!.setLooping(true);
   }
+
 }

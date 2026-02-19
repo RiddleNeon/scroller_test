@@ -1,5 +1,6 @@
 import 'dart:async';
 
+import 'package:flutter/cupertino.dart';
 import 'package:wurp/logic/video/video_provider.dart';
 import 'package:wurp/main.dart';
 
@@ -47,6 +48,7 @@ class FeedViewModel {
     final video = await videoSource.getVideoByIndex(index);
     final container = VideoContainer(video: video);
     await container.loadController();
+    print("controller loaded: ${container.controller}");
     _loadedContainers[index] = container;
     return container;
   }
@@ -59,9 +61,9 @@ class FeedViewModel {
     // 1. Dispose far-away containers FIRST to free decoder slots and audio focus
     //    before the new player tries to acquire them.
     final indicesToDispose = _loadedContainers.keys
-        .where((i) => (i - index).abs() > 1)
+        .where((i) => (i - index).abs() > 2)
         .toList();
-    await Future.wait(indicesToDispose.map(_disposeIndex));
+    Future.wait(indicesToDispose.map(_disposeIndex));
 
     // 2. Pause the previous video
     if (previous != index && !_disposedIndices.contains(previous)) {

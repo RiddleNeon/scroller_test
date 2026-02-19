@@ -1,8 +1,8 @@
+/*
+import 'package:better_player_plus/better_player_plus.dart';
 import 'package:flutter/material.dart';
-import 'package:video_player/video_player.dart';
 import 'package:wurp/ui/video_container.dart';
 import 'package:wurp/ui/video_description.dart';
-
 
 Widget videoCard(VideoContainer video) {
   return Stack(
@@ -22,17 +22,17 @@ Widget videoCard(VideoContainer video) {
               child: SizedBox(
                 width: video.controller?.value.size.width ?? 0,
                 height: video.controller?.value.size.height ?? 0,
-                child: VideoPlayer(video.controller!),
+                child: BetterPlayer(controller: video.controller!),
               ),
             )),
       )
           : Container(
-        color: Colors.black,
-        child: Center(
-          child: Text("Loading"),
-        ),
-      ),
-      /*Column(
+              color: Colors.black,
+              child: Center(
+                child: Text("Loading"),
+              ),
+            ),
+      Column(
         mainAxisAlignment: MainAxisAlignment.end,
         children: <Widget>[
           Row(
@@ -44,7 +44,8 @@ Widget videoCard(VideoContainer video) {
           ),
           SizedBox(height: 20)
         ],
-      ),*/
+      ),
     ],
   );
 }
+*/

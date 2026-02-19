@@ -34,6 +34,7 @@ class RecommendationVideoProvider implements VideoProvider {
 
   @override
   Future<Video> getVideoByIndex(int index) async {
+    print("REQUESTED VIDEO INDEX: $index, CACHE SIZE: ${_videoCache.length}");
     // Preload more videos if we're running low
     if (index >= _videoCache.length - _preloadThreshold) {
       Future loadingFuture = preloadVideos(_preloadBatchSize);
@@ -42,6 +43,7 @@ class RecommendationVideoProvider implements VideoProvider {
         await loadingFuture;
       }
     }
+    
 
     // Return video if available
     if (index < _videoCache.length) {
@@ -88,6 +90,7 @@ class RecommendationVideoProvider implements VideoProvider {
       
 
       _videoCache.addAll(newVideos);
+      print("added these videos: ${newVideos.map((e) => e.videoUrl).toList()}");
       for (var value in newVideos) {
         LocalSeenService.markAsSeen(value.id);
       }

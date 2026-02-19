@@ -1,5 +1,7 @@
+/*
 import 'dart:async';
 
+import 'package:better_player_plus/better_player_plus.dart';
 import 'package:cloud_firestore/cloud_firestore.dart';
 import 'package:flutter/material.dart';
 import 'package:video_player/video_player.dart';
@@ -12,7 +14,7 @@ import '../overlays.dart';
 class VideoItem extends StatefulWidget {
   final int index;
   final ValueNotifier<int> focusedIndex;
-  final VideoPlayerController controller;
+  final BetterPlayerController controller;
   final Video video;
   final String userId;
   final TickerProvider provider;
@@ -271,4 +273,4 @@ class _VideoItemState extends State<VideoItem> {
   }
 }
 
-VideoProvider videoProvider = BaseAlgorithmVideoProvider();
+VideoProvider videoProvider = BaseAlgorithmVideoProvider();*/

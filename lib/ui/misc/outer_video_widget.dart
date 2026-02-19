@@ -1,3 +1,4 @@
+/*
 import 'package:flutter/material.dart';
 import 'package:video_player/video_player.dart';
 import 'package:wurp/logic/video/video.dart';
@@ -66,3 +67,4 @@ class _OuterVideoWidgetState extends State<OuterVideoWidget> {
         : Center(child: CircularProgressIndicator());
   }
 }
+*/

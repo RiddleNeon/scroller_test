@@ -43,7 +43,7 @@ class VideoControllerPool {
           allowBackgroundPlayback: false,
         ),
       );
-
+      
       final entry = VideoControllerEntry(
         controller: controller,
         video: video,
@@ -51,7 +51,7 @@ class VideoControllerPool {
       );
       _cache[index] = entry;
 
-      _addToInitializationQueue(index);
+      //_addToInitializationQueue(index);
 
       return await entry.initializationCompleter!.future;
     } catch (e) {
@@ -76,34 +76,9 @@ class VideoControllerPool {
       for (int i = 0; i < 2 && _initializationQueue.isNotEmpty; i++) {
         batch.add(_initializationQueue.removeFirst());
       }
-
-      await Future.wait(
-        batch.map((index) => _initializeController(index)),
-        eagerError: false,
-      );
     }
 
     _isProcessingQueue = false;
-  }
-
-  Future<void> _initializeController(int index) async {
-    final entry = _cache[index];
-    if (entry == null || entry.isInitialized) return;
-
-    try {
-      await entry.controller.initialize();
-
-      entry.isInitialized = true;
-      entry.controller.setLooping(true);
-      entry.controller.setVolume(1.0);
-
-      entry.initializationCompleter?.complete(entry);
-
-      print('✅ Initialized video $index: ${entry.video.title}');
-    } catch (e) {
-      print('❌ Error initializing video $index: $e');
-      entry.initializationCompleter?.completeError(e);
-    }
   }
 
   void playOnly(int index) {

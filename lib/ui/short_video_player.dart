@@ -1,9 +1,9 @@
 import 'package:flutter/material.dart';
-import 'package:wurp/ui/video_card.dart';
-import 'package:wurp/ui/video_container.dart';
+import 'package:video_player/video_player.dart';
+
 import 'feed_view_model.dart';
 
-Widget feedVideos(FeedViewModel feedViewModel) {
+Widget feedVideos() {
   return Stack(
     children: [
       PageView.builder(
@@ -14,55 +14,45 @@ Widget feedVideos(FeedViewModel feedViewModel) {
         itemCount: 500,
         scrollDirection: Axis.vertical,
         itemBuilder: (context, index) {
-          // Pass `index` (not currentIndex) so each page loads its own video
-          return FutureBuilder<VideoContainer>(
-            future: feedViewModel.getVideoAt(index),
-            builder: (context, snapshot) {
-              if (snapshot.data != null) {
-                return videoCard(snapshot.data!);
-              }
-              return const Center(child: CircularProgressIndicator());
-            },
-          );
+          return FutureBuilder(
+              future: feedViewModel.getVideoAt(index),
+              builder: (context, snapshot) {
+                if (snapshot.connectionState != ConnectionState.done) {
+                  return Container(
+                    color: Colors.black,
+                    child: Center(
+                      child: CircularProgressIndicator(),
+                    ),
+                  );
+                }
+                print("data: ${snapshot.data}");
+                return VideoPlayer(snapshot.data!.controller!);
+              });
         },
         onPageChanged: (value) {
           feedViewModel.switchToVideoAt(value);
         },
       ),
-      SafeArea(
+      /*SafeArea(
         child: Container(
-          padding: const EdgeInsets.only(top: 20),
-          child: Row(
-            mainAxisAlignment: MainAxisAlignment.center,
-            crossAxisAlignment: CrossAxisAlignment.center,
-            children: <Widget>[
-              const Text(
-                'Following',
-                style: TextStyle(
-                  fontSize: 17.0,
-                  fontWeight: FontWeight.normal,
-                  color: Colors.white70,
-                ),
-              ),
-              const SizedBox(width: 7),
-              Container(
-                color: Colors.white70,
-                height: 10,
-                width: 1.0,
-              ),
-              const SizedBox(width: 7),
-              const Text(
-                'For You',
-                style: TextStyle(
-                  fontSize: 17.0,
-                  fontWeight: FontWeight.bold,
-                  color: Colors.white,
-                ),
-              ),
-            ],
-          ),
+          padding: EdgeInsets.only(top: 20),
+          child: Row(mainAxisAlignment: MainAxisAlignment.center, crossAxisAlignment: CrossAxisAlignment.center, children: <Widget>[
+            Text('Following', style: TextStyle(fontSize: 17.0, fontWeight: FontWeight.normal, color: Colors.white70)),
+            SizedBox(
+              width: 7,
+            ),
+            Container(
+              color: Colors.white70,
+              height: 10,
+              width: 1.0,
+            ),
+            SizedBox(
+              width: 7,
+            ),
+            Text('For You', style: TextStyle(fontSize: 17.0, fontWeight: FontWeight.bold, color: Colors.white))
+          ]),
         ),
-      ),
+      ),*/
     ],
   );
 }

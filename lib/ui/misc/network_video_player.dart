@@ -1,5 +1,6 @@
+/*
+import 'package:better_player_plus/better_player_plus.dart';
 import 'package:flutter/material.dart';
-import 'package:video_player/video_player.dart';
 
 class NetworkVideoPlayer extends StatefulWidget {
   final String url;
@@ -16,7 +17,6 @@ class NetworkVideoPlayer extends StatefulWidget {
 }
 
 class _NetworkVideoPlayerState extends State<NetworkVideoPlayer> {
-  VideoPlayerController? _controller;
   Future<void>? _initFuture;
 
   @override
@@ -31,13 +31,7 @@ class _NetworkVideoPlayerState extends State<NetworkVideoPlayer> {
   }
 
   void _init() {
-    _controller = VideoPlayerController.networkUrl(Uri.parse(widget.url));
-    _initFuture = _controller!.initialize().then((_) {
-      _controller!
-        ..setLooping(true)
-        ..play();
-      setState(() {});
-    });
+    _controller = 
   }
 
   void _disposeController() {
@@ -64,8 +58,9 @@ class _NetworkVideoPlayerState extends State<NetworkVideoPlayer> {
         if (snapshot.connectionState != ConnectionState.done) {
           return const Center(child: CircularProgressIndicator());
         }
-        return VideoPlayer(_controller!);
+        return BetterPlayer(controller: _controller!);
       },
     );
   }
 }
+*/
