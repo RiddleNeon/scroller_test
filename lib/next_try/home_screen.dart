@@ -1,7 +1,7 @@
+/*
 import 'package:flutter/material.dart';
 import 'package:wurp/next_try/top_navigation_bar.dart';
 import 'bottom_navigation_bar.dart';
-import 'feed_screen.dart';
 
 class HomeScreen extends StatelessWidget {
   const HomeScreen({super.key});
@@ -23,6 +23,7 @@ class HomeScreen extends StatelessWidget {
             right: 0,
             child: TopNavBar(),
           ),
+          ),
 
           // Search icon top-right
           Positioned(
@@ -35,4 +36,4 @@ class HomeScreen extends StatelessWidget {
       bottomNavigationBar: const BottomNavBar(),
     );
   }
-}
+}*/

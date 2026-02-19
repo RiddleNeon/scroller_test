@@ -1,9 +1,11 @@
 import 'package:flutter/material.dart';
-import 'package:video_player/video_player.dart';
+import 'package:wurp/logic/video/video_provider.dart';
+import 'package:wurp/main.dart';
 
 import 'feed_view_model.dart';
+import 'misc/video_widget.dart';
 
-Widget feedVideos() {
+Widget feedVideos(TickerProvider tickerProvider, RecommendationVideoProvider videoProvider) {
   return Stack(
     children: [
       PageView.builder(
@@ -26,33 +28,20 @@ Widget feedVideos() {
                   );
                 }
                 print("data: ${snapshot.data}");
-                return VideoPlayer(snapshot.data!.controller!);
+                return VideoItem(
+                  controller: snapshot.data!.controller!,
+                  video: snapshot.data!.video,
+                  provider: tickerProvider,
+                  videoProvider: videoProvider,
+                  userId: auth!.currentUser!.uid,
+                  index: index,
+                );
               });
         },
         onPageChanged: (value) {
           feedViewModel.switchToVideoAt(value);
         },
       ),
-      /*SafeArea(
-        child: Container(
-          padding: EdgeInsets.only(top: 20),
-          child: Row(mainAxisAlignment: MainAxisAlignment.center, crossAxisAlignment: CrossAxisAlignment.center, children: <Widget>[
-            Text('Following', style: TextStyle(fontSize: 17.0, fontWeight: FontWeight.normal, color: Colors.white70)),
-            SizedBox(
-              width: 7,
-            ),
-            Container(
-              color: Colors.white70,
-              height: 10,
-              width: 1.0,
-            ),
-            SizedBox(
-              width: 7,
-            ),
-            Text('For You', style: TextStyle(fontSize: 17.0, fontWeight: FontWeight.bold, color: Colors.white))
-          ]),
-        ),
-      ),*/
     ],
   );
 }

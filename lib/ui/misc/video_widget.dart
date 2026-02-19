@@ -1,7 +1,5 @@
-/*
 import 'dart:async';
 
-import 'package:better_player_plus/better_player_plus.dart';
 import 'package:cloud_firestore/cloud_firestore.dart';
 import 'package:flutter/material.dart';
 import 'package:video_player/video_player.dart';
@@ -12,23 +10,21 @@ import '../../logic/video/video.dart';
 import '../overlays.dart';
 
 class VideoItem extends StatefulWidget {
-  final int index;
-  final ValueNotifier<int> focusedIndex;
-  final BetterPlayerController controller;
+  final VideoPlayerController controller;
   final Video video;
   final String userId;
   final TickerProvider provider;
   final RecommendationVideoProvider videoProvider;
+  final int index;
 
   const VideoItem({
     super.key,
-    required this.index,
-    required this.focusedIndex,
     required this.controller,
     required this.video,
     required this.userId,
     required this.provider,
     required this.videoProvider,
+    required this.index,
   });
 
   @override
@@ -45,27 +41,21 @@ class _VideoItemState extends State<VideoItem> {
   bool _hasShared = false;
   bool _hasCommented = false;
   bool _hasSaved = false;
-  late VideoPlayerValue _lastValue;
 
   @override
   void initState() {
     super.initState();
-    _lastValue = widget.controller.value;
-    widget.controller.addListener(_onVideoChanged);
-    widget.focusedIndex.addListener(_onFocusChanged);
   }
 
   @override
   void dispose() {
-    widget.controller.removeListener(_onVideoChanged);
-    widget.focusedIndex.removeListener(_onFocusChanged);
     _trackingTimer?.cancel();
     _saveInteraction();
     super.dispose();
   }
 
   void _onFocusChanged() {
-    final bool isActive = widget.focusedIndex.value == widget.index;
+    final bool isActive = widget.controller.value.isPlaying;
 
     if (isActive) {
       _startTracking();
@@ -80,7 +70,7 @@ class _VideoItemState extends State<VideoItem> {
     // Track view after 3 seconds
     if (!_hasTrackedView) {
       Future.delayed(const Duration(milliseconds: 400), () {
-        if (mounted && widget.focusedIndex.value == widget.index) {
+        if (widget.controller.value.isPlaying) {
           _trackView();
           _hasTrackedView = true;
         }
@@ -153,8 +143,8 @@ class _VideoItemState extends State<VideoItem> {
 
       print(
         "Saved interaction for video ${widget.video.id}: "
-            "watchTime=${_totalWatchTime.toStringAsFixed(1)}s, "
-            "liked=$_isLiked, shared=$_hasShared",
+        "watchTime=${_totalWatchTime.toStringAsFixed(1)}s, "
+        "liked=$_isLiked, shared=$_hasShared",
       );
 
       // Reset for next viewing session
@@ -200,77 +190,51 @@ class _VideoItemState extends State<VideoItem> {
     });
   }
 
-  void _onVideoChanged() {
-    final current = widget.controller.value;
-
-    if (_lastValue.isInitialized != current.isInitialized ||
-        _lastValue.hasError != current.hasError ||
-        (_lastValue.size != current.size && current.size != Size.zero)) {
-      setState(() {
-        _lastValue = current;
-      });
-    }
-  }
-
   @override
   Widget build(BuildContext context) {
     print("starting video widget build");
-
-    Future.delayed(Duration(milliseconds: 20), () {
-      final bool isActive = widget.focusedIndex.value == widget.index;
-      if (mounted) {
-        if (isActive && !widget.controller.value.isPlaying && widget.controller.value.isInitialized) {
-          widget.controller.play();
-        } else if (!isActive && widget.controller.value.isPlaying) {
-          widget.controller.pause();
-        }
-      }
-    },);
-
     return RepaintBoundary(
       child: Center(
-        child: _lastValue.size.width == 0 || _lastValue.size.height == 0
-            ? const SizedBox()
-            : RepaintBoundary(
-          child: AspectRatio(
-            aspectRatio: 9 / 16,
-            child: LayoutBuilder(
-              builder: (context, constraints) {
-                return Stack(
-                  children: [
-                    RepaintBoundary(
-                      child: Center(
-                        child: AspectRatio(
-                          aspectRatio: _lastValue.size.aspectRatio,
-                          child: VideoPlayer(
-                            widget.controller,
-                            key: ValueKey(widget.video.id),
+        child: RepaintBoundary(
+                child: AspectRatio(
+                  aspectRatio: 9 / 16,
+                  child: LayoutBuilder(
+                    builder: (context, constraints) {
+                      return Stack(
+                        children: [
+                          RepaintBoundary(
+                            child: Center(
+                              child: AspectRatio(
+                                aspectRatio: widget.controller.value.aspectRatio,
+                                child: VideoPlayer(
+                                  widget.controller,
+                                  key: ValueKey(widget.video.id),
+                                ),
+                              ),
+                            ),
                           ),
-                        ),
-                      ),
-                    ),
-                    PageOverlay(
-                      provider: widget.provider,
-                      index: widget.index,
-                      video: widget.video,
-                      onLikeChanged: onLikeChanged,
-                      onDislikeChanged: onDislikeChanged,
-                      onShareChanged: onShareChanged,
-                      onSaveChanged: onSaveChanged,
-                      onCommentChanged: onCommentChanged,
-                      initiallyLiked: false,
-                      initiallyDisliked: false,
-                      child: Container(),
-                    ),
-                  ],
-                );
-              },
-            ),
-          ),
-        ),
+                          PageOverlay(
+                            provider: widget.provider,
+                            video: widget.video,
+                            onLikeChanged: onLikeChanged,
+                            onDislikeChanged: onDislikeChanged,
+                            onShareChanged: onShareChanged,
+                            onSaveChanged: onSaveChanged,
+                            onCommentChanged: onCommentChanged,
+                            initiallyLiked: false,
+                            initiallyDisliked: false,
+                            index: widget.index,
+                            child: Container(),
+                          ),
+                        ],
+                      );
+                    },
+                  ),
+                ),
+              ),
       ),
     );
   }
 }
 
-VideoProvider videoProvider = BaseAlgorithmVideoProvider();*/
+VideoProvider videoProvider = BaseAlgorithmVideoProvider();

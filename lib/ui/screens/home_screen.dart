@@ -12,17 +12,17 @@ class MyHomePage extends StatefulWidget {
   State<MyHomePage> createState() => _MyHomePageState();
 }
 
-class _MyHomePageState extends State<MyHomePage> {
+class _MyHomePageState extends State<MyHomePage> with TickerProviderStateMixin{
 
 
   @override
   Widget build(BuildContext context) {
     if(!runningOnMobile) {
-      return Glowscreen(child: feedVideos());
+      return Glowscreen(child: feedVideos(this, videoProvider));
     } else {
       return Scaffold(
         backgroundColor: Colors.black,
-        body: feedVideos(),
+        body: feedVideos(this, videoProvider),
       );
     }
   }

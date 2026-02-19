@@ -7,8 +7,8 @@ import 'overlay_buttons/like_button.dart';
 
 class PageOverlay extends StatefulWidget {
   final TickerProvider provider;
-  final int index;
   final Video video;
+  final int index;
 
   final Widget child;
   final bool initiallyLiked;
@@ -23,14 +23,16 @@ class PageOverlay extends StatefulWidget {
   const PageOverlay({
     super.key,
     required this.provider,
-    required this.index,
     required this.video,
+    required this.index,
     required this.onLikeChanged,
     required this.onDislikeChanged,
     required this.onShareChanged,
     required this.onSaveChanged,
     required this.onCommentChanged,
-    required this.child, required this.initiallyLiked, required this.initiallyDisliked,
+    required this.child,
+    required this.initiallyLiked,
+    required this.initiallyDisliked,
   });
 
   @override
@@ -43,9 +45,21 @@ class _PageOverlayState extends State<PageOverlay> {
   @override
   void initState() {
     super.initState();
-    pageOverlays.remove(widget.index - 10); //clear cache for videos that are far away
 
-    controller = pageOverlays[widget.index] ?? PageOverlayController(widget.index, provider: widget.provider, videoId: widget.video.id);
+    final oldController = pageOverlays[widget.index - 10];
+    if (oldController != null) {
+      oldController.dispose();
+      pageOverlays.remove(widget.index - 10);
+    }
+
+    controller = pageOverlays[widget.index] ??
+        PageOverlayController(
+          widget.index,
+          provider: widget.provider,
+          videoId: widget.video.id,
+          initiallyLiked: widget.initiallyLiked,
+          initiallyDisliked: widget.initiallyDisliked,
+        );
     controller.addListener(_onControllerUpdate);
   }
 
@@ -53,18 +67,18 @@ class _PageOverlayState extends State<PageOverlay> {
   late bool lastDisliked = widget.initiallyDisliked;
 
   void _onControllerUpdate() {
-    print("like or dislike changed");
-    if (mounted && controller.switched) {
-      setState(() {});
-    }
-    if(lastLiked != controller.liked){
+    if (!mounted) return;
+
+    if (lastLiked != controller.liked) {
       lastLiked = controller.liked;
       widget.onLikeChanged(controller.liked);
-    }    
-    if(lastDisliked != controller.disliked){
+    }
+    if (lastDisliked != controller.disliked) {
       lastDisliked = controller.disliked;
       widget.onDislikeChanged(controller.disliked);
     }
+
+    setState(() {});
   }
 
   @override
@@ -78,7 +92,19 @@ class _PageOverlayState extends State<PageOverlay> {
     return Stack(
       children: [
         Positioned.fill(child: widget.child),
-        controller.content,
+        Align(
+          alignment: Alignment.centerRight,
+          child: Column(
+            mainAxisAlignment: MainAxisAlignment.center,
+            spacing: 8,
+            children: [
+              controller.likeButton,
+              controller.dislikeButton,
+              const Icon(CupertinoIcons.ellipses_bubble),
+              const Icon(CupertinoIcons.share),
+            ],
+          ),
+        ),
       ],
     );
   }
@@ -91,116 +117,89 @@ class PageOverlayController extends ChangeNotifier {
   final int index;
   final String videoId;
 
-  PageOverlayController(this.index, {required this.provider, required this.videoId}) {
+  bool liked;
+  bool disliked;
+
+  late LikeButton likeButton;
+  late DislikeButton dislikeButton;
+
+  PageOverlayController(
+      this.index, {
+        required this.provider,
+        required this.videoId,
+        bool initiallyLiked = false,
+        bool initiallyDisliked = false,
+      })  : liked = initiallyLiked,
+        disliked = initiallyDisliked {
     pageOverlays[index] = this;
-    buildContent();
+    _buildButtons();
   }
 
-  bool liked = false;
-  bool disliked = false;
-  bool switched = false; //if the user switched like to dislike or the other way around, used to trigger the correct animation on the buttons
-
-  late Widget content;
-
-  void buildContent() {
-    LikeButton likeButton = liked
-        ? getPressedLikeButton(provider, initiallyPlayingAnimation: switched)
-        : getUnpressedLikeButton(provider, initiallyPlayingAnimation: switched);
-    DislikeButton dislikeButton = disliked
-        ? getPressedDislikeButton(initiallyPlayingAnimation: switched)
-        : getUnpressedDislikeButton(initiallyPlayingAnimation: switched);
-
-    content = Align(
-      alignment: Alignment.centerRight,
-      child: Column(
-        mainAxisAlignment: MainAxisAlignment.center,
-        spacing: 8,
-        children: [likeButton, dislikeButton, Icon(CupertinoIcons.ellipses_bubble), Icon(CupertinoIcons.share)],
-      ),
-    );
-  }
-
-  void onLikeChanged(bool newLiked) {
+  void _onLikeChanged(bool newLiked) {
+    final wasDisliked = disliked;
     liked = newLiked;
-    if (disliked && newLiked) {
+
+    if (wasDisliked && newLiked) {
       disliked = false;
-      // Reset button instances to force rebuild with correct state
-      pressedDislikeButton = null;
-      unPressedDislikeButton = null;
-      switched = true;
-      buildContent();
+      _rebuildDislikeButton(playAnimation: false);
     }
+
     notifyListeners();
-    switched = false;
   }
 
-  void onDislikeChanged(bool newDisliked) {
+  void _onDislikeChanged(bool newDisliked) {
+    final wasLiked = liked;
     disliked = newDisliked;
-    if (liked && newDisliked) {
+
+    if (wasLiked && newDisliked) {
       liked = false;
-      // Reset button instances to force rebuild with correct state
-      pressedLikeButton = null;
-      unPressedLikeButton = null;
-      switched = true;
-      buildContent();
+      _rebuildLikeButton(playAnimation: false);
     }
+
     notifyListeners();
-    switched = false;
   }
 
-  DislikeButton? pressedDislikeButton;
-  DislikeButton? unPressedDislikeButton;
-
-  LikeButton? pressedLikeButton;
-  LikeButton? unPressedLikeButton;
-
-  LikeButton getPressedLikeButton(TickerProvider provider, {bool initiallyPlayingAnimation = false}) {
-    pressedLikeButton ??= LikeButton(
-      userId: auth!.currentUser!.uid,
-      videoId: videoId,
+  void _buildButtons() {
+    likeButton = LikeButton(
+      key: ValueKey('like_$index'),
       provider: provider,
-      key: GlobalObjectKey("pressed_like_${index % 4}"),
-      initiallyLiked: true,
-      onLikeChanged: onLikeChanged,
-      initiallyPlayingAnimation: initiallyPlayingAnimation,
+      videoId: videoId,
+      userId: auth!.currentUser!.uid,
+      initiallyLiked: liked,
+      initiallyPlayingAnimation: false,
+      onLikeChanged: _onLikeChanged,
     );
-    return pressedLikeButton!;
+
+    dislikeButton = DislikeButton(
+      key: ValueKey('dislike_$index'),
+      videoId: videoId,
+      userId: auth!.currentUser!.uid,
+      initiallyDisliked: disliked,
+      initiallyPlayingAnimation: false,
+      onDislikeChanged: _onDislikeChanged,
+    );
   }
 
-  LikeButton getUnpressedLikeButton(TickerProvider provider, {bool initiallyPlayingAnimation = false}) {
-    unPressedLikeButton ??= LikeButton(
+  void _rebuildLikeButton({bool playAnimation = false}) {
+    likeButton = LikeButton(
+      key: ValueKey('like_${index}_${liked ? 'on' : 'off'}'),
       provider: provider,
-      key: GlobalObjectKey("unpressed_like_${index % 4}"),
-      initiallyLiked: false,
-      onLikeChanged: onLikeChanged,
-      initiallyPlayingAnimation: initiallyPlayingAnimation,
       videoId: videoId,
       userId: auth!.currentUser!.uid,
+      initiallyLiked: liked,
+      initiallyPlayingAnimation: playAnimation,
+      onLikeChanged: _onLikeChanged,
     );
-    return unPressedLikeButton!;
   }
 
-  DislikeButton getPressedDislikeButton({bool initiallyPlayingAnimation = false}) {
-    pressedDislikeButton ??= DislikeButton(
-      key: GlobalObjectKey("pressed_dislike_${index % 4}"),
-      initiallyDisliked: true,
-      onDislikeChanged: onDislikeChanged,
-      initiallyPlayingAnimation: initiallyPlayingAnimation,
+  void _rebuildDislikeButton({bool playAnimation = false}) {
+    dislikeButton = DislikeButton(
+      key: ValueKey('dislike_${index}_${disliked ? 'on' : 'off'}'),
       videoId: videoId,
       userId: auth!.currentUser!.uid,
+      initiallyDisliked: disliked,
+      initiallyPlayingAnimation: playAnimation,
+      onDislikeChanged: _onDislikeChanged,
     );
-    return pressedDislikeButton!;
-  }
-
-  DislikeButton getUnpressedDislikeButton({bool initiallyPlayingAnimation = false}) {
-    unPressedDislikeButton ??= DislikeButton(
-      key: GlobalObjectKey("unpressed_dislike_${index % 4}"),
-      initiallyDisliked: false,
-      onDislikeChanged: onDislikeChanged,
-      initiallyPlayingAnimation: initiallyPlayingAnimation,
-      videoId: videoId,
-      userId: auth!.currentUser!.uid,
-    );
-    return unPressedDislikeButton!;
   }
 }
