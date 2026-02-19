@@ -38,6 +38,7 @@ class RecommendationVideoProvider implements VideoProvider {
     // Preload more videos if we're running low
     if (index >= _videoCache.length - _preloadThreshold) {
       Future loadingFuture = preloadVideos(_preloadBatchSize);
+      print("new loading future");
       if(index >= _videoCache.length) {
         // If requested index is beyond current cache, wait for preload to finish
         await loadingFuture;
@@ -77,7 +78,7 @@ class RecommendationVideoProvider implements VideoProvider {
   Future<void>? _currentPreloadTask;
   @override
   Future<void> preloadVideos(int count) {
-    _currentPreloadTask ??= _preloadMoreVideosInternal(count).whenComplete(() => _currentPreloadTask = null);
+    _currentPreloadTask ??= _preloadMoreVideosInternal(count).then((val) => _currentPreloadTask = null);
     return _currentPreloadTask!;
   }
   

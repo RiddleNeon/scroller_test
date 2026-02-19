@@ -10,8 +10,7 @@ FeedViewModel get feedViewModel => _feedViewModel ??= FeedViewModel();
 FeedViewModel? _feedViewModel;
 
 class FeedViewModel {
-  RecommendationVideoProvider videoSource =
-  RecommendationVideoProvider(userId: auth!.currentUser!.uid);
+  static RecommendationVideoProvider videoSource = RecommendationVideoProvider(userId: auth!.currentUser!.uid);
 
   FeedViewModel();
 

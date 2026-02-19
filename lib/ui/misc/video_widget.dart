@@ -42,24 +42,43 @@ class _VideoItemState extends State<VideoItem> {
   bool _hasCommented = false;
   bool _hasSaved = false;
 
+  bool _wasPlaying = false;
+
   @override
   void initState() {
     super.initState();
+    widget.controller.addListener(_onControllerUpdate);
+    // Falls das Video beim Mounten bereits läuft
+    if (widget.controller.value.isPlaying) {
+      _wasPlaying = true;
+      _startTracking();
+    }
+  }
+
+  @override
+  void didUpdateWidget(VideoItem oldWidget) {
+    super.didUpdateWidget(oldWidget);
+    if (oldWidget.controller != widget.controller) {
+      oldWidget.controller.removeListener(_onControllerUpdate);
+      widget.controller.addListener(_onControllerUpdate);
+    }
   }
 
   @override
   void dispose() {
+    widget.controller.removeListener(_onControllerUpdate);
     _trackingTimer?.cancel();
     _saveInteraction();
     super.dispose();
   }
 
-  void _onFocusChanged() {
-    final bool isActive = widget.controller.value.isPlaying;
-
-    if (isActive) {
+  void _onControllerUpdate() {
+    final bool isPlaying = widget.controller.value.isPlaying;
+    if (isPlaying && !_wasPlaying) {
+      _wasPlaying = true;
       _startTracking();
-    } else {
+    } else if (!isPlaying && _wasPlaying) {
+      _wasPlaying = false;
       _stopTracking();
     }
   }
@@ -114,6 +133,7 @@ class _VideoItemState extends State<VideoItem> {
   /// Save complete interaction when user leaves video
   /// This creates ONE interaction document with all data
   void _saveInteraction() async {
+    print("saving interaction");
     if (currentlySaving) return;
     if (_startWatchTime != null) {
       final elapsed = DateTime.now().difference(_startWatchTime!).inSeconds.toDouble();
@@ -123,6 +143,7 @@ class _VideoItemState extends State<VideoItem> {
 
     // Only save if user actually watched something
     if (_totalWatchTime < .4 && !_isLiked && !_isDisliked && !_hasShared && !_hasSaved) {
+      print("cancelling bc not interested at index ${widget.index}");
       return;
     }
 
@@ -131,7 +152,7 @@ class _VideoItemState extends State<VideoItem> {
     try {
       // Use VideoRecommender to track interaction
       // This handles BOTH recent_interactions AND preference updates
-      widget.videoProvider.trackVideoInteraction(
+      await widget.videoProvider.trackVideoInteraction(
         video: widget.video,
         watchTime: _totalWatchTime,
         videoDuration: videoDuration > 0 ? videoDuration : 1.0,
@@ -143,8 +164,8 @@ class _VideoItemState extends State<VideoItem> {
 
       print(
         "Saved interaction for video ${widget.video.id}: "
-        "watchTime=${_totalWatchTime.toStringAsFixed(1)}s, "
-        "liked=$_isLiked, shared=$_hasShared",
+            "watchTime=${_totalWatchTime.toStringAsFixed(1)}s, "
+            "liked=$_isLiked, shared=$_hasShared",
       );
 
       // Reset for next viewing session
@@ -152,6 +173,7 @@ class _VideoItemState extends State<VideoItem> {
     } catch (e) {
       print("Error saving interaction: $e");
     }
+    print("done saving");
     currentlySaving = false;
   }
 
@@ -196,42 +218,42 @@ class _VideoItemState extends State<VideoItem> {
     return RepaintBoundary(
       child: Center(
         child: RepaintBoundary(
-                child: AspectRatio(
-                  aspectRatio: 9 / 16,
-                  child: LayoutBuilder(
-                    builder: (context, constraints) {
-                      return Stack(
-                        children: [
-                          RepaintBoundary(
-                            child: Center(
-                              child: AspectRatio(
-                                aspectRatio: widget.controller.value.aspectRatio,
-                                child: VideoPlayer(
-                                  widget.controller,
-                                  key: ValueKey(widget.video.id),
-                                ),
-                              ),
-                            ),
+          child: AspectRatio(
+            aspectRatio: 9 / 16,
+            child: LayoutBuilder(
+              builder: (context, constraints) {
+                return Stack(
+                  children: [
+                    RepaintBoundary(
+                      child: Center(
+                        child: AspectRatio(
+                          aspectRatio: widget.controller.value.aspectRatio,
+                          child: VideoPlayer(
+                            widget.controller,
+                            key: ValueKey(widget.video.id),
                           ),
-                          PageOverlay(
-                            provider: widget.provider,
-                            video: widget.video,
-                            onLikeChanged: onLikeChanged,
-                            onDislikeChanged: onDislikeChanged,
-                            onShareChanged: onShareChanged,
-                            onSaveChanged: onSaveChanged,
-                            onCommentChanged: onCommentChanged,
-                            initiallyLiked: false,
-                            initiallyDisliked: false,
-                            index: widget.index,
-                            child: Container(),
-                          ),
-                        ],
-                      );
-                    },
-                  ),
-                ),
-              ),
+                        ),
+                      ),
+                    ),
+                    PageOverlay(
+                      provider: widget.provider,
+                      video: widget.video,
+                      onLikeChanged: onLikeChanged,
+                      onDislikeChanged: onDislikeChanged,
+                      onShareChanged: onShareChanged,
+                      onSaveChanged: onSaveChanged,
+                      onCommentChanged: onCommentChanged,
+                      initiallyLiked: false,
+                      initiallyDisliked: false,
+                      index: widget.index,
+                      child: Container(),
+                    ),
+                  ],
+                );
+              },
+            ),
+          ),
+        ),
       ),
     );
   }

@@ -141,7 +141,7 @@ class UserPreferenceManager {
 
   List<MapEntry<String, TagInteraction>> sortByRelevancy(Map<String, TagInteraction> tagPrefs) {
     DateTime now = DateTime.now();
-    return _cachedTagPrefs.entries.toList()..sort(
+    return tagPrefs.entries.toList()..sort(
       (a, b) => b.value.lastInteracted.difference(now) < Duration(minutes: 30)
           ? -1
           : b.value.engagementScore.distanceTo(0.5).compareTo(a.value.engagementScore.distanceTo(0.5)),
