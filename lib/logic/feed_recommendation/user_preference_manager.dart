@@ -9,16 +9,16 @@ class UserPreferenceManager {
   final String userId;
 
   static const double _learningRate = 0.25;
-  static const int _maxTagPreferences = 380;
+  static const int _maxTagPreferences = 80;
   static const int _maxAuthorPreferences = 20;
 
   static const double defaultMaxEngagementScore = 6;
 
   // Cache
-  Map<String, TagInteraction> _cachedTagPrefs = {};
-  Map<String, TagInteraction> _cachedAuthorPrefs = {};
-  double _cachedAvgCompletion = 0.0;
-  int _cachedTotalInteractions = 0;
+  Map<String, TagInteraction> cachedTagPrefs = {};
+  Map<String, TagInteraction> cachedAuthorPrefs = {};
+  double cachedAvgCompletion = 0.0;
+  int cachedTotalInteractions = 0;
 
   static final Map<String, UserPreferenceManager> _instances = {};
 
@@ -48,17 +48,17 @@ class UserPreferenceManager {
         final data = snapshot.data()!;
         final profile = data['recommendationProfile'] ?? {};
 
-        _cachedTagPrefs = Map<String, double>.from(
+        cachedTagPrefs = Map<String, double>.from(
           profile['tagVector'] ?? {},
         ).map<String, TagInteraction>((key, value) => MapEntry(key, TagInteraction(engagementScore: value)));
-        _cachedAuthorPrefs = Map<String, double>.from(
+        cachedAuthorPrefs = Map<String, double>.from(
           profile['authorVector'] ?? {},
         ).map<String, TagInteraction>((key, value) => MapEntry(key, TagInteraction(engagementScore: value)));
-        _cachedAvgCompletion = (profile['avgCompletionRate'] ?? 0.0).toDouble();
-        _cachedTotalInteractions = profile['totalInteractions'] ?? 0;
+        cachedAvgCompletion = (profile['avgCompletionRate'] ?? 0.0).toDouble();
+        cachedTotalInteractions = profile['totalInteractions'] ?? 0;
 
         print(
-          "📥 Loaded: ${_cachedTagPrefs.length} tags, ${_cachedAuthorPrefs.length} authors: avgCompletion=${_cachedAvgCompletion.toStringAsFixed(2)}, totalInteractions=$_cachedTotalInteractions, tags: ${(_cachedTagPrefs.entries.toList()..sort((a, b) => a.value.engagementScore.distanceTo(0.5).compareTo(b.value.engagementScore.distanceTo(0.5)))).map<String>((e) => "${e.key}: ${e.value.engagementScore.toStringAsPrecision(2)}").toList().toString()}",
+          "📥 Loaded: ${cachedTagPrefs.length} tags, ${cachedAuthorPrefs.length} authors: avgCompletion=${cachedAvgCompletion.toStringAsFixed(2)}, totalInteractions=$cachedTotalInteractions, tags: ${(cachedTagPrefs.entries.toList()..sort((a, b) => a.value.engagementScore.distanceTo(0.5).compareTo(b.value.engagementScore.distanceTo(0.5)))).map<String>((e) => "${e.key}: ${e.value.engagementScore.toStringAsPrecision(2)}").toList().toString()}",
         );
       }
     } catch (e) {
@@ -80,12 +80,12 @@ class UserPreferenceManager {
     int updated = 0;
     for (final tag in video.tags) {
       if (tag.isEmpty) continue;
-      final oldScore = _cachedTagPrefs[tag]?.engagementScore ?? 0.5;
+      final oldScore = cachedTagPrefs[tag]?.engagementScore ?? 0.5;
       final lr = adaptiveLR(oldScore);
       final newScore = oldScore + lr * (normalizedEngagementScore - oldScore);
-      _cachedTagPrefs[tag] = TagInteraction(engagementScore: newScore.clamp(0.0, 1.0));
+      cachedTagPrefs[tag] = TagInteraction(engagementScore: newScore.clamp(0.0, 1.0));
       updated++;
-      print("🏷️ Tag '$tag': $oldScore -> ${_cachedTagPrefs[tag]} (LR: ${lr.toStringAsPrecision(3)})");
+      print("🏷️ Tag '$tag': $oldScore -> ${cachedTagPrefs[tag]} (LR: ${lr.toStringAsPrecision(3)})");
     }
 
     if (updated == 0) {
@@ -94,33 +94,33 @@ class UserPreferenceManager {
 
     Map<String, double>? networkTagEffects;
     // Trim tags
-    if (_cachedTagPrefs.length > _maxTagPreferences) {
-      final sorted = sortByRelevancy(_cachedTagPrefs);
+    if (cachedTagPrefs.length > _maxTagPreferences) {
+      final sorted = sortByRelevancy(cachedTagPrefs);
       networkTagEffects = Map.fromEntries(sorted.take(_maxTagPreferences).map((e) => MapEntry(e.key, e.value.engagementScore)));
       print("removed tags: ${sorted.skip(_maxTagPreferences).map((e) => "${e.key}: ${e.value.engagementScore.toStringAsPrecision(2)}").toList()}");
       print("kept tags: ${networkTagEffects.entries.map((e) => "${e.key}: ${e.value.toStringAsPrecision(2)}").toList()}");
     }
 
-    networkTagEffects ??= _cachedTagPrefs.map((key, value) => MapEntry(key, value.engagementScore));
+    networkTagEffects ??= cachedTagPrefs.map((key, value) => MapEntry(key, value.engagementScore));
 
     // Update author
-    final oldAuthor = _cachedAuthorPrefs[video.authorId]?.engagementScore ?? 0.5;
+    final oldAuthor = cachedAuthorPrefs[video.authorId]?.engagementScore ?? 0.5;
     final lr = adaptiveLR(oldAuthor);
-    _cachedAuthorPrefs[video.authorId] = TagInteraction(engagementScore: (oldAuthor + lr * (normalizedEngagementScore - oldAuthor)).clamp(0.0, 1.0));
-    print("👤 Author '${video.authorId}': $oldAuthor -> ${_cachedAuthorPrefs[video.authorId]}");
+    cachedAuthorPrefs[video.authorId] = TagInteraction(engagementScore: (oldAuthor + lr * (normalizedEngagementScore - oldAuthor)).clamp(0.0, 1.0));
+    print("👤 Author '${video.authorId}': $oldAuthor -> ${cachedAuthorPrefs[video.authorId]}");
 
     Map<String, double>? networkAuthorEffects;
 
-    if (_cachedAuthorPrefs.length > _maxAuthorPreferences) {
-      final sorted = sortByRelevancy(_cachedAuthorPrefs);
+    if (cachedAuthorPrefs.length > _maxAuthorPreferences) {
+      final sorted = sortByRelevancy(cachedAuthorPrefs);
       networkAuthorEffects = Map.fromEntries(sorted.take(_maxAuthorPreferences).map((e) => MapEntry(e.key, e.value.engagementScore)));
       print("removed authors: ${sorted.skip(_maxAuthorPreferences).map((e) => "${e.key}: ${e.value.engagementScore.toStringAsPrecision(2)}").toList()}");
     }
 
-    networkAuthorEffects ??= _cachedAuthorPrefs.map((key, value) => MapEntry(key, value.engagementScore));
+    networkAuthorEffects ??= cachedAuthorPrefs.map((key, value) => MapEntry(key, value.engagementScore));
 
-    _cachedAvgCompletion = (_cachedAvgCompletion * _cachedTotalInteractions + normalizedEngagementScore) / (_cachedTotalInteractions + 1);
-    _cachedTotalInteractions++;
+    cachedAvgCompletion = (cachedAvgCompletion * cachedTotalInteractions + normalizedEngagementScore) / (cachedTotalInteractions + 1);
+    cachedTotalInteractions++;
 
     final userRef = _firestore.collection('users').doc(userId).collection('profile').doc('preferences');
 
@@ -128,24 +128,27 @@ class UserPreferenceManager {
       'recommendationProfile': {
         'tagVector': networkTagEffects,
         'authorVector': networkAuthorEffects,
-        'avgCompletionRate': _cachedAvgCompletion,
-        'totalInteractions': _cachedTotalInteractions,
+        'avgCompletionRate': cachedAvgCompletion,
+        'totalInteractions': cachedTotalInteractions,
         'lastUpdated': FieldValue.serverTimestamp(),
       },
     }, merge: true);
 
-    if (_cachedTotalInteractions % 5 == 0) {
+    if (cachedTotalInteractions % 5 == 0) {
       await FirestoreBatchQueue().commit();
     }
   }
 
   List<MapEntry<String, TagInteraction>> sortByRelevancy(Map<String, TagInteraction> tagPrefs) {
     DateTime now = DateTime.now();
-    return tagPrefs.entries.toList()..sort(
-      (a, b) => b.value.lastInteracted.difference(now) < Duration(minutes: 30)
-          ? -1
-          : b.value.engagementScore.distanceTo(0.5).compareTo(a.value.engagementScore.distanceTo(0.5)),
-    );
+    return tagPrefs.entries.toList()
+      ..sort((a, b) {
+        final aRecent = now.difference(a.value.lastInteracted) < Duration(minutes: 30);
+        final bRecent = now.difference(b.value.lastInteracted) < Duration(minutes: 30);
+        if (bRecent && !aRecent) return 1;
+        if (aRecent && !bRecent) return -1;
+        return b.value.engagementScore.distanceTo(0.5).compareTo(a.value.engagementScore.distanceTo(0.5));
+      });
   }
 }
 

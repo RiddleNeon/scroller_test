@@ -1,3 +1,5 @@
+import 'dart:developer';
+
 import 'package:cloud_firestore/cloud_firestore.dart';
 import 'package:wurp/logic/feed_recommendation/user_interaction.dart';
 import 'package:wurp/logic/feed_recommendation/user_preference_manager.dart';
@@ -17,9 +19,15 @@ abstract class VideoRecommenderBase {
   }
   /// Get user preferences
   Future<UserPreferences> getUserPreferences() async {
-    final prefsDoc = await firestore.collection('users').doc(userId).collection('profile').doc('preferences').get();
-
-    return UserPreferences.fromFirestore(prefsDoc);
+    await preferenceManager.loadCache();
+    return UserPreferences(
+      tagPreferences: preferenceManager.cachedTagPrefs
+          .map((k, v) => MapEntry(k, v.engagementScore)),
+      authorPreferences: preferenceManager.cachedAuthorPrefs
+          .map((k, v) => MapEntry(k, v.engagementScore)),
+      avgCompletionRate: preferenceManager.cachedAvgCompletion,
+      totalInteractions: preferenceManager.cachedTotalInteractions,
+    );
   }
 
   /// Clean up old interactions
@@ -133,7 +141,7 @@ abstract class VideoRecommenderBase {
 
       for (final tag in video.tags) {
         if (preferredTags.containsKey(tag)) {
-          tagScore += preferredTags[tag]! - 0.5; // Center around 0 (neutral) instead of 0.5
+          tagScore += preferredTags[tag]!;
           matchedTags++;
         }
       }
@@ -151,12 +159,13 @@ abstract class VideoRecommenderBase {
       factors++;
     }
 
-    return factors > 0 ? (score / factors).clamp(0.0, 1.0) : 0.5;
+    return factors > 0 ? (score / factors) : 0.5;
   }
 
 
   /// Fallback: Get trending videos
   Future<Set<Video>> getTrendingVideos(int limit) async {
+    log("Fallback to trending!", level: 2000);
     final snapshot = await firestore.collection('videos').orderBy('createdAt', descending: true).limit(limit).get();
     return snapshot.docs.map((doc) => Video.fromFirestore(doc)).toSet();
   }
@@ -238,6 +247,37 @@ abstract class VideoRecommenderBase {
     );
 
     return videos.take(limit).toList();
+  }
+
+  Future<List<Video>> fetchVideosByTag(String tag, {required int limit}) async {
+    final List<Video> unseen = [];
+    DateTime? cursor = LocalSeenService.getTagCursor(tag);
+
+    while (unseen.length < limit) {
+      Query query = firestore
+          .collection('videos')
+          .where('tags', arrayContains: tag)
+          .orderBy('createdAt', descending: true)
+          .limit(limit);
+
+      if (cursor != null) {
+        query = query.where('createdAt', isLessThan: Timestamp.fromDate(cursor));
+      }
+
+      final snapshot = await query.get();
+      if (snapshot.docs.isEmpty) break;
+
+      final videos = snapshot.docs.map((doc) => Video.fromFirestore(doc)).toList();
+      cursor = videos.last.createdAt;
+
+      unseen.addAll(videos.where((v) => !LocalSeenService.hasSeen(v.id)));
+    }
+
+    if (cursor != null) {
+      await LocalSeenService.saveTagCursor(tag, cursor);
+    }
+
+    return unseen.take(limit).toList();
   }
 
   /// Calculate global engagement score from video metrics

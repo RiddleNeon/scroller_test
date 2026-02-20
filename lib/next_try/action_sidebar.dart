@@ -93,7 +93,7 @@ class _AvatarFollow extends StatelessWidget {
             ),
             child: ClipOval(
               child: CachedNetworkImage(
-                imageUrl: author.profileImageUrl!,
+                imageUrl: author.profileImageUrl,
                 fit: BoxFit.cover,
                 placeholder: (_, __) =>
                 const CircularProgressIndicator(strokeWidth: 1),

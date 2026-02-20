@@ -49,7 +49,7 @@ class LocalSeenService {
 
 
   static Future<void> syncWithFirestore() async {
-    final lastSync = _settingsBox.get('lastSyncTimestamp') ??
+    final lastSync = _settingsBox.get('lastSyncTimestamp') as DateTime? ??
         DateTime.now().subtract(Duration(days: 7));
 
     final snapshot = await _firestore
@@ -63,20 +63,46 @@ class LocalSeenService {
     if (snapshot.docs.isEmpty) return;
 
     final Map<String, DateTime> newEntries = {};
-
     for (var doc in snapshot.docs) {
       final data = doc.data();
       final String videoId = data['videoId'];
       final DateTime seenAt = (data['timestamp'] as Timestamp).toDate();
-
       newEntries[videoId] = seenAt;
     }
 
     print("Syncing ${newEntries.length} seen video entries from Firestore for user $userId...");
     await _seenBox.putAll(newEntries);
-    print("all seen videos: ${_seenBox.keys.toList()}");
+    
+    
+    final Map<String, DateTime> tagOldestSeen = {};
 
-    final latestInteractionTime = (snapshot.docs.first.data()['timestamp'] as Timestamp).toDate();
+    for (var doc in snapshot.docs) {
+      final data = doc.data();
+      final List<String> tags = data['tags'] != null
+          ? List<String>.from(data['tags'])
+          : [];
+      final DateTime seenAt = (data['timestamp'] as Timestamp).toDate();
+
+      for (final tag in tags) {
+        if (!tagOldestSeen.containsKey(tag) ||
+            seenAt.isBefore(tagOldestSeen[tag]!)) {
+          tagOldestSeen[tag] = seenAt;
+        }
+      }
+    }
+    
+    
+    for (final entry in tagOldestSeen.entries) {
+      final existingCursor = getTagCursor(entry.key);
+      if (existingCursor == null || entry.value.isBefore(existingCursor)) {
+        await saveTagCursor(entry.key, entry.value);
+      }
+    }
+
+    print("Updated tag cursors for ${tagOldestSeen.length} tags");
+
+    final latestInteractionTime =
+    (snapshot.docs.first.data()['timestamp'] as Timestamp).toDate();
     await _settingsBox.put('lastSyncTimestamp', latestInteractionTime);
   }
 
@@ -110,4 +136,12 @@ class LocalSeenService {
     await _cursorBox.clear();
   }
   
+  
+  static DateTime? getTagCursor(String tag) {
+    return _cursorBox.get('tag_cursor_$tag') as DateTime?;
+  }
+
+  static Future<void> saveTagCursor(String tag, DateTime timestamp) async {
+    await _cursorBox.put('tag_cursor_$tag', timestamp);
+  }
 }

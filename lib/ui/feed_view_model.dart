@@ -1,6 +1,5 @@
 import 'dart:async';
 
-import 'package:flutter/cupertino.dart';
 import 'package:wurp/logic/video/video_provider.dart';
 import 'package:wurp/main.dart';
 

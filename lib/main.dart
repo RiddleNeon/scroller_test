@@ -4,15 +4,14 @@ import 'package:firebase_core/firebase_core.dart';
 import 'package:flutter/foundation.dart';
 import 'package:flutter/material.dart';
 import 'package:fvp/fvp.dart' as fvp;
-import 'package:provider/provider.dart';
 import 'package:wurp/firebase_options.dart';
 import 'package:wurp/logic/local_storage/local_seen_service.dart';
 import 'package:wurp/logic/repositories/user_repository.dart';
 import 'package:wurp/logic/video/video_provider.dart';
+import 'package:wurp/tools/video_generator/video_generator.dart';
 import 'package:wurp/ui/auth/auth_screen.dart';
 import 'package:wurp/ui/screens/home_screen.dart';
 
-import 'next_try/home_screen.dart';
 
 FirebaseApp? app;
 FirebaseAuth? auth;

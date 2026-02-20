@@ -22,9 +22,8 @@ class VideoRecommender extends VideoRecommenderBase {
   static const double _recencyWeight = 0.15;
   static const double _engagementWeight = 0.40;
   static const double _diversityWeight = 0.15;
-  static const double _personalizedWeight = 0.30;
+  static const double _personalizedWeight = 0.50;
   static const int _candidatePoolSize = 80;
-  static const int _recommendationBatchSize = 10;
   
   VideoRecommender({required super.userId});
 
@@ -35,9 +34,11 @@ class VideoRecommender extends VideoRecommenderBase {
     try {
       // 1. Get user preferences
       final userPreferences = await getUserPreferences();
+      print("got user preferences");
       
       // 2. Get recent interactions for diversity (limited to last N)
       final recentInteractions = await getRecentInteractions();
+      print("got recent interactions");
       
       // 3. Get candidate videos
       final candidateVideos = await _getCandidateVideos(userPreferences: userPreferences, limit: _candidatePoolSize);
@@ -48,10 +49,12 @@ class VideoRecommender extends VideoRecommenderBase {
       final scoredVideos = _scoreVideos(candidateVideos, userPreferences, recentInteractions);
       
       // 5. Apply diversity filter
-      final diversifiedVideos = _applyDiversityFilter(scoredVideos);
+      final diversifiedVideos = _applyDiversityFilter(scoredVideos, limit: limit);
       
       print("Diversified videos for user $userId: ${diversifiedVideos.length} videos, sample: ${diversifiedVideos.take(5).map((vs) => {'videoUrl': vs.video.videoUrl, 'score': vs.score}).toList()}");
 
+      if(diversifiedVideos.isEmpty) return getTrendingVideos(limit);
+      
       // 6. Return top N videos
       return diversifiedVideos.take(limit).map((vs) => vs.video).toSet();
     } catch (e) {
@@ -65,59 +68,36 @@ class VideoRecommender extends VideoRecommenderBase {
   /// Get candidate videos with smart filtering based on user preferences
   Future<Set<Video>> _getCandidateVideos({
     required UserPreferences userPreferences,
-    required int limit
+    required int limit,
   }) async {
-    if (userPreferences.isNewUser) {
-      print("New User! getting trending videos for user $userId...");
-      return getTrendingVideos(limit);
-    }
-    
-    print("Getting candidate videos, last seen timestamps: newest=${LocalSeenService.getNewestSeenTimestamp()}, oldest=${LocalSeenService.getOldestSeenTimestamp()})");
+    if (userPreferences.isNewUser) return getTrendingVideos(limit);
 
     final Set<Video> candidates = {};
 
+    final topTags = _getTopTags(userPreferences, 3);
+    print("top tags for user: ${topTags}");
+    for (final tag in topTags) {
+      final tagVideos = await fetchVideosByTag(tag, limit: limit ~/ 3);
+      print("got videos: ${tagVideos}");
+      candidates.addAll(tagVideos.where((v) => !LocalSeenService.hasSeen(v.id)));
+    }
+
     final newestTimestamp = LocalSeenService.getNewestSeenTimestamp();
-    final newVideos = await fetchNewVideos(newestTimestamp, limit);
+    final newVideos = await fetchNewVideos(newestTimestamp, limit ~/ 4);
+    candidates.addAll(newVideos.where((v) => !LocalSeenService.hasSeen(v.id)));
 
-    if (newVideos.isNotEmpty) {
-      print("Found ${newVideos.length} new videos");
-      candidates.addAll(newVideos);
-      await LocalSeenService.saveNewestSeenTimestamp(newVideos.first.createdAt);
-    }
-
-    //trending videos
     if (candidates.length < limit * 0.5) {
-      final trendingCursor = LocalSeenService.getTrendingCursor();
-      final trendingVideos = await fetchTrendingVideos(
-        cursor: trendingCursor,
-        limit: (limit - candidates.length) ~/ 2,
-      );
-
-      if (trendingVideos.isNotEmpty) {
-        candidates.addAll(trendingVideos.where((v) => !candidates.any((v2) => v2.id == v.id)));
-        await LocalSeenService.saveTrendingCursor(trendingVideos.last.createdAt);
-      }
+      final trending = await getTrendingVideos(limit ~/ 4);
+      candidates.addAll(trending.where((v) => !LocalSeenService.hasSeen(v.id)));
     }
 
-    // Backfill with older videos if we don't have enough recent ones
-    if (candidates.length < limit) {
-      final oldestTimestamp = LocalSeenService.getOldestSeenTimestamp();
-      final oldVideos = await fetchOldVideos(oldestTimestamp, limit - candidates.length);
+    return candidates;
+  }
 
-      if (oldVideos.isNotEmpty) {
-        print("Backfilling with ${oldVideos.length} older videos");
-        candidates.addAll(oldVideos);
-        await LocalSeenService.saveOldestSeenTimestamp(oldVideos.last.createdAt);
-      } else {
-        print("No more old videos available");
-      }
-    }
-
-    final unseenCandidates = candidates
-        .where((video) => !LocalSeenService.hasSeen(video.id))
-        .toSet();
-    
-    return unseenCandidates;
+  List<String> _getTopTags(UserPreferences prefs, int count) {
+    final sorted = prefs.tagPreferences.entries.toList()
+      ..sort((a, b) => b.value.compareTo(a.value));
+    return sorted.take(count).map((e) => e.key).toList();
   }
 
   /// Score videos based on multiple factors
@@ -196,7 +176,7 @@ class VideoRecommender extends VideoRecommenderBase {
   }
 
   /// Apply diversity filter to prevent monotony
-  List<VideoScore> _applyDiversityFilter(List<VideoScore> scoredVideos) {
+  List<VideoScore> _applyDiversityFilter(List<VideoScore> scoredVideos, {int limit = 20}) {
     final result = <VideoScore>[];
     final authorCount = <String, int>{};
     final tagCombinations = <String, int>{};
@@ -220,7 +200,7 @@ class VideoRecommender extends VideoRecommenderBase {
       authorCount[video.authorId] = currentAuthorCount + 1;
       tagCombinations[tagKey] = currentTagCount + 1;
 
-      if (result.length >= _recommendationBatchSize) break;
+      if (result.length >= limit) break;
     }
 
     return result;
