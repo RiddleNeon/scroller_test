@@ -92,34 +92,6 @@ abstract class VideoRecommenderBase {
     await preferenceManager.updatePreferences(video: video, normalizedEngagementScore: interaction.normalizedEngagementScore);
   }
 
-
-  /// Get only recent interactions (limited query)
-  Future<List<UserInteraction>> getRecentInteractions() async { //todo use cached preferences to limit this query
-    final snapshot = await firestore
-        .collection('users')
-        .doc(userId)
-        .collection('recent_interactions')
-        .orderBy('timestamp', descending: true)
-        .limit(_recentInteractionsLimit)
-        .get();
-
-    return snapshot.docs.map((doc) {
-      final data = doc.data();
-      //print("videoId: ${data['videoId']}, watchTime: ${data['watchTime']}, videoDuration: ${data['videoDuration']}, liked: ${data['liked']}, shared: ${data['shared']}, commented: ${data['commented']}, saved: ${data['saved']}, timestamp: ${data['timestamp']}, authorId: ${data['authorId']}, tags: ${data['tags']}");
-      return UserInteraction(
-        videoId: data['videoId'] ?? '',
-        watchTime: (data['watchTime'] ?? 0).toDouble(),
-        videoDuration: (data['videoDuration'] ?? 1).toDouble(),
-        liked: data['liked'] ?? false,
-        shared: data['shared'] ?? false,
-        commented: data['commented'] ?? false,
-        saved: data['saved'] ?? false,
-        timestamp: (data['timestamp'] as Timestamp?)?.toDate(), authorId: data['authorId'] ?? "38215211", //todo
-        tags: data['tags'] != null ? List<String>.from(data['tags']) : ["untagged"],
-      );
-    }).toList();
-  }
-
   /// Calculate personalization score
   double calculatePersonalizationScore(Video video, UserPreferences userPreferences) {
     final preferredTags = userPreferences.tagPreferences;
@@ -154,7 +126,7 @@ abstract class VideoRecommenderBase {
 
     // Author matching
     if (preferredAuthors.containsKey(video.authorId)) {
-      score += preferredAuthors[video.authorId]! - 0.5;
+      score += preferredAuthors[video.authorId]!;
       factors++;
     }
 
@@ -249,12 +221,14 @@ abstract class VideoRecommenderBase {
     return videos.take(limit).toList();
   }
 
+  static const _maxRetryAttempts = 5;
   Future<List<Video>> fetchVideosByTag(String tag, {required int limit}) async {
     print("fetching videos by tag $tag");
     final List<Video> unseen = [];
     DateTime? cursor = LocalSeenService.getTagCursor(tag);
-
-    while (unseen.length < limit) {
+    
+    int attempts = 0;
+    while (unseen.length < limit && attempts < _maxRetryAttempts) {
       Query query = firestore
           .collection('videos')
           .where('tags', arrayContains: tag)

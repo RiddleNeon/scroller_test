@@ -87,17 +87,14 @@ class RecommendationVideoProvider implements VideoProvider {
   Future<void> _preloadMoreVideosInternal(int count) async {
     try {      
 
-      print("getting new vids");
       final newVideos = await _recommender.getRecommendedVideos(
         limit: count,
       );
       
-      print("got new vids");
       _videoCache.addAll(newVideos);
       for (var value in newVideos) {
-        LocalSeenService.markAsSeen(value.id);
+        LocalSeenService.markAsSeen(value);
       }
-      print("marked as seen");
     } catch (e) {
       print('Error preloading videos: $e');
     }

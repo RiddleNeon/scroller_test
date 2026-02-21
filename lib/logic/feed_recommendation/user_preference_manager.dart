@@ -33,7 +33,10 @@ class UserPreferenceManager {
   Future<void>? _loadFuture;
 
   Future<void> loadCache() async {
-    _loadFuture ??= _loadCacheInternal();
+    _loadFuture ??= _loadCacheInternal().catchError((e) {
+      _loadFuture = null;
+      throw e;
+    });
     return await _loadFuture!;
   }
 
