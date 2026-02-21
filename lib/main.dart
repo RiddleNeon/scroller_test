@@ -7,6 +7,7 @@ import 'package:fvp/fvp.dart' as fvp;
 import 'package:wurp/firebase_options.dart';
 import 'package:wurp/logic/local_storage/local_seen_service.dart';
 import 'package:wurp/logic/repositories/user_repository.dart';
+import 'package:wurp/logic/repositories/video_repository.dart';
 import 'package:wurp/logic/video/video_provider.dart';
 import 'package:wurp/ui/auth/auth_screen.dart';
 import 'package:wurp/ui/screens/home_screen.dart';
@@ -32,6 +33,7 @@ void main() async {
   await FirebaseFirestore.instance.runTransaction((transaction) async {}); //whyever it fixes a crash on windows
   auth = FirebaseAuth.instanceFor(app: app!);
   _firestore = FirebaseFirestore.instance;
+  VideoRepository().addComment("MrROkFLyYpSqOuxwcePncM8Kk4B3", "gYlpkVli3SAn1UHSv9K8", "HEHEHEHEHAAAA");
 
   if (auth?.currentUser != null) {
     await onUserLogin();

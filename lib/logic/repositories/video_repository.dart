@@ -38,10 +38,10 @@ class VideoRepository {
       'authorId': authorId,
       'createdAt': FieldValue.serverTimestamp(),
       'tags': tags.map((tag) => tag.toLowerCase()).toList(),
-      'likesCount': 0,
-      'sharesCount': 0,
-      'commentsCount': 0,
-      'viewsCount': 0,
+      'likes': 0,
+      'shares': 0,
+      'comments': 0,
+      'views': 0,
     });
 
     _batchQueue.set(
@@ -260,7 +260,7 @@ class VideoRepository {
     _batchQueue.update(
       firestore.collection('videos').doc(videoId),
       {
-        'viewsCount': FieldValue.increment(1),
+        'views': FieldValue.increment(1),
       },
     );
   }
@@ -270,7 +270,7 @@ class VideoRepository {
     _batchQueue.update(
       firestore.collection('videos').doc(videoId),
       {
-        'sharesCount': FieldValue.increment(1),
+        'shares': FieldValue.increment(1),
       },
     );
   }
@@ -459,7 +459,7 @@ class VideoRepository {
 
       final snapshot = await firestore
           .collection('videos')
-          .where('tags', arrayContainsAny: video.tags.take(3).toList())
+          .where('tags', arrayContainsAny: video.tags.take(5).toList())
           .orderBy('createdAt', descending: true)
           .limit(limit + 1)
           .get();
