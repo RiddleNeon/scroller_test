@@ -27,7 +27,6 @@ Widget feedVideos(TickerProvider tickerProvider, RecommendationVideoProvider vid
                     ),
                   );
                 }
-                print("data: ${snapshot.data}");
                 return VideoItem(
                   controller: snapshot.data!.controller!,
                   video: snapshot.data!.video,

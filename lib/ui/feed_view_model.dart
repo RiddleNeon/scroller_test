@@ -46,7 +46,6 @@ class FeedViewModel {
     final video = await videoSource.getVideoByIndex(index);
     final container = VideoContainer(video: video);
     await container.loadController();
-    print("controller loaded: ${container.controller}");
     _loadedContainers[index] = container;
     return container;
   }
@@ -67,7 +66,7 @@ class FeedViewModel {
     if (previous != index && !_disposedIndices.contains(previous)) {
       final prev = _loadedContainers[previous];
       await prev?.controller?.pause();
-      print("Paused video at index $previous");
+      await prev?.controller?.seekTo(Duration.zero);
     }
 
     // 3. Now play the current video (decoder slot is free, audio focus available)

@@ -48,7 +48,6 @@ class _VideoItemState extends State<VideoItem> {
   void initState() {
     super.initState();
     widget.controller.addListener(_onControllerUpdate);
-    // Falls das Video beim Mounten bereits läuft
     if (widget.controller.value.isPlaying) {
       _wasPlaying = true;
       _startTracking();
@@ -126,6 +125,7 @@ class _VideoItemState extends State<VideoItem> {
     // Only increment view count on video
     final videoRef = firestore.collection('videos').doc(widget.video.id);
     batchQueue.update(videoRef, {'viewsCount': FieldValue.increment(1)});
+    print("view tracked for url ${widget.video.videoUrl}: ${widget.video}");
   }
 
   bool currentlySaving = false;
@@ -133,7 +133,6 @@ class _VideoItemState extends State<VideoItem> {
   /// Save complete interaction when user leaves video
   /// This creates ONE interaction document with all data
   void _saveInteraction() async {
-    print("saving interaction");
     if (currentlySaving) return;
     if (_startWatchTime != null) {
       final elapsed = DateTime.now().difference(_startWatchTime!).inSeconds.toDouble();
@@ -143,7 +142,6 @@ class _VideoItemState extends State<VideoItem> {
 
     // Only save if user actually watched something
     if (_totalWatchTime < .4 && !_isLiked && !_isDisliked && !_hasShared && !_hasSaved) {
-      print("cancelling bc not interested at index ${widget.index}");
       return;
     }
 
@@ -162,18 +160,11 @@ class _VideoItemState extends State<VideoItem> {
         saved: _hasSaved,
       );
 
-      print(
-        "Saved interaction for video ${widget.video.id}: "
-            "watchTime=${_totalWatchTime.toStringAsFixed(1)}s, "
-            "liked=$_isLiked, shared=$_hasShared",
-      );
-
       // Reset for next viewing session
       _totalWatchTime = 0.0;
     } catch (e) {
       print("Error saving interaction: $e");
     }
-    print("done saving");
     currentlySaving = false;
   }
 
@@ -214,7 +205,6 @@ class _VideoItemState extends State<VideoItem> {
 
   @override
   Widget build(BuildContext context) {
-    print("starting video widget build");
     return RepaintBoundary(
       child: Center(
         child: RepaintBoundary(

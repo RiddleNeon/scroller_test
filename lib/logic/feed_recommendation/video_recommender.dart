@@ -5,7 +5,7 @@ import 'package:wurp/logic/feed_recommendation/user_preferences.dart';
 import 'package:wurp/logic/feed_recommendation/video_recommender_base.dart';
 import 'package:wurp/logic/video/video.dart';
 
-import '../local_storage/local_seen_service.dart';
+import '../../util/misc/lists.dart';
 
 class VideoScore {
   final double score;
@@ -14,57 +14,49 @@ class VideoScore {
   VideoScore({required this.score, required this.video});
 }
 
-
 /// Optimized video recommender with preference-based system
 class VideoRecommender extends VideoRecommenderBase {
-
   // Algorithm parameters
   static const double _recencyWeight = 0.15;
   static const double _engagementWeight = 0.40;
   static const double _diversityWeight = 0.15;
   static const double _personalizedWeight = 0.50;
-  static const int _candidatePoolSize = 80;
-  
+  static const int _candidatePoolSize = 10;
+
   VideoRecommender({required super.userId});
-
-
 
   /// Main recommendation function
   Future<Set<Video>> getRecommendedVideos({int limit = 20}) async {
     try {
       // 1. Get user preferences
       final userPreferences = await getUserPreferences();
-      print("got user preferences");
-      
+
       // 2. Get recent interactions for diversity (limited to last N)
       final recentInteractions = await getRecentInteractions();
-      print("got recent interactions");
-      
+
       // 3. Get candidate videos
       final candidateVideos = await _getCandidateVideos(userPreferences: userPreferences, limit: _candidatePoolSize);
-      
-      print("Candidate videos for user $userId: ${candidateVideos.length} videos, sample: ${candidateVideos.map((v) => v.id).toList()}");
 
       // 4. Score each video
       final scoredVideos = _scoreVideos(candidateVideos, userPreferences, recentInteractions);
-      
+
       // 5. Apply diversity filter
       final diversifiedVideos = _applyDiversityFilter(scoredVideos, limit: limit);
-      
-      print("Diversified videos for user $userId: ${diversifiedVideos.length} videos, sample: ${diversifiedVideos.take(5).map((vs) => {'videoUrl': vs.video.videoUrl, 'score': vs.score}).toList()}");
 
-      if(diversifiedVideos.isEmpty) return getTrendingVideos(limit);
-      
+      if (diversifiedVideos.isEmpty) {
+        print("no more videos!");
+        return getTrendingVideos(limit);
+      }
+
       // 6. Return top N videos
-      return diversifiedVideos.take(limit).map((vs) => vs.video).toSet();
+      return (diversifiedVideos.take(limit).map((vs) => vs.video).toList()..shuffle()).toSet();
     } catch (e) {
       print('Error getting recommendations: $e. stacktrace: ${StackTrace.current}');
       // Fallback to trending videos
       return getTrendingVideos(limit);
     }
   }
-  
-  
+
   /// Get candidate videos with smart filtering based on user preferences
   Future<Set<Video>> _getCandidateVideos({
     required UserPreferences userPreferences,
@@ -78,25 +70,23 @@ class VideoRecommender extends VideoRecommenderBase {
     print("top tags for user: ${topTags}");
     for (final tag in topTags) {
       final tagVideos = await fetchVideosByTag(tag, limit: limit ~/ 3);
-      print("got videos: ${tagVideos}");
-      candidates.addAll(tagVideos.where((v) => !LocalSeenService.hasSeen(v.id)));
+      candidates.addAll(tagVideos);
     }
 
-    final newestTimestamp = LocalSeenService.getNewestSeenTimestamp();
+/*    final newestTimestamp = LocalSeenService.getNewestSeenTimestamp();
     final newVideos = await fetchNewVideos(newestTimestamp, limit ~/ 4);
     candidates.addAll(newVideos.where((v) => !LocalSeenService.hasSeen(v.id)));
 
     if (candidates.length < limit * 0.5) {
       final trending = await getTrendingVideos(limit ~/ 4);
       candidates.addAll(trending.where((v) => !LocalSeenService.hasSeen(v.id)));
-    }
+    }*/
 
-    return candidates;
+    return removeDuplicates<Video>(candidates.toList(), getCheckedParameter: (vid) => vid.videoUrl).toSet();
   }
 
   List<String> _getTopTags(UserPreferences prefs, int count) {
-    final sorted = prefs.tagPreferences.entries.toList()
-      ..sort((a, b) => b.value.compareTo(a.value));
+    final sorted = prefs.tagPreferences.entries.toList()..sort((a, b) => b.value.compareTo(a.value));
     return sorted.take(count).map((e) => e.key).toList();
   }
 

@@ -1,9 +1,11 @@
 import 'dart:developer';
+import 'dart:math' hide log;
 
 import 'package:cloud_firestore/cloud_firestore.dart';
 import 'package:wurp/logic/feed_recommendation/user_interaction.dart';
 import 'package:wurp/logic/feed_recommendation/user_preference_manager.dart';
 import 'package:wurp/logic/feed_recommendation/user_preferences.dart';
+import 'package:wurp/util/misc/lists.dart';
 
 import '../local_storage/local_seen_service.dart';
 import '../video/video.dart';
@@ -71,7 +73,6 @@ abstract class VideoRecommenderBase {
       timestamp: DateTime.now(), authorId: video.authorId, tags: video.tags,
     );
 
-    print("trackInteraction - Video ID: ${video.id}");
 
     // 1. Store recent interaction (with automatic cleanup via TTL in Firestore rules)
     await firestore.collection('users').doc(userId).collection('recent_interactions').add({
@@ -86,9 +87,7 @@ abstract class VideoRecommenderBase {
       'authorId': video.authorId,
       'tags': video.tags,
     });
-
-    print("Recent interaction saved");
-
+    
     // 2. Update user preferences (batched)
     await preferenceManager.updatePreferences(video: video, normalizedEngagementScore: interaction.normalizedEngagementScore);
   }
@@ -115,7 +114,7 @@ abstract class VideoRecommenderBase {
         shared: data['shared'] ?? false,
         commented: data['commented'] ?? false,
         saved: data['saved'] ?? false,
-        timestamp: (data['timestamp'] as Timestamp).toDate(), authorId: data['authorId'] ?? "38215211", //todo
+        timestamp: (data['timestamp'] as Timestamp?)?.toDate(), authorId: data['authorId'] ?? "38215211", //todo
         tags: data['tags'] != null ? List<String>.from(data['tags']) : ["untagged"],
       );
     }).toList();
@@ -167,6 +166,7 @@ abstract class VideoRecommenderBase {
   Future<Set<Video>> getTrendingVideos(int limit) async {
     log("Fallback to trending!", level: 2000);
     final snapshot = await firestore.collection('videos').orderBy('createdAt', descending: true).limit(limit).get();
+    print("got snapshot");
     return snapshot.docs.map((doc) => Video.fromFirestore(doc)).toSet();
   }
 
@@ -250,6 +250,7 @@ abstract class VideoRecommenderBase {
   }
 
   Future<List<Video>> fetchVideosByTag(String tag, {required int limit}) async {
+    print("fetching videos by tag $tag");
     final List<Video> unseen = [];
     DateTime? cursor = LocalSeenService.getTagCursor(tag);
 
@@ -257,26 +258,34 @@ abstract class VideoRecommenderBase {
       Query query = firestore
           .collection('videos')
           .where('tags', arrayContains: tag)
-          .orderBy('createdAt', descending: true)
-          .limit(limit);
+          .orderBy('createdAt', descending: true);
 
       if (cursor != null) {
         query = query.where('createdAt', isLessThan: Timestamp.fromDate(cursor));
       }
+      
+      
 
-      final snapshot = await query.get();
+      final snapshot = await query.limit(limit*2).get(); //todo check costs of firebase
+      print("got snapshot: ${snapshot.docs.map((e) => (e.data() as Map<String, dynamic>)["videoUrl"]).toList()}");
       if (snapshot.docs.isEmpty) break;
 
       final videos = snapshot.docs.map((doc) => Video.fromFirestore(doc)).toList();
-      cursor = videos.last.createdAt;
-
+      
       unseen.addAll(videos.where((v) => !LocalSeenService.hasSeen(v.id)));
+
+
+      int lastCountingIndex = min(videos.length-1, limit);
+      cursor = videos.elementAtOrNull(lastCountingIndex)?.createdAt;
+      
+      
+      print("unseen filtered: ${unseen.map((e) => e.videoUrl).toList().take(limit).toList()}");
     }
 
     if (cursor != null) {
       await LocalSeenService.saveTagCursor(tag, cursor);
     }
-
+    
     return unseen.take(limit).toList();
   }
 

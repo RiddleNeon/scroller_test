@@ -18,7 +18,6 @@ class VideoContainer {
       ),
     );
 
-    print("loading video ${video.videoUrl}");
     await controller!.initialize();
 
     return controller!.setLooping(true);

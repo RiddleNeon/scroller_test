@@ -33,12 +33,10 @@ class RecommendationVideoProvider implements VideoProvider {
       : _recommender = VideoRecommender(userId: userId);
 
   @override
-  Future<Video> getVideoByIndex(int index) async {
-    print("REQUESTED VIDEO INDEX: $index, CACHE SIZE: ${_videoCache.length}");
+  Future<Video> getVideoByIndex(int index, [bool retry = true]) async {
     // Preload more videos if we're running low
     if (index >= _videoCache.length - _preloadThreshold) {
       Future loadingFuture = preloadVideos(_preloadBatchSize);
-      print("new loading future");
       if(index >= _videoCache.length) {
         // If requested index is beyond current cache, wait for preload to finish
         await loadingFuture;
@@ -50,7 +48,11 @@ class RecommendationVideoProvider implements VideoProvider {
     if (index < _videoCache.length) {
       _currentIndex = index;
       return _videoCache[index];
+    } else if(retry) {
+      return getVideoByIndex(index, false);
     }
+    
+    
     throw Exception('Video index out of range: $index');
   }
   
@@ -85,16 +87,17 @@ class RecommendationVideoProvider implements VideoProvider {
   Future<void> _preloadMoreVideosInternal(int count) async {
     try {      
 
+      print("getting new vids");
       final newVideos = await _recommender.getRecommendedVideos(
         limit: count,
       );
       
-
+      print("got new vids");
       _videoCache.addAll(newVideos);
-      print("added these videos: ${newVideos.map((e) => e.videoUrl).toList()}");
       for (var value in newVideos) {
         LocalSeenService.markAsSeen(value.id);
       }
+      print("marked as seen");
     } catch (e) {
       print('Error preloading videos: $e');
     }

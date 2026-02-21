@@ -56,10 +56,6 @@ class UserPreferenceManager {
         ).map<String, TagInteraction>((key, value) => MapEntry(key, TagInteraction(engagementScore: value)));
         cachedAvgCompletion = (profile['avgCompletionRate'] ?? 0.0).toDouble();
         cachedTotalInteractions = profile['totalInteractions'] ?? 0;
-
-        print(
-          "📥 Loaded: ${cachedTagPrefs.length} tags, ${cachedAuthorPrefs.length} authors: avgCompletion=${cachedAvgCompletion.toStringAsFixed(2)}, totalInteractions=$cachedTotalInteractions, tags: ${(cachedTagPrefs.entries.toList()..sort((a, b) => a.value.engagementScore.distanceTo(0.5).compareTo(b.value.engagementScore.distanceTo(0.5)))).map<String>((e) => "${e.key}: ${e.value.engagementScore.toStringAsPrecision(2)}").toList().toString()}",
-        );
       }
     } catch (e) {
       print('Error loading cache');
@@ -68,7 +64,6 @@ class UserPreferenceManager {
   }
 
   Future<void> updatePreferences({required Video video, required double normalizedEngagementScore}) async {
-    print("🎯 Update for video ${video.id}, tags: ${video.tags}, engagement: $normalizedEngagementScore");
     await loadCache();
 
     double adaptiveLR(double currentScore) {
@@ -85,11 +80,6 @@ class UserPreferenceManager {
       final newScore = oldScore + lr * (normalizedEngagementScore - oldScore);
       cachedTagPrefs[tag] = TagInteraction(engagementScore: newScore.clamp(0.0, 1.0));
       updated++;
-      print("🏷️ Tag '$tag': $oldScore -> ${cachedTagPrefs[tag]} (LR: ${lr.toStringAsPrecision(3)})");
-    }
-
-    if (updated == 0) {
-      print("NO TAGS UPDATED! video.tags = ${video.tags}");
     }
 
     Map<String, double>? networkTagEffects;
@@ -97,8 +87,6 @@ class UserPreferenceManager {
     if (cachedTagPrefs.length > _maxTagPreferences) {
       final sorted = sortByRelevancy(cachedTagPrefs);
       networkTagEffects = Map.fromEntries(sorted.take(_maxTagPreferences).map((e) => MapEntry(e.key, e.value.engagementScore)));
-      print("removed tags: ${sorted.skip(_maxTagPreferences).map((e) => "${e.key}: ${e.value.engagementScore.toStringAsPrecision(2)}").toList()}");
-      print("kept tags: ${networkTagEffects.entries.map((e) => "${e.key}: ${e.value.toStringAsPrecision(2)}").toList()}");
     }
 
     networkTagEffects ??= cachedTagPrefs.map((key, value) => MapEntry(key, value.engagementScore));
@@ -107,14 +95,12 @@ class UserPreferenceManager {
     final oldAuthor = cachedAuthorPrefs[video.authorId]?.engagementScore ?? 0.5;
     final lr = adaptiveLR(oldAuthor);
     cachedAuthorPrefs[video.authorId] = TagInteraction(engagementScore: (oldAuthor + lr * (normalizedEngagementScore - oldAuthor)).clamp(0.0, 1.0));
-    print("👤 Author '${video.authorId}': $oldAuthor -> ${cachedAuthorPrefs[video.authorId]}");
 
     Map<String, double>? networkAuthorEffects;
 
     if (cachedAuthorPrefs.length > _maxAuthorPreferences) {
       final sorted = sortByRelevancy(cachedAuthorPrefs);
       networkAuthorEffects = Map.fromEntries(sorted.take(_maxAuthorPreferences).map((e) => MapEntry(e.key, e.value.engagementScore)));
-      print("removed authors: ${sorted.skip(_maxAuthorPreferences).map((e) => "${e.key}: ${e.value.engagementScore.toStringAsPrecision(2)}").toList()}");
     }
 
     networkAuthorEffects ??= cachedAuthorPrefs.map((key, value) => MapEntry(key, value.engagementScore));

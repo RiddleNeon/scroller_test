@@ -9,7 +9,7 @@ class UserInteraction {
   final bool shared;
   final bool commented;
   final bool saved;
-  final DateTime timestamp;
+  final DateTime? timestamp;
 
   UserInteraction({
     required this.videoId,

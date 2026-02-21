@@ -16,12 +16,20 @@ class LocalSeenService {
   static Future<void> init() async {
     print("starting initialization of LocalSeenService...");
     await Hive.initFlutter();
+
     _seenBox = await Hive.openBox<DateTime>(_seenBoxName);
     _settingsBox = await Hive.openBox(_settingsBoxName);
     _cursorBox = await Hive.openBox(_cursorBoxName);
+
+    await _cursorBox.clear();
+    await _seenBox.clear();
+
+    print("cleared!");
+
     userId = auth!.currentUser!.uid;
     await syncWithFirestore();
     await cleanUpOldEntries();
+
     print("initialized LocalSeenService with ${_seenBox.length} seen videos for user $userId, last sync: ${_settingsBox.get('lastSyncTimestamp')}");
   }
 
@@ -48,29 +56,72 @@ class LocalSeenService {
   }
 
 
-  static Future<void> syncWithFirestore() async {
+  static Future<void> syncWithFirestore({bool onlyLoad = true}) async {
     final lastSync = _settingsBox.get('lastSyncTimestamp') as DateTime? ??
-        DateTime.now().subtract(Duration(days: 7));
+        DateTime.now().subtract(const Duration(days: 7));
+    
+    
+    if (!onlyLoad) {
+      print("Uploading local changes to Firestore...");
 
+      final Map<String, DateTime> localEntries =
+      Map<String, DateTime>.from(_seenBox.toMap());
+
+      final batch = _firestore.batch();
+      int uploadCount = 0;
+
+      for (final entry in localEntries.entries) {
+        if (entry.value.isAfter(lastSync)) {
+          final docRef = _firestore
+              .collection('users')
+              .doc(userId)
+              .collection('recent_interactions')
+              .doc(entry.key);
+
+          batch.set(docRef, {
+            'videoId': entry.key,
+            'timestamp': Timestamp.fromDate(entry.value),
+          }, SetOptions(merge: true));
+
+          uploadCount++;
+        }
+      }
+
+      if (uploadCount > 0) {
+        await batch.commit();
+      }
+
+      print("Uploaded $uploadCount local entries");
+    }
+
+    
     final snapshot = await _firestore
         .collection('users')
-        .doc(userId)
+        .doc(userId) 
         .collection('recent_interactions')
         .where('timestamp', isGreaterThan: Timestamp.fromDate(lastSync))
         .orderBy('timestamp', descending: true)
         .get();
 
-    if (snapshot.docs.isEmpty) return;
+    if (snapshot.docs.isEmpty) { 
+      print("Nothing new from Firestore");
+      return;
+    }
 
-    final Map<String, DateTime> newEntries = {};
+    final Map<String, DateTime> newEntries = {}; 
+
     for (var doc in snapshot.docs) {
       final data = doc.data();
       final String videoId = data['videoId'];
       final DateTime seenAt = (data['timestamp'] as Timestamp).toDate();
-      newEntries[videoId] = seenAt;
+
+      final local = _seenBox.get(videoId); 
+      if (local == null || seenAt.isAfter(local)) {
+        newEntries[videoId] = seenAt;
+      }
     }
 
-    print("Syncing ${newEntries.length} seen video entries from Firestore for user $userId...");
+    print("Syncing ${newEntries.length} entries from Firestore...");
     await _seenBox.putAll(newEntries);
     
     
@@ -78,9 +129,8 @@ class LocalSeenService {
 
     for (var doc in snapshot.docs) {
       final data = doc.data();
-      final List<String> tags = data['tags'] != null
-          ? List<String>.from(data['tags'])
-          : [];
+      final List<String> tags =
+      data['tags'] != null ? List<String>.from(data['tags']) : [];
       final DateTime seenAt = (data['timestamp'] as Timestamp).toDate();
 
       for (final tag in tags) {
@@ -90,8 +140,7 @@ class LocalSeenService {
         }
       }
     }
-    
-    
+
     for (final entry in tagOldestSeen.entries) {
       final existingCursor = getTagCursor(entry.key);
       if (existingCursor == null || entry.value.isBefore(existingCursor)) {
@@ -100,9 +149,11 @@ class LocalSeenService {
     }
 
     print("Updated tag cursors for ${tagOldestSeen.length} tags");
-
+    
+    
     final latestInteractionTime =
     (snapshot.docs.first.data()['timestamp'] as Timestamp).toDate();
+
     await _settingsBox.put('lastSyncTimestamp', latestInteractionTime);
   }
 
