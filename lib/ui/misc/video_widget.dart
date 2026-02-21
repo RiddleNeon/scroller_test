@@ -155,6 +155,7 @@ class _VideoItemState extends State<VideoItem> {
         watchTime: _totalWatchTime,
         videoDuration: videoDuration > 0 ? videoDuration : 1.0,
         liked: _isLiked,
+        disliked: _isDisliked,
         shared: _hasShared,
         commented: _hasCommented,
         saved: _hasSaved,
@@ -248,5 +249,3 @@ class _VideoItemState extends State<VideoItem> {
     );
   }
 }
-
-VideoProvider videoProvider = BaseAlgorithmVideoProvider();

@@ -11,6 +11,7 @@ class UserProfile {
   final int? followingCount;
   final int? totalVideosCount;
   final int? totalLikesCount;
+  final int? totalDislikesCount;
 
   const UserProfile({
     required this.id,
@@ -22,9 +23,10 @@ class UserProfile {
     this.followingCount,
     this.totalVideosCount,
     this.totalLikesCount,
+    this.totalDislikesCount,
   });
 
-  factory UserProfile.fromFirestore(DocumentSnapshot doc, {bool includePublishedVideos = false, bool includeFollowingIds = false}) {
+  factory UserProfile.fromFirestore(DocumentSnapshot doc) {
     Map data = doc.data() as Map<String, dynamic>;
     return UserProfile(
       id: doc.id,
@@ -36,9 +38,41 @@ class UserProfile {
       followingCount: data['followingCount'],
       totalVideosCount: data['totalVideosCount'],
       totalLikesCount: data['totalLikesCount'],
+      totalDislikesCount: data['totalDislikesCount'],
     );
   }
+  
+  static Future<List<UserProfile>> _fetchProfilesByIds(List<String> ids) async {
+    if (ids.isEmpty) return [];
 
+    final profiles = <UserProfile>[];
+    for (int i = 0; i < ids.length; i += 30) {
+      final chunk = ids.sublist(i, (i + 30).clamp(0, ids.length));
+      final snapshot = await FirebaseFirestore.instance
+          .collection('users')
+          .where(FieldPath.documentId, whereIn: chunk)
+          .get();
+      profiles.addAll(snapshot.docs.map((doc) => UserProfile.fromFirestore(doc)));
+    }
+    return profiles;
+  }
+
+  static Future<List<Video>> _fetchVideosByIds(List<String> ids) async {
+    if (ids.isEmpty) return [];
+
+    final videos = <Video>[];
+    for (int i = 0; i < ids.length; i += 30) {
+      final chunk = ids.sublist(i, (i + 30).clamp(0, ids.length));
+      final snapshot = await FirebaseFirestore.instance
+          .collection('videos')
+          .where(FieldPath.documentId, whereIn: chunk)
+          .get();
+      videos.addAll(snapshot.docs.map((doc) => Video.fromFirestore(doc)));
+    }
+    return videos;
+  }
+  
+  
   Future<List<String>> getFollowingIds() async {
     final snapshot = await FirebaseFirestore.instance
         .collection('users')
@@ -48,7 +82,6 @@ class UserProfile {
     return snapshot.docs.map((doc) => doc.id).toList();
   }
 
-  /// Get user's published videos
   Future<List<Video>> getPublishedVideos({int limit = 20}) async {
     try {
       final snapshot = await FirebaseFirestore.instance
@@ -57,7 +90,6 @@ class UserProfile {
           .orderBy('createdAt', descending: true)
           .limit(limit)
           .get();
-
       return snapshot.docs.map((doc) => Video.fromFirestore(doc)).toList();
     } catch (e) {
       print('Error fetching published videos: $e');
@@ -65,10 +97,8 @@ class UserProfile {
     }
   }
 
-  /// Get user's liked videos
   Future<List<Video>> getLikedVideos({int limit = 20}) async {
     try {
-      // First get the liked video IDs
       final likedSnapshot = await FirebaseFirestore.instance
           .collection('users')
           .doc(id)
@@ -78,30 +108,31 @@ class UserProfile {
           .get();
 
       final videoIds = likedSnapshot.docs.map((doc) => doc.id).toList();
-
-      if (videoIds.isEmpty) return [];
-
-      // Fetch the actual videos
-      final videos = <Video>[];
-      for (final videoId in videoIds) {
-        final videoDoc = await FirebaseFirestore.instance
-            .collection('videos')
-            .doc(videoId)
-            .get();
-
-        if (videoDoc.exists) {
-          videos.add(Video.fromFirestore(videoDoc));
-        }
-      }
-
-      return videos;
+      return _fetchVideosByIds(videoIds);
     } catch (e) {
       print('Error fetching liked videos: $e');
       return [];
     }
   }
 
-  /// Get followers list
+  Future<List<Video>> getDislikedVideos({int limit = 20}) async {
+    try {
+      final dislikedSnapshot = await FirebaseFirestore.instance
+          .collection('users')
+          .doc(id)
+          .collection('disliked_videos')
+          .orderBy('dislikedAt', descending: true)
+          .limit(limit)
+          .get();
+
+      final videoIds = dislikedSnapshot.docs.map((doc) => doc.id).toList();
+      return _fetchVideosByIds(videoIds);
+    } catch (e) {
+      print('Error fetching disliked videos: $e');
+      return [];
+    }
+  }
+
   Future<List<UserProfile>> getFollowers({int limit = 50}) async {
     try {
       final snapshot = await FirebaseFirestore.instance
@@ -111,50 +142,31 @@ class UserProfile {
           .limit(limit)
           .get();
 
-      final followers = <UserProfile>[];
-      for (final doc in snapshot.docs) {
-        final userDoc = await FirebaseFirestore.instance
-            .collection('users')
-            .doc(doc.id)
-            .get();
-
-        if (userDoc.exists) {
-          followers.add(UserProfile.fromFirestore(userDoc));
-        }
-      }
-
-      return followers;
+      final followerIds = snapshot.docs.map((doc) => doc.id).toList();
+      return _fetchProfilesByIds(followerIds);
     } catch (e) {
       print('Error fetching followers: $e');
       return [];
     }
   }
 
-  /// Get following list
   Future<List<UserProfile>> getFollowing({int limit = 50}) async {
     try {
-      final followingIds = await getFollowingIds();
-      final following = <UserProfile>[];
+      final snapshot = await FirebaseFirestore.instance
+          .collection('users')
+          .doc(id)
+          .collection('following')
+          .limit(limit)
+          .get();
 
-      for (final userId in followingIds.take(limit)) {
-        final userDoc = await FirebaseFirestore.instance
-            .collection('users')
-            .doc(userId)
-            .get();
-
-        if (userDoc.exists) {
-          following.add(UserProfile.fromFirestore(userDoc));
-        }
-      }
-
-      return following;
+      final followingIds = snapshot.docs.map((doc) => doc.id).toList();
+      return _fetchProfilesByIds(followingIds);
     } catch (e) {
       print('Error fetching following: $e');
       return [];
     }
   }
 
-  /// Check if this user is followed by another user
   Future<bool> isFollowedBy(String userId) async {
     try {
       final doc = await FirebaseFirestore.instance
@@ -163,7 +175,6 @@ class UserProfile {
           .collection('following')
           .doc(id)
           .get();
-
       return doc.exists;
     } catch (e) {
       print('Error checking follow status: $e');
@@ -172,7 +183,8 @@ class UserProfile {
   }
 
   @override
-  String toString() => 'UserProfile{id: $id, username: $username, profileImageUrl: $profileImageUrl, bio: $bio, createdAt: $createdAt, followersCount: $followersCount}';
+  String toString() =>
+      'UserProfile{id: $id, username: $username, profileImageUrl: $profileImageUrl, bio: $bio, createdAt: $createdAt, followersCount: $followersCount}';
 }
 
 class CreatorUserProfile extends UserProfile {
@@ -188,26 +200,13 @@ class CreatorUserProfile extends UserProfile {
     super.followingCount,
     super.totalVideosCount,
     super.totalLikesCount,
+    super.totalDislikesCount,
     required this.publishedVideoIds,
   });
 
-  /// Get published videos with full Video objects
   Future<List<Video>> getPublishedVideosDetailed() async {
     try {
-      final videos = <Video>[];
-
-      for (final videoId in publishedVideoIds) {
-        final doc = await FirebaseFirestore.instance
-            .collection('videos')
-            .doc(videoId)
-            .get();
-
-        if (doc.exists) {
-          videos.add(Video.fromFirestore(doc));
-        }
-      }
-
-      return videos;
+      return UserProfile._fetchVideosByIds(publishedVideoIds);
     } catch (e) {
       print('Error fetching published videos: $e');
       return [];

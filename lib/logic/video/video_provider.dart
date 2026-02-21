@@ -13,6 +13,7 @@ abstract class VideoProvider {
     required double watchTime,
     required double videoDuration,
     bool liked = false,
+    bool disliked = false,
     bool shared = false,
     bool commented = false,
     bool saved = false,
@@ -103,6 +104,7 @@ class RecommendationVideoProvider implements VideoProvider {
     required double watchTime,
     required double videoDuration,
     bool liked = false,
+    bool disliked = false,
     bool shared = false,
     bool commented = false,
     bool saved = false,
@@ -111,6 +113,7 @@ class RecommendationVideoProvider implements VideoProvider {
       watchTime: watchTime,
       videoDuration: videoDuration,
       liked: liked,
+      disliked: disliked,
       shared: shared,
       commented: commented,
       saved: saved,
@@ -131,28 +134,5 @@ class RecommendationVideoProvider implements VideoProvider {
   void clearCache() {
     _videoCache.clear();
     _currentIndex = 0;
-  }
-}
-
-class BaseAlgorithmVideoProvider implements VideoProvider {
-  @override
-  Future<Video?> getVideoByIndex(int index) async {
-    return null;
-  }
-
-  @override
-  Future<void> preloadVideos(int count) async {}
-
-  @override
-  void trackVideoInteraction({
-    required Video video,
-    required double watchTime,
-    required double videoDuration,
-    bool liked = false,
-    bool shared = false,
-    bool commented = false,
-    bool saved = false,
-  }) {
-    // No-op
   }
 }

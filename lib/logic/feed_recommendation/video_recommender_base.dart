@@ -36,6 +36,7 @@ abstract class VideoRecommenderBase {
     required double watchTime,
     required double videoDuration,
     bool liked = false,
+    bool disliked = false,
     bool shared = false,
     bool commented = false,
     bool saved = false,
@@ -49,6 +50,7 @@ abstract class VideoRecommenderBase {
       'watchTime': watchTime,
       'videoDuration': videoDuration,
       'liked': liked,
+      'disliked': disliked,
       'shared': shared,
       'commented': commented,
       'saved': saved,
@@ -60,7 +62,7 @@ abstract class VideoRecommenderBase {
     await preferenceManager.updatePreferences(
         video: video,
         normalizedEngagementScore: calculateNormalizedEngagementScore(
-            calculateEngagementScore(liked: liked, shared: shared, commented: commented, saved: saved, completionRate: watchTime / videoDuration)));
+            calculateEngagementScore(liked: liked, disliked: disliked, shared: shared, commented: commented, saved: saved, completionRate: watchTime / videoDuration)));
   }
 
   /// Calculate personalization score

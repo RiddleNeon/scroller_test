@@ -98,7 +98,7 @@ class _DislikeButtonState extends State<DislikeButton>
     // Update video dislike count
     final videoRef = firestore.collection('videos').doc(widget.videoId);
     batchQueue.update(videoRef, {
-      'dislikes': FieldValue.increment(isDisliked ? 1 : -1),
+      'dislikes': FieldValue.increment(isDisliked ? 1 : -1), //todo not the same
     });
 
     // Update user's disliked videos collection

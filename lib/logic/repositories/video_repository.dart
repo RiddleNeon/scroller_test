@@ -122,6 +122,63 @@ class VideoRepository {
     );
   }
 
+  void dislikeVideo(String userId, String videoId) {
+    _batchQueue.set(
+      firestore
+          .collection('users')
+          .doc(userId)
+          .collection('disliked_videos')
+          .doc(videoId),
+      {
+        'dislikedAt': FieldValue.serverTimestamp(),
+      },
+    );
+
+    _batchQueue.set(
+      firestore
+          .collection('videos')
+          .doc(videoId)
+          .collection('dislikes')
+          .doc(userId),
+      {
+        'dislikedAt': FieldValue.serverTimestamp(),
+      },
+    );
+
+    _batchQueue.update(
+      firestore.collection('videos').doc(videoId),
+      {
+        'dislikesCount': FieldValue.increment(1),
+      },
+    );
+  }
+
+  /// Unlike a video
+  void undislikeVideo(String userId, String videoId) {
+    _batchQueue.delete(
+      firestore
+          .collection('users')
+          .doc(userId)
+          .collection('disliked_videos')
+          .doc(videoId),
+    );
+
+    _batchQueue.delete(
+      firestore
+          .collection('videos')
+          .doc(videoId)
+          .collection('dislikes')
+          .doc(userId),
+    );
+
+    _batchQueue.update(
+      firestore.collection('videos').doc(videoId),
+      {
+        'dislikesCount': FieldValue.increment(-1),
+      },
+    );
+  }
+
   /// Follow a user
   void followUser(String followerId, String followeeId) {
     if (followerId == followeeId) {

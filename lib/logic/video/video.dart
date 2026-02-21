@@ -87,6 +87,23 @@ class Video {
     }
   }
 
+  /// Check if a user has disliked this video
+  Future<bool> isDislikedByUser(String userId) async {
+    try {
+      final doc = await FirebaseFirestore.instance
+          .collection('videos')
+          .doc(id)
+          .collection('dislikes')
+          .doc(userId)
+          .get();
+
+      return doc.exists;
+    } catch (e) {
+      print('Error checking like status: $e');
+      return false;
+    }
+  }
+
   /// Check if a user is following the video author
   Future<bool> isAuthorFollowedByUser(String userId) async {
     try {
