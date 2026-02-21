@@ -22,5 +22,4 @@ class VideoContainer {
 
     return controller!.setLooping(true);
   }
-
 }

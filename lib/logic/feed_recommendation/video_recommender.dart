@@ -85,7 +85,7 @@ class VideoRecommender extends VideoRecommenderBase {
     }
 
     if (candidates.length < limit) {
-      final trending = await getTrendingVideos(limit ~/ 4);
+      final trending = await fetchTrendingVideos(limit: limit ~/ 4);
       candidates.addAll(trending.where((v) => !LocalSeenService.hasSeen(v.id)));
     }
 

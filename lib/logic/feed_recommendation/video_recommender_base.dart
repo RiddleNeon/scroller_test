@@ -165,17 +165,25 @@ abstract class VideoRecommenderBase {
     Query query =
         firestore.collection('videos').where('createdAt', isGreaterThan: Timestamp.fromDate(weekAgo)).orderBy('createdAt', descending: true).limit(limit * 3);
 
+    cursor ??= LocalSeenService.getTrendingCursor();
+    
     if (cursor != null) {
       query = query.where('createdAt', isLessThan: Timestamp.fromDate(cursor));
     }
-
+    
     final snapshot = await query.get();
 
     final videos = snapshot.docs.map((doc) => Video.fromFirestore(doc)).where((v) => !LocalSeenService.hasSeen(v.id)).toList();
 
     videos.sort((a, b) => calculateGlobalEngagementScore(b).compareTo(calculateGlobalEngagementScore(a)));
 
-    return videos.take(limit).toList();
+    final filteredVideos = videos.take(limit);
+    
+    if(filteredVideos.isNotEmpty) {
+      LocalSeenService.saveTrendingCursor(filteredVideos.last.createdAt);
+    }
+    
+    return filteredVideos.toList();
   }
 
   static const _maxRetryAttempts = 5;
