@@ -4,6 +4,7 @@ import 'package:wurp/logic/feed_recommendation/user_interaction.dart';
 import 'package:wurp/logic/feed_recommendation/user_preferences.dart';
 import 'package:wurp/logic/feed_recommendation/video_recommender_base.dart';
 import 'package:wurp/logic/video/video.dart';
+import 'package:wurp/main.dart';
 
 import '../../util/misc/lists.dart';
 import '../local_storage/local_seen_service.dart';
@@ -33,7 +34,7 @@ class VideoRecommender extends VideoRecommenderBase {
       final userPreferences = await getUserPreferences();
 
       // Get recent interactions for diversity (limited to last N)
-      final recentInteractions = await LocalSeenService.getRecentInteractionsLocal();
+      final recentInteractions = await localSeenService.getRecentInteractionsLocal();
 
       final candidateVideos = await _getCandidateVideos(userPreferences: userPreferences, limit: _candidatePoolSize);
       
@@ -72,19 +73,19 @@ class VideoRecommender extends VideoRecommenderBase {
       candidates.addAll(tagVideos);
     }
 
-    final newestTimestamp = LocalSeenService.getNewestSeenTimestamp();
+    final newestTimestamp = localSeenService.getNewestSeenTimestamp();
     final newVideos = await fetchNewVideos(newestTimestamp, limit ~/ 2);
     print("${newVideos.length} new videos available");
-    print("${newVideos.where((v) => !LocalSeenService.hasSeen(v.id)).length} new videos added");
-    final filteredNewVideos = newVideos.where((v) => !LocalSeenService.hasSeen(v.id));
+    print("${newVideos.where((v) => !localSeenService.hasSeen(v.id)).length} new videos added");
+    final filteredNewVideos = newVideos.where((v) => !localSeenService.hasSeen(v.id));
     if (filteredNewVideos.isNotEmpty) {
       candidates.addAll(filteredNewVideos);
-      LocalSeenService.saveNewestSeenTimestamp(filteredNewVideos.last.createdAt);
+      localSeenService.saveNewestSeenTimestamp(filteredNewVideos.last.createdAt);
     }
 
     if (candidates.length < limit) {
       final trending = await fetchTrendingVideos(limit: limit ~/ 4);
-      candidates.addAll(trending.where((v) => !LocalSeenService.hasSeen(v.id)));
+      candidates.addAll(trending.where((v) => !localSeenService.hasSeen(v.id)));
     }
 
     return removeDuplicates<Video>(candidates.toList(), getCheckedParameter: (vid) => vid.videoUrl).toSet();
@@ -121,7 +122,7 @@ class VideoRecommender extends VideoRecommenderBase {
       score += diversityScore * _diversityWeight;
 
       // 5. Apply penalties
-      if (LocalSeenService.hasSeen(video.id)) {
+      if (localSeenService.hasSeen(video.id)) {
         score *= 0.1; // Heavy penalty for already seen videos
       }
 

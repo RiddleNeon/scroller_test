@@ -10,6 +10,7 @@ import 'package:wurp/logic/repositories/user_repository.dart';
 import 'package:wurp/logic/repositories/video_repository.dart';
 import 'package:wurp/logic/video/video_provider.dart';
 import 'package:wurp/ui/auth/auth_screen.dart';
+import 'package:wurp/ui/feed_view_model.dart';
 import 'package:wurp/ui/screens/home_screen.dart';
 
 
@@ -22,8 +23,16 @@ FirebaseFirestore get firestore {
   if (_firestore == null) throw StateError("Firestore isnt initialized yet!");
   return _firestore!;
 }
-
 FirebaseFirestore? _firestore;
+
+LocalSeenService get localSeenService {
+  if (_localSeenService == null) throw StateError("Local Seen Service isnt initialized yet!");
+  return _localSeenService!;
+}
+LocalSeenService? _localSeenService;
+
+FeedViewModel get feedViewModel => _feedViewModel ??= FeedViewModel();
+FeedViewModel? _feedViewModel;
 
 void main() async {
   print("MAIN FUNCTION STARTED");
@@ -56,7 +65,10 @@ void main() async {
 
 Future<void> onUserLogin() async {
   print("login!");
-  await LocalSeenService.init();
+  await _feedViewModel?.dispose();
+  await _localSeenService?.dispose();
+  _localSeenService = LocalSeenService();
+  await _localSeenService!.init();
   //videoPublishTest();
   //removeAllPreferencesOfCurrentUser();
 }

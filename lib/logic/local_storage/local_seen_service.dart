@@ -11,21 +11,28 @@ class LocalSeenService {
   static const String _interactionBoxName = 'seen_interactions';
   static const double maxLocalStorage = 5e7; //50k
 
-  static late Box<DateTime> _seenBox;
-  static late Box _settingsBox;
-  static late Box _cursorBox;
-  static late Box _interactionBox;
+  late Box<DateTime> _seenBox;
+  late Box _settingsBox;
+  late Box _cursorBox;
+  late Box _interactionBox;
 
-  static late final String userId;
+  late final String userId;
+  
+  static bool hiveInitialized = false;
 
-  static Future<void> init() async {
+  Future<void> init() async {
     print("starting initialization of LocalSeenService...");
-    await Hive.initFlutter();
-
-    _seenBox = await Hive.openBox<DateTime>(_seenBoxName);
-    _settingsBox = await Hive.openBox(_settingsBoxName);
-    _cursorBox = await Hive.openBox(_cursorBoxName);
-    _interactionBox = await Hive.openBox(_interactionBoxName);
+    userId = auth!.currentUser!.uid;
+    
+    if(!hiveInitialized) {
+      await Hive.initFlutter("user_$userId");
+      hiveInitialized = true;
+    }
+    
+    _seenBox = await Hive.openBox<DateTime>('${userId}_$_seenBoxName');
+    _settingsBox = await Hive.openBox('${userId}_$_settingsBoxName');
+    _cursorBox = await Hive.openBox('${userId}_$_cursorBoxName');
+    _interactionBox = await Hive.openBox('${userId}_$_interactionBoxName');
 
     await _cursorBox.clear();
     await _seenBox.clear();
@@ -33,13 +40,16 @@ class LocalSeenService {
 
     print("cleared!");
 
-    userId = auth!.currentUser!.uid;
     await syncWithFirestore();
     await cleanUpOldEntries();
     print("initialized LocalSeenService with ${_seenBox.length} seen videos for user $userId, last sync: ${_settingsBox.get('lastSyncTimestamp')}");
   }
+  
+  Future<void> dispose() {
+    return Hive.close();
+  }
 
-  static void markAsSeen(Video video) {
+  void markAsSeen(Video video) {
     _seenBox.put(video.id, DateTime.now());
     _interactionBox.put(video.id, {
       'authorId': video.authorId,
@@ -47,11 +57,11 @@ class LocalSeenService {
     });
   }
 
-  static bool hasSeen(String videoId) => _seenBox.containsKey(videoId);
+  bool hasSeen(String videoId) => _seenBox.containsKey(videoId);
 
-  static Set<String> get allSeenIds => _seenBox.keys.cast<String>().toSet();
+  Set<String> get allSeenIds => _seenBox.keys.cast<String>().toSet();
 
-  static List<UserInteraction> getRecentInteractionsLocal({int limit = 50}) {
+  List<UserInteraction> getRecentInteractionsLocal({int limit = 50}) {
     final entries = _seenBox.toMap().entries.toList();
 
     entries.sort((a, b) => (b.value).compareTo(a.value));
@@ -73,7 +83,7 @@ class LocalSeenService {
     }).toList();
   }
 
-  static Future<void> cleanUpOldEntries() async {
+  Future<void> cleanUpOldEntries() async {
     if (_seenBox.length <= 5000) return;
 
     final entries = _seenBox.toMap().entries.toList();
@@ -86,7 +96,7 @@ class LocalSeenService {
     await _interactionBox.deleteAll(keysToDelete);
   }
 
-  static Future<void> syncWithFirestore({bool onlyLoad = true}) async {
+  Future<void> syncWithFirestore({bool onlyLoad = true}) async {
     final lastSync = _settingsBox.get('lastSyncTimestamp') as DateTime? ?? DateTime.now().subtract(const Duration(days: 7));
 
     if (!onlyLoad) {
@@ -180,21 +190,21 @@ class LocalSeenService {
     await _settingsBox.put('lastSyncTimestamp', latestTime);
   }
 
-  static DateTime? getNewestSeenTimestamp() => _cursorBox.get('newestSeenTimestamp') as DateTime?;
+  DateTime? getNewestSeenTimestamp() => _cursorBox.get('newestSeenTimestamp') as DateTime?;
 
-  static Future<void> saveNewestSeenTimestamp(DateTime timestamp) async => _cursorBox.put('newestSeenTimestamp', timestamp);
+  Future<void> saveNewestSeenTimestamp(DateTime timestamp) async => _cursorBox.put('newestSeenTimestamp', timestamp);
 
-  static DateTime? getOldestSeenTimestamp() => _cursorBox.get('oldestSeenTimestamp') as DateTime?;
+  DateTime? getOldestSeenTimestamp() => _cursorBox.get('oldestSeenTimestamp') as DateTime?;
 
-  static Future<void> saveOldestSeenTimestamp(DateTime timestamp) async => _cursorBox.put('oldestSeenTimestamp', timestamp);
+  Future<void> saveOldestSeenTimestamp(DateTime timestamp) async => _cursorBox.put('oldestSeenTimestamp', timestamp);
 
-  static DateTime? getTrendingCursor() => _cursorBox.get('trendingCursor') as DateTime?;
+  DateTime? getTrendingCursor() => _cursorBox.get('trendingCursor') as DateTime?;
 
-  static Future<void> saveTrendingCursor(DateTime timestamp) async => _cursorBox.put('trendingCursor', timestamp);
+  Future<void> saveTrendingCursor(DateTime timestamp) async => _cursorBox.put('trendingCursor', timestamp);
 
-  static Future<void> resetCursors() async => _cursorBox.clear();
+  Future<void> resetCursors() async => _cursorBox.clear();
 
-  static DateTime? getTagCursor(String tag) => _cursorBox.get('tag_cursor_$tag') as DateTime?;
+  DateTime? getTagCursor(String tag) => _cursorBox.get('tag_cursor_$tag') as DateTime?;
 
-  static Future<void> saveTagCursor(String tag, DateTime timestamp) async => _cursorBox.put('tag_cursor_$tag', timestamp);
+  Future<void> saveTagCursor(String tag, DateTime timestamp) async => _cursorBox.put('tag_cursor_$tag', timestamp);
 }

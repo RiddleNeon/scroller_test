@@ -5,13 +5,12 @@ import 'package:wurp/main.dart';
 
 import 'video_container.dart';
 
-FeedViewModel get feedViewModel => _feedViewModel ??= FeedViewModel();
-FeedViewModel? _feedViewModel;
-
 class FeedViewModel {
-  static RecommendationVideoProvider videoSource = RecommendationVideoProvider(userId: auth!.currentUser!.uid);
+  static RecommendationVideoProvider? videoSource;
 
-  FeedViewModel();
+  FeedViewModel(){
+    videoSource = RecommendationVideoProvider(userId: auth!.currentUser!.uid);
+  }
 
   // Stores futures so we never load the same index twice
   final Map<int, Future<VideoContainer>> _videoFutures = {};
@@ -43,7 +42,8 @@ class FeedViewModel {
   }
 
   Future<VideoContainer> _loadContainer(int index) async {
-    final video = await videoSource.getVideoByIndex(index);
+    assert(videoSource != null, "Videos Source isnt initialized yet!");
+    final video = await videoSource!.getVideoByIndex(index);
     final container = VideoContainer(video: video);
     await container.loadController();
     _loadedContainers[index] = container;
@@ -90,5 +90,11 @@ class FeedViewModel {
     _videoFutures.remove(index);
 
     await container?.controller?.dispose();
+  }
+  
+  Future<void> dispose() async {
+    await Future.wait(_videoFutures.values);
+    await Future.wait(_loadedContainers.values.map((element) => element.controller?.dispose() ?? Future.value()));
+    videoSource?.clearCache();
   }
 }

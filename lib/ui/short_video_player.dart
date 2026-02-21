@@ -2,7 +2,6 @@ import 'package:flutter/material.dart';
 import 'package:wurp/logic/video/video_provider.dart';
 import 'package:wurp/main.dart';
 
-import 'feed_view_model.dart';
 import 'misc/video_widget.dart';
 
 Widget feedVideos(TickerProvider tickerProvider, RecommendationVideoProvider videoProvider) {
