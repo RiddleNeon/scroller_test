@@ -2,6 +2,7 @@ import 'package:flutter/material.dart';
 import 'package:lottie/lottie.dart';
 import 'package:cloud_firestore/cloud_firestore.dart';
 import '../../logic/batches/batch_service.dart';
+import '../../main.dart';
 
 class LikeButton extends StatefulWidget {
   final TickerProvider provider;
@@ -108,7 +109,6 @@ class _LikeButtonState extends State<LikeButton> {
   /// Only update like count and user's liked_videos collection
   /// The interaction tracking is handled centrally in VideoItem
   void _updateLikeInFirestore(bool isLiked) {
-    final firestore = FirebaseFirestore.instance;
     final batchQueue = FirestoreBatchQueue.instance;
 
     // Update video like count

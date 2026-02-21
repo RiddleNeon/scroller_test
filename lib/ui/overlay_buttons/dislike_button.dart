@@ -1,6 +1,7 @@
 import 'package:flutter/material.dart';
 import 'package:cloud_firestore/cloud_firestore.dart';
 import '../../logic/batches/batch_service.dart';
+import '../../main.dart';
 
 class DislikeButton extends StatefulWidget {
   final bool initiallyDisliked;
@@ -92,7 +93,6 @@ class _DislikeButtonState extends State<DislikeButton>
   /// Only update dislike count and user's disliked_videos collection
   /// The interaction tracking is handled centrally in VideoItem
   void _updateDislikeInFirestore(bool isDisliked) {
-    final firestore = FirebaseFirestore.instance;
     final batchQueue = FirestoreBatchQueue.instance;
 
     // Update video dislike count

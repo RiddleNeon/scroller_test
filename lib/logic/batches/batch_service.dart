@@ -1,13 +1,13 @@
 import 'dart:async';
 import 'package:cloud_firestore/cloud_firestore.dart';
 
+import '../../main.dart';
+
 class FirestoreBatchQueue {
   static final FirestoreBatchQueue instance = FirestoreBatchQueue._internal();
   factory FirestoreBatchQueue() => instance;
   FirestoreBatchQueue._internal();
-
-  final FirebaseFirestore _firestore = FirebaseFirestore.instance;
-
+  
   final List<_BatchOperation> _pendingOperations = [];
   Timer? _commitTimer;
 
@@ -156,7 +156,7 @@ class FirestoreBatchQueue {
 
   /// Commit a single chunk of operations
   Future<void> _commitChunk(List<_BatchOperation> operations) async {
-    final batch = _firestore.batch();
+    final batch = firestore.batch();
 
     for (final op in operations) {
       switch (op.type) {

@@ -1,11 +1,11 @@
 import 'package:cloud_firestore/cloud_firestore.dart';
 import 'package:wurp/util/extensions/num_distance.dart';
 
+import '../../main.dart';
 import '../batches/batch_service.dart';
 import '../video/video.dart';
 
 class UserPreferenceManager {
-  final FirebaseFirestore _firestore = FirebaseFirestore.instance;
   final String userId;
 
   static const double _learningRate = 0.25;
@@ -30,8 +30,9 @@ class UserPreferenceManager {
     loadCache();
   }
 
+  bool get isCacheLoaded => _loadFuture != null;
+  
   Future<void>? _loadFuture;
-
   Future<void> loadCache() async {
     _loadFuture ??= _loadCacheInternal().catchError((e) {
       _loadFuture = null;
@@ -43,7 +44,7 @@ class UserPreferenceManager {
   Future<void> _loadCacheInternal() async {
     print("getting cache for user $userId...");
     try {
-      final userRef = _firestore.collection('users').doc(userId).collection('profile').doc('preferences');
+      final userRef = firestore.collection('users').doc(userId).collection('profile').doc('preferences');
       print("Loading user preferences from Firestore for user $userId...");
       final snapshot = await userRef.get();
 
@@ -111,7 +112,7 @@ class UserPreferenceManager {
     cachedAvgCompletion = (cachedAvgCompletion * cachedTotalInteractions + normalizedEngagementScore) / (cachedTotalInteractions + 1);
     cachedTotalInteractions++;
 
-    final userRef = _firestore.collection('users').doc(userId).collection('profile').doc('preferences');
+    final userRef = firestore.collection('users').doc(userId).collection('profile').doc('preferences');
 
     userRef.batchSet({
       'recommendationProfile': {

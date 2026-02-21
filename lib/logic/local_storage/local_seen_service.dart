@@ -9,13 +9,13 @@ class LocalSeenService {
   static const String _settingsBoxName = 'seen_settings';
   static const String _cursorBoxName = 'feed_cursors';
   static const String _interactionBoxName = 'seen_interactions';
+  static const double maxLocalStorage = 5e7; //50k
 
   static late Box<DateTime> _seenBox;
   static late Box _settingsBox;
   static late Box _cursorBox;
   static late Box _interactionBox;
 
-  static final FirebaseFirestore _firestore = FirebaseFirestore.instance;
   static late final String userId;
 
   static Future<void> init() async {
@@ -96,10 +96,10 @@ class LocalSeenService {
         _seenBox.toMap()..removeWhere((key, value) => (value).isBefore(lastSync)),
       );
 
-      final batch = _firestore.batch();
+      final batch = firestore.batch();
       int uploadCount = 0;
 
-      final docRef = _firestore.collection('users').doc(userId).collection('recent_interactions');
+      final docRef = firestore.collection('users').doc(userId).collection('recent_interactions');
 
       for (final entry in localEntries.entries) {
         final meta = _interactionBox.get(entry.key) as Map?;
@@ -120,7 +120,7 @@ class LocalSeenService {
       print("Uploaded $uploadCount local entries");
     }
 
-    final snapshot = await _firestore
+    final snapshot = await firestore
         .collection('users')
         .doc(userId)
         .collection('recent_interactions')

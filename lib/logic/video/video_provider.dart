@@ -92,9 +92,6 @@ class RecommendationVideoProvider implements VideoProvider {
       );
       
       _videoCache.addAll(newVideos);
-      for (var value in newVideos) {
-        LocalSeenService.markAsSeen(value);
-      }
     } catch (e) {
       print('Error preloading videos: $e');
     }

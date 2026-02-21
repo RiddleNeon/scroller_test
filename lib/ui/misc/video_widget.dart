@@ -7,6 +7,7 @@ import 'package:wurp/logic/video/video_provider.dart';
 
 import '../../logic/batches/batch_service.dart';
 import '../../logic/video/video.dart';
+import '../../main.dart';
 import '../overlays.dart';
 
 class VideoItem extends StatefulWidget {
@@ -119,7 +120,6 @@ class _VideoItemState extends State<VideoItem> {
 
   /// Track view count on video document only (lightweight)
   void _trackView() {
-    final firestore = FirebaseFirestore.instance;
     final batchQueue = FirestoreBatchQueue.instance;
 
     // Only increment view count on video

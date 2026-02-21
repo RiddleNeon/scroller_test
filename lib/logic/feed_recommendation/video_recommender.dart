@@ -102,9 +102,6 @@ class VideoRecommender extends VideoRecommenderBase {
     final now = DateTime.now();
     final scoredVideos = <VideoScore>[];
 
-    // Get videos user has recently seen
-    final seenVideoIds = recentInteractions.map((i) => i.videoId).toSet();
-
     for (final video in videos) {
       double score = 0.0;
 
@@ -122,11 +119,11 @@ class VideoRecommender extends VideoRecommenderBase {
       score += personalizationScore * _personalizedWeight;
 
       // 4. Diversity Score (penalize similar content to recently seen)
-      final diversityScore = _calculateDiversityScore(video, recentInteractions, seenVideoIds);
+      final diversityScore = _calculateDiversityScore(video, recentInteractions);
       score += diversityScore * _diversityWeight;
 
       // 5. Apply penalties
-      if (seenVideoIds.contains(video.id)) {
+      if (LocalSeenService.hasSeen(video.id)) {
         score *= 0.1; // Heavy penalty for already seen videos
       }
 
@@ -145,7 +142,7 @@ class VideoRecommender extends VideoRecommenderBase {
   }
 
   /// Calculate diversity score to avoid echo chamber
-  double _calculateDiversityScore(Video video, List<UserInteraction> recentInteractions, Set<String> seenVideoIds) {
+  double _calculateDiversityScore(Video video, List<UserInteraction> recentInteractions) {
     if (recentInteractions.isEmpty) return 1.0;
 
     final recentTags = <String>{};

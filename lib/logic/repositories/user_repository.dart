@@ -1,12 +1,12 @@
 import 'package:cloud_firestore/cloud_firestore.dart';
 
+import '../../main.dart';
 import '../models/user_model.dart';
 
 class UserRepository {
-  final FirebaseFirestore _firestore = FirebaseFirestore.instance;
-
+  
   Future<UserProfile> getUser(String userId, {bool loadFollowers = false}) async {
-    DocumentSnapshot doc = await _firestore.collection('users').doc(userId).get();
+    DocumentSnapshot doc = await firestore.collection('users').doc(userId).get();
     UserProfile model = UserProfile.fromFirestore(doc);
     
     return model;
@@ -22,7 +22,7 @@ class UserRepository {
     String bio = '',
   }) async {
     
-    await _firestore.collection('users').doc(id).set({
+    await firestore.collection('users').doc(id).set({
       'username': username,
       'profileImageUrl': profileImageUrl,
       'bio': bio,
@@ -41,11 +41,11 @@ class UserRepository {
   }
 
   Future<void> followUser(String userId, String targetUserId) async {
-    DocumentReference userRef = _firestore.collection('users').doc(userId);
-    DocumentReference targetUserRef = _firestore.collection('users').doc(targetUserId);
+    DocumentReference userRef = firestore.collection('users').doc(userId);
+    DocumentReference targetUserRef = firestore.collection('users').doc(targetUserId);
     DocumentReference followingRef = userRef.collection('following').doc(targetUserId);
     
-    await _firestore.runTransaction((transaction) async {
+    await firestore.runTransaction((transaction) async {
       
       DocumentSnapshot userSnapshot = await transaction.get(userRef);
       DocumentSnapshot targetUserSnapshot = await transaction.get(targetUserRef);
@@ -69,12 +69,12 @@ class UserRepository {
   }
 
   Future<void> unfollowUser(String userId, String targetUserId) async {
-    DocumentReference userRef = _firestore.collection('users').doc(userId);
-    DocumentReference targetUserRef = _firestore.collection('users').doc(targetUserId);
+    DocumentReference userRef = firestore.collection('users').doc(userId);
+    DocumentReference targetUserRef = firestore.collection('users').doc(targetUserId);
     DocumentReference followingRef = userRef.collection('following').doc(targetUserId);
     DocumentReference followerRef = targetUserRef.collection('followers').doc(userId);
 
-    await _firestore.runTransaction((transaction) async {
+    await firestore.runTransaction((transaction) async {
       DocumentSnapshot userSnapshot = await transaction.get(userRef);
       DocumentSnapshot targetUserSnapshot = await transaction.get(targetUserRef);
       DocumentSnapshot followingSnapshot = await transaction.get(followingRef);

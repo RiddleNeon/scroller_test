@@ -17,6 +17,13 @@ FirebaseAuth? auth;
 
 UserRepository? userRepository = UserRepository();
 
+FirebaseFirestore get firestore {
+  if (_firestore == null) throw StateError("Firestore isnt initialized yet!");
+  return _firestore!;
+}
+
+FirebaseFirestore? _firestore;
+
 void main() async {
   print("MAIN FUNCTION STARTED");
   WidgetsFlutterBinding.ensureInitialized();
@@ -24,11 +31,12 @@ void main() async {
   app = await Firebase.initializeApp(options: DefaultFirebaseOptions.currentPlatform);
   await FirebaseFirestore.instance.runTransaction((transaction) async {}); //whyever it fixes a crash on windows
   auth = FirebaseAuth.instanceFor(app: app!);
+  _firestore = FirebaseFirestore.instance;
 
-  if(auth?.currentUser != null) {
+  if (auth?.currentUser != null) {
     await onUserLogin();
   }
-  
+
   runApp(
       MaterialApp(
         debugShowCheckedModeBanner: false,
@@ -38,8 +46,8 @@ void main() async {
             : MyHomePage(),
       )
   );
-  
-  
+
+
   if (kIsWeb) auth!.setPersistence(Persistence.LOCAL);
   print(auth?.currentUser);
 }
@@ -50,7 +58,9 @@ Future<void> onUserLogin() async {
   //videoPublishTest();
   //removeAllPreferencesOfCurrentUser();
 }
-RecommendationVideoProvider? _videoProvider; 
+
+RecommendationVideoProvider? _videoProvider;
+
 RecommendationVideoProvider get videoProvider => _videoProvider ??= RecommendationVideoProvider(userId: auth!.currentUser!.uid);
 
 bool runningOnMobile = defaultTargetPlatform == TargetPlatform.iOS || defaultTargetPlatform == TargetPlatform.android;

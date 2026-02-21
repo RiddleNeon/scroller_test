@@ -39,21 +39,18 @@ Future<Map<String, dynamic>> loadJson() async {
 }
 
 Future<void> removeAllCurrentVideos() async {
-  FirebaseFirestore firestore = FirebaseFirestore.instance;
   QuerySnapshot snapshot = await firestore.collection('videos').get();
   for (DocumentSnapshot doc in snapshot.docs) {
     await doc.reference.delete();
   }
 }
 Future<void> removeAllUsers() async {
-  FirebaseFirestore firestore = FirebaseFirestore.instance;
   QuerySnapshot snapshot = await firestore.collection('users').where("username", isNotEqualTo: "julian").get();
   for (DocumentSnapshot doc in snapshot.docs) {
     await doc.reference.delete();
   }
 }
 Future<void> removeAllPreferencesOfCurrentUser() async {
-  FirebaseFirestore firestore = FirebaseFirestore.instance;
   String userId = auth!.currentUser!.uid;
   DocumentReference<Map<String, dynamic>> profilePreferences = firestore.collection('users').doc(userId).collection("profile").doc("preferences");
   profilePreferences.set({

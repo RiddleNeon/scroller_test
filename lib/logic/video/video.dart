@@ -1,5 +1,6 @@
 import 'package:cloud_firestore/cloud_firestore.dart';
 
+import '../../main.dart';
 import '../models/user_model.dart';
 
 class Video {
@@ -146,6 +147,20 @@ class VideoWithAuthor {
       author: author,
       isLiked: isLiked,
       isAuthorFollowed: isFollowed,
+    );
+  }
+
+  static Future<Map<String, UserProfile>> fetchAuthorProfiles(
+      List<Video> videos) async {
+    final authorIds = videos.map((v) => v.authorId).toSet().toList();
+
+    final snapshot = await firestore
+        .collection('users')
+        .where(FieldPath.documentId, whereIn: authorIds)
+        .get();
+
+    return Map.fromEntries(
+        snapshot.docs.map((doc) => MapEntry(doc.id, UserProfile.fromFirestore(doc)))
     );
   }
 }
