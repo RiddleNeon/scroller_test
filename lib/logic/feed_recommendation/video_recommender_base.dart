@@ -202,7 +202,6 @@ abstract class VideoRecommenderBase {
       }
 
       final snapshot = await query.limit(limit * 2).get(); //todo check costs of firebase
-      print("got snapshot: ${snapshot.docs.map((e) => (e.data() as Map<String, dynamic>)["videoUrl"]).toList()}");
       if (snapshot.docs.isEmpty) break;
 
       final videos = snapshot.docs.map((doc) => Video.fromFirestore(doc)).toList();
@@ -211,8 +210,6 @@ abstract class VideoRecommenderBase {
 
       int lastCountingIndex = min(videos.length - 1, limit);
       cursor = videos.elementAtOrNull(lastCountingIndex)?.createdAt;
-
-      print("unseen filtered: ${unseen.map((e) => e.videoUrl).toList().take(limit).toList()}");
     }
 
     if (cursor != null) {

@@ -22,26 +22,25 @@ class VideoRecommender extends VideoRecommenderBase {
   static const double _engagementWeight = 0.30;
   static const double _diversityWeight = 0.1;
   static const double _personalizedWeight = 0.50;
-  static const int _candidatePoolSize = 10;
+  static const int _candidatePoolSize = 50;
 
   VideoRecommender({required super.userId});
 
   /// Main recommendation function
   Future<Set<Video>> getRecommendedVideos({int limit = 20}) async {
     try {
-      // 1. Get user preferences
+      // Get user preferences
       final userPreferences = await getUserPreferences();
 
-      // 2. Get recent interactions for diversity (limited to last N)
+      // Get recent interactions for diversity (limited to last N)
       final recentInteractions = await LocalSeenService.getRecentInteractionsLocal();
 
-      // 3. Get candidate videos
       final candidateVideos = await _getCandidateVideos(userPreferences: userPreferences, limit: _candidatePoolSize);
+      
+      print("got ${candidateVideos.length} videos!");
 
-      // 4. Score each video
       final scoredVideos = _scoreVideos(candidateVideos, userPreferences, recentInteractions);
 
-      // 5. Apply diversity filter
       final diversifiedVideos = _applyDiversityFilter(scoredVideos, limit: limit);
 
       if (diversifiedVideos.isEmpty) {
@@ -49,7 +48,6 @@ class VideoRecommender extends VideoRecommenderBase {
         return getTrendingVideos(limit);
       }
 
-      // 6. Return top N videos
       return (diversifiedVideos.take(limit).map((vs) => vs.video).toList()..shuffle()).toSet();
     } catch (e) {
       print('Error getting recommendations: $e. stacktrace: ${StackTrace.current}');
@@ -78,10 +76,10 @@ class VideoRecommender extends VideoRecommenderBase {
     final newVideos = await fetchNewVideos(newestTimestamp, limit ~/ 2);
     print("${newVideos.length} new videos available");
     print("${newVideos.where((v) => !LocalSeenService.hasSeen(v.id)).length} new videos added");
-    final filteredNewVids = newVideos.where((v) => !LocalSeenService.hasSeen(v.id));
-    if (filteredNewVids.isNotEmpty) {
-      candidates.addAll(filteredNewVids);
-      LocalSeenService.saveNewestSeenTimestamp(filteredNewVids.last.createdAt);
+    final filteredNewVideos = newVideos.where((v) => !LocalSeenService.hasSeen(v.id));
+    if (filteredNewVideos.isNotEmpty) {
+      candidates.addAll(filteredNewVideos);
+      LocalSeenService.saveNewestSeenTimestamp(filteredNewVideos.last.createdAt);
     }
 
     if (candidates.length < limit) {

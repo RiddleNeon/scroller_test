@@ -20,6 +20,10 @@ class _LoginScreenState extends State<LoginScreen> {
   bool enteredPasswordIncorrectly = false;
 
   Future<String?> _authUser(LoginData data) async {
+    if(auth?.currentUser != null){
+      await auth!.signOut();
+    }
+    
     UserCredential? credential;
     try {
       credential = await FirebaseAuth.instance.signInWithEmailAndPassword(email: data.name, password: data.password);
@@ -43,6 +47,11 @@ class _LoginScreenState extends State<LoginScreen> {
   }
 
   Future<String?> _signupUser(SignupData data) async {
+    if(auth?.currentUser != null){
+      await auth!.signOut();
+    }
+    
+    
     if (data.password == null || data.name == null) return "please enter a valid email or password!";
     UserCredential? credential;
     try {
@@ -107,6 +116,10 @@ class _LoginScreenState extends State<LoginScreen> {
   }
 
   Future<String?> signInWithProvider(AuthProvider provider) async{
+    if(auth?.currentUser != null){
+      await auth!.signOut();
+    }
+    
     try {
       if (kIsWeb) {
         await FirebaseAuth.instance.signInWithPopup(GoogleAuthProvider());
