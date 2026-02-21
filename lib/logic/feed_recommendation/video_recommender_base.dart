@@ -174,7 +174,7 @@ abstract class VideoRecommenderBase {
   Future<List<Video>> getColdStartVideos({int limit = 20}) async {
     // Get popular videos from last 3 days
     final threeDaysAgo = DateTime.now().subtract(Duration(days: 3));
-
+    
     final snapshot = await firestore
         .collection('videos')
         .where('createdAt', isGreaterThan: Timestamp.fromDate(threeDaysAgo))

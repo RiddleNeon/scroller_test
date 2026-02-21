@@ -125,7 +125,7 @@ class _VideoItemState extends State<VideoItem> {
 
     // Only increment view count on video
     final videoRef = firestore.collection('videos').doc(widget.video.id);
-    batchQueue.update(videoRef, {'views': FieldValue.increment(1)});
+    batchQueue.update(videoRef, {'viewsCount': FieldValue.increment(1)});
   }
 
   bool currentlySaving = false;
