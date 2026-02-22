@@ -19,7 +19,6 @@ void videoPublishTest() async {
   await removeAllPreferencesOfCurrentUser();
   
   
-  VideoRepository videoRepo = VideoRepository();
   Map<String, dynamic> json = await loadJson();
   final videos = (json['data'] as List)
       .map((e) => Map<String, dynamic>.from(e))

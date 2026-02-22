@@ -14,7 +14,6 @@ class VideoContainer {
       Uri.parse(video.videoUrl),
       videoPlayerOptions: VideoPlayerOptions(
         mixWithOthers: true,
-        allowBackgroundPlayback: false,
       ),
     );
 

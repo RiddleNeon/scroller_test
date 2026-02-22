@@ -4,7 +4,7 @@ import 'package:wurp/logic/video/video.dart';
 
 import '../../main.dart';
 
-
+VideoRepository videoRepo = VideoRepository();
 class VideoRepository {
   
   Future<Video> getVideoById(String id) async {
@@ -409,22 +409,30 @@ class VideoRepository {
   }
 
   /// Search videos by title or tags
-  Future<List<Video>> searchVideos(String query, {int limit = 20}) async {
-    try {
-      final snapshot = await firestore
-          .collection('videos')
-          .where('tags', arrayContains: query.toLowerCase())
-          .orderBy('createdAt', descending: true)
-          .limit(limit)
-          .get();
+  Future<({List<Video> videos, DocumentSnapshot? lastDoc})> searchVideos(
+      String query, {
+        int limit = 20,
+        DocumentSnapshot? startAfter,
+      }) async {
 
-      return snapshot.docs
-          .map((doc) => Video.fromFirestore(doc))
-          .toList();
-    } catch (e) {
-      print('Error searching videos: $e');
-      return [];
+    var queryRef = firestore
+        .collection('videos')
+        .orderBy('title')
+        .startAt([query])
+        .endAt([query + '\uf8ff'])
+        .limit(limit);
+    
+    if (startAfter != null) {
+      queryRef = queryRef.startAfterDocument(startAfter);
     }
+
+    final snapshot = await queryRef.get();
+    final videos = snapshot.docs.map((doc) => Video.fromFirestore(doc)).toList();
+
+    return (
+    videos: videos,
+    lastDoc: snapshot.docs.isNotEmpty ? snapshot.docs.last : null,
+    );
   }
 
   /// Get videos by specific tags

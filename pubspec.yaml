@@ -29,6 +29,8 @@ dependencies:
   provider: ^6.1.5+1
   video_player: ^2.11.0
   fvp: ^0.35.2
+  shimmer_animation: ^2.2.2+1
+  video_thumbnail: ^0.5.6
   
   
 

@@ -4,24 +4,21 @@ import '../../main.dart';
 import '../models/user_model.dart';
 
 class UserRepository {
-  
   Future<UserProfile> getUser(String userId, {bool loadFollowers = false}) async {
     DocumentSnapshot doc = await firestore.collection('users').doc(userId).get();
     UserProfile model = UserProfile.fromFirestore(doc);
-    
+
     return model;
   }
-  
-  
+
   static const String noProfileImageUrl = "https://img.freepik.com/premium-psd/contact-icon-illustration-isolated_23-2151903357.jpg?semt=ais_hybrid&w=740&q=80";
-  
+
   Future<UserProfile> createUser({
     required String id,
     required String username,
     String profileImageUrl = noProfileImageUrl,
     String bio = '',
   }) async {
-    
     await firestore.collection('users').doc(id).set({
       'username': username,
       'profileImageUrl': profileImageUrl,
@@ -29,7 +26,7 @@ class UserRepository {
       'followersCount': 0,
       'createdAt': FieldValue.serverTimestamp(),
     });
-    
+
     return UserProfile(
       id: id,
       username: username,
@@ -44,24 +41,23 @@ class UserRepository {
     DocumentReference userRef = firestore.collection('users').doc(userId);
     DocumentReference targetUserRef = firestore.collection('users').doc(targetUserId);
     DocumentReference followingRef = userRef.collection('following').doc(targetUserId);
-    
+
     await firestore.runTransaction((transaction) async {
-      
       DocumentSnapshot userSnapshot = await transaction.get(userRef);
       DocumentSnapshot targetUserSnapshot = await transaction.get(targetUserRef);
       DocumentSnapshot followingSnapshot = await transaction.get(followingRef);
-      
+
       if (!userSnapshot.exists || !targetUserSnapshot.exists) {
         print("one of the users does not exist");
         throw Exception("One of the users does not exist");
       }
-      
+
       if (followingSnapshot.exists) {
         throw Exception("Already following this user");
       }
-      
+
       int followersCount = targetUserSnapshot['followersCount'] ?? 0;
-      
+
       transaction.update(targetUserRef, {
         'followersCount': followersCount + 1,
       });
@@ -99,5 +95,25 @@ class UserRepository {
         'followersCount': targetFollowersCount > 0 ? targetFollowersCount - 1 : 0,
       });
     });
+  }
+
+  Future<({List<UserProfile> users, DocumentSnapshot? lastDoc})> searchUsers(
+    String query, {
+    int limit = 20,
+    DocumentSnapshot? startAfter,
+  }) async {
+    var queryRef = firestore.collection('users').orderBy('username').startAt([query.toLowerCase()]).endAt([query.toLowerCase() + '\uf8ff']).limit(limit);
+
+    if (startAfter != null) {
+      queryRef = queryRef.startAfterDocument(startAfter);
+    }
+
+    final snapshot = await queryRef.get();
+    final users = snapshot.docs.map((doc) => UserProfile.fromFirestore(doc)).toList();
+
+    return (
+      users: users,
+      lastDoc: snapshot.docs.isNotEmpty ? snapshot.docs.last : null,
+    );
   }
 }

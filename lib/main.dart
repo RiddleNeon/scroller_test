@@ -34,6 +34,9 @@ LocalSeenService? _localSeenService;
 FeedViewModel get feedViewModel => _feedViewModel ??= FeedViewModel();
 FeedViewModel? _feedViewModel;
 
+
+final GlobalKey<NavigatorState> appNavigatorKey = GlobalKey<NavigatorState>();
+
 void main() async {
   print("MAIN FUNCTION STARTED");
   WidgetsFlutterBinding.ensureInitialized();
@@ -51,6 +54,7 @@ void main() async {
   runApp(
       MaterialApp(
         debugShowCheckedModeBanner: false,
+        navigatorKey: appNavigatorKey,
         theme: ThemeData(primarySwatch: Colors.blue),
         home: auth?.currentUser == null
             ? const LoginScreen()
