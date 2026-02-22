@@ -3,10 +3,11 @@ import 'dart:async';
 import 'package:wurp/logic/video/video_provider.dart';
 import 'package:wurp/main.dart';
 
+import 'overlays.dart';
 import 'video_container.dart';
 
 class FeedViewModel {
-  static RecommendationVideoProvider? videoSource;
+  late RecommendationVideoProvider videoSource;
 
   FeedViewModel(){
     videoSource = RecommendationVideoProvider(userId: auth!.currentUser!.uid);
@@ -42,8 +43,7 @@ class FeedViewModel {
   }
 
   Future<VideoContainer> _loadContainer(int index) async {
-    assert(videoSource != null, "Videos Source isnt initialized yet!");
-    final video = await videoSource!.getVideoByIndex(index);
+    final video = await videoSource.getVideoByIndex(index);
     final container = VideoContainer(video: video);
     await container.loadController();
     _loadedContainers[index] = container;
@@ -95,6 +95,10 @@ class FeedViewModel {
   Future<void> dispose() async {
     await Future.wait(_videoFutures.values);
     await Future.wait(_loadedContainers.values.map((element) => element.controller?.dispose() ?? Future.value()));
-    videoSource?.clearCache();
+    videoSource.clearCache();
+    _videoFutures.clear();
+    _loadedContainers.clear();
+    _disposedIndices.clear();
+    pageOverlays.clear();
   }
 }

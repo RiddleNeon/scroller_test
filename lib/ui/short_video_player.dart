@@ -5,6 +5,7 @@ import 'package:wurp/main.dart';
 import 'misc/video_widget.dart';
 
 Widget feedVideos(TickerProvider tickerProvider, RecommendationVideoProvider videoProvider) {
+  feedViewModel.switchToVideoAt(0); //so that the first video starts bc this function only gets called on page switches and the first page hasn't had a switch yet
   return Stack(
     children: [
       PageView.builder(
