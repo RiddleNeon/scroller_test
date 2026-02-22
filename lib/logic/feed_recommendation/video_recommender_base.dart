@@ -8,15 +8,13 @@ import 'package:wurp/logic/feed_recommendation/user_preferences.dart';
 
 import '../../main.dart';
 import '../batches/batch_service.dart';
-import '../local_storage/local_seen_service.dart';
 import '../video/video.dart';
 
 abstract class VideoRecommenderBase {
-  final String userId;
   late final UserPreferenceManager preferenceManager;
 
-  VideoRecommenderBase({required this.userId}) {
-    preferenceManager = UserPreferenceManager(userId: userId);
+  VideoRecommenderBase() {
+    preferenceManager = UserPreferenceManager();
   }
 
   /// Get user preferences
@@ -28,41 +26,6 @@ abstract class VideoRecommenderBase {
       avgCompletionRate: preferenceManager.cachedAvgCompletion,
       totalInteractions: preferenceManager.cachedTotalInteractions,
     );
-  }
-
-  /// Track user interaction and update preferences
-  Future<void> trackInteraction({
-    required Video video,
-    required double watchTime,
-    required double videoDuration,
-    bool liked = false,
-    bool disliked = false,
-    bool shared = false,
-    bool commented = false,
-    bool saved = false,
-  }) async {
-    localSeenService.markAsSeen(video);
-
-    final interactionRef = firestore.collection('users').doc(userId).collection('recent_interactions').doc();
-
-    interactionRef.batchSet({
-      'videoId': video.id,
-      'watchTime': watchTime,
-      'videoDuration': videoDuration,
-      'liked': liked,
-      'disliked': disliked,
-      'shared': shared,
-      'commented': commented,
-      'saved': saved,
-      'timestamp': FieldValue.serverTimestamp(),
-      'authorId': video.authorId,
-      'tags': video.tags,
-    });
-    // 2. Update user preferences (batched)
-    await preferenceManager.updatePreferences(
-        video: video,
-        normalizedEngagementScore: calculateNormalizedEngagementScore(
-            calculateEngagementScore(liked: liked, disliked: disliked, shared: shared, commented: commented, saved: saved, completionRate: watchTime / videoDuration)));
   }
 
   /// Calculate personalization score
@@ -110,7 +73,6 @@ abstract class VideoRecommenderBase {
   Future<Set<Video>> getTrendingVideos(int limit) async {
     log("Fallback to trending!", level: 2000);
     final snapshot = await firestore.collection('videos').orderBy('createdAt', descending: true).limit(limit).get();
-    print("got snapshot");
     return snapshot.docs.map((doc) => Video.fromFirestore(doc)).toSet();
   }
 
@@ -230,4 +192,40 @@ abstract class VideoRecommenderBase {
     final engagementRate = (likes + shares * 2 + comments * 1.5 + 1) / views;
     return (engagementRate * 100).clamp(0.0, 1.0);
   }
+}
+
+
+Future<void> trackInteraction({
+  required String userId,
+  required Video video,
+  required double watchTime,
+  required double videoDuration,
+  bool liked = false,
+  bool disliked = false,
+  bool shared = false,
+  bool commented = false,
+  bool saved = false,
+}) async {
+  localSeenService.markAsSeen(video);
+
+  final interactionRef = firestore.collection('users').doc(userId).collection('recent_interactions').doc();
+
+  interactionRef.batchSet({
+    'videoId': video.id,
+    'watchTime': watchTime,
+    'videoDuration': videoDuration,
+    'liked': liked,
+    'disliked': disliked,
+    'shared': shared,
+    'commented': commented,
+    'saved': saved,
+    'timestamp': FieldValue.serverTimestamp(),
+    'authorId': video.authorId,
+    'tags': video.tags,
+  });
+  // 2. Update user preferences (batched)
+  await UserPreferenceManager().updatePreferences(
+      video: video,
+      normalizedEngagementScore: calculateNormalizedEngagementScore(
+          calculateEngagementScore(liked: liked, disliked: disliked, shared: shared, commented: commented, saved: saved, completionRate: watchTime / videoDuration)));
 }

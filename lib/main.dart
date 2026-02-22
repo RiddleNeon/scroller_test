@@ -5,12 +5,14 @@ import 'package:flutter/foundation.dart';
 import 'package:flutter/material.dart';
 import 'package:fvp/fvp.dart' as fvp;
 import 'package:wurp/firebase_options.dart';
+import 'package:wurp/logic/feed_recommendation/user_preference_manager.dart';
 import 'package:wurp/logic/local_storage/local_seen_service.dart';
 import 'package:wurp/logic/repositories/user_repository.dart';
 import 'package:wurp/logic/repositories/video_repository.dart';
 import 'package:wurp/logic/video/video_provider.dart';
 import 'package:wurp/ui/auth/auth_screen.dart';
 import 'package:wurp/ui/feed_view_model.dart';
+import 'package:wurp/ui/overlays.dart';
 import 'package:wurp/ui/screens/home_screen.dart';
 
 
@@ -31,7 +33,7 @@ LocalSeenService get localSeenService {
 }
 LocalSeenService? _localSeenService;
 
-FeedViewModel get feedViewModel => _feedViewModel ??= FeedViewModel();
+FeedViewModel get feedViewModel => _feedViewModel ??= FeedViewModel(videoProvider);
 FeedViewModel? _feedViewModel;
 
 
@@ -67,18 +69,30 @@ void main() async {
   print(auth?.currentUser);
 }
 
-Future<void> onUserLogin() async {
+Future<void> onUserLogin([BuildContext? context]) async {
   print("login!");
+  UserPreferenceManager.reset();
+  pageOverlays.clear();
   await _feedViewModel?.dispose();
   await _localSeenService?.dispose();
   _localSeenService = LocalSeenService();
   await _localSeenService!.init();
+  if(context != null) {
+    rebuildAllChildren(context);
+  }
   //videoPublishTest();
   //removeAllPreferencesOfCurrentUser();
 }
 
-RecommendationVideoProvider? _videoProvider;
+void rebuildAllChildren(BuildContext context) {
+  void rebuild(Element el) {
+    el.markNeedsBuild();
+    el.visitChildren(rebuild);
+  }
+  (context as Element).visitChildren(rebuild);
+}
 
-RecommendationVideoProvider get videoProvider => _videoProvider ??= RecommendationVideoProvider(userId: auth!.currentUser!.uid);
+RecommendationVideoProvider? _videoProvider;
+RecommendationVideoProvider get videoProvider => _videoProvider ??= RecommendationVideoProvider();
 
 bool runningOnMobile = defaultTargetPlatform == TargetPlatform.iOS || defaultTargetPlatform == TargetPlatform.android;

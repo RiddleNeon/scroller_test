@@ -25,7 +25,7 @@ class SearchBarResult {
     if (_isLoadingVideos) return;
     _isLoadingVideos = true;
 
-    final videoResult = await videoRepo.searchVideos(searchText, limit: limit);
+    final videoResult = await videoRepo.searchVideosByTag(searchText, limit: limit);
     videoResults = videoResult.videos;
     print("done, results: ${videoResults}");
     _lastVideoDocument = videoResult.lastDoc;
@@ -50,7 +50,7 @@ class SearchBarResult {
     if (_isLoadingVideos || !_hasMoreVideos) return;
     _isLoadingVideos = true;
 
-    final result = await videoRepo.searchVideos(
+    final result = await videoRepo.searchVideosByTag(
       searchText,
       startAfter: _lastVideoDocument,
       limit: limit
@@ -61,7 +61,7 @@ class SearchBarResult {
     _hasMoreVideos = result.videos.length >= limit;
 
     _isLoadingVideos = false;
-  }  
+  }
   
   Future<void> preloadMoreUsers({int limit = 20}) async {
     if (_isLoadingUsers || !_hasMoreUsers) return;

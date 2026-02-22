@@ -1,23 +1,26 @@
 import 'package:flutter/material.dart';
 import 'package:wurp/logic/video/video_provider.dart';
 import 'package:wurp/main.dart';
+import 'package:wurp/ui/feed_view_model.dart';
 
 import 'misc/video_widget.dart';
 
-Widget feedVideos(TickerProvider tickerProvider, RecommendationVideoProvider videoProvider) {
-  feedViewModel.switchToVideoAt(0); //so that the first video starts bc this function only gets called on page switches and the first page hasn't had a switch yet
+Widget feedVideos(TickerProvider tickerProvider, VideoProvider videoProvider, {FeedViewModel? feedModel, int itemCount = 5000, int initialPage = 0}) {
+  feedModel ??= feedViewModel;
+  print("in feed videos, feed model: $feedModel, current provider: $videoProvider");
+  feedModel.switchToVideoAt(initialPage, videoSource: videoProvider); //so that the first video starts bc this function only gets called on page switches and the first page hasn't had a switch yet
   return Stack(
     children: [
       PageView.builder(
         controller: PageController(
-          initialPage: 0,
+          initialPage: initialPage,
           viewportFraction: 1,
         ),
-        itemCount: 500,
+        itemCount: itemCount,
         scrollDirection: Axis.vertical,
         itemBuilder: (context, index) {
           return FutureBuilder(
-              future: feedViewModel.getVideoAt(index),
+              future: feedModel!.getVideoAt(index, videoSource: videoProvider),
               builder: (context, snapshot) {
                 if (snapshot.connectionState != ConnectionState.done) {
                   return Container(
@@ -38,7 +41,7 @@ Widget feedVideos(TickerProvider tickerProvider, RecommendationVideoProvider vid
               });
         },
         onPageChanged: (value) {
-          feedViewModel.switchToVideoAt(value);
+          feedModel!.switchToVideoAt(value, videoSource: videoProvider);
         },
       ),
     ],

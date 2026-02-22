@@ -2,15 +2,19 @@ import 'package:flutter/foundation.dart';
 import 'package:flutter/material.dart';
 import 'package:shimmer_animation/shimmer_animation.dart';
 import 'package:video_thumbnail/video_thumbnail.dart';
+import 'package:wurp/logic/feed_recommendation/search_video_result_recommender.dart';
 import 'package:wurp/logic/video/video.dart';
+import 'package:wurp/main.dart';
 import 'package:wurp/next_try/search_bar_result.dart';
+import 'package:wurp/ui/feed_view_model.dart';
+import 'package:wurp/ui/short_video_player.dart';
 
 class SearchScreen extends StatefulWidget {
   @override
   State<SearchScreen> createState() => _SearchScreenState();
 }
 
-class _SearchScreenState extends State<SearchScreen> {
+class _SearchScreenState extends State<SearchScreen> with TickerProviderStateMixin {
   TextEditingController controller = TextEditingController();
   SearchBarResult? searchBarResult;
   bool loading = false;
@@ -50,7 +54,7 @@ class _SearchScreenState extends State<SearchScreen> {
       setState(() {
         canShowSearchResults = true;
         print("done with animation");
-      }); 
+      });
     });
   }
 
@@ -74,6 +78,7 @@ class _SearchScreenState extends State<SearchScreen> {
             color: Colors.transparent,
             child: TextField(
               controller: controller,
+              onSubmitted: _search,
               decoration: InputDecoration(
                 hint: const Text('Search for ya stuff heeree', textAlign: TextAlign.center),
                 hintStyle: const TextStyle(color: Color(0xFF757575), fontSize: 18),
@@ -109,11 +114,14 @@ class _SearchScreenState extends State<SearchScreen> {
     );
   }
 
-  Future<void> _search() async {
+  Future<void> _search([String? val]) async {
+    val ??= controller.text;
     hasSearched = true;
     setState(() => loading = true);
-    searchBarResult = SearchBarResult.fromFirestore(controller.text);
+    searchBarResult = SearchBarResult.fromFirestore(val);
     await searchBarResult!.complete();
+    currentSearchViewModel?.dispose();
+    currentSearchViewModel = FeedViewModel();
     setState(() => loading = false);
   }
 
@@ -147,7 +155,7 @@ class _SearchScreenState extends State<SearchScreen> {
                     shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(16)),
                     child: InkWell(
                       borderRadius: BorderRadius.circular(16),
-                      onTap: () => print("open video ${video.videoUrl}"),
+                      onTap: () => onVideoClick(index),
                       child: Row(
                         children: [
                           SizedBox(
@@ -197,6 +205,82 @@ class _SearchScreenState extends State<SearchScreen> {
   @override
   void dispose() {
     cachedImageData.clear();
+    currentSearchViewModel?.dispose();
     super.dispose();
+  }
+
+  FeedViewModel? currentSearchViewModel;
+
+  void onVideoClick(int videoIndex) {
+    showGeneralDialog(
+      context: context,
+      barrierDismissible: true,
+      barrierLabel: "VideoOverlay",
+      barrierColor: Colors.black54,
+      transitionDuration: const Duration(milliseconds: 250),
+
+      pageBuilder: (context, animation, secondaryAnimation) {
+        return SafeArea(
+          child: Center(
+            child: Material(
+              color: Colors.transparent,
+              child: Container(
+                width: MediaQuery.of(context).size.width * 0.95,
+                height: MediaQuery.of(context).size.height * 0.85,
+                decoration: BoxDecoration(
+                  color: Colors.black,
+                  borderRadius: BorderRadius.circular(18),
+                ),
+                clipBehavior: Clip.hardEdge,
+                child: Stack(
+                  children: [
+
+                    // VIDEO FEED
+                    feedVideos(
+                      this,
+                      SearchVideoResultRecommender(
+                        listedVideos: searchBarResult!.videoResults,
+                      ),
+                      feedModel: currentSearchViewModel,
+                      itemCount: searchBarResult!.videoResults.length,
+                      initialPage: videoIndex,
+                    ),
+
+                    // CLOSE BUTTON
+                    Positioned(
+                      right: 10,
+                      top: 10,
+                      child: GestureDetector(
+                        onTap: () => Navigator.pop(context),
+                        child: Container(
+                          padding: const EdgeInsets.all(8),
+                          decoration: BoxDecoration(
+                            color: Colors.black54,
+                            shape: BoxShape.circle,
+                          ),
+                          child: const Icon(Icons.close, color: Colors.white),
+                        ),
+                      ),
+                    ),
+                  ],
+                ),
+              ),
+            ),
+          ),
+        );
+      },
+
+      transitionBuilder: (context, animation, secondaryAnimation, child) {
+        final curved = CurvedAnimation(parent: animation, curve: Curves.easeOutCubic);
+
+        return FadeTransition(
+          opacity: curved,
+          child: ScaleTransition(
+            scale: Tween(begin: 0.9, end: 1.0).animate(curved),
+            child: child,
+          ),
+        );
+      },
+    );
   }
 }

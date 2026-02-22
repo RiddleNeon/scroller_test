@@ -10,6 +10,7 @@ class Video {
   final String videoUrl;
   final String? thumbnailUrl;
   final String authorId;
+  final String authorName;
   final DateTime createdAt;
   final List<String> tags;
 
@@ -32,6 +33,7 @@ class Video {
     this.sharesCount,
     this.commentsCount,
     this.viewsCount,
+    required this.authorName,
   });
 
   factory Video.fromFirestore(DocumentSnapshot doc) {
@@ -49,16 +51,14 @@ class Video {
       sharesCount: data['shares'],
       commentsCount: data['comments'],
       viewsCount: data['views'],
+      authorName: data['authorName'] ?? "No Name Provided",
     );
   }
 
   /// Get the author's profile
   Future<UserProfile?> getAuthorProfile() async {
     try {
-      final doc = await FirebaseFirestore.instance
-          .collection('users')
-          .doc(authorId)
-          .get();
+      final doc = await FirebaseFirestore.instance.collection('users').doc(authorId).get();
 
       if (doc.exists) {
         return UserProfile.fromFirestore(doc);
@@ -73,12 +73,7 @@ class Video {
   /// Check if a user has liked this video
   Future<bool> isLikedByUser(String userId) async {
     try {
-      final doc = await FirebaseFirestore.instance
-          .collection('videos')
-          .doc(id)
-          .collection('likes')
-          .doc(userId)
-          .get();
+      final doc = await FirebaseFirestore.instance.collection('videos').doc(id).collection('likes').doc(userId).get();
 
       return doc.exists;
     } catch (e) {
@@ -90,12 +85,7 @@ class Video {
   /// Check if a user has disliked this video
   Future<bool> isDislikedByUser(String userId) async {
     try {
-      final doc = await FirebaseFirestore.instance
-          .collection('videos')
-          .doc(id)
-          .collection('dislikes')
-          .doc(userId)
-          .get();
+      final doc = await FirebaseFirestore.instance.collection('videos').doc(id).collection('dislikes').doc(userId).get();
 
       return doc.exists;
     } catch (e) {
@@ -107,12 +97,7 @@ class Video {
   /// Check if a user is following the video author
   Future<bool> isAuthorFollowedByUser(String userId) async {
     try {
-      final doc = await FirebaseFirestore.instance
-          .collection('users')
-          .doc(userId)
-          .collection('following')
-          .doc(authorId)
-          .get();
+      final doc = await FirebaseFirestore.instance.collection('users').doc(userId).collection('following').doc(authorId).get();
 
       return doc.exists;
     } catch (e) {
@@ -125,9 +110,7 @@ class Video {
   double get engagementRate {
     if (viewsCount == null || viewsCount == 0) return 0.0;
 
-    final totalEngagements = (likesCount ?? 0) +
-        (sharesCount ?? 0) +
-        (commentsCount ?? 0);
+    final totalEngagements = (likesCount ?? 0) + (sharesCount ?? 0) + (commentsCount ?? 0);
 
     return (totalEngagements / viewsCount!) * 100;
   }
@@ -150,9 +133,9 @@ class VideoWithAuthor {
   });
 
   static Future<VideoWithAuthor?> fromVideo(
-      Video video,
-      String currentUserId,
-      ) async {
+    Video video,
+    String currentUserId,
+  ) async {
     final author = await video.getAuthorProfile();
     if (author == null) return null;
 
@@ -167,17 +150,11 @@ class VideoWithAuthor {
     );
   }
 
-  static Future<Map<String, UserProfile>> fetchAuthorProfiles(
-      List<Video> videos) async {
+  static Future<Map<String, UserProfile>> fetchAuthorProfiles(List<Video> videos) async {
     final authorIds = videos.map((v) => v.authorId).toSet().toList();
 
-    final snapshot = await firestore
-        .collection('users')
-        .where(FieldPath.documentId, whereIn: authorIds)
-        .get();
+    final snapshot = await firestore.collection('users').where(FieldPath.documentId, whereIn: authorIds).get();
 
-    return Map.fromEntries(
-        snapshot.docs.map((doc) => MapEntry(doc.id, UserProfile.fromFirestore(doc)))
-    );
+    return Map.fromEntries(snapshot.docs.map((doc) => MapEntry(doc.id, UserProfile.fromFirestore(doc))));
   }
 }

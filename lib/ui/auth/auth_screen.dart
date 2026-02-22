@@ -82,7 +82,7 @@ class _LoginScreenState extends State<LoginScreen> {
   void completeLogin() async {
     print("completing login...");
     try {
-      await onUserLogin();
+      await onUserLogin(context);
       if(mounted) {
         Navigator.of(context).pushReplacement(
           MaterialPageRoute(builder: (_) => MyHomePage()),

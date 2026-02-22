@@ -1,17 +1,14 @@
 import 'dart:async';
 
 import 'package:wurp/logic/video/video_provider.dart';
-import 'package:wurp/main.dart';
 
 import 'overlays.dart';
 import 'video_container.dart';
 
 class FeedViewModel {
-  late RecommendationVideoProvider videoSource;
-
-  FeedViewModel(){
-    videoSource = RecommendationVideoProvider(userId: auth!.currentUser!.uid);
-  }
+  VideoProvider? videoSource;
+  
+  FeedViewModel([this.videoSource]){}
 
   // Stores futures so we never load the same index twice
   final Map<int, Future<VideoContainer>> _videoFutures = {};
@@ -24,34 +21,44 @@ class FeedViewModel {
 
   /// Returns (and starts loading) the video at [index].
   /// Safe to call multiple times for the same index.
-  Future<VideoContainer> getVideoAt(int index) {
+  Future<VideoContainer> getVideoAt(int index, {VideoProvider? videoSource}) {
+    videoSource ??= this.videoSource;
+    print("getting video at $index, source: $videoSource");
     if (_disposedIndices.contains(index)) {
       _videoFutures.remove(index);
       _disposedIndices.remove(index);
     }
 
-    _videoFutures[index] ??= _loadContainer(index);
+    _videoFutures[index] ??= _loadContainer(index, videoSource: videoSource);
 
     // Only pre-load the NEXT video – avoid spawning multiple decoders at once.
     // Do NOT pre-load if we already have 2+ containers loaded (memory pressure).
     final next = index + 1;
     if (_loadedContainers.length < 2 && !_disposedIndices.contains(next)) {
-      _videoFutures[next] ??= _loadContainer(next);
+      _videoFutures[next] ??= _loadContainer(next, videoSource: videoSource);
     }
 
     return _videoFutures[index]!;
   }
 
-  Future<VideoContainer> _loadContainer(int index) async {
-    final video = await videoSource.getVideoByIndex(index);
-    final container = VideoContainer(video: video);
+  Future<VideoContainer> _loadContainer(int index, {VideoProvider? videoSource}) async {
+    print("loading container, given source: $videoSource");
+    videoSource ??= this.videoSource;
+    print("video source: $videoSource");
+    assert(videoSource != null, "you have to provide a video source!");
+    final video = await videoSource!.getVideoByIndex(index);
+    final container = VideoContainer(video: video!);
     await container.loadController();
     _loadedContainers[index] = container;
     return container;
   }
 
   /// Called by the PageView whenever the user lands on a new page.
-  Future<void> switchToVideoAt(int index) async {
+  Future<void> switchToVideoAt(int index, {VideoProvider? videoSource}) async {
+    videoSource ??= this.videoSource;
+    
+    print("switching to video, source: $videoSource");
+    
     final previous = _currentIndex;
     _currentIndex = index;
 
@@ -70,7 +77,7 @@ class FeedViewModel {
     }
 
     // 3. Now play the current video (decoder slot is free, audio focus available)
-    final current = await getVideoAt(index);
+    final current = await getVideoAt(index, videoSource: videoSource);
     if (!_disposedIndices.contains(index)) {
       await current.controller?.play();
     }
@@ -78,7 +85,8 @@ class FeedViewModel {
     // 4. Trigger pre-load of next video now that we have headroom
     final next = index + 1;
     if (!_disposedIndices.contains(next)) {
-      _videoFutures[next] ??= _loadContainer(next);
+      print("not disposed, loading");
+      _videoFutures[next] ??= _loadContainer(next, videoSource: videoSource);
     }
   }
 
@@ -95,7 +103,6 @@ class FeedViewModel {
   Future<void> dispose() async {
     await Future.wait(_videoFutures.values);
     await Future.wait(_loadedContainers.values.map((element) => element.controller?.dispose() ?? Future.value()));
-    videoSource.clearCache();
     _videoFutures.clear();
     _loadedContainers.clear();
     _disposedIndices.clear();

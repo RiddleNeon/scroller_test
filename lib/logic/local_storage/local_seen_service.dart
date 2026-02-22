@@ -21,7 +21,6 @@ class LocalSeenService {
   static bool hiveInitialized = false;
 
   Future<void> init() async {
-    print("starting initialization of LocalSeenService...");
     userId = auth!.currentUser!.uid;
     
     if(!hiveInitialized) {
@@ -34,11 +33,12 @@ class LocalSeenService {
     _cursorBox = await Hive.openBox('${userId}_$_cursorBoxName');
     _interactionBox = await Hive.openBox('${userId}_$_interactionBoxName');
 
+/*
     await _cursorBox.clear();
     await _seenBox.clear();
     await _interactionBox.clear();
+*/
 
-    print("cleared!");
 
     await syncWithFirestore();
     await cleanUpOldEntries();

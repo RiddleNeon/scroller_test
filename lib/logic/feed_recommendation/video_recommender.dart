@@ -25,7 +25,7 @@ class VideoRecommender extends VideoRecommenderBase {
   static const double _personalizedWeight = 0.50;
   static const int _candidatePoolSize = 50;
 
-  VideoRecommender({required super.userId});
+  VideoRecommender();
 
   /// Main recommendation function
   Future<Set<Video>> getRecommendedVideos({int limit = 20}) async {

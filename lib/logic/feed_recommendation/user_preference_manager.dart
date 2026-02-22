@@ -6,8 +6,6 @@ import '../batches/batch_service.dart';
 import '../video/video.dart';
 
 class UserPreferenceManager {
-  final String userId;
-
   static const double _learningRate = 0.25;
   static const int _maxTagPreferences = 80;
   static const int _maxAuthorPreferences = 20;
@@ -19,15 +17,18 @@ class UserPreferenceManager {
   Map<String, TagInteraction> cachedAuthorPrefs = {};
   double cachedAvgCompletion = 0.0;
   int cachedTotalInteractions = 0;
-
-  static final Map<String, UserPreferenceManager> _instances = {};
-
-  factory UserPreferenceManager({required String userId}) {
-    return _instances.putIfAbsent(userId, () => UserPreferenceManager._internal(userId));
+  
+  static UserPreferenceManager? currentInstance;
+  factory UserPreferenceManager() {
+    return currentInstance ??= UserPreferenceManager._internal();
   }
-
-  UserPreferenceManager._internal(this.userId) {
+  UserPreferenceManager._internal() {
     loadCache();
+  }
+  
+  ///resets all values in case of the user logging out and switching accounts
+  static void reset(){
+    currentInstance = null;
   }
 
   bool get isCacheLoaded => _loadFuture != null;
@@ -42,10 +43,8 @@ class UserPreferenceManager {
   }
 
   Future<void> _loadCacheInternal() async {
-    print("getting cache for user $userId...");
     try {
-      final userRef = firestore.collection('users').doc(userId).collection('profile').doc('preferences');
-      print("Loading user preferences from Firestore for user $userId...");
+      final userRef = firestore.collection('users').doc(auth!.currentUser!.uid).collection('profile').doc('preferences');
       final snapshot = await userRef.get();
 
       if (snapshot.exists) {
@@ -112,7 +111,7 @@ class UserPreferenceManager {
     cachedAvgCompletion = (cachedAvgCompletion * cachedTotalInteractions + normalizedEngagementScore) / (cachedTotalInteractions + 1);
     cachedTotalInteractions++;
 
-    final userRef = firestore.collection('users').doc(userId).collection('profile').doc('preferences');
+    final userRef = firestore.collection('users').doc(auth!.currentUser!.uid).collection('profile').doc('preferences');
 
     userRef.batchSet({
       'recommendationProfile': {

@@ -435,6 +435,31 @@ class VideoRepository {
     );
   }
 
+  Future<({List<Video> videos, DocumentSnapshot? lastDoc})> searchVideosByTag(
+      String tag, {
+        int limit = 20,
+        DocumentSnapshot? startAfter,
+      }) async {
+
+    var queryRef = firestore
+        .collection('videos')
+        .where('tags', arrayContains: tag)
+        .orderBy('likesCount') //todo switch when using new naming for new videos
+        .limit(limit);
+
+    if (startAfter != null) {
+      queryRef = queryRef.startAfterDocument(startAfter);
+    }
+
+    final snapshot = await queryRef.get();
+    final videos = snapshot.docs.map((doc) => Video.fromFirestore(doc)).toList();
+
+    return (
+    videos: videos,
+    lastDoc: snapshot.docs.isNotEmpty ? snapshot.docs.last : null,
+    );
+  }
+
   /// Get videos by specific tags
   Future<List<Video>> getVideosByTags(
       List<String> tags, {

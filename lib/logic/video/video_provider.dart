@@ -7,17 +7,6 @@ abstract class VideoProvider {
   Future<Video?> getVideoByIndex(int index);
 
   Future<void> preloadVideos(int count);
-
-  void trackVideoInteraction({
-    required Video video,
-    required double watchTime,
-    required double videoDuration,
-    bool liked = false,
-    bool disliked = false,
-    bool shared = false,
-    bool commented = false,
-    bool saved = false,
-  });
 }
 
 class RecommendationVideoProvider implements VideoProvider {
@@ -30,8 +19,8 @@ class RecommendationVideoProvider implements VideoProvider {
   static const int _preloadThreshold = 5; // Preload when this many videos left
   static const int _preloadBatchSize = 20;
 
-  RecommendationVideoProvider({required String userId})
-      : _recommender = VideoRecommender(userId: userId);
+  RecommendationVideoProvider()
+      : _recommender = VideoRecommender();
 
   @override
   Future<Video> getVideoByIndex(int index, [bool retry = true]) async {
@@ -98,35 +87,9 @@ class RecommendationVideoProvider implements VideoProvider {
     }
   }
 
-  @override
-  Future<void> trackVideoInteraction({
-    required Video video,
-    required double watchTime,
-    required double videoDuration,
-    bool liked = false,
-    bool disliked = false,
-    bool shared = false,
-    bool commented = false,
-    bool saved = false,
-  }) {    
-    return _recommender.trackInteraction(
-      watchTime: watchTime,
-      videoDuration: videoDuration,
-      liked: liked,
-      disliked: disliked,
-      shared: shared,
-      commented: commented,
-      saved: saved,
-      video: video,
-    ).catchError((e) {
-      print('Error tracking interaction: $e');
-    });
-  }
-
   /// Refresh recommendations (call this when user preferences might have changed)
   Future<void> refreshRecommendations() async {
-    _videoCache.clear();
-    _currentIndex = 0;
+    clearCache();
     await _loadInitialVideos();
   }
 
@@ -135,4 +98,10 @@ class RecommendationVideoProvider implements VideoProvider {
     _videoCache.clear();
     _currentIndex = 0;
   }
+  
+  void appendToCache(List<Video> videos) {
+    _videoCache.addAll(videos);
+  }
+  
+  int get currentCacheLength => _videoCache.length;
 }

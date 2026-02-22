@@ -3,6 +3,7 @@ import 'dart:async';
 import 'package:cloud_firestore/cloud_firestore.dart';
 import 'package:flutter/material.dart';
 import 'package:video_player/video_player.dart';
+import 'package:wurp/logic/feed_recommendation/video_recommender_base.dart';
 import 'package:wurp/logic/video/video_provider.dart';
 
 import '../../logic/batches/batch_service.dart';
@@ -15,7 +16,7 @@ class VideoItem extends StatefulWidget {
   final Video video;
   final String userId;
   final TickerProvider provider;
-  final RecommendationVideoProvider videoProvider;
+  final VideoProvider videoProvider;
   final int index;
 
   const VideoItem({
@@ -150,7 +151,7 @@ class _VideoItemState extends State<VideoItem> {
     try {
       // Use VideoRecommender to track interaction
       // This handles BOTH recent_interactions AND preference updates
-      await widget.videoProvider.trackVideoInteraction(
+      await trackInteraction(
         video: widget.video,
         watchTime: _totalWatchTime,
         videoDuration: videoDuration > 0 ? videoDuration : 1.0,
@@ -158,7 +159,8 @@ class _VideoItemState extends State<VideoItem> {
         disliked: _isDisliked,
         shared: _hasShared,
         commented: _hasCommented,
-        saved: _hasSaved,
+        saved: _hasSaved, 
+        userId: auth!.currentUser!.uid,
       );
 
       // Reset for next viewing session
