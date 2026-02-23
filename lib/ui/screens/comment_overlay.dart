@@ -38,7 +38,7 @@ class _CommentVM {
 }
 
 Future<void> openCommentsForVideo(String videoId, BuildContext context) async {
-  final commentQueryResult = await videoRepo.getComments("gYlpkVli3SAn1UHSv9K8");
+  final commentQueryResult = await videoRepo.getComments(videoId);
   List<Comment> comments = commentQueryResult.comments;
   print("comments: $comments}");
   DocumentSnapshot? lastCommentDoc = commentQueryResult.lastDoc;
@@ -50,18 +50,16 @@ Future<void> openCommentsForVideo(String videoId, BuildContext context) async {
     currentUsername: "yoMama",
     currentUserProfileImageUrl: "https://api.dicebear.com/7.x/thumbs/png?seed=yoMama",
     onCommentAdded: (p0) {
-      videoRepo.addComment("gYlpkVli3SAn1UHSv9K8", p0);
+      videoRepo.addComment(videoId, p0);
     },
     onLoadMore: () async {
-      final commentQueryResult = await videoRepo.getComments("gYlpkVli3SAn1UHSv9K8", startAfter: lastCommentDoc);
+      final commentQueryResult = await videoRepo.getComments(videoId, startAfter: lastCommentDoc);
       List<Comment> comments = commentQueryResult.comments;
       lastCommentDoc = commentQueryResult.lastDoc;
-      print("loading more: $comments");
       return comments;
     },
     onLoadReplies: (parent) async {
-      final result = await videoRepo.getComments("gYlpkVli3SAn1UHSv9K8", commentId: parent.id, startAfter: lastCommentRepliesDoc);
-      print("loading replies");
+      final result = await videoRepo.getComments(videoId, commentId: parent.id, startAfter: lastCommentRepliesDoc);
       lastCommentRepliesDoc = result.lastDoc;
       return result.comments;
     },

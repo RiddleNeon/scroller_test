@@ -2,7 +2,7 @@ import 'package:flutter/cupertino.dart';
 import 'package:flutter/material.dart';
 
 class CommentButton extends StatefulWidget {
-  final void Function(String)? onComment;
+  final void Function()? onComment;
   final String videoId;
 
   const CommentButton({
@@ -64,7 +64,7 @@ class _CommentButtonState extends State<CommentButton>
 
   void _onTap() {
     _ctrl.forward(from: 0.0);
-    widget.onComment?.call("Test");
+    widget.onComment?.call();
   }
 
   @override

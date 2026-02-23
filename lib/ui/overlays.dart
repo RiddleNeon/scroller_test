@@ -2,6 +2,7 @@ import 'package:flutter/cupertino.dart';
 import 'package:wurp/logic/repositories/video_repository.dart';
 import 'package:wurp/logic/video/video.dart';
 import 'package:wurp/ui/overlay_buttons/comment_button.dart';
+import 'package:wurp/ui/screens/comment_overlay.dart';
 
 import '../main.dart';
 import 'overlay_buttons/dislike_button.dart';
@@ -60,9 +61,7 @@ class _PageOverlayState extends State<PageOverlay> {
             children: [
               LikeButton(provider: widget.provider, videoId: widget.video.id, initiallyLiked: liked, onLikeChanged: _onLikeChanged),
               DislikeButton(videoId: widget.video.id, initiallyDisliked: disliked, onDislikeChanged: _onDislikeChanged),
-              CommentButton(videoId: widget.video.id, onComment: (p0) {
-                print("user commented $p0");
-              },),
+              CommentButton(videoId: widget.video.id, onComment: _onCommentButtonPressed),
               const Icon(CupertinoIcons.share),
             ],
           ),
@@ -91,6 +90,10 @@ class _PageOverlayState extends State<PageOverlay> {
       });
     }
     _updateDislikeInFirestore(newDisliked);
+  }
+  
+  void _onCommentButtonPressed(){
+    openCommentsForVideo(widget.video.id, context);
   }
 
   void _updateDislikeInFirestore(bool isDisliked) {
