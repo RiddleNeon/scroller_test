@@ -40,11 +40,10 @@ class _MyHomePageState extends State<MyHomePage> with TickerProviderStateMixin{
       case int(): content = feedVideos(this, videoProvider); break;
     };
     
-    bool loggedOut = selectedIndex == 4;
     return Scaffold(
       backgroundColor: Colors.black,
       body: runningOnMobile ? content : Glowscreen(child: content),
-      bottomNavigationBar: loggedOut ? null : BottomNavBar(key: bottomNavBarKey, onSelectionChange: onNavBarSelectionChange),
+      bottomNavigationBar: BottomNavBar(key: bottomNavBarKey, onSelectionChange: onNavBarSelectionChange),
     );
   }
 }

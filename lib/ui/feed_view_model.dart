@@ -8,7 +8,7 @@ import 'video_container.dart';
 class FeedViewModel {
   VideoProvider? videoSource;
   
-  FeedViewModel([this.videoSource]){}
+  FeedViewModel([this.videoSource]);
 
   // Stores futures so we never load the same index twice
   final Map<int, Future<VideoContainer>> _videoFutures = {};
@@ -101,11 +101,11 @@ class FeedViewModel {
   }
   
   Future<void> dispose() async {
-    await Future.wait(_videoFutures.values);
-    await Future.wait(_loadedContainers.values.map((element) => element.controller?.dispose() ?? Future.value()));
+    
+    await Future.wait([..._videoFutures.values, ..._loadedContainers.values.map((element) => element.controller?.dispose() ?? Future.value())]);
     _videoFutures.clear();
     _loadedContainers.clear();
     _disposedIndices.clear();
-    pageOverlays.clear();
+    print("disposed");
   }
 }

@@ -72,8 +72,7 @@ void main() async {
 Future<void> onUserLogin([BuildContext? context]) async {
   print("login!");
   UserPreferenceManager.reset();
-  pageOverlays.clear();
-  await _feedViewModel?.dispose();
+  await feedViewModel.dispose();
   await _localSeenService?.dispose();
   _localSeenService = LocalSeenService();
   await _localSeenService!.init();

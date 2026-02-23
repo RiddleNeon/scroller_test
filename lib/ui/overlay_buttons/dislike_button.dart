@@ -8,7 +8,6 @@ class DislikeButton extends StatefulWidget {
   final void Function(bool)? onDislikeChanged;
   final bool initiallyPlayingAnimation;
   final String videoId;
-  final String userId;
 
   const DislikeButton({
     super.key,
@@ -16,7 +15,6 @@ class DislikeButton extends StatefulWidget {
     this.onDislikeChanged,
     this.initiallyPlayingAnimation = false,
     required this.videoId,
-    required this.userId,
   });
 
   @override
@@ -104,7 +102,7 @@ class _DislikeButtonState extends State<DislikeButton>
     // Update user's disliked videos collection
     final userDislikeRef = firestore
         .collection('users')
-        .doc(widget.userId)
+        .doc(auth!.currentUser!.uid)
         .collection('disliked_videos')
         .doc(widget.videoId);
 

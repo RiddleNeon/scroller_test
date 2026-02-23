@@ -10,7 +10,6 @@ class LikeButton extends StatefulWidget {
   final bool initiallyPlayingAnimation;
   final void Function(bool)? onLikeChanged;
   final String videoId;
-  final String userId;
 
   const LikeButton({
     super.key,
@@ -19,7 +18,6 @@ class LikeButton extends StatefulWidget {
     this.onLikeChanged,
     this.initiallyPlayingAnimation = false,
     required this.videoId,
-    required this.userId,
   });
 
   @override
@@ -120,7 +118,7 @@ class _LikeButtonState extends State<LikeButton> {
     // Update user's liked videos collection
     final userLikeRef = firestore
         .collection('users')
-        .doc(widget.userId)
+        .doc(auth!.currentUser!.uid)
         .collection('liked_videos')
         .doc(widget.videoId);
 

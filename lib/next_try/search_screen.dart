@@ -120,7 +120,6 @@ class _SearchScreenState extends State<SearchScreen> with TickerProviderStateMix
     setState(() => loading = true);
     searchBarResult = SearchBarResult.fromFirestore(val);
     await searchBarResult!.complete();
-    currentSearchViewModel?.dispose();
     currentSearchViewModel = FeedViewModel();
     setState(() => loading = false);
   }
@@ -205,7 +204,6 @@ class _SearchScreenState extends State<SearchScreen> with TickerProviderStateMix
   @override
   void dispose() {
     cachedImageData.clear();
-    currentSearchViewModel?.dispose();
     super.dispose();
   }
 
@@ -218,7 +216,6 @@ class _SearchScreenState extends State<SearchScreen> with TickerProviderStateMix
       barrierLabel: "VideoOverlay",
       barrierColor: Colors.black54,
       transitionDuration: const Duration(milliseconds: 250),
-
       pageBuilder: (context, animation, secondaryAnimation) {
         return SafeArea(
           child: Center(
@@ -234,7 +231,6 @@ class _SearchScreenState extends State<SearchScreen> with TickerProviderStateMix
                 clipBehavior: Clip.hardEdge,
                 child: Stack(
                   children: [
-
                     // VIDEO FEED
                     feedVideos(
                       this,

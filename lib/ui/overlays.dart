@@ -1,6 +1,5 @@
 import 'package:flutter/cupertino.dart';
 import 'package:wurp/logic/video/video.dart';
-import 'package:wurp/main.dart';
 
 import 'overlay_buttons/dislike_button.dart';
 import 'overlay_buttons/like_button.dart';
@@ -40,52 +39,10 @@ class PageOverlay extends StatefulWidget {
 }
 
 class _PageOverlayState extends State<PageOverlay> {
-  late PageOverlayController controller;
-
-  @override
-  void initState() {
-    super.initState();
-
-    final oldController = pageOverlays[widget.index - 10];
-    if (oldController != null) {
-      oldController.dispose();
-      pageOverlays.remove(widget.index - 10);
-    }
-
-    controller = pageOverlays[widget.index] ??
-        PageOverlayController(
-          widget.index,
-          provider: widget.provider,
-          videoId: widget.video.id,
-          initiallyLiked: widget.initiallyLiked,
-          initiallyDisliked: widget.initiallyDisliked,
-        );
-    controller.addListener(_onControllerUpdate);
-  }
-
   late bool lastLiked = widget.initiallyLiked;
   late bool lastDisliked = widget.initiallyDisliked;
-
-  void _onControllerUpdate() {
-    if (!mounted) return;
-
-    if (lastLiked != controller.liked) {
-      lastLiked = controller.liked;
-      widget.onLikeChanged(controller.liked);
-    }
-    if (lastDisliked != controller.disliked) {
-      lastDisliked = controller.disliked;
-      widget.onDislikeChanged(controller.disliked);
-    }
-
-    setState(() {});
-  }
-
-  @override
-  void dispose() {
-    controller.removeListener(_onControllerUpdate);
-    super.dispose();
-  }
+  late bool liked = widget.initiallyLiked;
+  late bool disliked = widget.initiallyDisliked;
 
   @override
   Widget build(BuildContext context) {
@@ -98,8 +55,8 @@ class _PageOverlayState extends State<PageOverlay> {
             mainAxisAlignment: MainAxisAlignment.center,
             spacing: 8,
             children: [
-              controller.likeButton,
-              controller.dislikeButton,
+              LikeButton(provider: widget.provider, videoId: widget.video.id, initiallyLiked: liked, onLikeChanged: _onLikeChanged),
+              DislikeButton(videoId: widget.video.id, initiallyDisliked: disliked, onDislikeChanged: _onDislikeChanged),
               const Icon(CupertinoIcons.ellipses_bubble),
               const Icon(CupertinoIcons.share),
             ],
@@ -108,98 +65,24 @@ class _PageOverlayState extends State<PageOverlay> {
       ],
     );
   }
-}
-
-Map<int, PageOverlayController> pageOverlays = {};
-
-class PageOverlayController extends ChangeNotifier {
-  final TickerProvider provider;
-  final int index;
-  final String videoId;
-
-  bool liked;
-  bool disliked;
-
-  late LikeButton likeButton;
-  late DislikeButton dislikeButton;
-
-  PageOverlayController(
-      this.index, {
-        required this.provider,
-        required this.videoId,
-        bool initiallyLiked = false,
-        bool initiallyDisliked = false,
-      })  : liked = initiallyLiked,
-        disliked = initiallyDisliked {
-    pageOverlays[index] = this;
-    _buildButtons();
-  }
 
   void _onLikeChanged(bool newLiked) {
-    final wasDisliked = disliked;
     liked = newLiked;
-
-    if (wasDisliked && newLiked) {
-      disliked = false;
-      _rebuildDislikeButton(playAnimation: false);
+    if (disliked && newLiked) {
+      print("switch to undisliked");
+      setState(() {
+        disliked = false;
+      });
     }
-
-    notifyListeners();
   }
 
   void _onDislikeChanged(bool newDisliked) {
-    final wasLiked = liked;
     disliked = newDisliked;
-
-    if (wasLiked && newDisliked) {
-      liked = false;
-      _rebuildLikeButton(playAnimation: false);
+    if (liked && newDisliked) {
+      print("switch to unliked");
+      setState(() {
+        liked = false;
+      });
     }
-
-    notifyListeners();
-  }
-
-  void _buildButtons() {
-    likeButton = LikeButton(
-      key: ValueKey('like_$index'),
-      provider: provider,
-      videoId: videoId,
-      userId: auth!.currentUser!.uid,
-      initiallyLiked: liked,
-      initiallyPlayingAnimation: false,
-      onLikeChanged: _onLikeChanged,
-    );
-
-    dislikeButton = DislikeButton(
-      key: ValueKey('dislike_$index'),
-      videoId: videoId,
-      userId: auth!.currentUser!.uid,
-      initiallyDisliked: disliked,
-      initiallyPlayingAnimation: false,
-      onDislikeChanged: _onDislikeChanged,
-    );
-  }
-
-  void _rebuildLikeButton({bool playAnimation = false}) {
-    likeButton = LikeButton(
-      key: ValueKey('like_${index}_${liked ? 'on' : 'off'}'),
-      provider: provider,
-      videoId: videoId,
-      userId: auth!.currentUser!.uid,
-      initiallyLiked: liked,
-      initiallyPlayingAnimation: playAnimation,
-      onLikeChanged: _onLikeChanged,
-    );
-  }
-
-  void _rebuildDislikeButton({bool playAnimation = false}) {
-    dislikeButton = DislikeButton(
-      key: ValueKey('dislike_${index}_${disliked ? 'on' : 'off'}'),
-      videoId: videoId,
-      userId: auth!.currentUser!.uid,
-      initiallyDisliked: disliked,
-      initiallyPlayingAnimation: playAnimation,
-      onDislikeChanged: _onDislikeChanged,
-    );
   }
 }
