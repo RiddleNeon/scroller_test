@@ -6,6 +6,7 @@ import 'package:flutter/services.dart';
 
 import '../../logic/comments/comment.dart';
 import '../../logic/repositories/video_repository.dart';
+import '../../logic/video/video.dart';
 import '../../main.dart';
 
 class _CommentVM {
@@ -37,7 +38,8 @@ class _CommentVM {
         replies = replies ?? [];
 }
 
-Future<void> openCommentsForVideo(String videoId, BuildContext context) async {
+Future<void> openCommentsForVideo(Video video, BuildContext context) async {
+  String videoId = video.id;
   final commentQueryResult = await videoRepo.getComments(videoId);
   List<Comment> comments = commentQueryResult.comments;
   print("comments: $comments}");
@@ -49,6 +51,7 @@ Future<void> openCommentsForVideo(String videoId, BuildContext context) async {
     currentUserId: auth!.currentUser!.uid,
     currentUsername: "yoMama",
     currentUserProfileImageUrl: "https://api.dicebear.com/7.x/thumbs/png?seed=yoMama",
+    initialCommentsCount: video.commentsCount,
     onCommentAdded: (p0) {
       videoRepo.addComment(videoId, p0);
     },
@@ -76,6 +79,7 @@ void showCommentsOverlay({
   required void Function(Comment) onCommentAdded,
   Future<List<Comment>> Function()? onLoadMore,
   Future<List<Comment>> Function(Comment parent)? onLoadReplies,
+  int? initialCommentsCount
 }) {
   showModalBottomSheet(
     context: context,
@@ -90,6 +94,7 @@ void showCommentsOverlay({
       onCommentAdded: onCommentAdded,
       onLoadMore: onLoadMore,
       onLoadReplies: onLoadReplies,
+      initialCommentCount: initialCommentsCount,
     ),
   );
 }
@@ -100,6 +105,7 @@ class CommentsOverlay extends StatefulWidget {
   final String currentUsername;
   final String currentUserProfileImageUrl;
   final void Function(Comment) onCommentAdded;
+  final int? initialCommentCount;
 
   /// Called when the user scrolls near the end of the top-level list.
   /// Return [] to signal no more comments.
@@ -118,7 +124,8 @@ class CommentsOverlay extends StatefulWidget {
     required this.currentUserProfileImageUrl,
     required this.onCommentAdded,
     this.onLoadMore,
-    this.onLoadReplies,
+    this.onLoadReplies, 
+    this.initialCommentCount,
   });
 
   @override
@@ -134,7 +141,9 @@ class _CommentsOverlayState extends State<CommentsOverlay> {
   bool _isSending = false;
   bool _isLoadingMore = false;
   bool _hasMore = true;
-
+  
+  int newOwnComments = 0;
+  
   /// When non-null the input bar is in "reply" mode for this VM.
   _CommentVM? _replyTarget;
 
@@ -207,7 +216,7 @@ class _CommentsOverlayState extends State<CommentsOverlay> {
       final loaded = await widget.onLoadReplies!(vm.comment);
       if (!mounted) return;
       setState(() {
-        vm.comment.replies = loaded;
+        vm.comment.addReplies(loaded);
         vm.replies
           ..clear()
           ..addAll(loaded.map(_toVM));
@@ -223,6 +232,8 @@ class _CommentsOverlayState extends State<CommentsOverlay> {
   Future<void> _sendComment() async {
     final text = _textController.text.trim();
     if (text.isEmpty) return;
+    
+    newOwnComments++;
 
     HapticFeedback.lightImpact();
     setState(() => _isSending = true);
@@ -243,7 +254,8 @@ class _CommentsOverlayState extends State<CommentsOverlay> {
       date: DateTime.now(),
       likeCount: 0,
       parentId: target?.comment.id,
-      depth: target != null ? target.comment.depth + 1 : 0,
+      depth: target != null ? target.comment.depth + 1 : 0, 
+      replyCount: 0,
     );
 
     final newVm = _toVM(newComment);
@@ -253,7 +265,7 @@ class _CommentsOverlayState extends State<CommentsOverlay> {
         // Insert into the VM tree for immediate rendering
         target.replies.insert(0, newVm);
         // Keep Comment model in sync
-        target.comment.replies.insert(0, newComment);
+        target.comment.addReply(newComment);
         // Mark as loaded so a subsequent toggle won't overwrite with a stale fetch
         target.repliesLoaded = true;
         target.showReplies = true;
@@ -356,7 +368,7 @@ class _CommentsOverlayState extends State<CommentsOverlay> {
                   ),
                 ),
                 Text(
-                  '${_vms.length} Comments',
+                  '${widget.initialCommentCount == null ? _vms.length : (widget.initialCommentCount!+newOwnComments)} Comments',
                   style: const TextStyle(
                     color: Colors.white,
                     fontSize: 17,

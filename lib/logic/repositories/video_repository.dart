@@ -228,6 +228,12 @@ class VideoRepository {
   Future<void> addComment(String videoId, Comment comment) async {
     print("adding ${comment.toFirestore()} to ${comment.id}");
     await firestore.collection('videos').doc(videoId).collection('comments').doc(comment.id).set(comment.toFirestore());
+    await firestore.collection('videos').doc(videoId).set(
+      {
+        "commentsCount": FieldValue.increment(1)
+      },
+      SetOptions(merge: true)
+    );
   }
 
   Future<({List<Comment> comments, DocumentSnapshot? lastDoc})> getComments(String videoId,

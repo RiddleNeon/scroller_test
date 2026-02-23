@@ -33,11 +33,9 @@ class LocalSeenService {
     _cursorBox = await Hive.openBox('${userId}_$_cursorBoxName');
     _interactionBox = await Hive.openBox('${userId}_$_interactionBoxName');
 
-/*
-    await _cursorBox.clear();
+/*    await _cursorBox.clear();
     await _seenBox.clear();
-    await _interactionBox.clear();
-*/
+    await _interactionBox.clear();*/
 
 
     await syncWithFirestore();

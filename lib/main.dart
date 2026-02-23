@@ -75,9 +75,6 @@ Future<void> onUserLogin([BuildContext? context]) async {
   await _localSeenService?.dispose();
   _localSeenService = LocalSeenService();
   await _localSeenService!.init();
-  if(context != null) {
-    rebuildAllChildren(context);
-  }
   //videoPublishTest();
   //removeAllPreferencesOfCurrentUser();
 }

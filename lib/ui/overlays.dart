@@ -93,7 +93,7 @@ class _PageOverlayState extends State<PageOverlay> {
   }
   
   void _onCommentButtonPressed(){
-    openCommentsForVideo(widget.video.id, context);
+    openCommentsForVideo(widget.video, context);
   }
 
   void _updateDislikeInFirestore(bool isDisliked) {

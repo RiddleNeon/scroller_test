@@ -8,6 +8,7 @@ class Comment {
   String message;
   DateTime date;
   int likeCount;
+  int? replyCount;
 
   /// null  → top-level comment
   /// other → direct parent's id
@@ -19,7 +20,7 @@ class Comment {
 
   /// Client-only – NOT stored in Firestore.
   /// Populated by [buildCommentTree] after loading a flat list.
-  List<Comment> replies;
+  List<Comment> _replies;
 
   Comment({
     required this.id,
@@ -32,7 +33,8 @@ class Comment {
     this.parentId,
     this.depth = 0,
     List<Comment>? replies,
-  }) : replies = replies ?? [];
+    required this.replyCount,
+  }) : _replies = replies ?? [];
 
   // ── Firestore helpers ────────────────────────────────────────
 
@@ -45,6 +47,7 @@ class Comment {
     'likeCount': likeCount,
     'parentId': parentId,
     'depth': depth,
+    'replyCount': replyCount,
     // replies is client-only – never written to Firestore
   };
 
@@ -61,7 +64,23 @@ class Comment {
         likeCount: (data['likeCount'] as int?) ?? 0,
         parentId: data['parentId'] as String?,
         depth: (data['depth'] as int?) ?? 0,
+        replyCount: (data['replyCount'] as int?) ?? 0,
       );
+  
+  void addReply(Comment reply) {
+    _replies.add(reply);
+    replyCount ??= _replies.length;
+    replyCount = (replyCount ?? _replies.length) + 1;
+  }
+
+  void addReplies(List<Comment> replies) {
+    _replies.addAll(replies);
+    replyCount = (replyCount ?? _replies.length) + 1;
+  }
+  
+  List<Comment> getReplies(){
+    return _replies;
+  }
   
   @override
   String toString() => "Comment '$message' by $username ($userProfileImageUrl) with $likeCount likes, written at $date";
