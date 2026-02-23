@@ -1,6 +1,11 @@
+import 'package:cloud_firestore/cloud_firestore.dart';
 import 'package:flutter/cupertino.dart';
+import 'package:wurp/logic/repositories/video_repository.dart';
 import 'package:wurp/logic/video/video.dart';
+import 'package:wurp/ui/overlay_buttons/comment_button.dart';
 
+import '../logic/batches/batch_service.dart';
+import '../main.dart';
 import 'overlay_buttons/dislike_button.dart';
 import 'overlay_buttons/like_button.dart';
 
@@ -57,7 +62,9 @@ class _PageOverlayState extends State<PageOverlay> {
             children: [
               LikeButton(provider: widget.provider, videoId: widget.video.id, initiallyLiked: liked, onLikeChanged: _onLikeChanged),
               DislikeButton(videoId: widget.video.id, initiallyDisliked: disliked, onDislikeChanged: _onDislikeChanged),
-              const Icon(CupertinoIcons.ellipses_bubble),
+              CommentButton(videoId: widget.video.id, onComment: (p0) {
+                print("user commented $p0");
+              },),
               const Icon(CupertinoIcons.share),
             ],
           ),
@@ -74,6 +81,7 @@ class _PageOverlayState extends State<PageOverlay> {
         disliked = false;
       });
     }
+    _updateLikeInFirestore(newLiked);
   }
 
   void _onDislikeChanged(bool newDisliked) {
@@ -84,5 +92,13 @@ class _PageOverlayState extends State<PageOverlay> {
         liked = false;
       });
     }
+    _updateDislikeInFirestore(newDisliked);
+  }
+
+  void _updateDislikeInFirestore(bool isDisliked) {
+    videoRepo.dislikeVideo(auth!.currentUser!.uid, widget.video.id);
+  }
+  void _updateLikeInFirestore(bool isLiked) {
+    videoRepo.dislikeVideo(auth!.currentUser!.uid, widget.video.id);
   }
 }

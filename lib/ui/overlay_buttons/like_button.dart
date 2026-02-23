@@ -93,45 +93,11 @@ class _LikeButtonState extends State<LikeButton> {
         });
 
         widget.onLikeChanged?.call(liked);
-
-
-        _updateLikeInFirestore(liked);
       },
       child: Transform.scale(
         scale: 2,
-        child: SizedBox(width: 32, height: 32, child: builder),
+        child: SizedBox(width: 36, height: 36, child: builder),
       ),
     );
-  }
-
-  /// Only update like count and user's liked_videos collection
-  /// The interaction tracking is handled centrally in VideoItem
-  void _updateLikeInFirestore(bool isLiked) {
-    final batchQueue = FirestoreBatchQueue.instance;
-
-    // Update video like count
-    final videoRef = firestore.collection('videos').doc(widget.videoId);
-    batchQueue.update(videoRef, {
-      'likes': FieldValue.increment(isLiked ? 1 : -1),
-    });
-
-    // Update user's liked videos collection
-    final userLikeRef = firestore
-        .collection('users')
-        .doc(auth!.currentUser!.uid)
-        .collection('liked_videos')
-        .doc(widget.videoId);
-
-    if (isLiked) {
-      batchQueue.set(userLikeRef, {
-        'videoId': widget.videoId,
-        'likedAt': FieldValue.serverTimestamp(),
-      });
-    } else {
-      batchQueue.delete(userLikeRef);
-    }
-
-    // NO interaction document here - VideoItem handles this
-    // This prevents duplicate interaction entries
   }
 }

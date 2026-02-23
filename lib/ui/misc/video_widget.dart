@@ -236,7 +236,7 @@ class _VideoItemState extends State<VideoItem> {
                       onShareChanged: onShareChanged,
                       onSaveChanged: onSaveChanged,
                       onCommentChanged: onCommentChanged,
-                      initiallyLiked: false,
+                      initiallyLiked: false, //todo cache like and dislike vals
                       initiallyDisliked: false,
                       index: widget.index,
                       child: Container(),

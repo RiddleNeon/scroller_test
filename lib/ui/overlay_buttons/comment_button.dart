@@ -1,29 +1,22 @@
+import 'package:flutter/cupertino.dart';
 import 'package:flutter/material.dart';
-import 'package:cloud_firestore/cloud_firestore.dart';
-import '../../logic/batches/batch_service.dart';
-import '../../main.dart';
 
-class DislikeButton extends StatefulWidget {
-  final bool initiallyDisliked;
-  final void Function(bool)? onDislikeChanged;
-  final bool initiallyPlayingAnimation;
+class CommentButton extends StatefulWidget {
+  final void Function(String)? onComment;
   final String videoId;
 
-  const DislikeButton({
+  const CommentButton({
     super.key,
-    this.initiallyDisliked = false,
-    this.onDislikeChanged,
-    this.initiallyPlayingAnimation = false,
+    this.onComment,
     required this.videoId,
   });
 
   @override
-  State<DislikeButton> createState() => _DislikeButtonState();
+  State<CommentButton> createState() => _CommentButtonState();
 }
 
-class _DislikeButtonState extends State<DislikeButton>
+class _CommentButtonState extends State<CommentButton>
     with SingleTickerProviderStateMixin {
-  late bool disliked = widget.initiallyDisliked;
   late final AnimationController _ctrl;
   late final Animation<double> _scale;
   late final Animation<double> _rotate;
@@ -61,10 +54,6 @@ class _DislikeButtonState extends State<DislikeButton>
         weight: 60,
       ),
     ]).animate(_ctrl);
-
-    if (widget.initiallyPlayingAnimation) {
-      _ctrl.forward(from: 0.0);
-    }
   }
 
   @override
@@ -74,21 +63,12 @@ class _DislikeButtonState extends State<DislikeButton>
   }
 
   void _onTap() {
-    setState(() {
-      disliked = !disliked;
-    });
-
-    _ctrl.forward(from: 0.0).then((value) => widget.onDislikeChanged?.call(disliked));
+    _ctrl.forward(from: 0.0);
+    widget.onComment?.call("Test");
   }
-  
 
   @override
   Widget build(BuildContext context) {
-    final Color iconColor =
-    disliked ? Colors.redAccent : Colors.grey.shade700;
-    final IconData iconData =
-    disliked ? Icons.thumb_down : Icons.thumb_down;
-
     return Padding(
       padding: const EdgeInsets.all(4),
       child: InkWell(
@@ -101,7 +81,7 @@ class _DislikeButtonState extends State<DislikeButton>
               angle: _rotate.value,
               child: Transform.scale(
                 scale: _scale.value,
-                child: Icon(iconData, size: 28, color: iconColor),
+                child: Icon(CupertinoIcons.ellipses_bubble_fill, size: 28, color: Colors.grey.shade700)
               ),
             );
           },
