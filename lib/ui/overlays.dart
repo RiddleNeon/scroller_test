@@ -1,10 +1,8 @@
-import 'package:cloud_firestore/cloud_firestore.dart';
 import 'package:flutter/cupertino.dart';
 import 'package:wurp/logic/repositories/video_repository.dart';
 import 'package:wurp/logic/video/video.dart';
 import 'package:wurp/ui/overlay_buttons/comment_button.dart';
 
-import '../logic/batches/batch_service.dart';
 import '../main.dart';
 import 'overlay_buttons/dislike_button.dart';
 import 'overlay_buttons/like_button.dart';
