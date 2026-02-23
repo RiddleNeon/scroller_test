@@ -5,6 +5,7 @@ import 'package:flutter/foundation.dart';
 import 'package:flutter/material.dart';
 import 'package:fvp/fvp.dart' as fvp;
 import 'package:wurp/firebase_options.dart';
+import 'package:wurp/logic/comments/comment.dart';
 import 'package:wurp/logic/feed_recommendation/user_preference_manager.dart';
 import 'package:wurp/logic/local_storage/local_seen_service.dart';
 import 'package:wurp/logic/repositories/user_repository.dart';
@@ -47,8 +48,11 @@ void main() async {
   await FirebaseFirestore.instance.runTransaction((transaction) async {}); //whyever it fixes a crash on windows
   auth = FirebaseAuth.instanceFor(app: app!);
   _firestore = FirebaseFirestore.instance;
-  VideoRepository().addComment("MrROkFLyYpSqOuxwcePncM8Kk4B3", "gYlpkVli3SAn1UHSv9K8", "HEHEHEHEHAAAA");
-
+  print("adding comment");
+  await VideoRepository().addComment("gYlpkVli3SAn1UHSv9K8", Comment(id: '${DateTime.now().millisecondsSinceEpoch}_${"ligma".hashCode.abs()}', userId: auth!.currentUser!.uid, message: "LIGMA", date: DateTime.now(), username: "MrRokfly", userProfileImageUrl: "https://api.dicebear.com/7.x/thumbs/png?seed=yoMama"));
+  print("comment added");
+  List<Comment> comments = (await videoRepo.getComments("gYlpkVli3SAn1UHSv9K8")).comments;
+  print("comments: ${comments.toList()}");
   if (auth?.currentUser != null) {
     await onUserLogin();
   }

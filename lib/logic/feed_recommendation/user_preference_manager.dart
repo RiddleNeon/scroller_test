@@ -35,6 +35,7 @@ class UserPreferenceManager {
   
   Future<void>? _loadFuture;
   Future<void> loadCache() async {
+    print("loading cache");
     _loadFuture ??= _loadCacheInternal().catchError((e) {
       _loadFuture = null;
       throw e;
@@ -68,6 +69,7 @@ class UserPreferenceManager {
 
   Future<void> updatePreferences({required Video video, required double normalizedEngagementScore}) async {
     await loadCache();
+    print("updating preferences");
 
     double adaptiveLR(double currentScore) {
       final distance = (currentScore - 0.5).abs();
@@ -101,6 +103,7 @@ class UserPreferenceManager {
 
     Map<String, double>? networkAuthorEffects;
 
+    print("cached authors: $cachedAuthorPrefs");
     if (cachedAuthorPrefs.length > _maxAuthorPreferences) {
       final sorted = sortByRelevancy(cachedAuthorPrefs);
       networkAuthorEffects = Map.fromEntries(sorted.take(_maxAuthorPreferences).map((e) => MapEntry(e.key, e.value.engagementScore)));

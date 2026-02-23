@@ -1,16 +1,17 @@
 import 'package:cloud_firestore/cloud_firestore.dart';
 import 'package:wurp/logic/batches/batch_service.dart';
+import 'package:wurp/logic/comments/comment.dart';
 import 'package:wurp/logic/video/video.dart';
 
 import '../../main.dart';
 
 VideoRepository videoRepo = VideoRepository();
+
 class VideoRepository {
-  
   Future<Video> getVideoById(String id) async {
     DocumentSnapshot doc = await firestore.collection('videos').doc(id).get();
     Video model = Video.fromFirestore(doc);
-    
+
     return model;
   }
 
@@ -18,8 +19,9 @@ class VideoRepository {
     final snapshot = await FirebaseFirestore.instance.collection('users').doc(userId).collection('videos').get();
     return snapshot.docs.map((doc) => doc.id).toList();
   }
-  
+
   int videoQueueLength = 0;
+
   Future<void> publishVideo({
     required String title,
     required String description,
@@ -45,44 +47,31 @@ class VideoRepository {
     });
 
     _batchQueue.set(
-      firestore
-          .collection('users')
-          .doc(authorId)
-          .collection('videos')
-          .doc(videoRef.id),
+      firestore.collection('users').doc(authorId).collection('videos').doc(videoRef.id),
       {
         'createdAt': FieldValue.serverTimestamp(),
       },
     );
     videoQueueLength++;
-    if(videoQueueLength >= 10) {
+    if (videoQueueLength >= 10) {
       await flush();
       videoQueueLength = 0;
     }
   }
-  
 
   final FirestoreBatchQueue _batchQueue = FirestoreBatchQueue();
 
   /// Like a video
   void likeVideo(String userId, String videoId) {
     _batchQueue.set(
-      firestore
-          .collection('users')
-          .doc(userId)
-          .collection('liked_videos')
-          .doc(videoId),
+      firestore.collection('users').doc(userId).collection('liked_videos').doc(videoId),
       {
         'likedAt': FieldValue.serverTimestamp(),
       },
     );
 
     _batchQueue.set(
-      firestore
-          .collection('videos')
-          .doc(videoId)
-          .collection('likes')
-          .doc(userId),
+      firestore.collection('videos').doc(videoId).collection('likes').doc(userId),
       {
         'likedAt': FieldValue.serverTimestamp(),
       },
@@ -99,19 +88,11 @@ class VideoRepository {
   /// Unlike a video
   void unlikeVideo(String userId, String videoId) {
     _batchQueue.delete(
-      firestore
-          .collection('users')
-          .doc(userId)
-          .collection('liked_videos')
-          .doc(videoId),
+      firestore.collection('users').doc(userId).collection('liked_videos').doc(videoId),
     );
 
     _batchQueue.delete(
-      firestore
-          .collection('videos')
-          .doc(videoId)
-          .collection('likes')
-          .doc(userId),
+      firestore.collection('videos').doc(videoId).collection('likes').doc(userId),
     );
 
     _batchQueue.update(
@@ -124,22 +105,14 @@ class VideoRepository {
 
   void dislikeVideo(String userId, String videoId) {
     _batchQueue.set(
-      firestore
-          .collection('users')
-          .doc(userId)
-          .collection('disliked_videos')
-          .doc(videoId),
+      firestore.collection('users').doc(userId).collection('disliked_videos').doc(videoId),
       {
         'dislikedAt': FieldValue.serverTimestamp(),
       },
     );
 
     _batchQueue.set(
-      firestore
-          .collection('videos')
-          .doc(videoId)
-          .collection('dislikes')
-          .doc(userId),
+      firestore.collection('videos').doc(videoId).collection('dislikes').doc(userId),
       {
         'dislikedAt': FieldValue.serverTimestamp(),
       },
@@ -156,19 +129,11 @@ class VideoRepository {
   /// Unlike a video
   void undislikeVideo(String userId, String videoId) {
     _batchQueue.delete(
-      firestore
-          .collection('users')
-          .doc(userId)
-          .collection('disliked_videos')
-          .doc(videoId),
+      firestore.collection('users').doc(userId).collection('disliked_videos').doc(videoId),
     );
 
     _batchQueue.delete(
-      firestore
-          .collection('videos')
-          .doc(videoId)
-          .collection('dislikes')
-          .doc(userId),
+      firestore.collection('videos').doc(videoId).collection('dislikes').doc(userId),
     );
 
     _batchQueue.update(
@@ -186,22 +151,14 @@ class VideoRepository {
     }
 
     _batchQueue.set(
-      firestore
-          .collection('users')
-          .doc(followerId)
-          .collection('following')
-          .doc(followeeId),
+      firestore.collection('users').doc(followerId).collection('following').doc(followeeId),
       {
         'followedAt': FieldValue.serverTimestamp(),
       },
     );
 
     _batchQueue.set(
-      firestore
-          .collection('users')
-          .doc(followeeId)
-          .collection('followers')
-          .doc(followerId),
+      firestore.collection('users').doc(followeeId).collection('followers').doc(followerId),
       {
         'followedAt': FieldValue.serverTimestamp(),
       },
@@ -225,19 +182,11 @@ class VideoRepository {
   /// Unfollow a user
   void unfollowUser(String followerId, String followeeId) {
     _batchQueue.delete(
-      firestore
-          .collection('users')
-          .doc(followerId)
-          .collection('following')
-          .doc(followeeId),
+      firestore.collection('users').doc(followerId).collection('following').doc(followeeId),
     );
 
     _batchQueue.delete(
-      firestore
-          .collection('users')
-          .doc(followeeId)
-          .collection('followers')
-          .doc(followerId),
+      firestore.collection('users').doc(followeeId).collection('followers').doc(followerId),
     );
 
     _batchQueue.update(
@@ -276,40 +225,45 @@ class VideoRepository {
   }
 
   /// Add a comment
-  void addComment(
-      String userId,
-      String videoId,
-      String commentText,
-      ) {
-    final commentRef = firestore
-        .collection('videos')
-        .doc(videoId)
-        .collection('comments')
-        .doc();
+  Future<void> addComment(String videoId, Comment comment) async {
+    print("adding ${comment.toFirestore()} to ${comment.id}");
+    await firestore.collection('videos').doc(videoId).collection('comments').doc(comment.id).set(comment.toFirestore());
+  }
 
-    _batchQueue.set(commentRef, {
-      'userId': userId,
-      'text': commentText,
-      'createdAt': FieldValue.serverTimestamp(),
-      'likesCount': 0,
-    });
+ Future<({List<Comment> comments, DocumentSnapshot? lastDoc})> getComments(String videoId, {String? commentId, DocumentSnapshot? startAt, int limit = 20}) async {
+    Query baseQuery = firestore.collection('videos').doc(videoId).collection('comments').where('parentId', isEqualTo: commentId);
 
-    _batchQueue.update(
-      firestore.collection('videos').doc(videoId),
-      {
-        'commentsCount': FieldValue.increment(1),
-      },
+    if (startAt != null) {
+      baseQuery = baseQuery.startAtDocument(startAt);
+    }
+    
+    final result = await baseQuery.limit(limit).get();
+    DocumentSnapshot? lastDoc = result.docs.lastOrNull;
+    
+    List<Comment> comments = result.docs
+        .map((e) {
+      Object? data = e.data();
+      if (data is! Map<String, dynamic>) return null;
+      try {
+        return Comment.fromFirestore(e.id, data);
+      } on TypeError catch (e) {
+        return null;
+      }
+    })
+        .whereType<Comment>()
+        .toList();
+    
+
+    return (
+      comments: comments,
+      lastDoc: lastDoc,
     );
   }
 
   /// Save video
   void saveVideo(String userId, String videoId) {
     _batchQueue.set(
-      firestore
-          .collection('users')
-          .doc(userId)
-          .collection('saved_videos')
-          .doc(videoId),
+      firestore.collection('users').doc(userId).collection('saved_videos').doc(videoId),
       {
         'savedAt': FieldValue.serverTimestamp(),
       },
@@ -319,20 +273,16 @@ class VideoRepository {
   /// Unsave video
   void unsaveVideo(String userId, String videoId) {
     _batchQueue.delete(
-      firestore
-          .collection('users')
-          .doc(userId)
-          .collection('saved_videos')
-          .doc(videoId),
+      firestore.collection('users').doc(userId).collection('saved_videos').doc(videoId),
     );
   }
 
   /// Report a video
   void reportVideo(
-      String userId,
-      String videoId,
-      String reason,
-      ) {
+    String userId,
+    String videoId,
+    String reason,
+  ) {
     _batchQueue.set(
       firestore.collection('video_reports').doc(),
       {
@@ -353,15 +303,10 @@ class VideoRepository {
   /// Get current queue size
   int get pendingOperations => _batchQueue.queueSize;
 
-
   /// Get video feed for a user (following feed)
   Future<List<Video>> getFollowingFeed(String userId, {int limit = 20}) async {
     try {
-      final followingSnapshot = await firestore
-          .collection('users')
-          .doc(userId)
-          .collection('following')
-          .get();
+      final followingSnapshot = await firestore.collection('users').doc(userId).collection('following').get();
 
       final followingIds = followingSnapshot.docs.map((doc) => doc.id).toList();
 
@@ -374,9 +319,7 @@ class VideoRepository {
           .limit(limit)
           .get();
 
-      return videosSnapshot.docs
-          .map((doc) => Video.fromFirestore(doc))
-          .toList();
+      return videosSnapshot.docs.map((doc) => Video.fromFirestore(doc)).toList();
     } catch (e) {
       print('Error getting following feed: $e');
       return [];
@@ -395,9 +338,7 @@ class VideoRepository {
           .limit(limit * 3)
           .get();
 
-      final videos = snapshot.docs
-          .map((doc) => Video.fromFirestore(doc))
-          .toList();
+      final videos = snapshot.docs.map((doc) => Video.fromFirestore(doc)).toList();
 
       videos.sort((a, b) => b.engagementRate.compareTo(a.engagementRate));
 
@@ -410,18 +351,12 @@ class VideoRepository {
 
   /// Search videos by title or tags
   Future<({List<Video> videos, DocumentSnapshot? lastDoc})> searchVideos(
-      String query, {
-        int limit = 20,
-        DocumentSnapshot? startAfter,
-      }) async {
+    String query, {
+    int limit = 20,
+    DocumentSnapshot? startAfter,
+  }) async {
+    var queryRef = firestore.collection('videos').orderBy('title').startAt([query]).endAt([query + '\uf8ff']).limit(limit);
 
-    var queryRef = firestore
-        .collection('videos')
-        .orderBy('title')
-        .startAt([query])
-        .endAt([query + '\uf8ff'])
-        .limit(limit);
-    
     if (startAfter != null) {
       queryRef = queryRef.startAfterDocument(startAfter);
     }
@@ -430,17 +365,16 @@ class VideoRepository {
     final videos = snapshot.docs.map((doc) => Video.fromFirestore(doc)).toList();
 
     return (
-    videos: videos,
-    lastDoc: snapshot.docs.isNotEmpty ? snapshot.docs.last : null,
+      videos: videos,
+      lastDoc: snapshot.docs.isNotEmpty ? snapshot.docs.last : null,
     );
   }
 
   Future<({List<Video> videos, DocumentSnapshot? lastDoc})> searchVideosByTag(
-      String tag, {
-        int limit = 20,
-        DocumentSnapshot? startAfter,
-      }) async {
-
+    String tag, {
+    int limit = 20,
+    DocumentSnapshot? startAfter,
+  }) async {
     var queryRef = firestore
         .collection('videos')
         .where('tags', arrayContains: tag)
@@ -455,27 +389,20 @@ class VideoRepository {
     final videos = snapshot.docs.map((doc) => Video.fromFirestore(doc)).toList();
 
     return (
-    videos: videos,
-    lastDoc: snapshot.docs.isNotEmpty ? snapshot.docs.last : null,
+      videos: videos,
+      lastDoc: snapshot.docs.isNotEmpty ? snapshot.docs.last : null,
     );
   }
 
   /// Get videos by specific tags
   Future<List<Video>> getVideosByTags(
-      List<String> tags, {
-        int limit = 20,
-      }) async {
+    List<String> tags, {
+    int limit = 20,
+  }) async {
     try {
-      final snapshot = await firestore
-          .collection('videos')
-          .where('tags', arrayContainsAny: tags)
-          .orderBy('createdAt', descending: true)
-          .limit(limit)
-          .get();
+      final snapshot = await firestore.collection('videos').where('tags', arrayContainsAny: tags).orderBy('createdAt', descending: true).limit(limit).get();
 
-      return snapshot.docs
-          .map((doc) => Video.fromFirestore(doc))
-          .toList();
+      return snapshot.docs.map((doc) => Video.fromFirestore(doc)).toList();
     } catch (e) {
       print('Error getting videos by tags: $e');
       return [];
@@ -484,9 +411,9 @@ class VideoRepository {
 
   /// Get related videos based on tags
   Future<List<Video>> getRelatedVideos(
-      Video video, {
-        int limit = 10,
-      }) async {
+    Video video, {
+    int limit = 10,
+  }) async {
     try {
       if (video.tags.isEmpty) return [];
 
@@ -497,11 +424,7 @@ class VideoRepository {
           .limit(limit + 1)
           .get();
 
-      return snapshot.docs
-          .map((doc) => Video.fromFirestore(doc))
-          .where((v) => v.id != video.id)
-          .take(limit)
-          .toList();
+      return snapshot.docs.map((doc) => Video.fromFirestore(doc)).where((v) => v.id != video.id).take(limit).toList();
     } catch (e) {
       print('Error getting related videos: $e');
       return [];
@@ -510,13 +433,7 @@ class VideoRepository {
 
   Future<List<Video>> getSavedVideos(String userId, {int limit = 20}) async {
     try {
-      final savedSnapshot = await firestore
-          .collection('users')
-          .doc(userId)
-          .collection('saved_videos')
-          .orderBy('savedAt', descending: true)
-          .limit(limit)
-          .get();
+      final savedSnapshot = await firestore.collection('users').doc(userId).collection('saved_videos').orderBy('savedAt', descending: true).limit(limit).get();
 
       final videoIds = savedSnapshot.docs.map((doc) => doc.id).toList();
 
@@ -524,10 +441,7 @@ class VideoRepository {
 
       final videos = <Video>[];
       for (final videoId in videoIds) {
-        final videoDoc = await firestore
-            .collection('videos')
-            .doc(videoId)
-            .get();
+        final videoDoc = await firestore.collection('videos').doc(videoId).get();
 
         if (videoDoc.exists) {
           videos.add(Video.fromFirestore(videoDoc));
@@ -540,5 +454,4 @@ class VideoRepository {
       return [];
     }
   }
-
 }

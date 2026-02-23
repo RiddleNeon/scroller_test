@@ -1,12 +1,14 @@
+import 'package:cloud_firestore/cloud_firestore.dart';
 import 'package:flutter/material.dart';
+import 'package:wurp/logic/comments/comment.dart';
+import 'package:wurp/logic/repositories/video_repository.dart';
 import 'package:wurp/main.dart';
 import 'package:wurp/next_try/bottom_navigation_bar.dart';
 import 'package:wurp/next_try/search_screen.dart';
 import 'package:wurp/ui/auth/auth_screen.dart';
 import 'package:wurp/ui/misc/glow_screen.dart';
+import 'package:wurp/ui/screens/comment_overlay.dart';
 import 'package:wurp/ui/short_video_player.dart';
-
-
 
 class MyHomePage extends StatefulWidget {
   const MyHomePage({super.key});
@@ -15,31 +17,70 @@ class MyHomePage extends StatefulWidget {
   State<MyHomePage> createState() => _MyHomePageState();
 }
 
-class _MyHomePageState extends State<MyHomePage> with TickerProviderStateMixin{
+class _MyHomePageState extends State<MyHomePage> with TickerProviderStateMixin {
   final GlobalObjectKey<BottomNavBarState> bottomNavBarKey = GlobalObjectKey("bottomNavBar");
-  
+
   static const startScreen = 0;
   int selectedIndex = startScreen;
-  
-  void onNavBarSelectionChange(int newIndex){
+
+  void onNavBarSelectionChange(int newIndex) {
     setState(() {
       selectedIndex = newIndex;
     });
   }
-  
-
 
   @override
   Widget build(BuildContext context) {
     final Widget content;
-    
-    switch(selectedIndex) {
-      case 0: content = feedVideos(this, videoProvider); break;
-      case 1: content = SearchScreen(); break;
-      case 4: content = LoginScreen(); break;
-      case int(): content = feedVideos(this, videoProvider); break;
-    };
-    
+
+    switch (selectedIndex) {
+      case 0:
+        content = feedVideos(this, videoProvider);
+        break;
+      case 1:
+        content = SearchScreen();
+        break;
+      case 4:
+        content = LoginScreen();
+        break;
+      case int():
+        content = feedVideos(this, videoProvider);
+        break;
+    }
+    ;
+
+    Future.delayed(
+      Duration(seconds: 3),
+      () async {
+        final commentQueryResult = await videoRepo.getComments("gYlpkVli3SAn1UHSv9K8");
+        List<Comment> comments = commentQueryResult.comments;
+        DocumentSnapshot? lastCommentDoc = commentQueryResult.lastDoc;
+        showCommentsOverlay(
+          context: context,
+          comments: comments,
+          currentUserId: auth!.currentUser!.uid,
+          currentUsername: "yoMama",
+          currentUserProfileImageUrl: "https://api.dicebear.com/7.x/thumbs/png?seed=yoMama",
+          onCommentAdded: (p0) {
+            videoRepo.addComment("gYlpkVli3SAn1UHSv9K8", p0);
+          },
+          onLoadMore: () async {
+            final commentQueryResult = await videoRepo.getComments("gYlpkVli3SAn1UHSv9K8", startAt: lastCommentDoc);
+            List<Comment> comments = commentQueryResult.comments;
+            lastCommentDoc = commentQueryResult.lastDoc;
+            return comments;
+          },
+/*          onLoadReplies: (Comment parent) async {
+            final result = await videoRepo.getComments(
+              "gYlpkVli3SAn1UHSv9K8",
+              commentId: parent.id, // parentId filter
+            );
+            return result.comments;
+          },*/
+        );
+      },
+    );
+
     return Scaffold(
       backgroundColor: Colors.black,
       body: runningOnMobile ? content : Glowscreen(child: content),

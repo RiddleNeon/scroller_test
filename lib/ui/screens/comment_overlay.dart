@@ -4,14 +4,62 @@ import 'dart:ui';
 
 import '../../logic/comments/comment.dart';
 
+// ─────────────────────────────────────────────
+//  Tree builder
+//
+//  Converts a flat list (as you'd get from a Firestore query) into a
+//  tree by nesting each comment under its parent's replies list.
+//  Top-level comments (parentId == null) are returned; all others are
+//  attached as children of their parent.
+// ─────────────────────────────────────────────
+
+List<Comment> buildCommentTree(List<Comment> flat) {
+  // Clear any stale replies from a previous build
+  for (final c in flat) {
+    c.replies = [];
+  }
+  final Map<String, Comment> byId = {for (final c in flat) c.id: c};
+  final List<Comment> roots = [];
+
+  for (final c in flat) {
+    if (c.parentId == null) {
+      roots.add(c);
+    } else {
+      byId[c.parentId]?.replies.add(c);
+    }
+  }
+  return roots;
+}
+
+// ─────────────────────────────────────────────
+//  View-Model (mutable UI state per comment)
+// ─────────────────────────────────────────────
+
+class _CommentVM {
+  final Comment comment;
+  bool likedByMe;
+  int likeCount;
+  bool showReplies;
+
+  /// Child VMs – mirrors comment.replies but holds UI state.
+  /// Built recursively by [_CommentsOverlayState._toVM].
+  final List<_CommentVM> replies;
+
+  _CommentVM({
+    required this.comment,
+    this.likedByMe = false,
+    bool? showReplies,
+    List<_CommentVM>? replies,
+  })  : likeCount = comment.likeCount,
+        showReplies = showReplies ?? false,
+        replies = replies ?? [];
+}
 
 // ─────────────────────────────────────────────
 //  Demo entry point
 // ─────────────────────────────────────────────
 
-void main() {
-  runApp(const CommentsDemo());
-}
+void main() => runApp(const CommentsDemo());
 
 class CommentsDemo extends StatelessWidget {
   const CommentsDemo({super.key});
@@ -34,45 +82,85 @@ class _DemoPage extends StatefulWidget {
 }
 
 class _DemoPageState extends State<_DemoPage> {
-  final List<Comment> _comments = [
+  // Flat list – exactly as you'd store/load from Firestore.
+  // buildCommentTree() wires up the .replies on first open.
+  final List<Comment> _flat = [
     Comment(
+      id: 'c1',
       userId: '1',
       username: 'anna_k',
       userProfileImageUrl: 'https://api.dicebear.com/7.x/thumbs/png?seed=anna',
       message: 'Absolutely love this! 🔥',
       date: DateTime.now().subtract(const Duration(minutes: 12)),
+      likeCount: 5,
+      parentId: null,
+      depth: 0,
     ),
     Comment(
+      id: 'c2',
+      userId: '2',
+      username: 'max_dev',
+      userProfileImageUrl: 'https://api.dicebear.com/7.x/thumbs/png?seed=max',
+      message: 'Totally agree! 👍',
+      date: DateTime.now().subtract(const Duration(minutes: 8)),
+      likeCount: 2,
+      parentId: 'c1',
+      depth: 1,
+    ),
+    Comment(
+      id: 'c3',
+      userId: '3',
+      username: 'sara.design',
+      userProfileImageUrl: 'https://api.dicebear.com/7.x/thumbs/png?seed=sara',
+      message: 'Me too, deeply nested reply here!',
+      date: DateTime.now().subtract(const Duration(minutes: 4)),
+      likeCount: 0,
+      parentId: 'c2',
+      depth: 2,
+    ),
+    Comment(
+      id: 'c4',
       userId: '2',
       username: 'max_dev',
       userProfileImageUrl: 'https://api.dicebear.com/7.x/thumbs/png?seed=max',
       message: 'Clean design, great work 👌',
       date: DateTime.now().subtract(const Duration(hours: 1)),
+      likeCount: 3,
+      parentId: null,
+      depth: 0,
     ),
     Comment(
+      id: 'c5',
       userId: '3',
       username: 'sara.design',
       userProfileImageUrl: 'https://api.dicebear.com/7.x/thumbs/png?seed=sara',
       message: 'Could you share the source code? Would love to learn from this.',
       date: DateTime.now().subtract(const Duration(hours: 3)),
+      likeCount: 1,
+      parentId: null,
+      depth: 0,
     ),
   ];
 
   int _page = 1;
 
   Future<List<Comment>> _loadMore() async {
-    // Simulate network request
     await Future.delayed(const Duration(seconds: 1));
     _page++;
+    if (_page > 4) return [];
     return List.generate(
       3,
           (i) => Comment(
-        userId: 'user_$i',
+        id: 'page${_page}_$i',
+        userId: 'user_p${_page}_$i',
         username: 'user_${_page}_$i',
         userProfileImageUrl:
         'https://api.dicebear.com/7.x/thumbs/png?seed=page${_page}_$i',
-        message: 'Loaded comment #$i from page $_page 🗂️',
+        message: 'Comment #$i from page $_page 🗂️',
         date: DateTime.now().subtract(Duration(days: _page, hours: i)),
+        likeCount: 0,
+        parentId: null,
+        depth: 0,
       ),
     );
   }
@@ -80,13 +168,16 @@ class _DemoPageState extends State<_DemoPage> {
   void _openComments() {
     showCommentsOverlay(
       context: context,
-      comments: _comments,
+      // Pass the flat list – the overlay calls buildCommentTree internally.
+      comments: _flat,
       currentUserId: 'me',
       currentUsername: 'you',
-      currentUserProfileImageUrl: 'https://api.dicebear.com/7.x/thumbs/png?seed=you',
-      onCommentAdded: (c) => setState(() => _comments.insert(0, c)),
+      currentUserProfileImageUrl:
+      'https://api.dicebear.com/7.x/thumbs/png?seed=you',
+      // Called for every new comment (top-level AND replies).
+      // Add it to the flat list so the tree stays in sync.
+      onCommentAdded: (c) => setState(() => _flat.add(c)),
       onLoadMore: _loadMore,
-      totalCommentCount: 1000,
     );
   }
 
@@ -98,21 +189,20 @@ class _DemoPageState extends State<_DemoPage> {
         child: Column(
           mainAxisAlignment: MainAxisAlignment.center,
           children: [
-            const Text(
-              'Comments Overlay Demo',
-              style: TextStyle(color: Colors.white70, fontSize: 18),
-            ),
+            const Text('Comments Overlay Demo',
+                style: TextStyle(color: Colors.white70, fontSize: 18)),
             const SizedBox(height: 24),
             ElevatedButton.icon(
               style: ElevatedButton.styleFrom(
                 backgroundColor: const Color(0xFF1DB954),
                 foregroundColor: Colors.black,
-                padding: const EdgeInsets.symmetric(horizontal: 28, vertical: 14),
+                padding:
+                const EdgeInsets.symmetric(horizontal: 28, vertical: 14),
                 shape: const StadiumBorder(),
               ),
               onPressed: _openComments,
               icon: const Icon(Icons.comment_rounded),
-              label: Text('${_comments.length} Comments'),
+              label: Text('${_flat.where((c) => c.parentId == null).length} Comments'),
             ),
           ],
         ),
@@ -127,9 +217,14 @@ class _DemoPageState extends State<_DemoPage> {
 
 /// Shows the comments overlay as a modal bottom sheet.
 ///
-/// [onLoadMore] is called when the user scrolls to the bottom of the list.
-/// Return a list of new comments to append, or an empty list if there are no
-/// more comments. If null, pagination is disabled.
+/// [comments]       – flat list of all comments for this post (top-level +
+///                    replies). Pass the raw Firestore result; the overlay
+///                    calls [buildCommentTree] internally.
+/// [onCommentAdded] – fired for every new comment or reply the user submits.
+///                    The [Comment] already has [id], [parentId] and [depth]
+///                    set – write it straight to Firestore and add it to your
+///                    local flat list.
+/// [onLoadMore]     – called when scrolled near the end; return [] when exhausted.
 void showCommentsOverlay({
   required BuildContext context,
   required List<Comment> comments,
@@ -138,7 +233,6 @@ void showCommentsOverlay({
   required String currentUserProfileImageUrl,
   required void Function(Comment) onCommentAdded,
   Future<List<Comment>> Function()? onLoadMore,
-  int? totalCommentCount,
 }) {
   showModalBottomSheet(
     context: context,
@@ -152,7 +246,6 @@ void showCommentsOverlay({
       currentUserProfileImageUrl: currentUserProfileImageUrl,
       onCommentAdded: onCommentAdded,
       onLoadMore: onLoadMore,
-      totalCommentCount: totalCommentCount,
     ),
   );
 }
@@ -167,10 +260,10 @@ class CommentsOverlay extends StatefulWidget {
   final String currentUsername;
   final String currentUserProfileImageUrl;
   final void Function(Comment) onCommentAdded;
+
   /// Called when the user scrolls near the end of the list.
-  /// Should return newly loaded comments to append, or [] when exhausted.
+  /// Return [] to signal no more comments.
   final Future<List<Comment>> Function()? onLoadMore;
-  final int? totalCommentCount;
 
   const CommentsOverlay({
     super.key,
@@ -179,36 +272,45 @@ class CommentsOverlay extends StatefulWidget {
     required this.currentUsername,
     required this.currentUserProfileImageUrl,
     required this.onCommentAdded,
-    this.onLoadMore, 
-    this.totalCommentCount,
+    this.onLoadMore,
   });
 
   @override
   State<CommentsOverlay> createState() => _CommentsOverlayState();
 }
 
-class _CommentsOverlayState extends State<CommentsOverlay>
-    with SingleTickerProviderStateMixin {
-  late final List<Comment> _comments;
+class _CommentsOverlayState extends State<CommentsOverlay> {
+  late final List<_CommentVM> _vms;
   final TextEditingController _textController = TextEditingController();
   final ScrollController _scrollController = ScrollController();
   final FocusNode _focusNode = FocusNode();
+
   bool _isSending = false;
   bool _isLoadingMore = false;
   bool _hasMore = true;
-  int ownCommentCount = 0;
 
-  // ── Colours & Style ──────────────────────────────────────────
+  /// When non-null the input bar is in "reply" mode for this VM.
+  _CommentVM? _replyTarget;
+
+  // ── Palette ──────────────────────────────────────────────────
   static const _bgColor = Color(0xFF141414);
   static const _surfaceColor = Color(0xFF1E1E1E);
   static const _accentColor = Color(0xFF1DB954);
   static const _subtleText = Color(0xFF888888);
   static const _dividerColor = Color(0xFF2A2A2A);
+  static const _likedColor = Color(0xFFFF4D6D);
+
+  // Maximum visual indent levels – deeper replies share the last indent level
+  static const int _maxIndentDepth = 5;
+  static const double _indentPerDepth = 20.0;
+
+  // ─────────────────────────────────────────────────────────────
 
   @override
   void initState() {
     super.initState();
-    _comments = List.from(widget.comments);
+    // Build the tree from the flat list, then wrap each root in a VM.
+    _vms = buildCommentTree(widget.comments).map(_toVM).toList();
     if (widget.onLoadMore != null) {
       _scrollController.addListener(_onScroll);
     }
@@ -222,30 +324,33 @@ class _CommentsOverlayState extends State<CommentsOverlay>
     super.dispose();
   }
 
-  // ─────────────────────────────────────────────────────────────
-  //  Pagination
-  // ─────────────────────────────────────────────────────────────
+  /// Recursively converts a [Comment] (with its .replies already wired up
+  /// by [buildCommentTree]) into a [_CommentVM].
+  _CommentVM _toVM(Comment c) => _CommentVM(
+    comment: c,
+    replies: c.replies.map(_toVM).toList(),
+  );
+
+  // ── Pagination ────────────────────────────────────────────────
 
   void _onScroll() {
     if (!_scrollController.hasClients) return;
     final pos = _scrollController.position;
-    // Trigger when within 120px of the bottom
-    if (pos.pixels >= pos.maxScrollExtent - 120) {
-      _loadMoreComments();
-    }
+    if (pos.pixels >= pos.maxScrollExtent - 120) _loadMoreComments();
   }
 
   Future<void> _loadMoreComments() async {
     if (_isLoadingMore || !_hasMore || widget.onLoadMore == null) return;
     setState(() => _isLoadingMore = true);
     try {
-      final newComments = await widget.onLoadMore!();
+      final next = await widget.onLoadMore!();
       if (!mounted) return;
       setState(() {
-        if (newComments.isEmpty) {
+        if (next.isEmpty) {
           _hasMore = false;
         } else {
-          _comments.addAll(newComments);
+          // Paginated results are always top-level comments
+          _vms.addAll(next.map(_toVM));
         }
         _isLoadingMore = false;
       });
@@ -254,9 +359,87 @@ class _CommentsOverlayState extends State<CommentsOverlay>
     }
   }
 
-  // ─────────────────────────────────────────────────────────────
-  //  Helpers
-  // ─────────────────────────────────────────────────────────────
+  // ── Sending ───────────────────────────────────────────────────
+
+  Future<void> _sendComment() async {
+    final text = _textController.text.trim();
+    if (text.isEmpty) return;
+
+    HapticFeedback.lightImpact();
+    setState(() => _isSending = true);
+    await Future.delayed(const Duration(milliseconds: 180));
+
+    final target = _replyTarget;
+
+    // Generate a simple unique ID. In production replace with:
+    //   FirebaseFirestore.instance.collection('...').doc().id
+    final newId =
+        '${DateTime.now().millisecondsSinceEpoch}_${text.hashCode.abs()}';
+
+    final newComment = Comment(
+      id: newId,
+      userId: widget.currentUserId,
+      username: widget.currentUsername,
+      userProfileImageUrl: widget.currentUserProfileImageUrl,
+      message: text,
+      date: DateTime.now(),
+      likeCount: 0,
+      parentId: target?.comment.id,
+      depth: target != null ? target.comment.depth + 1 : 0,
+    );
+
+    final newVm = _toVM(newComment);
+
+    setState(() {
+      if (target != null) {
+        // Attach to the VM tree so it renders immediately
+        target.replies.insert(0, newVm);
+        // Also keep the Comment model in sync (client-side tree)
+        target.comment.replies.insert(0, newComment);
+        target.showReplies = true;
+      } else {
+        _vms.insert(0, newVm);
+      }
+      // Single callback for both top-level and replies –
+      // caller adds it to the flat list and writes to Firestore.
+      widget.onCommentAdded(newComment);
+      _replyTarget = null;
+      _isSending = false;
+    });
+
+    _textController.clear();
+    _focusNode.unfocus();
+
+    if (target == null && _scrollController.hasClients) {
+      _scrollController.animateTo(0,
+          duration: const Duration(milliseconds: 300), curve: Curves.easeOut);
+    }
+  }
+
+  void _startReply(_CommentVM vm) {
+    setState(() => _replyTarget = vm);
+    _focusNode.requestFocus();
+  }
+
+  void _cancelReply() {
+    setState(() => _replyTarget = null);
+    _focusNode.unfocus();
+  }
+
+  void _toggleLike(_CommentVM vm) {
+    HapticFeedback.selectionClick();
+    setState(() {
+      if (vm.likedByMe) {
+        vm.likedByMe = false;
+        vm.likeCount--;
+      } else {
+        vm.likedByMe = true;
+        vm.likeCount++;
+      }
+    });
+  }
+
+  // ── Helpers ───────────────────────────────────────────────────
 
   String _timeAgo(DateTime date) {
     final diff = DateTime.now().difference(date);
@@ -265,43 +448,6 @@ class _CommentsOverlayState extends State<CommentsOverlay>
     if (diff.inHours < 24) return '${diff.inHours}h';
     if (diff.inDays < 7) return '${diff.inDays}d';
     return '${date.day}.${date.month}.${date.year}';
-  }
-
-  Future<void> _sendComment() async {
-    final text = _textController.text.trim();
-    if (text.isEmpty) return;
-
-    HapticFeedback.lightImpact();
-    setState(() => _isSending = true);
-
-    // Simulate slight async delay (e.g. network call)
-    await Future.delayed(const Duration(milliseconds: 200));
-
-    final newComment = Comment(
-      userId: widget.currentUserId,
-      username: widget.currentUsername,
-      userProfileImageUrl: widget.currentUserProfileImageUrl,
-      message: text,
-      date: DateTime.now(),
-    );
-
-    setState(() {
-      _comments.insert(0, newComment);
-      ownCommentCount++;
-      _isSending = false;
-    });
-
-    _textController.clear();
-    widget.onCommentAdded(newComment);
-
-    // Scroll to top to reveal new comment
-    if (_scrollController.hasClients) {
-      _scrollController.animateTo(
-        0,
-        duration: const Duration(milliseconds: 300),
-        curve: Curves.easeOut,
-      );
-    }
   }
 
   // ─────────────────────────────────────────────────────────────
@@ -317,14 +463,15 @@ class _CommentsOverlayState extends State<CommentsOverlay>
       child: BackdropFilter(
         filter: ImageFilter.blur(sigmaX: 20, sigmaY: 20),
         child: Container(
-          height: MediaQuery.of(context).size.height * 0.75,
+          height: MediaQuery.of(context).size.height * 0.80,
           color: _bgColor,
           child: Column(
             children: [
               _buildHeader(),
               const Divider(color: _dividerColor, height: 1),
-              Expanded(child: _buildCommentList()),
+              Expanded(child: _buildList()),
               const Divider(color: _dividerColor, height: 1),
+              if (_replyTarget != null) _buildReplyBanner(),
               _buildInputBar(bottomPadding),
             ],
           ),
@@ -340,7 +487,6 @@ class _CommentsOverlayState extends State<CommentsOverlay>
       padding: const EdgeInsets.fromLTRB(20, 16, 12, 12),
       child: Row(
         children: [
-          // Drag handle
           Expanded(
             child: Column(
               crossAxisAlignment: CrossAxisAlignment.start,
@@ -357,7 +503,7 @@ class _CommentsOverlayState extends State<CommentsOverlay>
                   ),
                 ),
                 Text(
-                  '${widget.totalCommentCount != null ? (widget.totalCommentCount! + ownCommentCount) : _comments.length} Comments',
+                  '${_vms.length} Comments',
                   style: const TextStyle(
                     color: Colors.white,
                     fontSize: 17,
@@ -377,10 +523,10 @@ class _CommentsOverlayState extends State<CommentsOverlay>
     );
   }
 
-  // ── List ──────────────────────────────────────────────────────
+  // ── Comment list ──────────────────────────────────────────────
 
-  Widget _buildCommentList() {
-    if (_comments.isEmpty) {
+  Widget _buildList() {
+    if (_vms.isEmpty) {
       return const Center(
         child: Column(
           mainAxisAlignment: MainAxisAlignment.center,
@@ -398,33 +544,99 @@ class _CommentsOverlayState extends State<CommentsOverlay>
       );
     }
 
-    // +1 for the footer (loading spinner or "end" indicator)
     final hasFooter = widget.onLoadMore != null;
-    final itemCount = _comments.length + (hasFooter ? 1 : 0);
+    final count = _vms.length + (hasFooter ? 1 : 0);
 
     return ListView.separated(
       controller: _scrollController,
-      padding: const EdgeInsets.symmetric(vertical: 8),
-      itemCount: itemCount,
+      padding: const EdgeInsets.only(top: 4, bottom: 8),
+      itemCount: count,
       separatorBuilder: (_, i) {
-        if (i >= _comments.length - 1) return const SizedBox.shrink();
+        if (i >= _vms.length - 1) return const SizedBox.shrink();
         return const Divider(color: _dividerColor, height: 1, indent: 68);
       },
       itemBuilder: (_, i) {
-        // Footer
-        if (i == _comments.length) {
-          return _buildLoadMoreFooter();
-        }
-        return _CommentTile(
-          comment: _comments[i],
-          timeAgo: _timeAgo(_comments[i].date),
-          isOwn: _comments[i].userId == widget.currentUserId,
-        );
+        if (i == _vms.length) return _buildFooter();
+        return _buildCommentBlock(_vms[i], depth: 0);
       },
     );
   }
 
-  Widget _buildLoadMoreFooter() {
+  // ── Recursive comment block ────────────────────────────────────
+
+  Widget _buildCommentBlock(_CommentVM vm, {required int depth}) {
+    // Only indent for the first _maxIndentDepth levels; beyond that no extra indent.
+    // Using a delta (not cumulative) so each recursive Padding adds exactly
+    // _indentPerDepth px relative to its parent – and nothing beyond depth 5.
+    final double deltaIndent =
+    depth > 0 && depth <= _maxIndentDepth ? _indentPerDepth : 0.0;
+    final bool isReply = depth > 0;
+
+    return Padding(
+      padding: EdgeInsets.only(left: deltaIndent),
+      child: Column(
+        crossAxisAlignment: CrossAxisAlignment.start,
+        children: [
+          _CommentTile(
+            vm: vm,
+            timeAgo: _timeAgo(vm.comment.date),
+            isOwn: vm.comment.userId == widget.currentUserId,
+            accentColor: _accentColor,
+            likedColor: _likedColor,
+            subtleText: _subtleText,
+            isReply: isReply,
+            depth: depth,
+            onLike: () => _toggleLike(vm),
+            onReply: () => _startReply(vm),
+          ),
+          // ── Replies toggle ──────────────────────────────────────
+          if (vm.replies.isNotEmpty) ...[
+            Padding(
+              padding: const EdgeInsets.only(left: 52, bottom: 4),
+              child: GestureDetector(
+                onTap: () => setState(() => vm.showReplies = !vm.showReplies),
+                child: Row(
+                  children: [
+                    Container(
+                      width: 24,
+                      height: 1,
+                      color: _subtleText,
+                      margin: const EdgeInsets.only(right: 8),
+                    ),
+                    Text(
+                      vm.showReplies
+                          ? 'Hide replies'
+                          : 'View ${vm.replies.length} repl${vm.replies.length == 1 ? 'y' : 'ies'}',
+                      style: const TextStyle(
+                        color: _subtleText,
+                        fontSize: 12.5,
+                        fontWeight: FontWeight.w600,
+                      ),
+                    ),
+                  ],
+                ),
+              ),
+            ),
+            // ── Recursive children ──────────────────────────────
+            if (vm.showReplies)
+              Column(
+                children: vm.replies.map((reply) {
+                  return Column(
+                    children: [
+                      const Divider(
+                          color: _dividerColor, height: 1, indent: 16),
+                      _buildCommentBlock(reply, depth: depth + 1),
+                    ],
+                  );
+                }).toList(),
+              ),
+          ],
+        ],
+      ),
+    );
+  }
+
+  Widget _buildFooter() {
     if (_isLoadingMore) {
       return const Padding(
         padding: EdgeInsets.symmetric(vertical: 20),
@@ -433,9 +645,7 @@ class _CommentsOverlayState extends State<CommentsOverlay>
             width: 22,
             height: 22,
             child: CircularProgressIndicator(
-              strokeWidth: 2,
-              color: _accentColor,
-            ),
+                strokeWidth: 2, color: _accentColor),
           ),
         ),
       );
@@ -444,14 +654,42 @@ class _CommentsOverlayState extends State<CommentsOverlay>
       return const Padding(
         padding: EdgeInsets.symmetric(vertical: 16),
         child: Center(
-          child: Text(
-            '— no more comments —',
-            style: TextStyle(color: _subtleText, fontSize: 12),
-          ),
+          child: Text('— no more comments —',
+              style: TextStyle(color: _subtleText, fontSize: 12)),
         ),
       );
     }
     return const SizedBox(height: 8);
+  }
+
+  // ── Reply banner ──────────────────────────────────────────────
+
+  Widget _buildReplyBanner() {
+    return Container(
+      color: const Color(0xFF1A1A1A),
+      padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 8),
+      child: Row(
+        children: [
+          const Icon(Icons.reply_rounded, size: 15, color: _accentColor),
+          const SizedBox(width: 6),
+          Expanded(
+            child: Text(
+              'Replying to @${_replyTarget!.comment.username}',
+              style: const TextStyle(
+                  color: _accentColor,
+                  fontSize: 12.5,
+                  fontWeight: FontWeight.w500),
+              overflow: TextOverflow.ellipsis,
+            ),
+          ),
+          GestureDetector(
+            onTap: _cancelReply,
+            child:
+            const Icon(Icons.close_rounded, size: 16, color: _subtleText),
+          ),
+        ],
+      ),
+    );
   }
 
   // ── Input bar ─────────────────────────────────────────────────
@@ -478,11 +716,14 @@ class _CommentsOverlayState extends State<CommentsOverlay>
                 textInputAction: TextInputAction.send,
                 onSubmitted: (_) => _sendComment(),
                 style: const TextStyle(color: Colors.white, fontSize: 15),
-                decoration: const InputDecoration(
-                  hintText: 'Write a comment…',
-                  hintStyle: TextStyle(color: _subtleText, fontSize: 15),
-                  contentPadding:
-                  EdgeInsets.symmetric(horizontal: 16, vertical: 12),
+                decoration: InputDecoration(
+                  hintText: _replyTarget != null
+                      ? 'Reply to @${_replyTarget!.comment.username}…'
+                      : 'Write a comment…',
+                  hintStyle:
+                  const TextStyle(color: _subtleText, fontSize: 15),
+                  contentPadding: const EdgeInsets.symmetric(
+                      horizontal: 16, vertical: 12),
                   border: InputBorder.none,
                 ),
               ),
@@ -507,7 +748,9 @@ class _CommentsOverlayState extends State<CommentsOverlay>
                       ? const Padding(
                     padding: EdgeInsets.all(10),
                     child: CircularProgressIndicator(
-                        strokeWidth: 2, color: Colors.black),
+                      strokeWidth: 2,
+                      color: Colors.black,
+                    ),
                   )
                       : Icon(
                     Icons.arrow_upward_rounded,
@@ -529,24 +772,44 @@ class _CommentsOverlayState extends State<CommentsOverlay>
 // ─────────────────────────────────────────────
 
 class _CommentTile extends StatelessWidget {
-  final Comment comment;
+  final _CommentVM vm;
   final String timeAgo;
   final bool isOwn;
+  final bool isReply;
+  final int depth;
+  final Color accentColor;
+  final Color likedColor;
+  final Color subtleText;
+  final VoidCallback onLike;
+  final VoidCallback onReply;
 
   const _CommentTile({
-    required this.comment,
+    required this.vm,
     required this.timeAgo,
     required this.isOwn,
+    required this.accentColor,
+    required this.likedColor,
+    required this.subtleText,
+    required this.onLike,
+    required this.onReply,
+    this.isReply = false,
+    this.depth = 0,
   });
 
   @override
   Widget build(BuildContext context) {
+    // Slightly shrink avatar and font the deeper the nesting
+    final double avatarRadius = isReply ? (depth > 1 ? 13.0 : 16.0) : 20.0;
+    final double fontSize = isReply ? (depth > 1 ? 12.5 : 13.5) : 14.5;
+    final double nameFontSize = isReply ? (depth > 1 ? 11.5 : 12.5) : 13.5;
+
     return Padding(
-      padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 12),
+      padding:
+      EdgeInsets.fromLTRB(16, isReply ? 8 : 12, 16, isReply ? 8 : 12),
       child: Row(
         crossAxisAlignment: CrossAxisAlignment.start,
         children: [
-          _Avatar(url: comment.userProfileImageUrl, radius: 20),
+          _Avatar(url: vm.comment.userProfileImageUrl, radius: avatarRadius),
           const SizedBox(width: 12),
           Expanded(
             child: Column(
@@ -555,39 +818,142 @@ class _CommentTile extends StatelessWidget {
                 Row(
                   children: [
                     Text(
-                      comment.username,
+                      vm.comment.username,
                       style: TextStyle(
-                        color: isOwn
-                            ? const Color(0xFF1DB954)
-                            : Colors.white,
+                        color: isOwn ? accentColor : Colors.white,
                         fontWeight: FontWeight.w600,
-                        fontSize: 13.5,
+                        fontSize: nameFontSize,
                       ),
                     ),
                     if (isOwn)
-                      const Padding(
-                        padding: EdgeInsets.only(left: 4),
+                      Padding(
+                        padding: const EdgeInsets.only(left: 4),
                         child: Text('· you',
-                            style: TextStyle(
-                                color: Color(0xFF888888), fontSize: 12)),
+                            style:
+                            TextStyle(color: subtleText, fontSize: 11)),
                       ),
                     const Spacer(),
-                    Text(
-                      timeAgo,
-                      style: const TextStyle(
-                          color: Color(0xFF888888), fontSize: 12),
-                    ),
+                    Text(timeAgo,
+                        style: TextStyle(color: subtleText, fontSize: 11.5)),
                   ],
                 ),
                 const SizedBox(height: 4),
                 Text(
-                  comment.message,
-                  style: const TextStyle(
-                      color: Color(0xFFE0E0E0),
-                      fontSize: 14.5,
-                      height: 1.45),
+                  vm.comment.message,
+                  style: TextStyle(
+                    color: const Color(0xFFE0E0E0),
+                    fontSize: fontSize,
+                    height: 1.45,
+                  ),
+                ),
+                const SizedBox(height: 8),
+                // Like + Reply row
+                Row(
+                  children: [
+                    _LikeButton(
+                      count: vm.likeCount,
+                      liked: vm.likedByMe,
+                      likedColor: likedColor,
+                      subtleText: subtleText,
+                      onTap: onLike,
+                    ),
+                    const SizedBox(width: 16),
+                    GestureDetector(
+                      onTap: onReply,
+                      child: Row(
+                        children: [
+                          Icon(Icons.reply_rounded,
+                              size: 15, color: subtleText),
+                          const SizedBox(width: 4),
+                          Text('Reply',
+                              style: TextStyle(
+                                  color: subtleText, fontSize: 12.5)),
+                        ],
+                      ),
+                    ),
+                  ],
                 ),
               ],
+            ),
+          ),
+        ],
+      ),
+    );
+  }
+}
+
+class _LikeButton extends StatefulWidget {
+  final int count;
+  final bool liked;
+  final Color likedColor;
+  final Color subtleText;
+  final VoidCallback onTap;
+
+  const _LikeButton({
+    required this.count,
+    required this.liked,
+    required this.likedColor,
+    required this.subtleText,
+    required this.onTap,
+  });
+
+  @override
+  State<_LikeButton> createState() => _LikeButtonState();
+}
+
+class _LikeButtonState extends State<_LikeButton>
+    with SingleTickerProviderStateMixin {
+  late final AnimationController _ctrl;
+  late final Animation<double> _scale;
+
+  @override
+  void initState() {
+    super.initState();
+    _ctrl = AnimationController(
+        vsync: this, duration: const Duration(milliseconds: 200));
+    _scale = TweenSequence([
+      TweenSequenceItem(tween: Tween(begin: 1.0, end: 1.4), weight: 50),
+      TweenSequenceItem(tween: Tween(begin: 1.4, end: 1.0), weight: 50),
+    ]).animate(CurvedAnimation(parent: _ctrl, curve: Curves.easeInOut));
+  }
+
+  @override
+  void dispose() {
+    _ctrl.dispose();
+    super.dispose();
+  }
+
+  void _handleTap() {
+    _ctrl.forward(from: 0);
+    widget.onTap();
+  }
+
+  @override
+  Widget build(BuildContext context) {
+    final color = widget.liked ? widget.likedColor : widget.subtleText;
+    return GestureDetector(
+      onTap: _handleTap,
+      child: Row(
+        children: [
+          ScaleTransition(
+            scale: _scale,
+            child: Icon(
+              widget.liked
+                  ? Icons.favorite_rounded
+                  : Icons.favorite_border_rounded,
+              size: 15,
+              color: color,
+            ),
+          ),
+          const SizedBox(width: 4),
+          AnimatedSwitcher(
+            duration: const Duration(milliseconds: 200),
+            transitionBuilder: (child, anim) =>
+                FadeTransition(opacity: anim, child: child),
+            child: Text(
+              widget.count > 0 ? '${widget.count}' : 'Like',
+              key: ValueKey(widget.count),
+              style: TextStyle(color: color, fontSize: 12.5),
             ),
           ),
         ],
@@ -606,16 +972,14 @@ class _Avatar extends StatelessWidget {
 
   const _Avatar({required this.url, required this.radius});
 
-  /// Generates a consistent color from the URL string so every
-  /// fallback avatar has a unique but stable tint.
   Color _colorFromUrl(String url) {
-    final colors = [
-      const Color(0xFF1DB954),
-      const Color(0xFF3B82F6),
-      const Color(0xFFF59E0B),
-      const Color(0xFFEC4899),
-      const Color(0xFF8B5CF6),
-      const Color(0xFF06B6D4),
+    const colors = [
+      Color(0xFF1DB954),
+      Color(0xFF3B82F6),
+      Color(0xFFF59E0B),
+      Color(0xFFEC4899),
+      Color(0xFF8B5CF6),
+      Color(0xFF06B6D4),
     ];
     return colors[url.hashCode.abs() % colors.length];
   }
