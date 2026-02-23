@@ -230,29 +230,34 @@ class VideoRepository {
     await firestore.collection('videos').doc(videoId).collection('comments').doc(comment.id).set(comment.toFirestore());
   }
 
- Future<({List<Comment> comments, DocumentSnapshot? lastDoc})> getComments(String videoId, {String? commentId, DocumentSnapshot? startAt, int limit = 20}) async {
-    Query baseQuery = firestore.collection('videos').doc(videoId).collection('comments').where('parentId', isEqualTo: commentId);
-
-    if (startAt != null) {
-      baseQuery = baseQuery.startAtDocument(startAt);
-    }
+  Future<({List<Comment> comments, DocumentSnapshot? lastDoc})> getComments(String videoId,
+      {String? commentId, DocumentSnapshot? startAfter, int limit = 20}) async {
+    Query baseQuery = firestore.collection('videos').doc(videoId).collection('comments');
     
+    if (startAfter != null) {
+      baseQuery = baseQuery.startAfterDocument(startAfter);
+    }
+    if(commentId == null){
+      baseQuery = baseQuery.where('parentId', isNull: true);
+    } else {
+      baseQuery = baseQuery.where('parentId', isEqualTo: commentId);
+    }
+
     final result = await baseQuery.limit(limit).get();
     DocumentSnapshot? lastDoc = result.docs.lastOrNull;
-    
+
     List<Comment> comments = result.docs
         .map((e) {
-      Object? data = e.data();
-      if (data is! Map<String, dynamic>) return null;
-      try {
-        return Comment.fromFirestore(e.id, data);
-      } on TypeError catch (e) {
-        return null;
-      }
-    })
+          Object? data = e.data();
+          if (data is! Map<String, dynamic>) return null;
+          try {
+            return Comment.fromFirestore(e.id, data);
+          } on TypeError catch (e) {
+            return null;
+          }
+        })
         .whereType<Comment>()
         .toList();
-    
 
     return (
       comments: comments,

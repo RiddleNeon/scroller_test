@@ -49,38 +49,6 @@ class _MyHomePageState extends State<MyHomePage> with TickerProviderStateMixin {
     }
     ;
 
-    Future.delayed(
-      Duration(seconds: 3),
-      () async {
-        final commentQueryResult = await videoRepo.getComments("gYlpkVli3SAn1UHSv9K8");
-        List<Comment> comments = commentQueryResult.comments;
-        DocumentSnapshot? lastCommentDoc = commentQueryResult.lastDoc;
-        showCommentsOverlay(
-          context: context,
-          comments: comments,
-          currentUserId: auth!.currentUser!.uid,
-          currentUsername: "yoMama",
-          currentUserProfileImageUrl: "https://api.dicebear.com/7.x/thumbs/png?seed=yoMama",
-          onCommentAdded: (p0) {
-            videoRepo.addComment("gYlpkVli3SAn1UHSv9K8", p0);
-          },
-          onLoadMore: () async {
-            final commentQueryResult = await videoRepo.getComments("gYlpkVli3SAn1UHSv9K8", startAt: lastCommentDoc);
-            List<Comment> comments = commentQueryResult.comments;
-            lastCommentDoc = commentQueryResult.lastDoc;
-            return comments;
-          },
-/*          onLoadReplies: (Comment parent) async {
-            final result = await videoRepo.getComments(
-              "gYlpkVli3SAn1UHSv9K8",
-              commentId: parent.id, // parentId filter
-            );
-            return result.comments;
-          },*/
-        );
-      },
-    );
-
     return Scaffold(
       backgroundColor: Colors.black,
       body: runningOnMobile ? content : Glowscreen(child: content),

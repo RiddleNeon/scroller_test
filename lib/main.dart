@@ -48,11 +48,6 @@ void main() async {
   await FirebaseFirestore.instance.runTransaction((transaction) async {}); //whyever it fixes a crash on windows
   auth = FirebaseAuth.instanceFor(app: app!);
   _firestore = FirebaseFirestore.instance;
-  print("adding comment");
-  await VideoRepository().addComment("gYlpkVli3SAn1UHSv9K8", Comment(id: '${DateTime.now().millisecondsSinceEpoch}_${"ligma".hashCode.abs()}', userId: auth!.currentUser!.uid, message: "LIGMA", date: DateTime.now(), username: "MrRokfly", userProfileImageUrl: "https://api.dicebear.com/7.x/thumbs/png?seed=yoMama"));
-  print("comment added");
-  List<Comment> comments = (await videoRepo.getComments("gYlpkVli3SAn1UHSv9K8")).comments;
-  print("comments: ${comments.toList()}");
   if (auth?.currentUser != null) {
     await onUserLogin();
   }
