@@ -1,9 +1,11 @@
 import 'package:cached_network_image/cached_network_image.dart';
 import 'package:flutter/material.dart';
+import 'package:wurp/logic/models/user_model.dart';
 //source: https://github.com/salvadordeveloper/flutter-tiktok
 
 class ProfileScreen extends StatelessWidget {
-  const ProfileScreen({Key? key}) : super(key: key);
+  final UserProfile profile;
+  const ProfileScreen({Key? key, required this.profile}) : super(key: key);
 
   @override
   Widget build(BuildContext context) {
@@ -16,15 +18,15 @@ class ProfileScreen extends StatelessWidget {
               decoration: const BoxDecoration(
                   border: Border(bottom: BorderSide(color: Colors.black12))),
               padding: const EdgeInsets.symmetric(vertical: 12, horizontal: 20),
-              child: const Row(
+              child: Row(
                 mainAxisAlignment: MainAxisAlignment.spaceBetween,
                 children: [
-                  Icon(Icons.person_add_alt_1_outlined),
+                  const Icon(Icons.person_add_alt_1_outlined),
                   Text(
-                    "Salvador Valverde",
-                    style: TextStyle(fontSize: 15, fontWeight: FontWeight.bold),
+                    profile.username,
+                    style: const TextStyle(fontSize: 15, fontWeight: FontWeight.bold),
                   ),
-                  Icon(Icons.more_horiz)
+                  const Icon(Icons.more_horiz)
                 ],
               ),
             ),
@@ -55,9 +57,9 @@ class ProfileScreen extends StatelessWidget {
                   const SizedBox(
                     height: 10,
                   ),
-                  const Text(
-                    "@salvadordev",
-                    style: TextStyle(fontSize: 15, fontWeight: FontWeight.bold),
+                  Text(
+                    "@${profile.username}",
+                    style: const TextStyle(fontSize: 15, fontWeight: FontWeight.bold),
                   ),
                   const SizedBox(
                     height: 20,

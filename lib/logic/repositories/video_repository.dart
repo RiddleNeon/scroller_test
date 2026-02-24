@@ -465,4 +465,19 @@ class VideoRepository {
       return [];
     }
   }
+
+  Future<List<Video>> fetchVideosByIds(List<String> ids) async {
+    if (ids.isEmpty) return [];
+
+    final videos = <Video>[];
+    for (int i = 0; i < ids.length; i += 30) {
+      final chunk = ids.sublist(i, (i + 30).clamp(0, ids.length));
+      final snapshot = await FirebaseFirestore.instance
+          .collection('videos')
+          .where(FieldPath.documentId, whereIn: chunk)
+          .get();
+      videos.addAll(snapshot.docs.map((doc) => Video.fromFirestore(doc)));
+    }
+    return videos;
+  }
 }
