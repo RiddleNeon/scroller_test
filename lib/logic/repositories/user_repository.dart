@@ -4,11 +4,27 @@ import '../../main.dart';
 import '../models/user_model.dart';
 
 class UserRepository {
-  Future<UserProfile> getUser(String userId, {bool loadFollowers = false}) async {
+  Future<UserProfile> getUser(String userId) async {
+    print("getting user $userId");
     DocumentSnapshot doc = await firestore.collection('users').doc(userId).get();
+    print("got doc: ${doc.data()}");
     UserProfile model = UserProfile.fromFirestore(doc);
 
     return model;
+  }
+
+  Future<UserProfile> getOrCreateUser(String userId) async {
+    print("getting user $userId");
+    DocumentSnapshot doc = await firestore.collection('users').doc(userId).get();
+    print("got doc: ${doc.data()}");
+    
+    if(doc.exists) {
+      UserProfile model = UserProfile.fromFirestore(doc);
+      return model;
+    } else {
+      UserProfile model = await createUser(id: userId, username: auth!.currentUser!.displayName ?? auth!.currentUser!.email?.split("@").first ?? auth!.currentUser!.uid);
+      return model;
+    }
   }
 
   static const String noProfileImageUrl = "https://img.freepik.com/premium-psd/contact-icon-illustration-isolated_23-2151903357.jpg?semt=ais_hybrid&w=740&q=80";

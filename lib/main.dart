@@ -8,6 +8,7 @@ import 'package:wurp/firebase_options.dart';
 import 'package:wurp/logic/comments/comment.dart';
 import 'package:wurp/logic/feed_recommendation/user_preference_manager.dart';
 import 'package:wurp/logic/local_storage/local_seen_service.dart';
+import 'package:wurp/logic/models/user_model.dart';
 import 'package:wurp/logic/repositories/user_repository.dart';
 import 'package:wurp/logic/repositories/video_repository.dart';
 import 'package:wurp/logic/video/video_provider.dart';
@@ -20,7 +21,7 @@ import 'package:wurp/ui/screens/home_screen.dart';
 FirebaseApp? app;
 FirebaseAuth? auth;
 
-UserRepository? userRepository = UserRepository();
+UserRepository userRepository = UserRepository();
 
 FirebaseFirestore get firestore {
   if (_firestore == null) throw StateError("Firestore isnt initialized yet!");
@@ -40,8 +41,13 @@ FeedViewModel? _feedViewModel;
 
 final GlobalKey<NavigatorState> appNavigatorKey = GlobalKey<NavigatorState>();
 
+UserProfile get currentUser {
+  assert(_currentUser != null, "No user is currently logged in!");
+  return _currentUser!;
+}
+UserProfile? _currentUser;
+
 void main() async {
-  print("MAIN FUNCTION STARTED");
   WidgetsFlutterBinding.ensureInitialized();
   fvp.registerWith();
   app = await Firebase.initializeApp(options: DefaultFirebaseOptions.currentPlatform);
@@ -49,7 +55,7 @@ void main() async {
   auth = FirebaseAuth.instanceFor(app: app!);
   _firestore = FirebaseFirestore.instance;
   if (auth?.currentUser != null) {
-    await onUserLogin();
+    await onUserLogin(await userRepository.getUser(auth!.currentUser!.uid));
   }
 
   runApp(
@@ -68,8 +74,8 @@ void main() async {
   print(auth?.currentUser);
 }
 
-Future<void> onUserLogin([BuildContext? context]) async {
-  print("login!");
+Future<void> onUserLogin(UserProfile user, [BuildContext? context]) async {
+  _currentUser = user;
   UserPreferenceManager.reset();
   await feedViewModel.dispose();
   await _localSeenService?.dispose();

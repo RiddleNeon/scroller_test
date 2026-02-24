@@ -9,12 +9,14 @@ class LocalSeenService {
   static const String _settingsBoxName = 'seen_settings';
   static const String _cursorBoxName = 'feed_cursors';
   static const String _interactionBoxName = 'seen_interactions';
+  static const String _blacklistedTagsBoxName = 'blacklisted_tags';
   static const double maxLocalStorage = 5e7; //50k
 
   late Box<DateTime> _seenBox;
   late Box _settingsBox;
   late Box _cursorBox;
   late Box _interactionBox;
+  late Box<DateTime> _blacklistedTagsBox;
 
   late final String userId;
   
@@ -32,6 +34,7 @@ class LocalSeenService {
     _settingsBox = await Hive.openBox('${userId}_$_settingsBoxName');
     _cursorBox = await Hive.openBox('${userId}_$_cursorBoxName');
     _interactionBox = await Hive.openBox('${userId}_$_interactionBoxName');
+    _blacklistedTagsBox = await Hive.openBox('${userId}_$_blacklistedTagsBoxName');
 
 /*    await _cursorBox.clear();
     await _seenBox.clear();
@@ -205,4 +208,12 @@ class LocalSeenService {
   DateTime? getTagCursor(String tag) => _cursorBox.get('tag_cursor_$tag') as DateTime?;
 
   Future<void> saveTagCursor(String tag, DateTime timestamp) async => _cursorBox.put('tag_cursor_$tag', timestamp);
+  
+  Future<void> saveBlacklistedTag(String tag, DateTime timestamp) async {
+    _blacklistedTagsBox.put(tag, timestamp);
+  }
+  
+  List<String> getBlacklistedTags() {
+    return _blacklistedTagsBox.keys.map((e) => e.toString()).toList();
+  }
 }

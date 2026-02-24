@@ -30,6 +30,8 @@ class VideoRecommender extends VideoRecommenderBase {
   /// Main recommendation function
   Future<Set<Video>> getRecommendedVideos({int limit = 20}) async {
     try {
+      print("getting recommendet vids");
+      
       // Get user preferences
       final userPreferences = await getUserPreferences();
 
@@ -38,7 +40,7 @@ class VideoRecommender extends VideoRecommenderBase {
 
       final candidateVideos = await _getCandidateVideos(userPreferences: userPreferences, limit: _candidatePoolSize);
       
-      print("got ${candidateVideos.length} videos!");
+      print("got ${candidateVideos.map((e) => e.id).toList()} videos!");
 
       final scoredVideos = _scoreVideos(candidateVideos, userPreferences, recentInteractions);
 
@@ -46,14 +48,16 @@ class VideoRecommender extends VideoRecommenderBase {
 
       if (diversifiedVideos.isEmpty) {
         print("no more videos!");
-        return getTrendingVideos(limit);
+        return fetchTrendingVideos(limit: limit);
+      } else {
+        diversifiedVideos.forEach((element) => localSeenService.markAsSeen(element.video));
       }
 
       return (diversifiedVideos.take(limit).map((vs) => vs.video).toList()..shuffle()).toSet();
     } catch (e) {
       print('Error getting recommendations: $e. stacktrace: ${StackTrace.current}');
       // Fallback to trending videos
-      return getTrendingVideos(limit);
+      return fetchTrendingVideos(limit: limit);
     }
   }
 
@@ -62,19 +66,19 @@ class VideoRecommender extends VideoRecommenderBase {
     required UserPreferences userPreferences,
     required int limit,
   }) async {
-    if (userPreferences.isNewUser) return getTrendingVideos(limit);
+    if (userPreferences.isNewUser) return fetchTrendingVideos(limit: limit);
 
     final Set<Video> candidates = {};
 
     final topTags = _getTopTags(userPreferences, 3);
     print("top tags for user: ${topTags}");
     for (final tag in topTags) {
-      final tagVideos = await fetchVideosByTag(tag, limit: limit ~/ 3);
+      final tagVideos = await fetchVideosByTag(tag, limit: limit ~/ 3, onTagVideosEmpty: () {localSeenService.saveBlacklistedTag(tag, DateTime.now()); blacklistedTags?.add(tag);print("tag videos empty! removing $tag");});
       candidates.addAll(tagVideos);
     }
 
     final newestTimestamp = localSeenService.getNewestSeenTimestamp();
-    final newVideos = await fetchNewVideos(newestTimestamp, limit ~/ 2);
+    final newVideos = await fetchNewVideos(newestTimestamp, limit - candidates.length);
     print("${newVideos.length} new videos available");
     print("${newVideos.where((v) => !localSeenService.hasSeen(v.id)).length} new videos added");
     final filteredNewVideos = newVideos.where((v) => !localSeenService.hasSeen(v.id));
@@ -91,9 +95,12 @@ class VideoRecommender extends VideoRecommenderBase {
     return removeDuplicates<Video>(candidates.toList(), getCheckedParameter: (vid) => vid.videoUrl).toSet();
   }
 
+  List<String>? blacklistedTags;
   List<String> _getTopTags(UserPreferences prefs, int count) {
+    blacklistedTags ??= localSeenService.getBlacklistedTags();
+    print("blacklisted: $blacklistedTags");
     final sorted = prefs.tagPreferences.entries.toList()..sort((a, b) => b.value.compareTo(a.value));
-    return sorted.take(count).map((e) => e.key).toList();
+    return (sorted.where((element) => !blacklistedTags!.contains(element.key)).take(count).map((e) => e.key).toList())..forEach((element) => print("picked $element"));
   }
 
   /// Score videos based on multiple factors
@@ -179,7 +186,7 @@ class VideoRecommender extends VideoRecommenderBase {
 
       // Allow max 2 videos from same author in a batch
       final currentAuthorCount = authorCount[video.authorId] ?? 0;
-      const int maxPerAuthor = 2; //todo dynamic better
+      const int maxPerAuthor = 10; //todo dynamic better
       if (currentAuthorCount >= maxPerAuthor) continue;
 
       // Check tag diversity (don't repeat same tag combinations too often)

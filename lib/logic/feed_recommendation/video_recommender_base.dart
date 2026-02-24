@@ -69,13 +69,6 @@ abstract class VideoRecommenderBase {
     return factors > 0 ? (score / factors) : 0.5;
   }
 
-  /// Fallback: Get trending videos
-  Future<Set<Video>> getTrendingVideos(int limit) async {
-    log("Fallback to trending!", level: 2000);
-    final snapshot = await firestore.collection('videos').orderBy('createdAt', descending: true).limit(limit).get();
-    return snapshot.docs.map((doc) => Video.fromFirestore(doc)).toSet();
-  }
-
   ///Get videos for new users
   Future<List<Video>> getColdStartVideos({int limit = 20}) async {
     // Get popular videos from last 3 days
@@ -118,11 +111,11 @@ abstract class VideoRecommenderBase {
     return snapshot.docs.map((doc) => Video.fromFirestore(doc)).toList();
   }
 
-  Future<List<Video>> fetchTrendingVideos({
+  Future<Set<Video>> fetchTrendingVideos({
     DateTime? cursor,
     required int limit,
   }) async {
-    final weekAgo = DateTime.now().subtract(Duration(days: 7));
+    final weekAgo = DateTime.now().subtract(Duration(days: 9));
 
     Query query =
         firestore.collection('videos').where('createdAt', isGreaterThan: Timestamp.fromDate(weekAgo)).orderBy('createdAt', descending: true).limit(limit * 3);
@@ -131,9 +124,12 @@ abstract class VideoRecommenderBase {
     
     if (cursor != null) {
       query = query.where('createdAt', isLessThan: Timestamp.fromDate(cursor));
+      print("limiting time");
     }
     
     final snapshot = await query.get();
+    
+    print("got snapshot: ${snapshot.docs.length}");
 
     final videos = snapshot.docs.map((doc) => Video.fromFirestore(doc)).where((v) => !localSeenService.hasSeen(v.id)).toList();
 
@@ -143,14 +139,17 @@ abstract class VideoRecommenderBase {
     
     if(filteredVideos.isNotEmpty) {
       localSeenService.saveTrendingCursor(filteredVideos.last.createdAt);
+      print("saved cursor");
     }
     
-    return filteredVideos.toList();
+    print("vids length: ${videos.length}");
+    
+    return filteredVideos.toSet();
   }
 
   static const _maxRetryAttempts = 5;
 
-  Future<List<Video>> fetchVideosByTag(String tag, {required int limit}) async {
+  Future<List<Video>> fetchVideosByTag(String tag, {required int limit, required void Function() onTagVideosEmpty}) async {
     print("fetching videos by tag $tag");
     final List<Video> unseen = [];
     DateTime? cursor = localSeenService.getTagCursor(tag);
@@ -176,6 +175,10 @@ abstract class VideoRecommenderBase {
 
     if (cursor != null) {
       await localSeenService.saveTagCursor(tag, cursor);
+    }
+    
+    if(unseen.isEmpty){
+      onTagVideosEmpty();
     }
 
     return unseen.take(limit).toList();
@@ -206,8 +209,6 @@ Future<void> trackInteraction({
   bool commented = false,
   bool saved = false,
 }) async {
-  localSeenService.markAsSeen(video);
-
   final interactionRef = firestore.collection('users').doc(userId).collection('recent_interactions').doc();
 
   interactionRef.batchSet({

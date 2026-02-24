@@ -18,6 +18,8 @@ class LoginScreen extends StatefulWidget {
 class _LoginScreenState extends State<LoginScreen> {
   Duration get loginTime => const Duration(milliseconds: 2250);
   bool enteredPasswordIncorrectly = false;
+  
+  UserProfile? user;
 
   Future<String?> _authUser(LoginData data) async {
     if(auth?.currentUser != null){
@@ -41,7 +43,7 @@ class _LoginScreenState extends State<LoginScreen> {
       return "an unknown error has occurred!";
     }
 
-    UserProfile user = await userRepository!.getUser(credential.user!.uid);
+    user = await userRepository.getUser(credential.user!.uid);
     print(user);
     return null; //no error message -> success
   }
@@ -65,7 +67,7 @@ class _LoginScreenState extends State<LoginScreen> {
       return "an unknown error has occurred!";
     }
 
-    UserProfile user = await userRepository!.createUser(id: credential.user!.uid, username: credential.user?.displayName ?? credential.user!.email!.split("@").first);
+    user = await userRepository.createUser(id: credential.user!.uid, username: credential.user?.displayName ?? credential.user!.email!.split("@").first);
     print(user);
     return null; //no error message -> success
   }
@@ -80,9 +82,10 @@ class _LoginScreenState extends State<LoginScreen> {
   }
 
   void completeLogin() async {
+    assert(user != null, "Login completed but no user is logged in!");
     print("completing login...");
     try {
-      await onUserLogin(context);
+      await onUserLogin(user!, context);
       if(mounted) {
         Navigator.of(context).pushReplacement(
           MaterialPageRoute(builder: (_) => MyHomePage()),
@@ -132,6 +135,8 @@ class _LoginScreenState extends State<LoginScreen> {
     } on FirebaseAuthException catch(e) {
       return e.message;
     }
+    print("getting user");
+    user = await userRepository.getOrCreateUser(auth!.currentUser!.uid);
     return null;
   }
 
