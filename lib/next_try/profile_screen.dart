@@ -1,6 +1,7 @@
 import 'package:cached_network_image/cached_network_image.dart';
 import 'package:flutter/material.dart';
 import 'package:wurp/logic/models/user_model.dart';
+import 'package:wurp/main.dart';
 //source: https://github.com/salvadordeveloper/flutter-tiktok
 
 class ProfileScreen extends StatelessWidget {
@@ -43,7 +44,7 @@ class ProfileScreen extends StatelessWidget {
                         child: CachedNetworkImage(
                           fit: BoxFit.cover,
                           imageUrl:
-                          "https://q5n8c8q9.rocketcdn.me/wp-content/uploads/2018/08/The-20-Best-Royalty-Free-Music-Sites-in-2018.png",
+                          currentUser.profileImageUrl,
                           height: 100.0,
                           width: 100.0,
                           placeholder: (context, url) =>
@@ -67,17 +68,17 @@ class ProfileScreen extends StatelessWidget {
                   Row(
                     mainAxisAlignment: MainAxisAlignment.center,
                     children: [
-                      const Column(
+                      Column(
                         children: [
                           Text(
-                            "36",
-                            style: TextStyle(
+                            "${profile.followingCount}",
+                            style: const TextStyle(
                                 fontSize: 20, fontWeight: FontWeight.bold),
                           ),
-                          SizedBox(
+                          const SizedBox(
                             height: 5,
                           ),
-                          Text(
+                          const Text(
                             "Following",
                             style: TextStyle(
                                 fontSize: 12, fontWeight: FontWeight.normal),
@@ -90,17 +91,17 @@ class ProfileScreen extends StatelessWidget {
                         height: 15,
                         margin: const EdgeInsets.symmetric(horizontal: 15),
                       ),
-                      const Column(
+                      Column(
                         children: [
                           Text(
-                            "13",
-                            style: TextStyle(
+                            "${profile.followersCount}",
+                            style: const TextStyle(
                                 fontSize: 20, fontWeight: FontWeight.bold),
                           ),
-                          SizedBox(
+                          const SizedBox(
                             height: 5,
                           ),
-                          Text(
+                          const Text(
                             "Followers",
                             style: TextStyle(
                                 fontSize: 12, fontWeight: FontWeight.normal),
@@ -113,17 +114,17 @@ class ProfileScreen extends StatelessWidget {
                         height: 15,
                         margin: const EdgeInsets.symmetric(horizontal: 15),
                       ),
-                      const Column(
+                      Column(
                         children: [
                           Text(
-                            "143",
-                            style: TextStyle(
+                            "${profile.totalLikesCount}",
+                            style: const TextStyle(
                                 fontSize: 20, fontWeight: FontWeight.bold),
                           ),
-                          SizedBox(
+                          const SizedBox(
                             height: 5,
                           ),
-                          Text(
+                          const Text(
                             "Likes",
                             style: TextStyle(
                                 fontSize: 12, fontWeight: FontWeight.normal),

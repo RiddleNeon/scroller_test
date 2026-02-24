@@ -97,9 +97,17 @@ class _PageOverlayState extends State<PageOverlay> {
   }
 
   void _updateDislikeInFirestore(bool isDisliked) {
-    videoRepo.dislikeVideo(auth!.currentUser!.uid, widget.video.id);
+    if(isDisliked) {
+      videoRepo.dislikeVideo(auth!.currentUser!.uid, widget.video.id);
+    } else {
+      videoRepo.undislikeVideo(auth!.currentUser!.uid, widget.video.id);
+    }
   }
   void _updateLikeInFirestore(bool isLiked) {
-    videoRepo.dislikeVideo(auth!.currentUser!.uid, widget.video.id);
+    if(isLiked) {
+      videoRepo.likeVideo(auth!.currentUser!.uid, widget.video.id, widget.video.authorId);
+    } else {
+      videoRepo.unlikeVideo(auth!.currentUser!.uid, widget.video.id, widget.video.authorId);
+    }
   }
 }

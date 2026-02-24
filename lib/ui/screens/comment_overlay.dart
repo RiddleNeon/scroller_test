@@ -50,7 +50,7 @@ Future<void> openCommentsForVideo(Video video, BuildContext context) async {
     comments: comments,
     currentUserId: auth!.currentUser!.uid,
     currentUsername: currentUser.username,
-    currentUserProfileImageUrl: "https://api.dicebear.com/7.x/thumbs/png?seed=${currentUser.username}",
+    currentUserProfileImageUrl: currentUser.profileImageUrl,
     initialCommentsCount: video.commentsCount,
     onCommentAdded: (p0) {
       videoRepo.addComment(videoId, p0);

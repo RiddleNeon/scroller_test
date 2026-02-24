@@ -40,10 +40,10 @@ class VideoRepository {
       'authorId': authorId,
       'createdAt': FieldValue.serverTimestamp(),
       'tags': tags.map((tag) => tag.toLowerCase()).toList(),
-      'likes': 0,
-      'shares': 0,
-      'comments': 0,
-      'views': 0,
+      'likesCount': 0,
+      'sharesCount': 0,
+      'commentsCount': 0,
+      'viewsCount': 0,
     });
 
     _batchQueue.set(
@@ -62,7 +62,7 @@ class VideoRepository {
   final FirestoreBatchQueue _batchQueue = FirestoreBatchQueue();
 
   /// Like a video
-  void likeVideo(String userId, String videoId) {
+  void likeVideo(String userId, String videoId, String authorId) async {
     _batchQueue.set(
       firestore.collection('users').doc(userId).collection('liked_videos').doc(videoId),
       {
@@ -83,10 +83,12 @@ class VideoRepository {
         'likesCount': FieldValue.increment(1),
       },
     );
+    
+    firestore.collection('users').doc(authorId).update({'totalLikes': FieldValue.increment(1)});
   }
 
   /// Unlike a video
-  void unlikeVideo(String userId, String videoId) {
+  void unlikeVideo(String userId, String videoId, String authorId) {
     _batchQueue.delete(
       firestore.collection('users').doc(userId).collection('liked_videos').doc(videoId),
     );
@@ -101,6 +103,8 @@ class VideoRepository {
         'likesCount': FieldValue.increment(-1),
       },
     );
+
+    firestore.collection('users').doc(authorId).update({'totalLikes': FieldValue.increment(-1)});
   }
 
   void dislikeVideo(String userId, String videoId) {
@@ -209,7 +213,7 @@ class VideoRepository {
     _batchQueue.update(
       firestore.collection('videos').doc(videoId),
       {
-        'views': FieldValue.increment(1),
+        'viewsCount': FieldValue.increment(1),
       },
     );
   }

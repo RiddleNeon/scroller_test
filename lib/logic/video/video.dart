@@ -47,10 +47,10 @@ class Video {
       authorId: data['authorId'] ?? '',
       createdAt: (data['createdAt'] as Timestamp).toDate(),
       tags: data['tags'] != null ? List<String>.from(data['tags']) : [],
-      likesCount: data['likes'],
-      sharesCount: data['shares'],
-      commentsCount: data['comments'],
-      viewsCount: data['views'],
+      likesCount: data['likesCount'],
+      sharesCount: data['sharesCount'],
+      commentsCount: data['commentsCount'],
+      viewsCount: data['viewsCount'],
       authorName: data['authorName'] ?? "No Name Provided",
     );
   }

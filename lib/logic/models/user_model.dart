@@ -1,4 +1,5 @@
 import 'package:cloud_firestore/cloud_firestore.dart';
+import 'package:wurp/logic/repositories/user_repository.dart';
 import 'package:wurp/logic/repositories/video_repository.dart';
 import 'package:wurp/logic/video/video.dart';
 
@@ -35,7 +36,7 @@ class UserProfile {
     return UserProfile(
       id: doc.id,
       username: data['username'] ?? '',
-      profileImageUrl: data['profileImageUrl'] ?? '',
+      profileImageUrl: data['profileImageUrl'] ?? createUserProfileImageUrl(data['username']),
       bio: data['bio'] ?? '',
       createdAt: (data['createdAt'] as Timestamp).toDate(),
       followersCount: data['followersCount'] ?? 0,

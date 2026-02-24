@@ -29,7 +29,6 @@ class UserRepository {
     }
   }
 
-  static const String noProfileImageUrl = "https://img.freepik.com/premium-psd/contact-icon-illustration-isolated_23-2151903357.jpg?semt=ais_hybrid&w=740&q=80";
 
   Future<UserProfile> createUser({
     required String id,
@@ -48,7 +47,7 @@ class UserRepository {
     return UserProfile(
       id: id,
       username: username,
-      profileImageUrl: profileImageUrl ?? noProfileImageUrl,
+      profileImageUrl: profileImageUrl ?? createUserProfileImageUrl(username),
       bio: bio,
       createdAt: DateTime.now(),
       followersCount: 0, 
@@ -278,3 +277,6 @@ class UserRepository {
     );
   }
 }
+
+
+String createUserProfileImageUrl(String? seed) => "https://api.dicebear.com/7.x/miniavs/png?seed=${seed ?? "_"}";
