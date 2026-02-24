@@ -12,7 +12,7 @@ class VideoDescription extends StatelessWidget {
     return Expanded(
         child: Container(
             height: 120.0,
-            padding: EdgeInsets.only(left: 20.0),
+            padding: const EdgeInsets.only(left: 20.0),
             child: Column(
                 mainAxisSize: MainAxisSize.min,
                 mainAxisAlignment: MainAxisAlignment.end,
@@ -20,34 +20,34 @@ class VideoDescription extends StatelessWidget {
                 children: <Widget>[
                   Text(
                     '@$username',
-                    style: TextStyle(
+                    style: const TextStyle(
                         fontSize: 16,
                         color: Colors.white,
                         fontWeight: FontWeight.bold),
                   ),
-                  SizedBox(
+                  const SizedBox(
                     height: 7,
                   ),
                   Text(
                     videoTitle,
-                    style: TextStyle(
+                    style: const TextStyle(
                       fontSize: 16,
                       color: Colors.white,
                     ),
                   ),
-                  SizedBox(
+                  const SizedBox(
                     height: 7,
                   ),
                   Row(children: [
-                    Icon(
+                    const Icon(
                       Icons.music_note,
                       size: 15.0,
                       color: Colors.white,
                     ),
                     Text(songInfo,
-                        style: TextStyle(color: Colors.white, fontSize: 14.0))
+                        style: const TextStyle(color: Colors.white, fontSize: 14.0))
                   ]),
-                  SizedBox(
+                  const SizedBox(
                     height: 10,
                   ),
                 ])));

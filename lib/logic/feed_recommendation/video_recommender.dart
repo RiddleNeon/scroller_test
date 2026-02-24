@@ -7,7 +7,6 @@ import 'package:wurp/logic/video/video.dart';
 import 'package:wurp/main.dart';
 
 import '../../util/misc/lists.dart';
-import '../local_storage/local_seen_service.dart';
 
 class VideoScore {
   final double score;
@@ -171,7 +170,7 @@ class VideoRecommender extends VideoRecommenderBase {
       }
     }
 
-    final maxSimilarity = 5;
+    const maxSimilarity = 5;
     return 1.0 - (similarityCount / maxSimilarity).clamp(0.0, 1.0);
   }
 

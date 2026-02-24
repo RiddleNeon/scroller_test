@@ -1,7 +1,4 @@
 import 'package:flutter/material.dart';
-import 'package:cloud_firestore/cloud_firestore.dart';
-import '../../logic/batches/batch_service.dart';
-import '../../main.dart';
 
 class DislikeButton extends StatefulWidget {
   final bool initiallyDisliked;

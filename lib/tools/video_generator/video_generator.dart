@@ -27,7 +27,7 @@ void videoPublishTest() async {
   for (var videoData in videos) {
     await getVideoFromJsonDataObject(videoData, videoRepo);
     i++;
-    await Future.delayed(Duration(milliseconds: 200));
+    await Future.delayed(const Duration(milliseconds: 200));
     print("published video $i/${videos.length} - ${videoData['title']}");
   }
 }
@@ -73,6 +73,6 @@ Future<UserProfile?> createDummyUserModel(String name, String id, String profile
     return null;
   }
   createdUserIds.add(id);
-  UserProfile user = await userRepository!.createUser(id: id, username: name, profileImageUrl: profileImageUrl);
+  UserProfile user = await userRepository.createUser(id: id, username: name, profileImageUrl: profileImageUrl);
   return user;
 }

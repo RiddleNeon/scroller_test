@@ -25,7 +25,7 @@ Widget feedVideos(TickerProvider tickerProvider, VideoProvider videoProvider, {F
                 if (snapshot.connectionState != ConnectionState.done) {
                   return Container(
                     color: Colors.black,
-                    child: Center(
+                    child: const Center(
                       child: CircularProgressIndicator(),
                     ),
                   );

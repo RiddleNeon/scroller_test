@@ -38,7 +38,7 @@ class SearchBarResult {
     if (_isLoadingUsers) return;
     _isLoadingUsers = true;
 
-    final userResult = await userRepository!.searchUsers(searchText, limit: limit);
+    final userResult = await userRepository.searchUsers(searchText, limit: limit);
     userResults = userResult.users;
     _lastUserDocument = userResult.lastDoc;
     _hasMoreUsers = userResult.users.length >= limit;
@@ -67,7 +67,7 @@ class SearchBarResult {
     if (_isLoadingUsers || !_hasMoreUsers) return;
     _isLoadingUsers = true;
 
-    final result = await userRepository!.searchUsers(
+    final result = await userRepository.searchUsers(
       searchText,
       startAfter: _lastUserDocument,
       limit: limit

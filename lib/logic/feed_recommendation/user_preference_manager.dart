@@ -77,14 +77,12 @@ class UserPreferenceManager {
     }
 
     // Update tags
-    int updated = 0;
     for (final tag in video.tags) {
       if (tag.isEmpty) continue;
       final oldScore = cachedTagPrefs[tag]?.engagementScore ?? 0.5;
       final lr = adaptiveLR(oldScore);
       final newScore = oldScore + lr * (normalizedEngagementScore - oldScore);
       cachedTagPrefs[tag] = TagInteraction(engagementScore: newScore.clamp(0.0, 1.0));
-      updated++;
     }
 
     Map<String, double>? networkTagEffects;
@@ -135,8 +133,8 @@ class UserPreferenceManager {
     DateTime now = DateTime.now();
     return tagPrefs.entries.toList()
       ..sort((a, b) {
-        final aRecent = now.difference(a.value.lastInteracted) < Duration(minutes: 30);
-        final bRecent = now.difference(b.value.lastInteracted) < Duration(minutes: 30);
+        final aRecent = now.difference(a.value.lastInteracted) < const Duration(minutes: 30);
+        final bRecent = now.difference(b.value.lastInteracted) < const Duration(minutes: 30);
         if (bRecent && !aRecent) return 1;
         if (aRecent && !bRecent) return -1;
         return b.value.engagementScore.distanceTo(0.5).compareTo(a.value.engagementScore.distanceTo(0.5));

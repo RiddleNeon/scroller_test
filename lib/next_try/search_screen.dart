@@ -4,7 +4,6 @@ import 'package:shimmer_animation/shimmer_animation.dart';
 import 'package:video_thumbnail/video_thumbnail.dart';
 import 'package:wurp/logic/feed_recommendation/search_video_result_recommender.dart';
 import 'package:wurp/logic/video/video.dart';
-import 'package:wurp/main.dart';
 import 'package:wurp/next_try/search_bar_result.dart';
 import 'package:wurp/ui/feed_view_model.dart';
 import 'package:wurp/ui/short_video_player.dart';
@@ -28,7 +27,7 @@ class _SearchScreenState extends State<SearchScreen> with TickerProviderStateMix
   Widget build(BuildContext context) {
     return SizedBox.expand(
       child: Container(
-          decoration: BoxDecoration(
+          decoration: const BoxDecoration(
             gradient: LinearGradient(
               colors: [Colors.white, Colors.white60],
               transform: GradientRotation(0.3),
@@ -50,7 +49,7 @@ class _SearchScreenState extends State<SearchScreen> with TickerProviderStateMix
 
   void onAnimationEnd() {
     if (canShowSearchResults) return;
-    Future.delayed(Duration(milliseconds: 200), () {
+    Future.delayed(const Duration(milliseconds: 200), () {
       setState(() {
         canShowSearchResults = true;
         print("done with animation");
@@ -61,7 +60,7 @@ class _SearchScreenState extends State<SearchScreen> with TickerProviderStateMix
   Widget _buildSearchBar() {
     return AnimatedAlign(
       alignment: hasSearched ? Alignment.topCenter : Alignment.center,
-      duration: Duration(milliseconds: animationDuration),
+      duration: const Duration(milliseconds: animationDuration),
       curve: Curves.easeInOutCubic,
       onEnd: onAnimationEnd,
       child: Padding(
@@ -140,9 +139,9 @@ class _SearchScreenState extends State<SearchScreen> with TickerProviderStateMix
 
     return AnimatedOpacity(
         opacity: canShowSearchResults ? 1 : 0,
-        duration: Duration(milliseconds: 800),
+        duration: const Duration(milliseconds: 800),
         child: !canShowSearchResults
-            ? SizedBox.expand()
+            ? const SizedBox.expand()
             : ListView.builder(
                 padding: const EdgeInsets.symmetric(horizontal: 24, vertical: 16),
                 itemCount: videos.length,
@@ -250,7 +249,7 @@ class _SearchScreenState extends State<SearchScreen> with TickerProviderStateMix
                         onTap: () => Navigator.pop(context),
                         child: Container(
                           padding: const EdgeInsets.all(8),
-                          decoration: BoxDecoration(
+                          decoration: const BoxDecoration(
                             color: Colors.black54,
                             shape: BoxShape.circle,
                           ),

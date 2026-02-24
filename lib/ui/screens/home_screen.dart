@@ -1,14 +1,11 @@
-import 'package:cloud_firestore/cloud_firestore.dart';
 import 'package:flutter/material.dart';
-import 'package:wurp/logic/comments/comment.dart';
-import 'package:wurp/logic/repositories/video_repository.dart';
 import 'package:wurp/main.dart';
 import 'package:wurp/next_try/bottom_navigation_bar.dart';
 import 'package:wurp/next_try/search_screen.dart';
-import 'package:wurp/ui/auth/auth_screen.dart';
 import 'package:wurp/ui/misc/glow_screen.dart';
-import 'package:wurp/ui/screens/comment_overlay.dart';
 import 'package:wurp/ui/short_video_player.dart';
+
+import '../../next_try/profile_screen.dart';
 
 class MyHomePage extends StatefulWidget {
   const MyHomePage({super.key});
@@ -18,7 +15,7 @@ class MyHomePage extends StatefulWidget {
 }
 
 class _MyHomePageState extends State<MyHomePage> with TickerProviderStateMixin {
-  final GlobalObjectKey<BottomNavBarState> bottomNavBarKey = GlobalObjectKey("bottomNavBar");
+  static const GlobalObjectKey<BottomNavBarState> bottomNavBarKey = GlobalObjectKey("bottomNavBar");
 
   static const startScreen = 0;
   int selectedIndex = startScreen;
@@ -41,7 +38,7 @@ class _MyHomePageState extends State<MyHomePage> with TickerProviderStateMixin {
         content = SearchScreen();
         break;
       case 4:
-        content = LoginScreen();
+        content = const ProfileScreen();
         break;
       case int():
         content = feedVideos(this, videoProvider);

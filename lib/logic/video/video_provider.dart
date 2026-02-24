@@ -1,7 +1,6 @@
 import 'package:wurp/logic/video/video.dart';
 
 import '../feed_recommendation/video_recommender.dart';
-import '../local_storage/local_seen_service.dart';
 
 abstract class VideoProvider {
   Future<Video?> getVideoByIndex(int index);

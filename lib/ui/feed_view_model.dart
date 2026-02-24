@@ -2,7 +2,6 @@ import 'dart:async';
 
 import 'package:wurp/logic/video/video_provider.dart';
 
-import 'overlays.dart';
 import 'video_container.dart';
 
 class FeedViewModel {

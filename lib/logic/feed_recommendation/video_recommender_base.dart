@@ -1,4 +1,3 @@
-import 'dart:developer';
 import 'dart:math' hide log;
 
 import 'package:cloud_firestore/cloud_firestore.dart';
@@ -72,7 +71,7 @@ abstract class VideoRecommenderBase {
   ///Get videos for new users
   Future<List<Video>> getColdStartVideos({int limit = 20}) async {
     // Get popular videos from last 3 days
-    final threeDaysAgo = DateTime.now().subtract(Duration(days: 3));
+    final threeDaysAgo = DateTime.now().subtract(const Duration(days: 3));
 
     final snapshot = await firestore
         .collection('videos')
@@ -115,7 +114,7 @@ abstract class VideoRecommenderBase {
     DateTime? cursor,
     required int limit,
   }) async {
-    final weekAgo = DateTime.now().subtract(Duration(days: 9));
+    final weekAgo = DateTime.now().subtract(const Duration(days: 9));
 
     Query query =
         firestore.collection('videos').where('createdAt', isGreaterThan: Timestamp.fromDate(weekAgo)).orderBy('createdAt', descending: true).limit(limit * 3);

@@ -88,7 +88,7 @@ class _LoginScreenState extends State<LoginScreen> {
       await onUserLogin(user!, context);
       if(mounted) {
         Navigator.of(context).pushReplacement(
-          MaterialPageRoute(builder: (_) => MyHomePage()),
+          MaterialPageRoute(builder: (_) => const MyHomePage()),
         );
       }
     } catch (e, st) {

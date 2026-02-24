@@ -50,7 +50,7 @@ Future<void> openCommentsForVideo(Video video, BuildContext context) async {
     comments: comments,
     currentUserId: auth!.currentUser!.uid,
     currentUsername: currentUser.username,
-    currentUserProfileImageUrl: "https://api.dicebear.com/7.x/thumbs/png?seed=yoMama",
+    currentUserProfileImageUrl: "https://api.dicebear.com/7.x/thumbs/png?seed=${currentUser.username}",
     initialCommentsCount: video.commentsCount,
     onCommentAdded: (p0) {
       videoRepo.addComment(videoId, p0);
@@ -465,7 +465,7 @@ class _CommentsOverlayState extends State<CommentsOverlay> {
                   mainAxisSize: MainAxisSize.min,
                   children: [
                     if (vm.isLoadingReplies) ...[
-                      SizedBox(
+                      const SizedBox(
                         width: 14,
                         height: 14,
                         child: CircularProgressIndicator(
@@ -474,7 +474,7 @@ class _CommentsOverlayState extends State<CommentsOverlay> {
                         ),
                       ),
                       const SizedBox(width: 8),
-                      Text(
+                      const Text(
                         'Loading replies…',
                         style: TextStyle(
                           color: _subtleText,
@@ -857,7 +857,7 @@ class _Avatar extends StatelessWidget {
           errorBuilder: (_, __, ___) => Icon(
             Icons.person_rounded,
             size: radius,
-            color: Colors.white.withOpacity(0.9),
+            color: Colors.white.withValues(alpha: 0.9),
           ),
           loadingBuilder: (_, child, progress) {
             if (progress == null) return child;

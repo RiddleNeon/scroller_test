@@ -1,8 +1,5 @@
 import 'package:flutter/material.dart';
 import 'package:lottie/lottie.dart';
-import 'package:cloud_firestore/cloud_firestore.dart';
-import '../../logic/batches/batch_service.dart';
-import '../../main.dart';
 
 class LikeButton extends StatefulWidget {
   final TickerProvider provider;
@@ -40,7 +37,7 @@ class _LikeButtonState extends State<LikeButton> {
       controller.value = widget.initiallyLiked ? 0.1 : 0.4;
       controller.animateTo(
         widget.initiallyLiked ? 0.5 : 0,
-        duration: Duration(milliseconds: 600),
+        duration: const Duration(milliseconds: 600),
       );
     }
   }

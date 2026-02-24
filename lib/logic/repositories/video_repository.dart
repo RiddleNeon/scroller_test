@@ -258,7 +258,7 @@ class VideoRepository {
           if (data is! Map<String, dynamic>) return null;
           try {
             return Comment.fromFirestore(e.id, data);
-          } on TypeError catch (e) {
+          } on TypeError catch (_) {
             return null;
           }
         })
@@ -340,7 +340,7 @@ class VideoRepository {
   /// Get trending videos
   Future<List<Video>> getTrendingVideos({int limit = 20}) async {
     try {
-      final oneDayAgo = DateTime.now().subtract(Duration(days: 1));
+      final oneDayAgo = DateTime.now().subtract(const Duration(days: 1));
 
       final snapshot = await firestore
           .collection('videos')
