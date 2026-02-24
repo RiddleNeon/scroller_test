@@ -79,6 +79,7 @@ class _PageOverlayState extends State<PageOverlay> {
       });
     }
     _updateLikeInFirestore(newLiked);
+    widget.onLikeChanged(newLiked);
   }
 
   void _onDislikeChanged(bool newDisliked) {
@@ -90,6 +91,7 @@ class _PageOverlayState extends State<PageOverlay> {
       });
     }
     _updateDislikeInFirestore(newDisliked);
+    widget.onDislikeChanged(newDisliked);
   }
   
   void _onCommentButtonPressed(){

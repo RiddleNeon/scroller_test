@@ -10,6 +10,7 @@ class LocalSeenService {
   static const String _cursorBoxName = 'feed_cursors';
   static const String _interactionBoxName = 'seen_interactions';
   static const String _blacklistedTagsBoxName = 'blacklisted_tags';
+  static const String _likeValsBoxName = 'likec_videos';
   static const double maxLocalStorage = 5e7; //50k
 
   late Box<DateTime> _seenBox;
@@ -17,6 +18,7 @@ class LocalSeenService {
   late Box _cursorBox;
   late Box _interactionBox;
   late Box<DateTime> _blacklistedTagsBox;
+  late Box<bool> _likeValsBox; //bool: true -> like, false -> dislike, not in box: nothing
 
   late final String userId;
   
@@ -35,6 +37,7 @@ class LocalSeenService {
     _cursorBox = await Hive.openBox('${userId}_$_cursorBoxName');
     _interactionBox = await Hive.openBox('${userId}_$_interactionBoxName');
     _blacklistedTagsBox = await Hive.openBox('${userId}_$_blacklistedTagsBoxName');
+    _likeValsBox = await Hive.openBox('${userId}_$_likeValsBoxName');
 
 /*    await _cursorBox.clear();
     await _seenBox.clear();
@@ -216,4 +219,25 @@ class LocalSeenService {
   List<String> getBlacklistedTags() {
     return _blacklistedTagsBox.keys.map((e) => e.toString()).toList();
   }
+  
+  Future<void> saveLike(String videoId) async {
+    print("saved like for $videoId");
+    _likeValsBox.put(videoId, true);
+  }
+  Future<void> removeLike(String videoId) async {
+    print("removed like for $videoId");
+    _likeValsBox.delete(videoId);
+  }
+
+  Future<void> saveDislike(String videoId) async {
+    print("saved dislike for $videoId");
+    _likeValsBox.put(videoId, false);
+  }
+  Future<void> removeDislike(String videoId) async {
+    print("removed dislike for $videoId");
+    _likeValsBox.delete(videoId);
+  }
+  
+  bool isLiked(String videoId) => _likeValsBox.get(videoId) == true;
+  bool isDisliked(String videoId) => _likeValsBox.get(videoId) == false;
 }

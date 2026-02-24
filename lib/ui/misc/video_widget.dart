@@ -177,6 +177,11 @@ class _VideoItemState extends State<VideoItem> {
       _isLiked = isLiked;
       if (isLiked) _isDisliked = false; // Can't like and dislike
     });
+    if(isLiked) {
+      localSeenService.saveLike(widget.video.id);
+    } else {
+      localSeenService.removeLike(widget.video.id);
+    }
     // Interaction will be saved when video stops playing
   }
 
@@ -185,6 +190,11 @@ class _VideoItemState extends State<VideoItem> {
       _isDisliked = isDisliked;
       if (isDisliked) _isLiked = false; // Can't like and dislike
     });
+    if(isDisliked) {
+      localSeenService.saveDislike(widget.video.id);
+    } else {
+      localSeenService.removeDislike(widget.video.id);
+    }
     // Interaction will be saved when video stops playing
   }
 
@@ -236,8 +246,8 @@ class _VideoItemState extends State<VideoItem> {
                       onShareChanged: onShareChanged,
                       onSaveChanged: onSaveChanged,
                       onCommentChanged: onCommentChanged,
-                      initiallyLiked: false, //todo cache like and dislike vals
-                      initiallyDisliked: false,
+                      initiallyLiked: localSeenService.isLiked(widget.video.id), 
+                      initiallyDisliked: localSeenService.isDisliked(widget.video.id),
                       index: widget.index,
                       child: Container(),
                     ),
