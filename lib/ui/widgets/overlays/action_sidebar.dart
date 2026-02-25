@@ -1,7 +1,7 @@
 import 'package:flutter/material.dart';
 import 'package:cached_network_image/cached_network_image.dart';
-import '../logic/models/user_model.dart';
-import '../logic/video/video.dart';
+import '../../../logic/models/user_model.dart';
+import '../../../logic/video/video.dart';
 
 class ActionSidebar extends StatelessWidget {
   final VideoWithAuthor videoWithAuthor;

@@ -3,7 +3,7 @@ import 'package:wurp/logic/video/video_provider.dart';
 import 'package:wurp/main.dart';
 import 'package:wurp/ui/feed_view_model.dart';
 
-import 'misc/video_widget.dart';
+import 'widgets/video_widget.dart';
 
 Widget feedVideos(TickerProvider tickerProvider, VideoProvider videoProvider, {FeedViewModel? feedModel, int itemCount = 5000, int initialPage = 0}) {
   feedModel ??= feedViewModel;

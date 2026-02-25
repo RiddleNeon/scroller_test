@@ -1,12 +1,12 @@
 import 'package:flutter/cupertino.dart';
 import 'package:wurp/logic/repositories/video_repository.dart';
 import 'package:wurp/logic/video/video.dart';
-import 'package:wurp/ui/overlay_buttons/comment_button.dart';
 import 'package:wurp/ui/screens/comment_overlay.dart';
 
 import '../main.dart';
-import 'overlay_buttons/dislike_button.dart';
-import 'overlay_buttons/like_button.dart';
+import 'widgets/overlays/comment_button.dart';
+import 'widgets/overlays/dislike_button.dart';
+import 'widgets/overlays/like_button.dart';
 
 class PageOverlay extends StatefulWidget {
   final TickerProvider provider;

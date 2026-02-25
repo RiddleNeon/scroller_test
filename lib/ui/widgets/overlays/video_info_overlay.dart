@@ -1,5 +1,5 @@
 import 'package:flutter/material.dart';
-import '../logic/video/video.dart';
+import '../../../logic/video/video.dart';
 
 class VideoInfoOverlay extends StatelessWidget {
   final VideoWithAuthor videoWithAuthor;

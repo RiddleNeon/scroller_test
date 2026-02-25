@@ -3,11 +3,11 @@ import 'dart:async';
 
 import 'package:flutter/material.dart';
 import 'package:wurp/main.dart';
-import 'package:wurp/next_try/bottom_navigation_bar.dart';
-import 'package:wurp/next_try/search_screen.dart';
-import 'package:wurp/ui/misc/glow_screen.dart';
+import 'package:wurp/ui/screens/bottom_navigation_bar.dart';
+import 'package:wurp/ui/screens/search_screen/search_screen.dart';
+import 'package:wurp/ui/screens/glow_screen.dart';
 
-import '../../next_try/profile_screen.dart';
+import 'profile_screen.dart';
 import '../short_video_player.dart';
 
 class MyHomePage extends StatefulWidget {

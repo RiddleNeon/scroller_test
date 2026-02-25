@@ -235,7 +235,7 @@ class LocalSeenService {
         batch.set(
           likesRef.doc(videoId),
           {'videoId': videoId, 'likedAt': FieldValue.serverTimestamp()},
-          SetOptions(merge: true), //todo fix updating before close taking too long
+          SetOptions(merge: true),
         );
         count++;
       }

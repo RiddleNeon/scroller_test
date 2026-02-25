@@ -4,7 +4,7 @@ import 'package:shimmer_animation/shimmer_animation.dart';
 import 'package:video_thumbnail/video_thumbnail.dart';
 import 'package:wurp/logic/feed_recommendation/search_video_result_recommender.dart';
 import 'package:wurp/logic/video/video.dart';
-import 'package:wurp/next_try/search_bar_result.dart';
+import 'package:wurp/ui/screens/search_screen/search_bar_result.dart';
 import 'package:wurp/ui/feed_view_model.dart';
 import 'package:wurp/ui/short_video_player.dart';
 
