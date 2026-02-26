@@ -4,6 +4,7 @@ import 'package:cached_network_image/cached_network_image.dart';
 import 'package:flutter/material.dart';
 import 'package:wurp/logic/models/user_model.dart';
 import 'package:wurp/main.dart';
+import 'package:wurp/ui/widgets/logout_button.dart';
 
 import '../widgets/profile_image_picker.dart';
 // source (used as template): https://github.com/salvadordeveloper/flutter-tiktok
@@ -38,8 +39,11 @@ class _ProfileScreenState extends State<ProfileScreen> {
             bottom: PreferredSize(preferredSize: const Size.fromHeight(45), child: buildFeedNavigationBar(context)),
             stretch: true,
           ),
-          const SliverFillRemaining(
-            child: Center(child: Text("Content hier")),
+          SliverFillRemaining(
+            child: Container(
+              decoration: const BoxDecoration(gradient: LinearGradient(transform: GradientRotation(1.6), colors: [Colors.white, Colors.grey])),
+              child: const Center(child: Text("Nothing here!")),
+            ),
           ),
         ],
       ),
@@ -56,7 +60,7 @@ class _ProfileScreenState extends State<ProfileScreen> {
           mainAxisAlignment: MainAxisAlignment.spaceBetween,
           crossAxisAlignment: CrossAxisAlignment.center,
           children: [
-            const Icon(Icons.person_add_alt_1_outlined),
+            widget.ownProfile ? const LogoutButton() : Container(),
             Text(
               widget.profile.username,
               style: const TextStyle(fontSize: 15, fontWeight: FontWeight.bold),
@@ -161,17 +165,22 @@ class _ProfileScreenState extends State<ProfileScreen> {
               width: 140,
               height: 47,
               decoration: BoxDecoration(border: Border.all(color: Colors.black12)),
-              child: const Center(
-                child: Text(
-                  "Edit profile",
-                  style: TextStyle(fontSize: 15, fontWeight: FontWeight.bold),
+              child: InkWell(
+                onTap: () {
+                  setEditing(!editingMode);
+                },
+                child: Center(
+                  child: Text(
+                    editingMode ? "Save" : "Edit profile",
+                    style: const TextStyle(fontSize: 15, fontWeight: FontWeight.bold),
+                  ),
                 ),
               ),
             ),
             const SizedBox(
               width: 5,
             ),
-            if(widget.ownProfile) Container(
+            if(!widget.ownProfile) Container(
               width: 45,
               height: 47,
               decoration: BoxDecoration(border: Border.all(color: Colors.black12)),
@@ -258,7 +267,7 @@ class _ProfileScreenState extends State<ProfileScreen> {
       ),
     );
 
-    if (widget.ownProfile) {
+    if (widget.ownProfile && editingMode) {
       return Stack(
         children: [
           avatar,
@@ -287,7 +296,6 @@ class _ProfileScreenState extends State<ProfileScreen> {
 
   void showProfileImageChangeOverlay() async {
     final newUrl = await showProfileImagePicker(context);
-    print("new url: $newUrl");
     if (newUrl != null && mounted) {
       userRepository.updateProfileImageUrl(currentUser, newUrl).then(
         (value) {

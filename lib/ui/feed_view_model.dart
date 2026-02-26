@@ -100,7 +100,6 @@ class FeedViewModel {
   }
   
   Future<void> dispose() async {
-    
     await Future.wait([..._videoFutures.values, ..._loadedContainers.values.map((element) => element.controller?.dispose() ?? Future.value())]);
     _videoFutures.clear();
     _loadedContainers.clear();

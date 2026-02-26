@@ -77,12 +77,16 @@ void main() async {
 }
 
 Future<void> onUserLogin(UserProfile user, [BuildContext? context]) async {
+  await onUserLogout();
   _currentUser = user;
+  _localSeenService = LocalSeenService();
+  await _localSeenService!.init();
+}
+
+Future<void> onUserLogout() async {
   UserPreferenceManager.reset();
   await feedViewModel.dispose();
   await _localSeenService?.dispose();
-  _localSeenService = LocalSeenService();
-  await _localSeenService!.init();
 }
 
 void rebuildAllChildren(BuildContext context) {
