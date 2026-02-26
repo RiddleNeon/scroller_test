@@ -247,7 +247,7 @@ class _ProfileScreenState extends State<ProfileScreen> with SingleTickerProvider
     return Row(
       mainAxisAlignment: MainAxisAlignment.center,
       children: [
-        _ActionButton(
+        if(widget.ownProfile) _ActionButton(
           label: _editingMode ? 'Save' : 'Edit profile',
           width: 148,
           filled: _editingMode,
@@ -261,7 +261,7 @@ class _ProfileScreenState extends State<ProfileScreen> with SingleTickerProvider
             width: 100,
             filled: true,
             cs: cs,
-            onTap: () {},
+            onTap: () {userRepository.followUser(currentUser.id, widget.profile.id);},
           ),
           const SizedBox(width: 8),
           Tooltip(

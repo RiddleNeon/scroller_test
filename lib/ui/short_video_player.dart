@@ -1,4 +1,5 @@
 import 'package:flutter/material.dart';
+import 'package:preload_page_view/preload_page_view.dart';
 import 'package:wurp/logic/video/video_provider.dart';
 import 'package:wurp/main.dart';
 import 'package:wurp/ui/feed_view_model.dart';
@@ -11,8 +12,8 @@ Widget feedVideos(TickerProvider tickerProvider, VideoProvider videoProvider, {F
   feedModel.switchToVideoAt(initialPage, videoSource: videoProvider); //so that the first video starts bc this function only gets called on page switches and the first page hasn't had a switch yet
   return Stack(
     children: [
-      PageView.builder(
-        controller: PageController(
+      PreloadPageView.builder(
+        controller: PreloadPageController(
           initialPage: initialPage,
           viewportFraction: 1,
         ),
@@ -24,7 +25,6 @@ Widget feedVideos(TickerProvider tickerProvider, VideoProvider videoProvider, {F
               builder: (context, snapshot) {
                 if (snapshot.connectionState != ConnectionState.done) {
                   return Container(
-                    color: Colors.black,
                     child: const Center(
                       child: CircularProgressIndicator(),
                     ),
