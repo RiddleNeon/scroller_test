@@ -5,7 +5,6 @@ import 'package:video_thumbnail/video_thumbnail.dart';
 import 'package:wurp/logic/feed_recommendation/search_video_result_recommender.dart';
 import 'package:wurp/logic/models/user_model.dart';
 import 'package:wurp/logic/video/video.dart';
-import 'package:wurp/main.dart';
 import 'package:wurp/ui/feed_view_model.dart';
 import 'package:wurp/ui/screens/search_screen/search_bar_result.dart';
 import 'package:wurp/ui/short_video_player.dart';
@@ -29,13 +28,6 @@ class _SearchScreenState extends State<SearchScreen> with TickerProviderStateMix
 
   static const _kSearchBarHeight = 56.0;
   static const _kPadding = 16.0;
-
-  static const _bg = Color(0xFF0A0A0F);
-  static const _surface = Color(0xFF16161E);
-  static const _accent = Color(0xFFFF2D55);
-  static const _accentSecondary = Color(0xFF00F2EA);
-  static const _textPrimary = Color(0xFFF5F5F5);
-  static const _textSecondary = Color(0xFF8A8A9A);
 
   @override
   void initState() {
@@ -80,16 +72,14 @@ class _SearchScreenState extends State<SearchScreen> with TickerProviderStateMix
 
   @override
   Widget build(BuildContext context) {
-    return Theme(
-      data: _darkTheme(),
-      child: Scaffold(
-        backgroundColor: _bg,
-        body: _hasSearched ? _buildResultsBody() : _buildLandingBody(),
-      ),
+    final cs = Theme.of(context).colorScheme;
+    return Scaffold(
+      backgroundColor: cs.surface,
+      body: _hasSearched ? _buildResultsBody(cs) : _buildLandingBody(cs),
     );
   }
 
-  Widget _buildLandingBody() {
+  Widget _buildLandingBody(ColorScheme cs) {
     return Center(
       child: SingleChildScrollView(
         padding: const EdgeInsets.symmetric(horizontal: 32),
@@ -97,38 +87,38 @@ class _SearchScreenState extends State<SearchScreen> with TickerProviderStateMix
           mainAxisSize: MainAxisSize.min,
           children: [
             ShaderMask(
-              shaderCallback: (bounds) => const LinearGradient(
-                colors: [_accent, _accentSecondary],
+              shaderCallback: (bounds) => LinearGradient(
+                colors: [cs.primary, cs.secondary],
               ).createShader(bounds),
-              child: const Text(
+              child: Text(
                 'Discover',
                 style: TextStyle(
                   fontSize: 48,
                   fontWeight: FontWeight.w900,
                   letterSpacing: -1,
-                  color: Colors.white,
+                  color: cs.onSurface,
                 ),
               ),
             ),
             const SizedBox(height: 8),
-            const Text(
+            Text(
               'Find videos & creators',
-              style: TextStyle(color: _textSecondary, fontSize: 15),
+              style: TextStyle(color: cs.onSurfaceVariant, fontSize: 15),
             ),
             const SizedBox(height: 40),
-            _buildSearchField(),
+            _buildSearchField(cs),
           ],
         ),
       ),
     );
   }
 
-  Widget _buildResultsBody() {
+  Widget _buildResultsBody(ColorScheme cs) {
     return CustomScrollView(
       controller: _scrollController,
       slivers: [
         SliverAppBar(
-          backgroundColor: _bg,
+          backgroundColor: cs.surface,
           pinned: true,
           floating: true,
           snap: true,
@@ -137,7 +127,7 @@ class _SearchScreenState extends State<SearchScreen> with TickerProviderStateMix
           flexibleSpace: FlexibleSpaceBar(
             background: Padding(
               padding: const EdgeInsets.fromLTRB(_kPadding, _kPadding + 8, _kPadding, _kPadding),
-              child: _buildSearchField(),
+              child: _buildSearchField(cs),
             ),
           ),
         ),
@@ -147,9 +137,9 @@ class _SearchScreenState extends State<SearchScreen> with TickerProviderStateMix
             TabBar(
               controller: _tabController,
               onTap: (_) => setState(() {}),
-              labelColor: _accent,
-              unselectedLabelColor: _textSecondary,
-              indicatorColor: _accent,
+              labelColor: cs.primary,
+              unselectedLabelColor: cs.onSurfaceVariant,
+              indicatorColor: cs.primary,
               indicatorWeight: 3,
               indicatorSize: TabBarIndicatorSize.label,
               labelStyle: const TextStyle(
@@ -180,57 +170,56 @@ class _SearchScreenState extends State<SearchScreen> with TickerProviderStateMix
                 ),
               ],
             ),
-            backgroundColor: _bg,
+            cs: cs,
           ),
         ),
         if (_loading)
-          const SliverFillRemaining(
+          SliverFillRemaining(
             child: Center(
-              child: CircularProgressIndicator(color: _accent),
+              child: CircularProgressIndicator(color: cs.primary),
             ),
           )
         else ...[
-          if (_tabController.index == 0) _buildVideoSliver() else _buildUserSliver(),
+          if (_tabController.index == 0) _buildVideoSliver(cs) else _buildUserSliver(cs),
         ],
       ],
     );
   }
 
-  Widget _buildSearchField() {
+  Widget _buildSearchField(ColorScheme cs) {
     return Container(
       height: _kSearchBarHeight,
       decoration: BoxDecoration(
-        color: _surface,
+        color: cs.surfaceContainer,
         borderRadius: BorderRadius.circular(28),
         boxShadow: [
           BoxShadow(
-            color: _accent.withValues(alpha: 0.15),
+            color: cs.primary.withValues(alpha: 0.15),
             blurRadius: 20,
-            spreadRadius: 0,
           ),
         ],
       ),
       child: TextField(
         controller: _controller,
         onSubmitted: _search,
-        style: const TextStyle(color: _textPrimary, fontSize: 16),
-        cursorColor: _accent,
+        style: TextStyle(color: cs.onSurface, fontSize: 16),
+        cursorColor: cs.primary,
         decoration: InputDecoration(
           hintText: 'Search videos, creators, tags…',
-          hintStyle: const TextStyle(color: _textSecondary, fontSize: 15),
+          hintStyle: TextStyle(color: cs.onSurfaceVariant, fontSize: 15),
           border: InputBorder.none,
-          prefixIcon: const Icon(Icons.search_rounded, color: _textSecondary, size: 22),
+          prefixIcon: Icon(Icons.search_rounded, color: cs.onSurfaceVariant, size: 22),
           suffixIcon: GestureDetector(
             onTap: _search,
             child: Container(
               margin: const EdgeInsets.all(8),
               decoration: BoxDecoration(
-                gradient: const LinearGradient(
-                  colors: [_accent, Color(0xFFFF6B35)],
+                gradient: LinearGradient(
+                  colors: [cs.primary, cs.primaryContainer],
                 ),
                 borderRadius: BorderRadius.circular(20),
               ),
-              child: const Icon(Icons.arrow_forward_rounded, color: Colors.white, size: 20),
+              child: Icon(Icons.arrow_forward_rounded, color: cs.onPrimary, size: 20),
             ),
           ),
           contentPadding: const EdgeInsets.symmetric(vertical: 18, horizontal: 4),
@@ -239,10 +228,10 @@ class _SearchScreenState extends State<SearchScreen> with TickerProviderStateMix
     );
   }
 
-  Widget _buildVideoSliver() {
+  Widget _buildVideoSliver(ColorScheme cs) {
     final videos = _searchBarResult?.videoResults ?? [];
     if (videos.isEmpty) {
-      return const SliverFillRemaining(child: _EmptyState(label: 'No videos found'));
+      return SliverFillRemaining(child: _EmptyState(label: 'No videos found', cs: cs));
     }
     return SliverPadding(
       padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 8),
@@ -252,23 +241,24 @@ class _SearchScreenState extends State<SearchScreen> with TickerProviderStateMix
             video: videos[index],
             thumbnail: _thumbnailFor(videos[index]),
             onTap: () => _openVideoPlayer(index),
+            cs: cs,
           ),
           childCount: videos.length,
         ),
       ),
     );
   }
-
-  Widget _buildUserSliver() {
+  
+  Widget _buildUserSliver(ColorScheme cs) {
     final users = _searchBarResult?.userResults ?? [];
     if (users.isEmpty) {
-      return const SliverFillRemaining(child: _EmptyState(label: 'No creators found'));
+      return SliverFillRemaining(child: _EmptyState(label: 'No creators found', cs: cs));
     }
     return SliverPadding(
       padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 8),
       sliver: SliverList(
         delegate: SliverChildBuilderDelegate(
-          (context, index) => _UserCard(user: users[index]),
+          (context, index) => _UserCard(user: users[index], cs: cs),
           childCount: users.length,
         ),
       ),
@@ -347,20 +337,6 @@ class _SearchScreenState extends State<SearchScreen> with TickerProviderStateMix
       },
     );
   }
-
-  ThemeData _darkTheme() {
-    return ThemeData.dark().copyWith(
-      scaffoldBackgroundColor: _bg,
-      colorScheme: const ColorScheme.dark(
-        primary: _accent,
-        secondary: _accentSecondary,
-        surface: _surface,
-      ),
-      tabBarTheme: const TabBarThemeData(
-        indicatorColor: _accent,
-      ),
-    );
-  }
 }
 
 
@@ -369,16 +345,13 @@ class _VideoCard extends StatelessWidget {
     required this.video,
     required this.thumbnail,
     required this.onTap,
+    required this.cs,
   });
 
   final Video video;
   final Future<Uint8List?> thumbnail;
   final VoidCallback onTap;
-
-  static const _accent = Color(0xFFFF2D55);
-  static const _surface = Color(0xFF16161E);
-  static const _textPrimary = Color(0xFFF5F5F5);
-  static const _textSecondary = Color(0xFF8A8A9A);
+  final ColorScheme cs;
 
   @override
   Widget build(BuildContext context) {
@@ -387,9 +360,9 @@ class _VideoCard extends StatelessWidget {
       child: Container(
         margin: const EdgeInsets.symmetric(vertical: 6),
         decoration: BoxDecoration(
-          color: _surface,
+          color: cs.surfaceContainer,
           borderRadius: BorderRadius.circular(14),
-          border: Border.all(color: Colors.white.withValues(alpha: 0.05)),
+          border: Border.all(color: cs.outlineVariant.withValues(alpha: 0.4)),
         ),
         child: Row(
           children: [
@@ -411,31 +384,35 @@ class _VideoCard extends StatelessWidget {
                       video.title,
                       maxLines: 2,
                       overflow: TextOverflow.ellipsis,
-                      style: const TextStyle(
-                        color: _textPrimary,
+                      style: TextStyle(
+                        color: cs.onSurface,
                         fontSize: 14,
                         fontWeight: FontWeight.w600,
                         height: 1.3,
                       ),
                     ),
                     const SizedBox(height: 6),
-                    Row(
-                      children: [
-                        Container(
-                          padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 2),
-                          decoration: BoxDecoration(
-                            color: _accent.withValues(alpha: 0.15),
-                            borderRadius: BorderRadius.circular(20),
+                    Container(
+                      padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 2),
+                      decoration: BoxDecoration(
+                        color: cs.primary.withValues(alpha: 0.15),
+                        borderRadius: BorderRadius.circular(20),
+                      ),
+                      child: Row(
+                        mainAxisSize: MainAxisSize.min,
+                        children: [
+                          Icon(Icons.play_arrow_rounded, color: cs.primary, size: 14),
+                          const SizedBox(width: 2),
+                          Text(
+                            'Watch',
+                            style: TextStyle(
+                              color: cs.primary,
+                              fontSize: 11,
+                              fontWeight: FontWeight.w600,
+                            ),
                           ),
-                          child: const Row(
-                            children: [
-                              Icon(Icons.play_arrow_rounded, color: _accent, size: 14),
-                              SizedBox(width: 2),
-                              Text('Watch', style: TextStyle(color: _accent, fontSize: 11, fontWeight: FontWeight.w600)),
-                            ],
-                          ),
-                        ),
-                      ],
+                        ],
+                      ),
                     ),
                   ],
                 ),
@@ -463,20 +440,15 @@ class _VideoCard extends StatelessWidget {
   }
 
   Widget _shimmer() => Shimmer(
-        child: Container(color: const Color(0xFF1E1E28)),
+        child: Container(color: cs.surfaceContainerHighest),
       );
 }
 
 class _UserCard extends StatelessWidget {
-  const _UserCard({required this.user});
+  const _UserCard({required this.user, required this.cs});
 
   final UserProfile user;
-
-  static const _surface = Color(0xFF16161E);
-  static const _accent = Color(0xFFFF2D55);
-  static const _accentSecondary = Color(0xFF00F2EA);
-  static const _textPrimary = Color(0xFFF5F5F5);
-  static const _textSecondary = Color(0xFF8A8A9A);
+  final ColorScheme cs;
 
   @override
   Widget build(BuildContext context) {
@@ -484,7 +456,7 @@ class _UserCard extends StatelessWidget {
       margin: const EdgeInsets.symmetric(vertical: 6),
       padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 14),
       decoration: BoxDecoration(
-        color: _surface,
+        color: cs.surfaceContainer,
         borderRadius: BorderRadius.circular(14),
         border: Border.all(color: Colors.white.withValues(alpha: 0.05)),
       ),
@@ -492,17 +464,17 @@ class _UserCard extends StatelessWidget {
         children: [
           Container(
             padding: const EdgeInsets.all(2),
-            decoration: const BoxDecoration(
+            decoration: BoxDecoration(
               shape: BoxShape.circle,
               gradient: LinearGradient(
-                colors: [_accent, _accentSecondary],
+                colors: [cs.primary, cs.secondary],
                 begin: Alignment.topLeft,
                 end: Alignment.bottomRight,
               ),
             ),
             child: CircleAvatar(
               radius: 26,
-              backgroundColor: _surface,
+              backgroundColor: cs.surfaceContainer,
               backgroundImage: (user.profileImageUrl.isNotEmpty) ? NetworkImage(user.profileImageUrl) : NetworkImage(createUserProfileImageUrl(user.username)),
             ),
           ),
@@ -513,8 +485,8 @@ class _UserCard extends StatelessWidget {
               children: [
                 Text(
                   user.username,
-                  style: const TextStyle(
-                    color: _textPrimary,
+                  style: TextStyle(
+                    color: cs.onSurface,
                     fontSize: 15,
                     fontWeight: FontWeight.w700,
                   ),
@@ -523,19 +495,17 @@ class _UserCard extends StatelessWidget {
                   const SizedBox(height: 2),
                   Text(
                     '@${user.username}',
-                    style: const TextStyle(color: _textSecondary, fontSize: 13),
+                    style: TextStyle(color: cs.onSurfaceVariant, fontSize: 13),
                   ),
                 ],
               ],
             ),
           ),
           TextButton(
-            onPressed: () {
-              userRepository.followUser(currentUser.id, user.id);
-            },
+            onPressed: () {},
             style: TextButton.styleFrom(
-              backgroundColor: _accent.withValues(alpha: 0.12),
-              foregroundColor: _accent,
+              backgroundColor: cs.primary.withValues(alpha: 0.12),
+              foregroundColor: cs.primary,
               padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 8),
               shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(20)),
               textStyle: const TextStyle(fontWeight: FontWeight.w700, fontSize: 13),
@@ -549,9 +519,10 @@ class _UserCard extends StatelessWidget {
 }
 
 class _EmptyState extends StatelessWidget {
-  const _EmptyState({required this.label});
+  const _EmptyState({required this.label, required this.cs});
 
   final String label;
+  final ColorScheme cs;
 
   @override
   Widget build(BuildContext context) {
@@ -559,9 +530,9 @@ class _EmptyState extends StatelessWidget {
       child: Column(
         mainAxisSize: MainAxisSize.min,
         children: [
-          Icon(Icons.search_off_rounded, size: 52, color: Colors.white.withValues(alpha: 0.2)),
+          Icon(Icons.search_off_rounded, size: 52, color: cs.onSurfaceVariant.withValues(alpha: 0.4)),
           const SizedBox(height: 12),
-          Text(label, style: const TextStyle(color: Color(0xFF8A8A9A), fontSize: 15)),
+          Text(label, style: TextStyle(color: cs.onSurfaceVariant, fontSize: 15)),
         ],
       ),
     );
@@ -569,10 +540,10 @@ class _EmptyState extends StatelessWidget {
 }
 
 class _TabBarDelegate extends SliverPersistentHeaderDelegate {
-  _TabBarDelegate(this.tabBar, {required this.backgroundColor});
+  _TabBarDelegate(this.tabBar, {required this.cs});
 
   final TabBar tabBar;
-  final Color backgroundColor;
+  final ColorScheme cs;
 
   @override
   double get minExtent => tabBar.preferredSize.height + 1;
@@ -583,11 +554,11 @@ class _TabBarDelegate extends SliverPersistentHeaderDelegate {
   @override
   Widget build(BuildContext context, double shrinkOffset, bool overlapsContent) {
     return Container(
-      color: backgroundColor,
+      color: cs.surface,
       child: Column(
         children: [
           tabBar,
-          Divider(height: 1, thickness: 1, color: Colors.white.withValues(alpha: 0.07)),
+          Divider(height: 1, thickness: 1, color: cs.outlineVariant.withValues(alpha: 0.3)),
         ],
       ),
     );

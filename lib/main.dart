@@ -64,7 +64,7 @@ void main() async {
       MaterialApp(
         debugShowCheckedModeBanner: false,
         navigatorKey: appNavigatorKey,
-        theme: ThemeData(primarySwatch: Colors.blue),
+        theme: ThemeData.from(colorScheme: getColorScheme()),
         home: auth?.currentUser == null
             ? const LoginScreen()
             : const MyHomePage(),
@@ -74,6 +74,15 @@ void main() async {
 
   if (kIsWeb) auth!.setPersistence(Persistence.LOCAL);
   print(auth?.currentUser);
+}
+
+ColorScheme getColorScheme() {
+  return const ColorScheme.dark(
+    secondary: Colors.blue,
+    onSecondary: Color(0xFF002828),
+    primary: Colors.teal,
+    tertiary: Colors.tealAccent,
+  );
 }
 
 Future<void> onUserLogin(UserProfile user, [BuildContext? context]) async {

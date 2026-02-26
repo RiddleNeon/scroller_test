@@ -7,7 +7,6 @@ import 'package:wurp/main.dart';
 import 'package:wurp/ui/widgets/logout_button.dart';
 
 import '../widgets/profile_image_picker.dart';
-// source (used as template): https://github.com/salvadordeveloper/flutter-tiktok
 
 class ProfileScreen extends StatefulWidget {
   final UserProfile profile;
@@ -19,255 +18,155 @@ class ProfileScreen extends StatefulWidget {
   State<ProfileScreen> createState() => _ProfileScreenState();
 }
 
-class _ProfileScreenState extends State<ProfileScreen> {
-  bool editingMode = false;
+class _ProfileScreenState extends State<ProfileScreen> with SingleTickerProviderStateMixin {
+  bool _editingMode = false;
+  late final TabController _tabController;
+
+  @override
+  void initState() {
+    super.initState();
+    _tabController = TabController(length: 3, vsync: this);
+  }
+
+  @override
+  void dispose() {
+    _tabController.dispose();
+    super.dispose();
+  }
 
   @override
   Widget build(BuildContext context) {
-    return SafeArea(
-      child: CustomScrollView(
-        slivers: [
-          SliverAppBar(
-            pinned: true,
-            expandedHeight: 400,
-            backgroundColor: Colors.white,
-            title: buildTopInfoBar(context),
-            flexibleSpace: FlexibleSpaceBar(
-              background: buildProfileInfo(context),
-              collapseMode: CollapseMode.pin,
-            ),
-            bottom: PreferredSize(preferredSize: const Size.fromHeight(45), child: buildFeedNavigationBar(context)),
-            stretch: true,
-          ),
-          SliverFillRemaining(
-            child: Container(
-              decoration: const BoxDecoration(gradient: LinearGradient(transform: GradientRotation(1.6), colors: [Colors.white, Colors.grey])),
-              child: const Center(child: Text("Nothing here!")),
-            ),
-          ),
-        ],
-      ),
-    );
-  }
-
-  Widget buildTopInfoBar(BuildContext context) {
-    return BackdropFilter(
-      filter: ImageFilter.blur(sigmaX: 15, sigmaY: 15),
-      child: Container(
-        decoration: const BoxDecoration(border: Border(bottom: BorderSide(color: Colors.black12)), color: Colors.white30),
-        height: kToolbarHeight,
-        child: Row(
-          mainAxisAlignment: MainAxisAlignment.spaceBetween,
-          crossAxisAlignment: CrossAxisAlignment.center,
-          children: [
-            widget.ownProfile ? const LogoutButton() : Container(),
-            Text(
-              widget.profile.username,
-              style: const TextStyle(fontSize: 15, fontWeight: FontWeight.bold),
-            ),
-            const Icon(Icons.more_horiz)
-          ],
-        ),
-      ),
-    );
-  }
-
-  Widget buildProfileInfo(BuildContext context) {
-    return Column(
-      children: [
-        const SizedBox(height: kToolbarHeight),
-        const SizedBox(height: 15),
-        Row(
-          mainAxisAlignment: MainAxisAlignment.center,
-          children: [
-            buildProfileImageAvatar()
-          ],
-        ),
-        const SizedBox(
-          height: 10,
-        ),
-        Text(
-          "@${widget.profile.username}",
-          style: const TextStyle(fontSize: 15, fontWeight: FontWeight.bold),
-        ),
-        const SizedBox(
-          height: 20,
-        ),
-        Row(
-          mainAxisAlignment: MainAxisAlignment.center,
-          children: [
-            Column(
-              children: [
-                Text(
-                  "${widget.profile.followingCount ?? 0}",
-                  style: const TextStyle(fontSize: 20, fontWeight: FontWeight.bold),
-                ),
-                const SizedBox(
-                  height: 5,
-                ),
-                const Text(
-                  "Following",
-                  style: TextStyle(fontSize: 12, fontWeight: FontWeight.normal),
-                ),
-              ],
-            ),
-            Container(
-              color: Colors.black54,
-              width: 1,
-              height: 15,
-              margin: const EdgeInsets.symmetric(horizontal: 15),
-            ),
-            Column(
-              children: [
-                Text(
-                  "${widget.profile.followersCount}",
-                  style: const TextStyle(fontSize: 20, fontWeight: FontWeight.bold),
-                ),
-                const SizedBox(
-                  height: 5,
-                ),
-                const Text(
-                  "Followers",
-                  style: TextStyle(fontSize: 12, fontWeight: FontWeight.normal),
-                ),
-              ],
-            ),
-            Container(
-              color: Colors.black54,
-              width: 1,
-              height: 15,
-              margin: const EdgeInsets.symmetric(horizontal: 15),
-            ),
-            Column(
-              children: [
-                Text(
-                  "${widget.profile.totalLikesCount ?? 0}",
-                  style: const TextStyle(fontSize: 20, fontWeight: FontWeight.bold),
-                ),
-                const SizedBox(
-                  height: 5,
-                ),
-                const Text(
-                  "Likes",
-                  style: TextStyle(fontSize: 12, fontWeight: FontWeight.normal),
-                ),
-              ],
-            ),
-          ],
-        ),
-        const SizedBox(
-          height: 15,
-        ),
-        Row(
-          mainAxisAlignment: MainAxisAlignment.center,
-          children: [
-            Container(
-              width: 140,
-              height: 47,
-              decoration: BoxDecoration(border: Border.all(color: Colors.black12)),
-              child: InkWell(
-                onTap: () {
-                  setEditing(!editingMode);
-                },
-                child: Center(
-                  child: Text(
-                    editingMode ? "Save" : "Edit profile",
-                    style: const TextStyle(fontSize: 15, fontWeight: FontWeight.bold),
-                  ),
-                ),
+    final cs = Theme.of(context).colorScheme;
+    return Scaffold(
+      backgroundColor: cs.surface,
+      body: SafeArea(
+        child: CustomScrollView(
+          slivers: [
+            SliverAppBar(
+              pinned: true,
+              floating: false,
+              expandedHeight: 380,
+              backgroundColor: cs.surface,
+              surfaceTintColor: Colors.transparent,
+              elevation: 0,
+              title: _buildCollapsedTitle(cs),
+              flexibleSpace: FlexibleSpaceBar(
+                collapseMode: CollapseMode.pin,
+                background: _buildProfileHeader(cs),
+              ),
+              bottom: PreferredSize(
+                preferredSize: const Size.fromHeight(46),
+                child: _buildTabBar(cs),
               ),
             ),
-            const SizedBox(
-              width: 5,
+            SliverFillRemaining(
+              child: TabBarView(
+                controller: _tabController,
+                children: [
+                  _buildEmptyTab(cs, Icons.grid_on_rounded, 'No videos yet'),
+                  _buildEmptyTab(cs, Icons.favorite_border_rounded, 'No liked videos'),
+                  _buildEmptyTab(cs, Icons.lock_outline_rounded, 'Private videos'),
+                ],
+              ),
             ),
-            if(!widget.ownProfile) Container(
-              width: 45,
-              height: 47,
-              decoration: BoxDecoration(border: Border.all(color: Colors.black12)),
-              child: const Tooltip(message: "report user", child: Center(child: Icon(Icons.flag_rounded, color: Colors.black54))),
-            )
           ],
         ),
-        const SizedBox(
-          height: 25,
-        ),
-      ],
+      ),
     );
   }
 
-  Widget buildFeedNavigationBar(BuildContext context) {
+  Widget _buildCollapsedTitle(ColorScheme cs) {
+    return ClipRect(
+      child: BackdropFilter(
+        filter: ImageFilter.blur(sigmaX: 20, sigmaY: 20),
+        child: Container(
+          color: cs.surfaceContainer.withValues(alpha: 0.7),
+          height: kToolbarHeight,
+          padding: const EdgeInsets.symmetric(horizontal: 4),
+          child: Row(
+            mainAxisAlignment: MainAxisAlignment.spaceBetween,
+            children: [
+              if (widget.ownProfile) const LogoutButton() else const SizedBox(width: 48),
+              Text(
+                widget.profile.username,
+                style: TextStyle(
+                  color: cs.onSurface,
+                  fontSize: 15,
+                  fontWeight: FontWeight.w700,
+                  letterSpacing: 0.2,
+                ),
+              ),
+              IconButton(
+                icon: Icon(Icons.more_horiz, color: cs.onSurface),
+                onPressed: () {},
+              ),
+            ],
+          ),
+        ),
+      ),
+    );
+  }
+
+  Widget _buildProfileHeader(ColorScheme cs) {
     return Container(
-      height: 45,
-      decoration: BoxDecoration(border: Border.all(color: Colors.black12)),
-      child: Row(
-        mainAxisAlignment: MainAxisAlignment.spaceAround,
+      color: cs.surface,
+      padding: const EdgeInsets.only(top: kToolbarHeight),
+      child: Column(
         children: [
-          Column(
-            mainAxisAlignment: MainAxisAlignment.end,
-            children: [
-              const Icon(Icons.menu),
-              const SizedBox(
-                height: 7,
-              ),
-              Container(
-                color: Colors.black,
-                height: 2,
-                width: 55,
-              )
-            ],
+          const SizedBox(height: 20),
+          _buildAvatar(cs),
+          const SizedBox(height: 14),
+          Text(
+            '@${widget.profile.username}',
+            style: TextStyle(
+              color: cs.onSurface,
+              fontSize: 16,
+              fontWeight: FontWeight.w800,
+              letterSpacing: 0.3,
+            ),
           ),
-          Column(
-            mainAxisAlignment: MainAxisAlignment.end,
-            children: [
-              const Icon(
-                Icons.favorite_border,
-                color: Colors.black26,
-              ),
-              const SizedBox(
-                height: 7,
-              ),
-              Container(
-                color: Colors.transparent,
-                height: 2,
-                width: 55,
-              )
-            ],
-          ),
-          Column(
-            mainAxisAlignment: MainAxisAlignment.end,
-            children: <Widget>[
-              const Icon(
-                Icons.lock_outline,
-                color: Colors.black26,
-              ),
-              const SizedBox(
-                height: 7,
-              ),
-              Container(
-                color: Colors.transparent,
-                height: 2,
-                width: 55,
-              )
-            ],
-          ),
+          const SizedBox(height: 20),
+          _buildStatsRow(cs),
+          const SizedBox(height: 20),
+          _buildActionRow(cs),
+          const SizedBox(height: 20),
         ],
       ),
     );
   }
 
-  Widget buildProfileImageAvatar() {
-    final ClipOval avatar = ClipOval(
-      child: CachedNetworkImage(
-        fit: BoxFit.cover,
-        imageUrl: currentUser.profileImageUrl,
-        height: 100.0,
-        width: 100.0,
-        placeholder: (context, url) => const CircularProgressIndicator(),
-        errorWidget: (context, url, error) => const Icon(Icons.error),
+  Widget _buildAvatar(ColorScheme cs) {
+    final avatar = Container(
+      width: 100,
+      height: 100,
+      decoration: BoxDecoration(
+        shape: BoxShape.circle,
+        gradient: LinearGradient(
+          colors: [cs.primary, cs.secondary],
+          begin: Alignment.topLeft,
+          end: Alignment.bottomRight,
+        ),
+      ),
+      padding: const EdgeInsets.all(2.5),
+      child: ClipOval(
+        child: CachedNetworkImage(
+          fit: BoxFit.cover,
+          imageUrl: currentUser.profileImageUrl,
+          placeholder: (context, url) => Container(
+            color: cs.surfaceContainer,
+            child: Center(
+              child: CircularProgressIndicator(strokeWidth: 2, color: cs.primary),
+            ),
+          ),
+          errorWidget: (context, url, error) => Container(
+            color: cs.surfaceContainer,
+            child: Icon(Icons.person_rounded, size: 48, color: cs.onSurfaceVariant),
+          ),
+        ),
       ),
     );
 
-    if (widget.ownProfile && editingMode) {
+    if (widget.ownProfile && _editingMode) {
       return Stack(
         children: [
           avatar,
@@ -275,15 +174,16 @@ class _ProfileScreenState extends State<ProfileScreen> {
             bottom: 0,
             right: 0,
             child: GestureDetector(
-              onTap: showProfileImageChangeOverlay,
+              onTap: _showProfileImageChangeOverlay,
               child: Container(
-                width: 28,
-                height: 28,
-                decoration: const BoxDecoration(
-                  color: Colors.black,
+                width: 30,
+                height: 30,
+                decoration: BoxDecoration(
+                  color: cs.primary,
                   shape: BoxShape.circle,
+                  border: Border.all(color: cs.surface, width: 2),
                 ),
-                child: const Icon(Icons.edit, size: 15, color: Colors.white),
+                child: Icon(Icons.edit_rounded, size: 14, color: cs.onPrimary),
               ),
             ),
           ),
@@ -294,21 +194,190 @@ class _ProfileScreenState extends State<ProfileScreen> {
     return avatar;
   }
 
-  void showProfileImageChangeOverlay() async {
-    final newUrl = await showProfileImagePicker(context);
-    if (newUrl != null && mounted) {
-      userRepository.updateProfileImageUrl(currentUser, newUrl).then(
-        (value) {
-          currentUser = value;
-          if(mounted) setState(() {});
-        },
-      );
-    }
+  Widget _buildStatsRow(ColorScheme cs) {
+    return Row(
+      mainAxisAlignment: MainAxisAlignment.center,
+      children: [
+        _buildStatItem(cs, '${widget.profile.followingCount ?? 0}', 'Following'),
+        _buildStatDivider(cs),
+        _buildStatItem(cs, '${widget.profile.followersCount}', 'Followers'),
+        _buildStatDivider(cs),
+        _buildStatItem(cs, '${widget.profile.totalLikesCount ?? 0}', 'Likes'),
+      ],
+    );
   }
 
-  void setEditing(bool val) {
-    setState(() {
-      editingMode = val;
-    });
+  Widget _buildStatItem(ColorScheme cs, String value, String label) {
+    return Padding(
+      padding: const EdgeInsets.symmetric(horizontal: 18),
+      child: Column(
+        children: [
+          Text(
+            value,
+            style: TextStyle(
+              color: cs.onSurface,
+              fontSize: 20,
+              fontWeight: FontWeight.w800,
+              letterSpacing: -0.5,
+            ),
+          ),
+          const SizedBox(height: 3),
+          Text(
+            label,
+            style: TextStyle(
+              color: cs.onSurfaceVariant,
+              fontSize: 12,
+              fontWeight: FontWeight.w500,
+            ),
+          ),
+        ],
+      ),
+    );
+  }
+
+  Widget _buildStatDivider(ColorScheme cs) {
+    return Container(
+      width: 1,
+      height: 22,
+      color: cs.outlineVariant,
+    );
+  }
+
+  Widget _buildActionRow(ColorScheme cs) {
+    return Row(
+      mainAxisAlignment: MainAxisAlignment.center,
+      children: [
+        _ActionButton(
+          label: _editingMode ? 'Save' : 'Edit profile',
+          width: 148,
+          filled: _editingMode,
+          cs: cs,
+          onTap: () => setState(() => _editingMode = !_editingMode),
+        ),
+        if (!widget.ownProfile) ...[
+          const SizedBox(width: 8),
+          _ActionButton(
+            label: 'Follow',
+            width: 100,
+            filled: true,
+            cs: cs,
+            onTap: () {},
+          ),
+          const SizedBox(width: 8),
+          Tooltip(
+            message: 'Report user',
+            child: GestureDetector(
+              onTap: () {},
+              child: Container(
+                width: 46,
+                height: 38,
+                decoration: BoxDecoration(
+                  border: Border.all(color: cs.outlineVariant),
+                  borderRadius: BorderRadius.circular(8),
+                ),
+                child: Icon(Icons.flag_rounded, size: 20, color: cs.onSurfaceVariant),
+              ),
+            ),
+          ),
+        ],
+      ],
+    );
+  }
+
+  Widget _buildTabBar(ColorScheme cs) {
+    return Container(
+      height: 46,
+      decoration: BoxDecoration(
+        color: cs.surface,
+        border: Border(
+          top: BorderSide(color: cs.outlineVariant.withValues(alpha: 0.5)),
+          bottom: BorderSide(color: cs.outlineVariant.withValues(alpha: 0.5)),
+        ),
+      ),
+      child: TabBar(
+        controller: _tabController,
+        indicatorColor: cs.primary,
+        indicatorWeight: 2.5,
+        indicatorSize: TabBarIndicatorSize.tab,
+        dividerColor: Colors.transparent,
+        labelColor: cs.onSurface,
+        unselectedLabelColor: cs.onSurfaceVariant,
+        tabs: const [
+          Tab(icon: Icon(Icons.grid_on_rounded, size: 22)),
+          Tab(icon: Icon(Icons.favorite_border_rounded, size: 22)),
+          Tab(icon: Icon(Icons.lock_outline_rounded, size: 22)),
+        ],
+      ),
+    );
+  }
+
+  Widget _buildEmptyTab(ColorScheme cs, IconData icon, String label) {
+    return Center(
+      child: Column(
+        mainAxisSize: MainAxisSize.min,
+        children: [
+          Icon(icon, size: 48, color: cs.onSurfaceVariant.withValues(alpha: 0.35)),
+          const SizedBox(height: 12),
+          Text(label, style: TextStyle(color: cs.onSurfaceVariant, fontSize: 14, fontWeight: FontWeight.w500)),
+        ],
+      ),
+    );
+  }
+
+  void _showProfileImageChangeOverlay() async {
+    final newUrl = await showProfileImagePicker(context);
+    if (newUrl != null && mounted) {
+      userRepository.updateProfileImageUrl(currentUser, newUrl).then((value) {
+        currentUser = value;
+        if (mounted) setState(() {});
+      });
+    }
+  }
+}
+
+class _ActionButton extends StatelessWidget {
+  const _ActionButton({
+    required this.label,
+    required this.width,
+    required this.filled,
+    required this.cs,
+    required this.onTap,
+  });
+
+  final String label;
+  final double width;
+  final bool filled;
+  final ColorScheme cs;
+  final VoidCallback onTap;
+
+  @override
+  Widget build(BuildContext context) {
+    return GestureDetector(
+      onTap: onTap,
+      child: AnimatedContainer(
+        duration: const Duration(milliseconds: 200),
+        width: width,
+        height: 38,
+        decoration: BoxDecoration(
+          color: filled ? cs.primary : Colors.transparent,
+          border: Border.all(
+            color: filled ? cs.primary : cs.outlineVariant,
+            width: 1.5,
+          ),
+          borderRadius: BorderRadius.circular(8),
+        ),
+        child: Center(
+          child: Text(
+            label,
+            style: TextStyle(
+              color: filled ? cs.onPrimary : cs.onSurface,
+              fontSize: 14,
+              fontWeight: FontWeight.w700,
+              letterSpacing: 0.2,
+            ),
+          ),
+        ),
+      ),
+    );
   }
 }
