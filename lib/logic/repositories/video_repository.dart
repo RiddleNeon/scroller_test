@@ -6,6 +6,7 @@ import 'package:wurp/logic/video/video.dart';
 import '../../main.dart';
 
 VideoRepository videoRepo = VideoRepository();
+final FirestoreBatchQueue batchQueue = FirestoreBatchQueue();
 
 class VideoRepository {
   Future<Video> getVideoById(String id) async {
@@ -32,7 +33,7 @@ class VideoRepository {
   }) async {
     final videoRef = firestore.collection('videos').doc();
 
-    _batchQueue.set(videoRef, {
+    batchQueue.set(videoRef, {
       'title': title,
       'description': description,
       'videoUrl': videoUrl,
@@ -46,7 +47,7 @@ class VideoRepository {
       'viewsCount': 0,
     });
 
-    _batchQueue.set(
+    batchQueue.set(
       firestore.collection('users').doc(authorId).collection('videos').doc(videoRef.id),
       {
         'createdAt': FieldValue.serverTimestamp(),
@@ -59,25 +60,25 @@ class VideoRepository {
     }
   }
 
-  final FirestoreBatchQueue _batchQueue = FirestoreBatchQueue();
+  
 
   /// Like a video
   void likeVideo(String userId, String videoId, String authorId) async {
-    _batchQueue.set(
+    batchQueue.set(
       firestore.collection('users').doc(userId).collection('liked_videos').doc(videoId),
       {
         'likedAt': FieldValue.serverTimestamp(),
       },
     );
 
-    _batchQueue.set(
+    batchQueue.set(
       firestore.collection('videos').doc(videoId).collection('likes').doc(userId),
       {
         'likedAt': FieldValue.serverTimestamp(),
       },
     );
 
-    _batchQueue.update(
+    batchQueue.update(
       firestore.collection('videos').doc(videoId),
       {
         'likesCount': FieldValue.increment(1),
@@ -89,15 +90,15 @@ class VideoRepository {
 
   /// Unlike a video
   void unlikeVideo(String userId, String videoId, String authorId) {
-    _batchQueue.delete(
+    batchQueue.delete(
       firestore.collection('users').doc(userId).collection('liked_videos').doc(videoId),
     );
 
-    _batchQueue.delete(
+    batchQueue.delete(
       firestore.collection('videos').doc(videoId).collection('likes').doc(userId),
     );
 
-    _batchQueue.update(
+    batchQueue.update(
       firestore.collection('videos').doc(videoId),
       {
         'likesCount': FieldValue.increment(-1),
@@ -108,21 +109,21 @@ class VideoRepository {
   }
 
   void dislikeVideo(String userId, String videoId) {
-    _batchQueue.set(
+    batchQueue.set(
       firestore.collection('users').doc(userId).collection('disliked_videos').doc(videoId),
       {
         'dislikedAt': FieldValue.serverTimestamp(),
       },
     );
 
-    _batchQueue.set(
+    batchQueue.set(
       firestore.collection('videos').doc(videoId).collection('dislikes').doc(userId),
       {
         'dislikedAt': FieldValue.serverTimestamp(),
       },
     );
 
-    _batchQueue.update(
+    batchQueue.update(
       firestore.collection('videos').doc(videoId),
       {
         'dislikesCount': FieldValue.increment(1),
@@ -132,15 +133,15 @@ class VideoRepository {
 
   /// Unlike a video
   void undislikeVideo(String userId, String videoId) {
-    _batchQueue.delete(
+    batchQueue.delete(
       firestore.collection('users').doc(userId).collection('disliked_videos').doc(videoId),
     );
 
-    _batchQueue.delete(
+    batchQueue.delete(
       firestore.collection('videos').doc(videoId).collection('dislikes').doc(userId),
     );
 
-    _batchQueue.update(
+    batchQueue.update(
       firestore.collection('videos').doc(videoId),
       {
         'dislikesCount': FieldValue.increment(-1),
@@ -148,69 +149,9 @@ class VideoRepository {
     );
   }
 
-  /// Follow a user
-  void followUser(String followerId, String followeeId) {
-    if (followerId == followeeId) {
-      throw Exception('Cannot follow yourself');
-    }
-
-    _batchQueue.set(
-      firestore.collection('users').doc(followerId).collection('following').doc(followeeId),
-      {
-        'followedAt': FieldValue.serverTimestamp(),
-      },
-    );
-
-    _batchQueue.set(
-      firestore.collection('users').doc(followeeId).collection('followers').doc(followerId),
-      {
-        'followedAt': FieldValue.serverTimestamp(),
-      },
-    );
-
-    _batchQueue.update(
-      firestore.collection('users').doc(followerId),
-      {
-        'followingCount': FieldValue.increment(1),
-      },
-    );
-
-    _batchQueue.update(
-      firestore.collection('users').doc(followeeId),
-      {
-        'followersCount': FieldValue.increment(1),
-      },
-    );
-  }
-
-  /// Unfollow a user
-  void unfollowUser(String followerId, String followeeId) {
-    _batchQueue.delete(
-      firestore.collection('users').doc(followerId).collection('following').doc(followeeId),
-    );
-
-    _batchQueue.delete(
-      firestore.collection('users').doc(followeeId).collection('followers').doc(followerId),
-    );
-
-    _batchQueue.update(
-      firestore.collection('users').doc(followerId),
-      {
-        'followingCount': FieldValue.increment(-1),
-      },
-    );
-
-    _batchQueue.update(
-      firestore.collection('users').doc(followeeId),
-      {
-        'followersCount': FieldValue.increment(-1),
-      },
-    );
-  }
-
   /// Increment view count
   void incrementViewCount(String videoId) {
-    _batchQueue.update(
+    batchQueue.update(
       firestore.collection('videos').doc(videoId),
       {
         'viewsCount': FieldValue.increment(1),
@@ -220,7 +161,7 @@ class VideoRepository {
 
   /// Increment share count
   void incrementShareCount(String videoId) {
-    _batchQueue.update(
+    batchQueue.update(
       firestore.collection('videos').doc(videoId),
       {
         'shares': FieldValue.increment(1),
@@ -277,7 +218,7 @@ class VideoRepository {
 
   /// Save video
   void saveVideo(String userId, String videoId) {
-    _batchQueue.set(
+    batchQueue.set(
       firestore.collection('users').doc(userId).collection('saved_videos').doc(videoId),
       {
         'savedAt': FieldValue.serverTimestamp(),
@@ -287,7 +228,7 @@ class VideoRepository {
 
   /// Unsave video
   void unsaveVideo(String userId, String videoId) {
-    _batchQueue.delete(
+    batchQueue.delete(
       firestore.collection('users').doc(userId).collection('saved_videos').doc(videoId),
     );
   }
@@ -298,7 +239,7 @@ class VideoRepository {
     String videoId,
     String reason,
   ) {
-    _batchQueue.set(
+    batchQueue.set(
       firestore.collection('video_reports').doc(),
       {
         'userId': userId,
@@ -312,11 +253,11 @@ class VideoRepository {
 
   /// Force commit all pending operations
   Future<void> flush() async {
-    await _batchQueue.commit();
+    await batchQueue.commit();
   }
 
   /// Get current queue size
-  int get pendingOperations => _batchQueue.queueSize;
+  int get pendingOperations => batchQueue.queueSize;
 
   /// Get video feed for a user (following feed)
   Future<List<Video>> getFollowingFeed(String userId, {int limit = 20}) async {

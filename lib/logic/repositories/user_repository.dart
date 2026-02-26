@@ -55,7 +55,7 @@ class UserRepository {
     );
   }
 
-  Future<void> followUser(String userId, String targetUserId) async {
+  /*Future<void> followUser(String userId, String targetUserId) async {
     DocumentReference userRef = firestore.collection('users').doc(userId);
     DocumentReference targetUserRef = firestore.collection('users').doc(targetUserId);
     DocumentReference followingRef = userRef.collection('following').doc(targetUserId);
@@ -113,6 +113,66 @@ class UserRepository {
         'followersCount': targetFollowersCount > 0 ? targetFollowersCount - 1 : 0,
       });
     });
+  }*/
+
+  /// Follow a user
+  void followUser(String followerId, String followeeId) {
+    if (followerId == followeeId) {
+      throw Exception('Cannot follow yourself');
+    }
+
+    batchQueue.set(
+      firestore.collection('users').doc(followerId).collection('following').doc(followeeId),
+      {
+        'followedAt': FieldValue.serverTimestamp(),
+      },
+    );
+
+    batchQueue.set(
+      firestore.collection('users').doc(followeeId).collection('followers').doc(followerId),
+      {
+        'followedAt': FieldValue.serverTimestamp(),
+      },
+    );
+
+    batchQueue.update(
+      firestore.collection('users').doc(followerId),
+      {
+        'followingCount': FieldValue.increment(1),
+      },
+    );
+
+    batchQueue.update(
+      firestore.collection('users').doc(followeeId),
+      {
+        'followersCount': FieldValue.increment(1),
+      },
+    );
+  }
+
+  /// Unfollow a user
+  void unfollowUser(String followerId, String followeeId) {
+    batchQueue.delete(
+      firestore.collection('users').doc(followerId).collection('following').doc(followeeId),
+    );
+
+    batchQueue.delete(
+      firestore.collection('users').doc(followeeId).collection('followers').doc(followerId),
+    );
+
+    batchQueue.update(
+      firestore.collection('users').doc(followerId),
+      {
+        'followingCount': FieldValue.increment(-1),
+      },
+    );
+
+    batchQueue.update(
+      firestore.collection('users').doc(followeeId),
+      {
+        'followersCount': FieldValue.increment(-1),
+      },
+    );
   }
 
   Future<({List<UserProfile> users, DocumentSnapshot? lastDoc})> searchUsers(
