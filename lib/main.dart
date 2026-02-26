@@ -21,13 +21,13 @@ FirebaseAuth? auth;
 UserRepository userRepository = UserRepository();
 
 FirebaseFirestore get firestore {
-  if (_firestore == null) throw StateError("Firestore isnt initialized yet!");
+  if (_firestore == null) throw StateError("Firestore isn't initialized yet!");
   return _firestore!;
 }
 FirebaseFirestore? _firestore;
 
 LocalSeenService get localSeenService {
-  if (_localSeenService == null) throw StateError("Local Seen Service isnt initialized yet!");
+  if (_localSeenService == null) throw StateError("Local Seen Service isn't initialized yet!");
   return _localSeenService!;
 }
 LocalSeenService? _localSeenService;
@@ -42,13 +42,18 @@ UserProfile get currentUser {
   assert(_currentUser != null, "No user is currently logged in!");
   return _currentUser!;
 }
+
+set currentUser(UserProfile newUser) {
+  _currentUser = newUser;
+}
+
 UserProfile? _currentUser;
 
 void main() async {
   WidgetsFlutterBinding.ensureInitialized();
   fvp.registerWith();
   app = await Firebase.initializeApp(options: DefaultFirebaseOptions.currentPlatform);
-  await FirebaseFirestore.instance.runTransaction((transaction) async {}); //whyever it fixes a crash on windows
+  await FirebaseFirestore.instance.runTransaction((transaction) async {}); //somehow it fixes a crash on windows
   auth = FirebaseAuth.instanceFor(app: app!);
   _firestore = FirebaseFirestore.instance;
   if (auth?.currentUser != null) {

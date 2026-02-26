@@ -1,382 +1,306 @@
+import 'dart:ui';
+
 import 'package:cached_network_image/cached_network_image.dart';
 import 'package:flutter/material.dart';
 import 'package:wurp/logic/models/user_model.dart';
 import 'package:wurp/main.dart';
-//source: https://github.com/salvadordeveloper/flutter-tiktok
 
-class ProfileScreen extends StatelessWidget {
+import '../widgets/profile_image_picker.dart';
+// source (used as template): https://github.com/salvadordeveloper/flutter-tiktok
+
+class ProfileScreen extends StatefulWidget {
   final UserProfile profile;
-  const ProfileScreen({Key? key, required this.profile}) : super(key: key);
+  final bool ownProfile;
+
+  const ProfileScreen({Key? key, required this.profile, required this.ownProfile}) : super(key: key);
+
+  @override
+  State<ProfileScreen> createState() => _ProfileScreenState();
+}
+
+class _ProfileScreenState extends State<ProfileScreen> {
+  bool editingMode = false;
 
   @override
   Widget build(BuildContext context) {
     return SafeArea(
+      child: CustomScrollView(
+        slivers: [
+          SliverAppBar(
+            pinned: true,
+            expandedHeight: 400,
+            backgroundColor: Colors.white,
+            title: buildTopInfoBar(context),
+            flexibleSpace: FlexibleSpaceBar(
+              background: buildProfileInfo(context),
+              collapseMode: CollapseMode.pin,
+            ),
+            bottom: PreferredSize(preferredSize: const Size.fromHeight(45), child: buildFeedNavigationBar(context)),
+            stretch: true,
+          ),
+          const SliverFillRemaining(
+            child: Center(child: Text("Content hier")),
+          ),
+        ],
+      ),
+    );
+  }
+
+  Widget buildTopInfoBar(BuildContext context) {
+    return BackdropFilter(
+      filter: ImageFilter.blur(sigmaX: 15, sigmaY: 15),
       child: Container(
-        color: Colors.white,
-        child: Column(
+        decoration: const BoxDecoration(border: Border(bottom: BorderSide(color: Colors.black12)), color: Colors.white30),
+        height: kToolbarHeight,
+        child: Row(
+          mainAxisAlignment: MainAxisAlignment.spaceBetween,
+          crossAxisAlignment: CrossAxisAlignment.center,
           children: [
-            Container(
-              decoration: const BoxDecoration(
-                  border: Border(bottom: BorderSide(color: Colors.black12))),
-              padding: const EdgeInsets.symmetric(vertical: 12, horizontal: 20),
-              child: Row(
-                mainAxisAlignment: MainAxisAlignment.spaceBetween,
-                children: [
-                  const Icon(Icons.person_add_alt_1_outlined),
-                  Text(
-                    profile.username,
-                    style: const TextStyle(fontSize: 15, fontWeight: FontWeight.bold),
-                  ),
-                  const Icon(Icons.more_horiz)
-                ],
-              ),
+            const Icon(Icons.person_add_alt_1_outlined),
+            Text(
+              widget.profile.username,
+              style: const TextStyle(fontSize: 15, fontWeight: FontWeight.bold),
             ),
-            SingleChildScrollView(
-              child: Column(
-                children: [
-                  const SizedBox(
-                    height: 15,
-                  ),
-                  Row(
-                    mainAxisAlignment: MainAxisAlignment.center,
-                    children: [
-                      ClipOval(
-                        child: CachedNetworkImage(
-                          fit: BoxFit.cover,
-                          imageUrl:
-                          currentUser.profileImageUrl,
-                          height: 100.0,
-                          width: 100.0,
-                          placeholder: (context, url) =>
-                              const CircularProgressIndicator(),
-                          errorWidget: (context, url, error) =>
-                              const Icon(Icons.error),
-                        ),
-                      ),
-                    ],
-                  ),
-                  const SizedBox(
-                    height: 10,
-                  ),
-                  Text(
-                    "@${profile.username}",
-                    style: const TextStyle(fontSize: 15, fontWeight: FontWeight.bold),
-                  ),
-                  const SizedBox(
-                    height: 20,
-                  ),
-                  Row(
-                    mainAxisAlignment: MainAxisAlignment.center,
-                    children: [
-                      Column(
-                        children: [
-                          Text(
-                            "${profile.followingCount}",
-                            style: const TextStyle(
-                                fontSize: 20, fontWeight: FontWeight.bold),
-                          ),
-                          const SizedBox(
-                            height: 5,
-                          ),
-                          const Text(
-                            "Following",
-                            style: TextStyle(
-                                fontSize: 12, fontWeight: FontWeight.normal),
-                          ),
-                        ],
-                      ),
-                      Container(
-                        color: Colors.black54,
-                        width: 1,
-                        height: 15,
-                        margin: const EdgeInsets.symmetric(horizontal: 15),
-                      ),
-                      Column(
-                        children: [
-                          Text(
-                            "${profile.followersCount}",
-                            style: const TextStyle(
-                                fontSize: 20, fontWeight: FontWeight.bold),
-                          ),
-                          const SizedBox(
-                            height: 5,
-                          ),
-                          const Text(
-                            "Followers",
-                            style: TextStyle(
-                                fontSize: 12, fontWeight: FontWeight.normal),
-                          ),
-                        ],
-                      ),
-                      Container(
-                        color: Colors.black54,
-                        width: 1,
-                        height: 15,
-                        margin: const EdgeInsets.symmetric(horizontal: 15),
-                      ),
-                      Column(
-                        children: [
-                          Text(
-                            "${profile.totalLikesCount}",
-                            style: const TextStyle(
-                                fontSize: 20, fontWeight: FontWeight.bold),
-                          ),
-                          const SizedBox(
-                            height: 5,
-                          ),
-                          const Text(
-                            "Likes",
-                            style: TextStyle(
-                                fontSize: 12, fontWeight: FontWeight.normal),
-                          ),
-                        ],
-                      ),
-                    ],
-                  ),
-                  const SizedBox(
-                    height: 15,
-                  ),
-                  Row(
-                    mainAxisAlignment: MainAxisAlignment.center,
-                    children: [
-                      Container(
-                        width: 140,
-                        height: 47,
-                        decoration: BoxDecoration(
-                            border: Border.all(color: Colors.black12)),
-                        child: const Center(
-                          child: Text(
-                            "Edit profile",
-                            style: TextStyle(
-                                fontSize: 15, fontWeight: FontWeight.bold),
-                          ),
-                        ),
-                      ),
-                      const SizedBox(
-                        width: 5,
-                      ),
-                      Container(
-                        width: 45,
-                        height: 47,
-                        decoration: BoxDecoration(
-                            border: Border.all(color: Colors.black12)),
-                        child: const Center(child: Icon(Icons.bookmark)),
-                      )
-                    ],
-                  ),
-                  const SizedBox(
-                    height: 25,
-                  ),
-                  Container(
-                    height: 45,
-                    decoration: BoxDecoration(
-                        border: Border.all(color: Colors.black12)),
-                    child: Row(
-                      mainAxisAlignment: MainAxisAlignment.spaceAround,
-                      children: [
-                        Column(
-                          mainAxisAlignment: MainAxisAlignment.end,
-                          children: [
-                            const Icon(Icons.menu),
-                            const SizedBox(
-                              height: 7,
-                            ),
-                            Container(
-                              color: Colors.black,
-                              height: 2,
-                              width: 55,
-                            )
-                          ],
-                        ),
-                        Column(
-                          mainAxisAlignment: MainAxisAlignment.end,
-                          children: [
-                            const Icon(
-                              Icons.favorite_border,
-                              color: Colors.black26,
-                            ),
-                            const SizedBox(
-                              height: 7,
-                            ),
-                            Container(
-                              color: Colors.transparent,
-                              height: 2,
-                              width: 55,
-                            )
-                          ],
-                        ),
-                        Column(
-                          mainAxisAlignment: MainAxisAlignment.end,
-                          children: <Widget>[
-                            const Icon(
-                              Icons.lock_outline,
-                              color: Colors.black26,
-                            ),
-                            const SizedBox(
-                              height: 7,
-                            ),
-                            Container(
-                              color: Colors.transparent,
-                              height: 2,
-                              width: 55,
-                            )
-                          ],
-                        ),
-                      ],
-                    ),
-                  ),
-                  Row(
-                    children: [
-                      Expanded(
-                        child: Container(
-                          height: 160,
-                          decoration: BoxDecoration(
-                              color: Colors.black26,
-                              border:
-                              Border.all(color: Colors.white70, width: .5)),
-                          child: FittedBox(
-                            child: CachedNetworkImage(
-                              fit: BoxFit.fill,
-                              imageUrl:
-                              "https://media.giphy.com/media/Ii4Cv63yG9iYawDtKC/giphy.gif",
-                              placeholder: (context, url) => const Padding(
-                                padding: EdgeInsets.all(35.0),
-                                child: CircularProgressIndicator(),
-                              ),
-                              errorWidget: (context, url, error) =>
-                                  const Icon(Icons.error),
-                            ),
-                            fit: BoxFit.fill,
-                          ),
-                        ),
-                      ),
-                      Expanded(
-                        child: Container(
-                          height: 160,
-                          decoration: BoxDecoration(
-                              color: Colors.black26,
-                              border:
-                              Border.all(color: Colors.white70, width: .5)),
-                          child: FittedBox(
-                            child: CachedNetworkImage(
-                              fit: BoxFit.fill,
-                              imageUrl:
-                              "https://media.giphy.com/media/tqfS3mgQU28ko/giphy.gif",
-                              placeholder: (context, url) => const Padding(
-                                padding: EdgeInsets.all(35.0),
-                                child: CircularProgressIndicator(),
-                              ),
-                              errorWidget: (context, url, error) =>
-                                  const Icon(Icons.error),
-                            ),
-                            fit: BoxFit.fill,
-                          ),
-                        ),
-                      ),
-                      Expanded(
-                        child: Container(
-                          height: 160,
-                          decoration: BoxDecoration(
-                              color: Colors.black26,
-                              border:
-                              Border.all(color: Colors.white70, width: .5)),
-                          child: FittedBox(
-                            child: CachedNetworkImage(
-                              fit: BoxFit.fill,
-                              imageUrl:
-                              "https://media.giphy.com/media/3o72EX5QZ9N9d51dqo/giphy.gif",
-                              placeholder: (context, url) => const Padding(
-                                padding: EdgeInsets.all(35.0),
-                                child: CircularProgressIndicator(),
-                              ),
-                              errorWidget: (context, url, error) =>
-                                  const Icon(Icons.error),
-                            ),
-                            fit: BoxFit.fill,
-                          ),
-                        ),
-                      ),
-                    ],
-                  ),
-                  Row(
-                    children: [
-                      Expanded(
-                        child: Container(
-                          height: 160,
-                          decoration: BoxDecoration(
-                              color: Colors.black26,
-                              border:
-                              Border.all(color: Colors.white70, width: .5)),
-                          child: FittedBox(
-                            child: CachedNetworkImage(
-                              fit: BoxFit.fill,
-                              imageUrl:
-                              "https://media.giphy.com/media/4oMoIbIQrvCjm/giphy.gif",
-                              placeholder: (context, url) => const Padding(
-                                padding: EdgeInsets.all(35.0),
-                                child: CircularProgressIndicator(),
-                              ),
-                              errorWidget: (context, url, error) =>
-                                  const Icon(Icons.error),
-                            ),
-                            fit: BoxFit.fill,
-                          ),
-                        ),
-                      ),
-                      Expanded(
-                        child: Container(
-                          height: 160,
-                          decoration: BoxDecoration(
-                              color: Colors.black26,
-                              border:
-                              Border.all(color: Colors.white70, width: .5)),
-                          child: FittedBox(
-                            child: CachedNetworkImage(
-                              fit: BoxFit.fill,
-                              imageUrl:
-                              "https://media.giphy.com/media/aZmD30dCFaPXG/giphy.gif",
-                              placeholder: (context, url) => const Padding(
-                                padding: EdgeInsets.all(35.0),
-                                child: CircularProgressIndicator(),
-                              ),
-                              errorWidget: (context, url, error) =>
-                                  const Icon(Icons.error),
-                            ),
-                            fit: BoxFit.fill,
-                          ),
-                        ),
-                      ),
-                      Expanded(
-                        child: Container(
-                          height: 160,
-                          decoration: BoxDecoration(
-                              color: Colors.black26,
-                              border:
-                              Border.all(color: Colors.white70, width: .5)),
-                          child: FittedBox(
-                            child: CachedNetworkImage(
-                              fit: BoxFit.fill,
-                              imageUrl:
-                              "https://media.giphy.com/media/NU8tcjnPaODTy/giphy.gif",
-                              placeholder: (context, url) => const Padding(
-                                padding: EdgeInsets.all(35.0),
-                                child: CircularProgressIndicator(),
-                              ),
-                              errorWidget: (context, url, error) =>
-                                  const Icon(Icons.error),
-                            ),
-                            fit: BoxFit.fill,
-                          ),
-                        ),
-                      ),
-                    ],
-                  ),
-                ],
-              ),
-            ),
+            const Icon(Icons.more_horiz)
           ],
         ),
       ),
     );
+  }
+
+  Widget buildProfileInfo(BuildContext context) {
+    return Column(
+      children: [
+        const SizedBox(height: kToolbarHeight),
+        const SizedBox(height: 15),
+        Row(
+          mainAxisAlignment: MainAxisAlignment.center,
+          children: [
+            buildProfileImageAvatar()
+          ],
+        ),
+        const SizedBox(
+          height: 10,
+        ),
+        Text(
+          "@${widget.profile.username}",
+          style: const TextStyle(fontSize: 15, fontWeight: FontWeight.bold),
+        ),
+        const SizedBox(
+          height: 20,
+        ),
+        Row(
+          mainAxisAlignment: MainAxisAlignment.center,
+          children: [
+            Column(
+              children: [
+                Text(
+                  "${widget.profile.followingCount ?? 0}",
+                  style: const TextStyle(fontSize: 20, fontWeight: FontWeight.bold),
+                ),
+                const SizedBox(
+                  height: 5,
+                ),
+                const Text(
+                  "Following",
+                  style: TextStyle(fontSize: 12, fontWeight: FontWeight.normal),
+                ),
+              ],
+            ),
+            Container(
+              color: Colors.black54,
+              width: 1,
+              height: 15,
+              margin: const EdgeInsets.symmetric(horizontal: 15),
+            ),
+            Column(
+              children: [
+                Text(
+                  "${widget.profile.followersCount}",
+                  style: const TextStyle(fontSize: 20, fontWeight: FontWeight.bold),
+                ),
+                const SizedBox(
+                  height: 5,
+                ),
+                const Text(
+                  "Followers",
+                  style: TextStyle(fontSize: 12, fontWeight: FontWeight.normal),
+                ),
+              ],
+            ),
+            Container(
+              color: Colors.black54,
+              width: 1,
+              height: 15,
+              margin: const EdgeInsets.symmetric(horizontal: 15),
+            ),
+            Column(
+              children: [
+                Text(
+                  "${widget.profile.totalLikesCount ?? 0}",
+                  style: const TextStyle(fontSize: 20, fontWeight: FontWeight.bold),
+                ),
+                const SizedBox(
+                  height: 5,
+                ),
+                const Text(
+                  "Likes",
+                  style: TextStyle(fontSize: 12, fontWeight: FontWeight.normal),
+                ),
+              ],
+            ),
+          ],
+        ),
+        const SizedBox(
+          height: 15,
+        ),
+        Row(
+          mainAxisAlignment: MainAxisAlignment.center,
+          children: [
+            Container(
+              width: 140,
+              height: 47,
+              decoration: BoxDecoration(border: Border.all(color: Colors.black12)),
+              child: const Center(
+                child: Text(
+                  "Edit profile",
+                  style: TextStyle(fontSize: 15, fontWeight: FontWeight.bold),
+                ),
+              ),
+            ),
+            const SizedBox(
+              width: 5,
+            ),
+            if(widget.ownProfile) Container(
+              width: 45,
+              height: 47,
+              decoration: BoxDecoration(border: Border.all(color: Colors.black12)),
+              child: const Tooltip(message: "report user", child: Center(child: Icon(Icons.flag_rounded, color: Colors.black54))),
+            )
+          ],
+        ),
+        const SizedBox(
+          height: 25,
+        ),
+      ],
+    );
+  }
+
+  Widget buildFeedNavigationBar(BuildContext context) {
+    return Container(
+      height: 45,
+      decoration: BoxDecoration(border: Border.all(color: Colors.black12)),
+      child: Row(
+        mainAxisAlignment: MainAxisAlignment.spaceAround,
+        children: [
+          Column(
+            mainAxisAlignment: MainAxisAlignment.end,
+            children: [
+              const Icon(Icons.menu),
+              const SizedBox(
+                height: 7,
+              ),
+              Container(
+                color: Colors.black,
+                height: 2,
+                width: 55,
+              )
+            ],
+          ),
+          Column(
+            mainAxisAlignment: MainAxisAlignment.end,
+            children: [
+              const Icon(
+                Icons.favorite_border,
+                color: Colors.black26,
+              ),
+              const SizedBox(
+                height: 7,
+              ),
+              Container(
+                color: Colors.transparent,
+                height: 2,
+                width: 55,
+              )
+            ],
+          ),
+          Column(
+            mainAxisAlignment: MainAxisAlignment.end,
+            children: <Widget>[
+              const Icon(
+                Icons.lock_outline,
+                color: Colors.black26,
+              ),
+              const SizedBox(
+                height: 7,
+              ),
+              Container(
+                color: Colors.transparent,
+                height: 2,
+                width: 55,
+              )
+            ],
+          ),
+        ],
+      ),
+    );
+  }
+
+  Widget buildProfileImageAvatar() {
+    final ClipOval avatar = ClipOval(
+      child: CachedNetworkImage(
+        fit: BoxFit.cover,
+        imageUrl: currentUser.profileImageUrl,
+        height: 100.0,
+        width: 100.0,
+        placeholder: (context, url) => const CircularProgressIndicator(),
+        errorWidget: (context, url, error) => const Icon(Icons.error),
+      ),
+    );
+
+    if (widget.ownProfile) {
+      return Stack(
+        children: [
+          avatar,
+          Positioned(
+            bottom: 0,
+            right: 0,
+            child: GestureDetector(
+              onTap: showProfileImageChangeOverlay,
+              child: Container(
+                width: 28,
+                height: 28,
+                decoration: const BoxDecoration(
+                  color: Colors.black,
+                  shape: BoxShape.circle,
+                ),
+                child: const Icon(Icons.edit, size: 15, color: Colors.white),
+              ),
+            ),
+          ),
+        ],
+      );
+    }
+
+    return avatar;
+  }
+
+  void showProfileImageChangeOverlay() async {
+    final newUrl = await showProfileImagePicker(context);
+    print("new url: $newUrl");
+    if (newUrl != null && mounted) {
+      userRepository.updateProfileImageUrl(currentUser, newUrl).then(
+        (value) {
+          currentUser = value;
+          if(mounted) setState(() {});
+        },
+      );
+    }
+  }
+
+  void setEditing(bool val) {
+    setState(() {
+      editingMode = val;
+    });
   }
 }

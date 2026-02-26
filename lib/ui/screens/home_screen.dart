@@ -51,7 +51,7 @@ class _MyHomePageState extends State<MyHomePage> with TickerProviderStateMixin, 
         content = SearchScreen();
         break;
       case 4:
-        content = ProfileScreen(profile: currentUser);
+        content = ProfileScreen(profile: currentUser, ownProfile: true);
         break;
       case int():
         content = feedVideos(this, videoProvider);
