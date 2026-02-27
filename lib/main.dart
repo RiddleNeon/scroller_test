@@ -10,14 +10,12 @@ import 'package:wurp/logic/local_storage/local_seen_service.dart';
 import 'package:wurp/logic/models/user_model.dart';
 import 'package:wurp/logic/repositories/user_repository.dart';
 import 'package:wurp/logic/video/video_provider.dart';
-import 'package:wurp/ui/screens/auth_screen.dart';
+import 'package:wurp/ui/router.dart';
 import 'package:wurp/ui/feed_view_model.dart';
-import 'package:wurp/ui/screens/home_screen.dart';
 
 
 FirebaseApp? app;
 FirebaseAuth? auth;
-
 UserRepository userRepository = UserRepository();
 
 FirebaseFirestore get firestore {
@@ -35,6 +33,9 @@ LocalSeenService? _localSeenService;
 FeedViewModel get feedViewModel => _feedViewModel ??= FeedViewModel(videoProvider);
 FeedViewModel? _feedViewModel;
 
+RecommendationVideoProvider? _videoProvider;
+RecommendationVideoProvider get videoProvider => _videoProvider ??= RecommendationVideoProvider();
+
 
 final GlobalKey<NavigatorState> appNavigatorKey = GlobalKey<NavigatorState>();
 
@@ -49,6 +50,8 @@ set currentUser(UserProfile newUser) {
 
 UserProfile? _currentUser;
 
+bool get userLoggedIn => _currentUser != null;
+
 void main() async {
   WidgetsFlutterBinding.ensureInitialized();
   fvp.registerWith();
@@ -56,18 +59,19 @@ void main() async {
   await FirebaseFirestore.instance.runTransaction((transaction) async {}); //somehow it fixes a crash on windows
   auth = FirebaseAuth.instanceFor(app: app!);
   _firestore = FirebaseFirestore.instance;
+  initRouter();
+  routerConfig.refresh();
   if (auth?.currentUser != null) {
+    print("user not null");
     await onUserLogin(await userRepository.getUser(auth!.currentUser!.uid));
   }
 
+  print("running now ");
   runApp(
-      MaterialApp(
+      MaterialApp.router(
         debugShowCheckedModeBanner: false,
-        navigatorKey: appNavigatorKey,
         theme: ThemeData.from(colorScheme: getColorScheme()),
-        home: auth?.currentUser == null
-            ? const LoginScreen()
-            : const MyHomePage(),
+        routerConfig: routerConfig,
       )
   );
 
@@ -105,8 +109,5 @@ void rebuildAllChildren(BuildContext context) {
   }
   (context as Element).visitChildren(rebuild);
 }
-
-RecommendationVideoProvider? _videoProvider;
-RecommendationVideoProvider get videoProvider => _videoProvider ??= RecommendationVideoProvider();
 
 bool runningOnMobile = defaultTargetPlatform == TargetPlatform.iOS || defaultTargetPlatform == TargetPlatform.android;

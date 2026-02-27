@@ -1,5 +1,6 @@
 import 'package:flutter/material.dart';
 import 'package:preload_page_view/preload_page_view.dart';
+import 'package:wurp/logic/video/video.dart';
 import 'package:wurp/logic/video/video_provider.dart';
 import 'package:wurp/main.dart';
 import 'package:wurp/ui/feed_view_model.dart';
@@ -46,4 +47,20 @@ Widget feedVideos(TickerProvider tickerProvider, VideoProvider videoProvider, {F
       ),
     ],
   );
+}
+
+
+class VideoFeed extends StatefulWidget {
+  final VideoProvider? videoProvider;
+  const VideoFeed({super.key, this.videoProvider});
+
+  @override
+  State<VideoFeed> createState() => _VideoFeedState();
+}
+
+class _VideoFeedState extends State<VideoFeed> with TickerProviderStateMixin {
+  @override
+  Widget build(BuildContext context) {
+    return feedVideos(this, widget.videoProvider ?? videoProvider);
+  }
 }

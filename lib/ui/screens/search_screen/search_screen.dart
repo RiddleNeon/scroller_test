@@ -16,6 +16,8 @@ import '../../../logic/repositories/user_repository.dart';
 class SearchScreen extends StatefulWidget {
   @override
   State<SearchScreen> createState() => _SearchScreenState();
+
+  const SearchScreen({super.key});
 }
 
 class _SearchScreenState extends State<SearchScreen> with TickerProviderStateMixin {
@@ -250,7 +252,7 @@ class _SearchScreenState extends State<SearchScreen> with TickerProviderStateMix
       ),
     );
   }
-  
+
   Widget _buildUserSliver(ColorScheme cs) {
     final users = _searchBarResult?.userResults ?? [];
     if (users.isEmpty) {
@@ -340,7 +342,6 @@ class _SearchScreenState extends State<SearchScreen> with TickerProviderStateMix
     );
   }
 }
-
 
 class _VideoCard extends StatelessWidget {
   const _VideoCard({
@@ -464,28 +465,33 @@ class _UserCard extends StatelessWidget {
       ),
       child: InkWell(
         onTap: () {
-          Navigator.of(context).push(MaterialPageRoute(builder: (context) {
-            return Hero(tag: 'profile_from_search', child: ProfileScreen(profile: user, ownProfile: user.id == currentUser.id));
-          },));
+          Navigator.of(context).push(MaterialPageRoute(
+            builder: (context) {
+              return Hero(tag: 'profile_avatar_${user.id}', child: ProfileScreen(profile: user, ownProfile: user.id == currentUser.id));
+            },
+          ));
         },
         child: Row(
           children: [
             Container(
-              padding: const EdgeInsets.all(2),
-              decoration: BoxDecoration(
-                shape: BoxShape.circle,
-                gradient: LinearGradient(
-                  colors: [cs.primary, cs.secondary],
-                  begin: Alignment.topLeft,
-                  end: Alignment.bottomRight,
+                padding: const EdgeInsets.all(2),
+                decoration: BoxDecoration(
+                  shape: BoxShape.circle,
+                  gradient: LinearGradient(
+                    colors: [cs.primary, cs.secondary],
+                    begin: Alignment.topLeft,
+                    end: Alignment.bottomRight,
+                  ),
                 ),
-              ),
-              child: CircleAvatar(
-                radius: 26,
-                backgroundColor: cs.surfaceContainer,
-                backgroundImage: (user.profileImageUrl.isNotEmpty) ? NetworkImage(user.profileImageUrl) : NetworkImage(createUserProfileImageUrl(user.username)),
-              ),
-            ),
+                child: Hero(
+                  tag: 'profile_avatar',
+                  child: CircleAvatar(
+                    radius: 26,
+                    backgroundColor: cs.surfaceContainer,
+                    backgroundImage:
+                        (user.profileImageUrl.isNotEmpty) ? NetworkImage(user.profileImageUrl) : NetworkImage(createUserProfileImageUrl(user.username)),
+                  ),
+                )),
             const SizedBox(width: 14),
             Expanded(
               child: Column(

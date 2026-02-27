@@ -1,9 +1,10 @@
 import 'package:flutter/material.dart';
 
 class BottomNavBar extends StatefulWidget {
-  final void Function(int) onSelectionChange;
+  final void Function(String) onSelectionChange;
+  final List<({IconData icon, String id, String label})> items;
 
-  const BottomNavBar({super.key, required this.onSelectionChange});
+  const BottomNavBar({super.key, required this.onSelectionChange, required this.items});
 
   @override
   State<BottomNavBar> createState() => BottomNavBarState();
@@ -12,13 +13,21 @@ class BottomNavBar extends StatefulWidget {
 class BottomNavBarState extends State<BottomNavBar> {
   int currentSelectedIndex = 0;
 
-  static const _items = [
-    (icon: Icons.home, label: 'Home'),
-    (icon: Icons.search, label: 'Discover'),
-    (icon: Icons.add_box_outlined, label: ''),
-    (icon: Icons.notifications_none, label: 'Inbox'),
-    (icon: Icons.person_outline, label: 'Profile'),
+  static const __items = [
+    (icon: Icons.home, label: 'Home', id: 'home'),
+    (icon: Icons.search, label: 'Discover', id: 'search'),
+    (icon: Icons.add_box_outlined, label: '', id: 'create'),
+    (icon: Icons.notifications_none, label: 'Inbox', id: 'notifications'),
+    (icon: Icons.person_outline, label: 'Profile', id: 'profile'),
   ];
+  
+  List get items => widget.items;
+  
+  @override
+  void initState() {
+    print("state created");
+    super.initState();
+  }
 
   @override
   Widget build(BuildContext context) {
@@ -30,7 +39,7 @@ class BottomNavBarState extends State<BottomNavBar> {
       color: Colors.black,
       child: LayoutBuilder(
         builder: (context, constraints) {
-          final slotWidth = constraints.maxWidth / _items.length;
+          final slotWidth = constraints.maxWidth / items.length;
 
           final selectorCenterX = currentSelectedIndex * slotWidth + slotWidth / 2;
 
@@ -55,14 +64,14 @@ class BottomNavBarState extends State<BottomNavBar> {
               ),
               Row(
                 mainAxisAlignment: MainAxisAlignment.spaceAround,
-                children: List.generate(_items.length, (i) {
-                  final item = _items[i];
+                children: List.generate(items.length, (i) {
+                  final item = items[i];
 
                   if (i == 2) {
                     return GestureDetector(
                       onTap: () {
                         setState(() => currentSelectedIndex = i);
-                        widget.onSelectionChange(currentSelectedIndex);
+                        widget.onSelectionChange(items[currentSelectedIndex].id);
                       },
                       child: SizedBox(
                         width: slotWidth,
@@ -93,7 +102,7 @@ class BottomNavBarState extends State<BottomNavBar> {
                   return GestureDetector(
                     onTap: () {
                       setState(() => currentSelectedIndex = i);
-                      widget.onSelectionChange(currentSelectedIndex);
+                      widget.onSelectionChange(items[currentSelectedIndex].id);
                     },
                     behavior: HitTestBehavior.opaque,
                     child: SizedBox(

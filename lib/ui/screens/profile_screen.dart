@@ -136,26 +136,29 @@ class _ProfileScreenState extends State<ProfileScreen> with SingleTickerProvider
   }
 
   Widget _buildAvatar(ColorScheme cs) {
-    final avatar = Container(
-        width: 100,
-        height: 100,
-        decoration: BoxDecoration(
-          shape: BoxShape.circle,
-          gradient: LinearGradient(
-            colors: [cs.primary, cs.secondary],
-            begin: Alignment.topLeft,
-            end: Alignment.bottomRight,
-          ),
-        ),
-        padding: const EdgeInsets.all(2.5),
-        child: ClipOval(
-            child: CircleAvatar(
-          radius: 26,
-          backgroundColor: cs.surfaceContainer,
-          backgroundImage: (widget.profile.profileImageUrl.isNotEmpty)
-              ? NetworkImage(widget.profile.profileImageUrl)
-              : NetworkImage(createUserProfileImageUrl(widget.profile.username)),
-        )));
+    final avatar = Hero(
+        tag: 'profile_avatar_${widget.profile.id}',
+        child: Container(
+            width: 100,
+            height: 100,
+            decoration: BoxDecoration(
+              shape: BoxShape.circle,
+              gradient: LinearGradient(
+                colors: [cs.primary, cs.secondary],
+                begin: Alignment.topLeft,
+                end: Alignment.bottomRight,
+              ),
+            ),
+            padding: const EdgeInsets.all(2.5),
+            child: ClipOval(
+              child: CircleAvatar(
+                radius: 26,
+                backgroundColor: cs.surfaceContainer,
+                backgroundImage: (widget.profile.profileImageUrl.isNotEmpty)
+                    ? NetworkImage(widget.profile.profileImageUrl)
+                    : NetworkImage(createUserProfileImageUrl(widget.profile.username)),
+              ),
+            )));
 
     if (widget.ownProfile && _editingMode) {
       return Stack(

@@ -3,6 +3,7 @@ import 'package:flutter/foundation.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter_login/flutter_login.dart';
 import 'package:font_awesome_flutter/font_awesome_flutter.dart';
+import 'package:wurp/ui/router.dart';
 
 import '../../logic/models/user_model.dart';
 import '../../main.dart';
@@ -87,9 +88,7 @@ class _LoginScreenState extends State<LoginScreen> {
     try {
       await onUserLogin(user!, context);
       if(mounted) {
-        Navigator.of(context).pushReplacement(
-          MaterialPageRoute(builder: (_) => const MyHomePage()),
-        );
+        routerConfig.push('/feed');
       }
     } catch (e, st) {
       print('Login failed: $e\n$st');

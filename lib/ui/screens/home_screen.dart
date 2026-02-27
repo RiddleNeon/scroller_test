@@ -1,3 +1,4 @@
+/*
 
 import 'dart:async';
 
@@ -48,7 +49,7 @@ class _MyHomePageState extends State<MyHomePage> with TickerProviderStateMixin, 
         content = feedVideos(this, videoProvider);
         break;
       case 1:
-        content = SearchScreen();
+        content = const SearchScreen();
         break;
       case 4:
         content = ProfileScreen(profile: currentUser, ownProfile: true);
@@ -56,8 +57,7 @@ class _MyHomePageState extends State<MyHomePage> with TickerProviderStateMixin, 
       case int():
         content = feedVideos(this, videoProvider);
         break;
-    }
-    ;
+    };
 
     return Scaffold(
       backgroundColor: Colors.black,
@@ -79,4 +79,4 @@ class _MyHomePageState extends State<MyHomePage> with TickerProviderStateMixin, 
       print("synced with firestore!");
     }
   }
-}
+}*/
