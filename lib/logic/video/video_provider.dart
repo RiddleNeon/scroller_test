@@ -22,10 +22,11 @@ class RecommendationVideoProvider implements VideoProvider {
       : _recommender = VideoRecommender();
 
   @override
-  Future<Video> getVideoByIndex(int index, [bool retry = true]) async {
+  Future<Video?> getVideoByIndex(int index, [bool retry = true]) async {
+    Future? loadingFuture;
     // Preload more videos if we're running low
     if (index >= _videoCache.length - _preloadThreshold) {
-      Future loadingFuture = preloadVideos(_preloadBatchSize);
+      loadingFuture = preloadVideos(_preloadBatchSize);
       if(index >= _videoCache.length) {
         // If requested index is beyond current cache, wait for preload to finish
         await loadingFuture;
@@ -38,11 +39,10 @@ class RecommendationVideoProvider implements VideoProvider {
       _currentIndex = index;
       return _videoCache[index];
     } else if(retry) {
+      await loadingFuture;
       return getVideoByIndex(index, false);
     }
-    
-    
-    throw Exception('Video index out of range: $index');
+    return null;
   }
   
   Future<void> _loadInitialVideos() {

@@ -52,9 +52,9 @@ class LocalSeenService {
     _blacklistedTagsBox = await Hive.openBox('${userId}_$_blacklistedTagsBoxName');
     _likeValsBox = await Hive.openBox('${userId}_$_likeValsBoxName');
 
-/*    await _cursorBox.clear();
+    await _cursorBox.clear();
     await _seenBox.clear();
-    await _interactionBox.clear();*/
+    await _interactionBox.clear();
 
     await syncWithFirestore();
     await cleanUpOldEntries();

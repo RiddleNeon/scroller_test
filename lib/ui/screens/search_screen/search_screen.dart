@@ -271,7 +271,9 @@ class _SearchScreenState extends State<SearchScreen> with TickerProviderStateMix
 
   final Map<String, Future<Uint8List?>> _cachedThumbnails = {};
 
-  Future<Uint8List?> _thumbnailFor(Video video) {
+  Future<Uint8List?> _thumbnailFor(Video video) async {
+    if(!(defaultTargetPlatform == TargetPlatform.android || defaultTargetPlatform == TargetPlatform.iOS)) return null;
+    
     _cachedThumbnails[video.videoUrl] ??= VideoThumbnail.thumbnailData(video: video.videoUrl);
     return _cachedThumbnails[video.videoUrl]!;
   }
@@ -467,7 +469,7 @@ class _UserCard extends StatelessWidget {
         onTap: () {
           Navigator.of(context).push(MaterialPageRoute(
             builder: (context) {
-              return Hero(tag: 'profile_avatar_${user.id}', child: ProfileScreen(profile: user, ownProfile: user.id == currentUser.id));
+              return ProfileScreen(profile: user, ownProfile: user.id == currentUser.id, hasBackButton: true);
             },
           ));
         },
@@ -483,15 +485,13 @@ class _UserCard extends StatelessWidget {
                     end: Alignment.bottomRight,
                   ),
                 ),
-                child: Hero(
-                  tag: 'profile_avatar',
-                  child: CircleAvatar(
+                child: CircleAvatar(
                     radius: 26,
                     backgroundColor: cs.surfaceContainer,
                     backgroundImage:
                         (user.profileImageUrl.isNotEmpty) ? NetworkImage(user.profileImageUrl) : NetworkImage(createUserProfileImageUrl(user.username)),
                   ),
-                )),
+                ),
             const SizedBox(width: 14),
             Expanded(
               child: Column(

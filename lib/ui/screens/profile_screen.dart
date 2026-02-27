@@ -6,13 +6,15 @@ import 'package:wurp/main.dart';
 import 'package:wurp/ui/widgets/logout_button.dart';
 
 import '../../logic/repositories/user_repository.dart';
+import '../misc/youtube_player.dart';
 import '../widgets/profile_image_picker.dart';
 
 class ProfileScreen extends StatefulWidget {
   final UserProfile profile;
   final bool ownProfile;
+  final bool hasBackButton;
 
-  const ProfileScreen({Key? key, required this.profile, required this.ownProfile}) : super(key: key);
+  const ProfileScreen({Key? key, required this.profile, required this.ownProfile, this.hasBackButton = false}) : super(key: key);
 
   @override
   State<ProfileScreen> createState() => _ProfileScreenState();
@@ -45,6 +47,7 @@ class _ProfileScreenState extends State<ProfileScreen> with SingleTickerProvider
             SliverAppBar(
               pinned: true,
               floating: false,
+              automaticallyImplyLeading: widget.hasBackButton,
               expandedHeight: 380,
               backgroundColor: cs.surface,
               surfaceTintColor: Colors.transparent,
@@ -86,7 +89,7 @@ class _ProfileScreenState extends State<ProfileScreen> with SingleTickerProvider
           child: Row(
             mainAxisAlignment: MainAxisAlignment.spaceBetween,
             children: [
-              if (widget.ownProfile) const LogoutButton() else const SizedBox(width: 48),
+              if (widget.ownProfile) const LogoutButton() else Container(),
               Text(
                 widget.profile.username,
                 style: TextStyle(
@@ -97,8 +100,10 @@ class _ProfileScreenState extends State<ProfileScreen> with SingleTickerProvider
                 ),
               ),
               IconButton(
-                icon: Icon(Icons.more_horiz, color: cs.onSurface),
-                onPressed: () {},
+                icon: Icon(Icons.settings, color: cs.onSurface),
+                onPressed: () {
+                  showRickDialog(context);
+                },
               ),
             ],
           ),
@@ -136,29 +141,27 @@ class _ProfileScreenState extends State<ProfileScreen> with SingleTickerProvider
   }
 
   Widget _buildAvatar(ColorScheme cs) {
-    final avatar = Hero(
-        tag: 'profile_avatar_${widget.profile.id}',
-        child: Container(
-            width: 100,
-            height: 100,
-            decoration: BoxDecoration(
-              shape: BoxShape.circle,
-              gradient: LinearGradient(
-                colors: [cs.primary, cs.secondary],
-                begin: Alignment.topLeft,
-                end: Alignment.bottomRight,
-              ),
-            ),
-            padding: const EdgeInsets.all(2.5),
-            child: ClipOval(
-              child: CircleAvatar(
-                radius: 26,
-                backgroundColor: cs.surfaceContainer,
-                backgroundImage: (widget.profile.profileImageUrl.isNotEmpty)
-                    ? NetworkImage(widget.profile.profileImageUrl)
-                    : NetworkImage(createUserProfileImageUrl(widget.profile.username)),
-              ),
-            )));
+    final avatar = Container(
+        width: 100,
+        height: 100,
+        decoration: BoxDecoration(
+          shape: BoxShape.circle,
+          gradient: LinearGradient(
+            colors: [cs.primary, cs.secondary],
+            begin: Alignment.topLeft,
+            end: Alignment.bottomRight,
+          ),
+        ),
+        padding: const EdgeInsets.all(2.5),
+        child: ClipOval(
+          child: CircleAvatar(
+            radius: 26,
+            backgroundColor: cs.surfaceContainer,
+            backgroundImage: (widget.profile.profileImageUrl.isNotEmpty)
+                ? NetworkImage(widget.profile.profileImageUrl)
+                : NetworkImage(createUserProfileImageUrl(widget.profile.username)),
+          ),
+        ));
 
     if (widget.ownProfile && _editingMode) {
       return Stack(

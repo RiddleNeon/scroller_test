@@ -4,6 +4,7 @@ import 'package:firebase_core/firebase_core.dart';
 import 'package:flutter/foundation.dart';
 import 'package:flutter/material.dart';
 import 'package:fvp/fvp.dart' as fvp;
+import 'package:webview_flutter/webview_flutter.dart';
 import 'package:wurp/logic/firebase_options.dart';
 import 'package:wurp/logic/feed_recommendation/user_preference_manager.dart';
 import 'package:wurp/logic/local_storage/local_seen_service.dart';

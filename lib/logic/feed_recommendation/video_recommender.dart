@@ -29,8 +29,6 @@ class VideoRecommender extends VideoRecommenderBase {
   /// Main recommendation function
   Future<Set<Video>> getRecommendedVideos({int limit = 20}) async {
     try {
-      print("getting recommendet vids");
-      
       // Get user preferences
       final userPreferences = await getUserPreferences();
 
@@ -39,8 +37,6 @@ class VideoRecommender extends VideoRecommenderBase {
 
       final candidateVideos = await _getCandidateVideos(userPreferences: userPreferences, limit: _candidatePoolSize);
       
-      print("got ${candidateVideos.map((e) => e.id).toList()} videos!");
-
       final scoredVideos = _scoreVideos(candidateVideos, userPreferences, recentInteractions);
 
       final diversifiedVideos = _applyDiversityFilter(scoredVideos, limit: limit);
@@ -97,9 +93,11 @@ class VideoRecommender extends VideoRecommenderBase {
   List<String>? blacklistedTags;
   List<String> _getTopTags(UserPreferences prefs, int count) {
     blacklistedTags ??= localSeenService.getBlacklistedTags();
-    print("blacklisted: $blacklistedTags");
     final sorted = prefs.tagPreferences.entries.toList()..sort((a, b) => b.value.compareTo(a.value));
-    return (sorted.where((element) => !blacklistedTags!.contains(element.key)).take(count).map((e) => e.key).toList())..forEach((element) => print("picked $element"));
+    return (sorted.where((element) => !blacklistedTags!.contains(element.key))
+        .take(count)
+        .map((e) => e.key).toList())
+      ..forEach((element) => print("picked $element"));
   }
 
   /// Score videos based on multiple factors

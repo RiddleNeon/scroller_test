@@ -23,6 +23,13 @@ class BottomNavBarState extends State<BottomNavBar> {
   
   List get items => widget.items;
   
+  void switchToIndex(int index) {
+    setState(() {
+      currentSelectedIndex = index;
+    });
+  }
+  
+  
   @override
   void initState() {
     print("state created");
