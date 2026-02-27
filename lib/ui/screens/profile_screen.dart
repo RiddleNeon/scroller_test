@@ -1,11 +1,11 @@
 import 'dart:ui';
 
-import 'package:cached_network_image/cached_network_image.dart';
 import 'package:flutter/material.dart';
 import 'package:wurp/logic/models/user_model.dart';
 import 'package:wurp/main.dart';
 import 'package:wurp/ui/widgets/logout_button.dart';
 
+import '../../logic/repositories/user_repository.dart';
 import '../widgets/profile_image_picker.dart';
 
 class ProfileScreen extends StatefulWidget {
@@ -137,34 +137,25 @@ class _ProfileScreenState extends State<ProfileScreen> with SingleTickerProvider
 
   Widget _buildAvatar(ColorScheme cs) {
     final avatar = Container(
-      width: 100,
-      height: 100,
-      decoration: BoxDecoration(
-        shape: BoxShape.circle,
-        gradient: LinearGradient(
-          colors: [cs.primary, cs.secondary],
-          begin: Alignment.topLeft,
-          end: Alignment.bottomRight,
-        ),
-      ),
-      padding: const EdgeInsets.all(2.5),
-      child: ClipOval(
-        child: CachedNetworkImage(
-          fit: BoxFit.cover,
-          imageUrl: currentUser.profileImageUrl,
-          placeholder: (context, url) => Container(
-            color: cs.surfaceContainer,
-            child: Center(
-              child: CircularProgressIndicator(strokeWidth: 2, color: cs.primary),
-            ),
-          ),
-          errorWidget: (context, url, error) => Container(
-            color: cs.surfaceContainer,
-            child: Icon(Icons.person_rounded, size: 48, color: cs.onSurfaceVariant),
+        width: 100,
+        height: 100,
+        decoration: BoxDecoration(
+          shape: BoxShape.circle,
+          gradient: LinearGradient(
+            colors: [cs.primary, cs.secondary],
+            begin: Alignment.topLeft,
+            end: Alignment.bottomRight,
           ),
         ),
-      ),
-    );
+        padding: const EdgeInsets.all(2.5),
+        child: ClipOval(
+            child: CircleAvatar(
+          radius: 26,
+          backgroundColor: cs.surfaceContainer,
+          backgroundImage: (widget.profile.profileImageUrl.isNotEmpty)
+              ? NetworkImage(widget.profile.profileImageUrl)
+              : NetworkImage(createUserProfileImageUrl(widget.profile.username)),
+        )));
 
     if (widget.ownProfile && _editingMode) {
       return Stack(
@@ -247,13 +238,14 @@ class _ProfileScreenState extends State<ProfileScreen> with SingleTickerProvider
     return Row(
       mainAxisAlignment: MainAxisAlignment.center,
       children: [
-        if(widget.ownProfile) _ActionButton(
-          label: _editingMode ? 'Save' : 'Edit profile',
-          width: 148,
-          filled: _editingMode,
-          cs: cs,
-          onTap: () => setState(() => _editingMode = !_editingMode),
-        ),
+        if (widget.ownProfile)
+          _ActionButton(
+            label: _editingMode ? 'Save' : 'Edit profile',
+            width: 148,
+            filled: _editingMode,
+            cs: cs,
+            onTap: () => setState(() => _editingMode = !_editingMode),
+          ),
         if (!widget.ownProfile) ...[
           const SizedBox(width: 8),
           _ActionButton(
@@ -261,7 +253,9 @@ class _ProfileScreenState extends State<ProfileScreen> with SingleTickerProvider
             width: 100,
             filled: true,
             cs: cs,
-            onTap: () {userRepository.followUser(currentUser.id, widget.profile.id);},
+            onTap: () {
+              userRepository.followUser(currentUser.id, widget.profile.id);
+            },
           ),
           const SizedBox(width: 8),
           Tooltip(

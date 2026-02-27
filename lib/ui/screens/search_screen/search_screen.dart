@@ -465,7 +465,7 @@ class _UserCard extends StatelessWidget {
       child: InkWell(
         onTap: () {
           Navigator.of(context).push(MaterialPageRoute(builder: (context) {
-            return ProfileScreen(profile: user, ownProfile: user.id == currentUser.id);
+            return Hero(tag: 'profile_from_search', child: ProfileScreen(profile: user, ownProfile: user.id == currentUser.id));
           },));
         },
         child: Row(
