@@ -10,7 +10,8 @@ class LocalSeenService {
   static const String _cursorBoxName = 'feed_cursors';
   static const String _interactionBoxName = 'seen_interactions';
   static const String _blacklistedTagsBoxName = 'blacklisted_tags';
-  static const String _likeValsBoxName = 'likec_videos';
+  static const String _likeValsBoxName = 'liked_videos';
+  static const String _followingBoxName = 'following_users';
   static const double maxLocalStorage = 5e7; //50k
 
   // Settings keys
@@ -18,6 +19,7 @@ class LocalSeenService {
   static const String _lastSyncLikesKey = 'lastSyncLikesTimestamp';
   static const String _lastSyncDislikesKey = 'lastSyncDislikesTimestamp';
   static const String _lastSyncPreferencesKey = 'lastSyncPreferencesTimestamp';
+  static const String _lastSyncFollowingKey = 'lastSyncFollowingTimestamp';
 
   // Firestore paths:
   // users/{uid}/liked_videos/{videoId}
@@ -31,6 +33,7 @@ class LocalSeenService {
   late Box _interactionBox;
   late Box<DateTime> _blacklistedTagsBox;
   late Box<bool> _likeValsBox; //bool: true -> like, false -> dislike, not in box: nothing
+  late Box<DateTime> _followingBox; // key: userId, value: followedAt
 
   late final String userId;
 
@@ -51,10 +54,15 @@ class LocalSeenService {
     _interactionBox = await Hive.openBox('${userId}_$_interactionBoxName');
     _blacklistedTagsBox = await Hive.openBox('${userId}_$_blacklistedTagsBoxName');
     _likeValsBox = await Hive.openBox('${userId}_$_likeValsBoxName');
+    _followingBox = await Hive.openBox<DateTime>('${userId}_$_followingBoxName');
 
+/*    await _seenBox.clear();
+    await _settingsBox.clear();
     await _cursorBox.clear();
-    await _seenBox.clear();
+    await _cursorDirtyBox.clear();
     await _interactionBox.clear();
+    await _blacklistedTagsBox.clear();
+    await _likeValsBox.clear();*/
 
     await syncWithFirestore();
     await cleanUpOldEntries();
@@ -128,14 +136,17 @@ class LocalSeenService {
         DateTime.now().subtract(const Duration(days: 7));
     final lastSyncPreferences = _settingsBox.get(_lastSyncPreferencesKey) as DateTime? ??
         DateTime.now().subtract(const Duration(days: 7));
+    final lastSyncFollowing = _settingsBox.get(_lastSyncFollowingKey) as DateTime? ??
+        DateTime.now().subtract(const Duration(days: 7));
 
-    print("syncing — seen: $lastSyncSeen, likes: $lastSyncLikes, dislikes: $lastSyncDislikes, preferences: $lastSyncPreferences");
+    print("syncing — seen: $lastSyncSeen, likes: $lastSyncLikes, dislikes: $lastSyncDislikes, preferences: $lastSyncPreferences, following: $lastSyncFollowing");
 
     await Future.wait([
       _syncSeenInteractions(lastSyncSeen, onlyLoad: onlyLoad),
       _syncLikes(lastSyncLikes, onlyLoad: onlyLoad),
       _syncDislikes(lastSyncDislikes, onlyLoad: onlyLoad),
       _syncPreferences(lastSyncPreferences, onlyLoad: onlyLoad),
+      _syncFollowing(lastSyncFollowing, onlyLoad: onlyLoad),
     ]);
     print("successfully synced!");
   }
@@ -499,4 +510,82 @@ class LocalSeenService {
 
   bool isLiked(String videoId) => _likeValsBox.get(videoId) == true;
   bool isDisliked(String videoId) => _likeValsBox.get(videoId) == false;
+
+  // ---------------------------------------------------------------------------
+  // Following  →  users/{uid}/following/{followedUserId}/followedAt
+  // ---------------------------------------------------------------------------
+
+  Future<void> _syncFollowing(DateTime lastSync, {required bool onlyLoad}) async {
+    final followingRef = firestore.collection('users').doc(userId).collection('following');
+
+    if (!onlyLoad) {
+      print("Uploading local following to Firestore...");
+      final batch = firestore.batch();
+      int count = 0;
+
+      for (final key in _followingBox.keys) {
+        final followedUserId = key as String;
+        final followedAt = _followingBox.get(followedUserId)!;
+        if (!followedAt.isAfter(lastSync)) continue;
+        batch.set(
+          followingRef.doc(followedUserId),
+          {'followedAt': Timestamp.fromDate(followedAt)},
+          SetOptions(merge: true),
+        );
+        count++;
+      }
+
+      if (count > 0) await batch.commit();
+      print("Uploaded $count following entries");
+    }
+
+    final snapshot = await followingRef
+        .where('followedAt', isGreaterThan: Timestamp.fromDate(lastSync))
+        .orderBy('followedAt', descending: true)
+        .get();
+
+    if (snapshot.docs.isEmpty) {
+      print("Nothing new from Firestore (following)");
+      return;
+    }
+
+    final Map<String, DateTime> toWrite = {};
+    for (final doc in snapshot.docs) {
+      final data = doc.data();
+      final followedAt = (data['followedAt'] as Timestamp).toDate();
+      final local = _followingBox.get(doc.id);
+      if (local == null || followedAt.isAfter(local)) {
+        toWrite[doc.id] = followedAt;
+      }
+    }
+
+    if (toWrite.isNotEmpty) {
+      await _followingBox.putAll(toWrite);
+      print("Synced ${toWrite.length} new following entries from Firestore");
+    }
+
+    final latestFollowedAt = (snapshot.docs.first.data()['followedAt'] as Timestamp?)?.toDate();
+    if (latestFollowedAt != null) {
+      await _settingsBox.put(_lastSyncFollowingKey, latestFollowedAt);
+    }
+  }
+
+  // ---------------------------------------------------------------------------
+  // Following helpers
+  // ---------------------------------------------------------------------------
+
+  Future<void> followUser(String followedUserId) async {
+    final now = DateTime.now();
+    await _followingBox.put(followedUserId, now);
+  }
+
+  Future<void> unfollowUser(String followedUserId) async {
+    await _followingBox.delete(followedUserId);
+  }
+
+  bool isFollowing(String followedUserId) => _followingBox.containsKey(followedUserId);
+
+  Set<String> get allFollowingIds => _followingBox.keys.cast<String>().toSet();
+
+  DateTime? followedAt(String followedUserId) => _followingBox.get(followedUserId);
 }

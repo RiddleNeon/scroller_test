@@ -19,16 +19,16 @@ class UserRepository {
     print("getting user $userId");
     DocumentSnapshot doc = await firestore.collection('users').doc(userId).get();
     print("got doc: ${doc.data()}");
-    
-    if(doc.exists) {
+
+    if (doc.exists) {
       UserProfile model = UserProfile.fromFirestore(doc);
       return model;
     } else {
-      UserProfile model = await createUser(id: userId, username: auth!.currentUser!.displayName ?? auth!.currentUser!.email?.split("@").first ?? auth!.currentUser!.uid);
+      UserProfile model =
+          await createUser(id: userId, username: auth!.currentUser!.displayName ?? auth!.currentUser!.email?.split("@").first ?? auth!.currentUser!.uid);
       return model;
     }
   }
-
 
   Future<UserProfile> createUser({
     required String id,
@@ -38,7 +38,7 @@ class UserRepository {
   }) async {
     await firestore.collection('users').doc(id).set({
       'username': username,
-      'profileImageUrl': profileImageUrl, //fixme
+      'profileImageUrl': profileImageUrl,
       'bio': bio,
       'followersCount': 0,
       'createdAt': FieldValue.serverTimestamp(),
@@ -50,7 +50,7 @@ class UserRepository {
       profileImageUrl: profileImageUrl ?? createUserProfileImageUrl(username),
       bio: bio,
       createdAt: DateTime.now(),
-      followersCount: 0, 
+      followersCount: 0,
       usesCustomProfileImage: false,
     );
   }
@@ -114,65 +114,112 @@ class UserRepository {
       });
     });
   }*/
+  
+  ///returns if the user is followed after the operation
+  Future<bool> toggleFollowUser(String currentId, String followingId) async {
+    if (currentId == followingId) throw Exception('Cannot toggle follow yourself');
+
+    bool following = await isFollowing(currentId, followingId);
+    
+    if(following){
+      _unfollowUser(currentId, followingId);
+      return false;
+    } else {
+      _followUser(currentId, followingId);
+      return true;
+    }
+  }
+  
 
   /// Follow a user
-  void followUser(String followerId, String followeeId) {
-    if (followerId == followeeId) {
-      throw Exception('Cannot follow yourself');
+  Future<void> followUser(String currentId, String followingId) async {
+    if (currentId == followingId) throw Exception('Cannot follow yourself');
+
+    bool alreadyFollowing = await isFollowing(currentId, followingId);
+    if (alreadyFollowing) {
+      print("already following! returning");
+      return;
     }
 
-    batchQueue.set(
-      firestore.collection('users').doc(followerId).collection('following').doc(followeeId),
-      {
-        'followedAt': FieldValue.serverTimestamp(),
-      },
-    );
+    await _followUser(currentId, followingId);
+  }
 
-    batchQueue.set(
-      firestore.collection('users').doc(followeeId).collection('followers').doc(followerId),
-      {
-        'followedAt': FieldValue.serverTimestamp(),
-      },
-    );
+  /// Follow a user
+  Future<void> _followUser(String currentId, String followingId) async {
+    firestore.runTransaction((transaction) async {
+      transaction.set(
+        firestore.collection('users').doc(currentId).collection('following').doc(followingId),
+        {
+          'followedAt': FieldValue.serverTimestamp(),
+        },
+      );
 
-    batchQueue.update(
-      firestore.collection('users').doc(followerId),
-      {
-        'followingCount': FieldValue.increment(1),
-      },
-    );
+      transaction.set(
+        firestore.collection('users').doc(followingId).collection('followers').doc(currentId),
+        {
+          'followedAt': FieldValue.serverTimestamp(),
+        },
+      );
 
-    batchQueue.update(
-      firestore.collection('users').doc(followeeId),
-      {
-        'followersCount': FieldValue.increment(1),
-      },
-    );
+      transaction.update(
+        firestore.collection('users').doc(currentId),
+        {
+          'followingCount': FieldValue.increment(1),
+        },
+      );
+
+      transaction.update(
+        firestore.collection('users').doc(followingId),
+        {
+          'followersCount': FieldValue.increment(1),
+        },
+      );
+    },);
+    
+    
+
+    if(currentId == currentUser.id) localSeenService.followUser(followingId);
   }
 
   /// Unfollow a user
-  void unfollowUser(String followerId, String followeeId) {
-    batchQueue.delete(
-      firestore.collection('users').doc(followerId).collection('following').doc(followeeId),
-    );
+  void unfollowUser(String currentId, String followingId) async {
+    if (currentId == followingId) throw Exception('Cannot unfollow yourself');
 
-    batchQueue.delete(
-      firestore.collection('users').doc(followeeId).collection('followers').doc(followerId),
-    );
 
-    batchQueue.update(
-      firestore.collection('users').doc(followerId),
-      {
-        'followingCount': FieldValue.increment(-1),
-      },
-    );
+    bool following = await isFollowing(currentId, followingId);
+    if (!following) {
+      print("not following, cannot unfollow! returning");
+      return;
+    }
+    
+    _unfollowUser(currentId, followingId);
+  }
 
-    batchQueue.update(
-      firestore.collection('users').doc(followeeId),
-      {
-        'followersCount': FieldValue.increment(-1),
-      },
-    );
+  void _unfollowUser(String currentId, String followingId) async {
+    firestore.runTransaction((transaction) async {
+      transaction.delete(
+        firestore.collection('users').doc(currentId).collection('following').doc(followingId),
+      );
+
+      transaction.delete(
+        firestore.collection('users').doc(followingId).collection('followers').doc(currentId),
+      );
+
+      transaction.update(
+        firestore.collection('users').doc(currentId),
+        {
+          'followingCount': FieldValue.increment(-1),
+        },
+      );
+
+      transaction.update(
+        firestore.collection('users').doc(followingId),
+        {
+          'followersCount': FieldValue.increment(-1),
+        },
+      );
+    });
+    if(currentId == currentUser.id) localSeenService.unfollowUser(followingId);
   }
 
   Future<({List<UserProfile> users, DocumentSnapshot? lastDoc})> searchUsers(
@@ -201,33 +248,21 @@ class UserRepository {
     final profiles = <UserProfile>[];
     for (int i = 0; i < ids.length; i += 30) {
       final chunk = ids.sublist(i, (i + 30).clamp(0, ids.length));
-      final snapshot = await FirebaseFirestore.instance
-          .collection('users')
-          .where(FieldPath.documentId, whereIn: chunk)
-          .get();
+      final snapshot = await FirebaseFirestore.instance.collection('users').where(FieldPath.documentId, whereIn: chunk).get();
       profiles.addAll(snapshot.docs.map((doc) => UserProfile.fromFirestore(doc)));
     }
     return profiles;
   }
 
-
   Future<List<String>> getFollowingIds(String userId) async {
-    final snapshot = await FirebaseFirestore.instance
-        .collection('users')
-        .doc(userId)
-        .collection('following')
-        .get();
+    final snapshot = await FirebaseFirestore.instance.collection('users').doc(userId).collection('following').get();
     return snapshot.docs.map((doc) => doc.id).toList();
   }
 
   Future<List<Video>> getPublishedVideos(String userId, {int limit = 20}) async {
     try {
-      final snapshot = await FirebaseFirestore.instance
-          .collection('videos')
-          .where('authorId', isEqualTo: userId)
-          .orderBy('createdAt', descending: true)
-          .limit(limit)
-          .get();
+      final snapshot =
+          await FirebaseFirestore.instance.collection('videos').where('authorId', isEqualTo: userId).orderBy('createdAt', descending: true).limit(limit).get();
       return snapshot.docs.map((doc) => Video.fromFirestore(doc)).toList();
     } catch (e) {
       print('Error fetching published videos: $e');
@@ -237,13 +272,8 @@ class UserRepository {
 
   Future<List<Video>> getLikedVideos(String userId, {int limit = 20}) async {
     try {
-      final likedSnapshot = await FirebaseFirestore.instance
-          .collection('users')
-          .doc(userId)
-          .collection('liked_videos')
-          .orderBy('likedAt', descending: true)
-          .limit(limit)
-          .get();
+      final likedSnapshot =
+          await FirebaseFirestore.instance.collection('users').doc(userId).collection('liked_videos').orderBy('likedAt', descending: true).limit(limit).get();
 
       final videoIds = likedSnapshot.docs.map((doc) => doc.id).toList();
       return videoRepo.fetchVideosByIds(videoIds);
@@ -273,12 +303,7 @@ class UserRepository {
 
   Future<List<UserProfile>> getFollowers(String userId, {int limit = 50}) async {
     try {
-      final snapshot = await FirebaseFirestore.instance
-          .collection('users')
-          .doc(userId)
-          .collection('followers')
-          .limit(limit)
-          .get();
+      final snapshot = await FirebaseFirestore.instance.collection('users').doc(userId).collection('followers').limit(limit).get();
 
       final followerIds = snapshot.docs.map((doc) => doc.id).toList();
       return _fetchProfilesByIds(followerIds);
@@ -290,12 +315,7 @@ class UserRepository {
 
   Future<List<UserProfile>> getFollowing(String userId, {int limit = 50}) async {
     try {
-      final snapshot = await FirebaseFirestore.instance
-          .collection('users')
-          .doc(userId)
-          .collection('following')
-          .limit(limit)
-          .get();
+      final snapshot = await FirebaseFirestore.instance.collection('users').doc(userId).collection('following').limit(limit).get();
 
       final followingIds = snapshot.docs.map((doc) => doc.id).toList();
       return _fetchProfilesByIds(followingIds);
@@ -307,12 +327,7 @@ class UserRepository {
 
   Future<bool> isFollowedBy(String user1, String user2) async {
     try {
-      final doc = await FirebaseFirestore.instance
-          .collection('users')
-          .doc(user2)
-          .collection('following')
-          .doc(user1)
-          .get();
+      final doc = await FirebaseFirestore.instance.collection('users').doc(user2).collection('following').doc(user1).get();
       return doc.exists;
     } catch (e) {
       print('Error checking follow status: $e');
@@ -320,12 +335,20 @@ class UserRepository {
     }
   }
 
+  Future<bool> isFollowing(String user1, String user2) async {
+    try {
+      final doc = await FirebaseFirestore.instance.collection('users').doc(user2).collection('followers').doc(user1).get();
+      return doc.exists;
+    } catch (e) {
+      print('Error checking follow status: $e');
+      return false;
+    }
+  }
 
   Future<UserProfile> updateProfileImageUrl(
-      UserProfile user,
-      String? newUrl,
-      ) async {
-
+    UserProfile user,
+    String? newUrl,
+  ) async {
     await firestore.collection('users').doc(user.id).update({
       'profileImageUrl': newUrl,
       'usesCustomProfileImage': newUrl != null,
@@ -337,6 +360,5 @@ class UserRepository {
     );
   }
 }
-
 
 String createUserProfileImageUrl(String? seed) => "https://api.dicebear.com/7.x/miniavs/png?seed=${seed ?? "_"}";

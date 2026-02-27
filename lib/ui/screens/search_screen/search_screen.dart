@@ -1,3 +1,4 @@
+import 'package:firebase_auth/firebase_auth.dart';
 import 'package:flutter/foundation.dart';
 import 'package:flutter/material.dart';
 import 'package:shimmer_animation/shimmer_animation.dart';
@@ -10,6 +11,7 @@ import 'package:wurp/ui/feed_view_model.dart';
 import 'package:wurp/ui/screens/profile_screen.dart';
 import 'package:wurp/ui/screens/search_screen/search_bar_result.dart';
 import 'package:wurp/ui/short_video_player.dart';
+import 'package:wurp/ui/widgets/overlays/follow_button.dart';
 
 import '../../../logic/repositories/user_repository.dart';
 
@@ -262,7 +264,7 @@ class _SearchScreenState extends State<SearchScreen> with TickerProviderStateMix
       padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 8),
       sliver: SliverList(
         delegate: SliverChildBuilderDelegate(
-          (context, index) => _UserCard(user: users[index], cs: cs),
+          (context, index) => _UserCard(initialUser: users[index], cs: cs),
           childCount: users.length,
         ),
       ),
@@ -449,19 +451,26 @@ class _VideoCard extends StatelessWidget {
       );
 }
 
-class _UserCard extends StatelessWidget {
-  const _UserCard({required this.user, required this.cs});
+class _UserCard extends StatefulWidget {
+  const _UserCard({required this.initialUser, required this.cs});
 
-  final UserProfile user;
+  final UserProfile initialUser;
   final ColorScheme cs;
 
+  @override
+  State<_UserCard> createState() => _UserCardState();
+}
+
+class _UserCardState extends State<_UserCard> {
+  late UserProfile user = widget.initialUser;
+  
   @override
   Widget build(BuildContext context) {
     return Container(
       margin: const EdgeInsets.symmetric(vertical: 6),
       padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 14),
       decoration: BoxDecoration(
-        color: cs.surfaceContainer,
+        color: widget.cs.surfaceContainer,
         borderRadius: BorderRadius.circular(14),
         border: Border.all(color: Colors.white.withValues(alpha: 0.05)),
       ),
@@ -480,14 +489,14 @@ class _UserCard extends StatelessWidget {
                 decoration: BoxDecoration(
                   shape: BoxShape.circle,
                   gradient: LinearGradient(
-                    colors: [cs.primary, cs.secondary],
+                    colors: [widget.cs.primary, widget.cs.secondary],
                     begin: Alignment.topLeft,
                     end: Alignment.bottomRight,
                   ),
                 ),
                 child: CircleAvatar(
                     radius: 26,
-                    backgroundColor: cs.surfaceContainer,
+                    backgroundColor: widget.cs.surfaceContainer,
                     backgroundImage:
                         (user.profileImageUrl.isNotEmpty) ? NetworkImage(user.profileImageUrl) : NetworkImage(createUserProfileImageUrl(user.username)),
                   ),
@@ -500,7 +509,7 @@ class _UserCard extends StatelessWidget {
                   Text(
                     user.username,
                     style: TextStyle(
-                      color: cs.onSurface,
+                      color: widget.cs.onSurface,
                       fontSize: 15,
                       fontWeight: FontWeight.w700,
                     ),
@@ -509,23 +518,18 @@ class _UserCard extends StatelessWidget {
                     const SizedBox(height: 2),
                     Text(
                       '@${user.username}',
-                      style: TextStyle(color: cs.onSurfaceVariant, fontSize: 13),
+                      style: TextStyle(color: widget.cs.onSurfaceVariant, fontSize: 13),
                     ),
                   ],
                 ],
               ),
             ),
-            TextButton(
-              onPressed: () {},
-              style: TextButton.styleFrom(
-                backgroundColor: cs.primary.withValues(alpha: 0.12),
-                foregroundColor: cs.primary,
-                padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 8),
-                shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(20)),
-                textStyle: const TextStyle(fontWeight: FontWeight.w700, fontSize: 13),
-              ),
-              child: const Text('Follow'),
-            ),
+            FollowButton(onChanged: (followed) {
+              userRepository.toggleFollowUser(currentUser.id, user.id);
+              setState(() {
+                user = user.copyWith(followersCount: user.followersCount+(followed?1:-1));
+              });
+            }, initialSubscribed: localSeenService.isFollowing(user.id)),
           ],
         ),
       ),
