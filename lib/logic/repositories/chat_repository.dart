@@ -34,7 +34,7 @@ class ChatRepository {
     await http.post(
       Uri.parse('https://wurp-fcm-server.onrender.com/send'),
       headers: {'Content-Type': 'application/json'},
-      body: body,
+      body: body.toString(),
     );
     
     String senderUid = currentUser.id;
