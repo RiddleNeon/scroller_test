@@ -15,7 +15,6 @@ void initRouter() {
   routerConfig = GoRouter(
     navigatorKey: appNavigatorKey,
     redirect: (context, state) {
-      print("redirect: ${state.matchedLocation}");
       
       final navBarItem = _navigationBarItems
           .where(

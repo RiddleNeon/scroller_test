@@ -22,7 +22,6 @@ class FeedViewModel {
   /// Safe to call multiple times for the same index.
   Future<VideoContainer> getVideoAt(int index, {VideoProvider? videoSource}) {
     videoSource ??= this.videoSource;
-    print("getting video at $index, source: $videoSource");
     if (_disposedIndices.contains(index)) {
       _videoFutures.remove(index);
       _disposedIndices.remove(index);
@@ -54,7 +53,6 @@ class FeedViewModel {
   Future<void> switchToVideoAt(int index, {VideoProvider? videoSource}) async {
     videoSource ??= this.videoSource;
     
-    print("switching to video, source: $videoSource");
     
     final previous = _currentIndex;
     _currentIndex = index;
@@ -82,7 +80,6 @@ class FeedViewModel {
     // 4. Trigger pre-load of next video now that we have headroom
     final next = index + 1;
     if (!_disposedIndices.contains(next)) {
-      print("not disposed, loading");
       _videoFutures[next] ??= _loadContainer(next, videoSource: videoSource);
     }
   }

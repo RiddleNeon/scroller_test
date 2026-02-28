@@ -119,16 +119,20 @@ abstract class VideoRecommenderBase {
     Query query =
         firestore.collection('videos').where('createdAt', isGreaterThan: Timestamp.fromDate(weekAgo)).orderBy('createdAt', descending: true).limit(limit * 3);
 
-    cursor ??= localSeenService.getTrendingCursor();
+    cursor ??= await localSeenService.getTrendingCursor();
     
     if (cursor != null) {
       query = query.where('createdAt', isLessThan: Timestamp.fromDate(cursor));
     }
     
     final snapshot = await query.get();
+    final videos = <Video>[];
+    for(final video in snapshot.docs.map((doc) => Video.fromFirestore(doc))){
+      if(!(await localSeenService.hasSeen(video.id))){
+        videos.add(video);
+      }
+    }
     
-    final videos = snapshot.docs.map((doc) => Video.fromFirestore(doc)).where((v) => !localSeenService.hasSeen(v.id)).toList();
-
     videos.sort((a, b) => calculateGlobalEngagementScore(b).compareTo(calculateGlobalEngagementScore(a)));
 
     final filteredVideos = videos.take(limit);
@@ -145,9 +149,8 @@ abstract class VideoRecommenderBase {
   static const _maxRetryAttempts = 5;
 
   Future<List<Video>> fetchVideosByTag(String tag, {required int limit, required void Function() onTagVideosEmpty}) async {
-    print("fetching videos by tag $tag");
     final List<Video> unseen = [];
-    DateTime? cursor = localSeenService.getTagCursor(tag);
+    DateTime? cursor = await localSeenService.getTagCursor(tag);
 
     int attempts = 0;
     while (unseen.length < limit && attempts < _maxRetryAttempts) {
@@ -161,9 +164,13 @@ abstract class VideoRecommenderBase {
       if (snapshot.docs.isEmpty) break;
 
       final videos = snapshot.docs.map((doc) => Video.fromFirestore(doc)).toList();
-
-      unseen.addAll(videos.where((v) => !localSeenService.hasSeen(v.id)));
-
+      
+      for(final video in videos){
+        if(!(await localSeenService.hasSeen(video.id))){
+          unseen.add(video);
+        }
+      }
+      
       int lastCountingIndex = min(videos.length - 1, limit);
       cursor = videos.elementAtOrNull(lastCountingIndex)?.createdAt;
     }

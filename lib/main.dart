@@ -1,14 +1,15 @@
 import 'package:cloud_firestore/cloud_firestore.dart';
 import 'package:firebase_auth/firebase_auth.dart';
 import 'package:firebase_core/firebase_core.dart';
+import 'package:firebase_messaging/firebase_messaging.dart';
 import 'package:flutter/foundation.dart';
 import 'package:flutter/material.dart';
 import 'package:fvp/fvp.dart' as fvp;
-import 'package:webview_flutter/webview_flutter.dart';
 import 'package:wurp/logic/firebase_options.dart';
 import 'package:wurp/logic/feed_recommendation/user_preference_manager.dart';
 import 'package:wurp/logic/local_storage/local_seen_service.dart';
 import 'package:wurp/logic/models/user_model.dart';
+import 'package:wurp/logic/repositories/chat_repository.dart';
 import 'package:wurp/logic/repositories/user_repository.dart';
 import 'package:wurp/logic/video/video_provider.dart';
 import 'package:wurp/ui/router.dart';
@@ -18,6 +19,7 @@ import 'package:wurp/ui/feed_view_model.dart';
 FirebaseApp? app;
 FirebaseAuth? auth;
 UserRepository userRepository = UserRepository();
+ChatRepository chatRepository = ChatRepository();
 
 FirebaseFirestore get firestore {
   if (_firestore == null) throw StateError("Firestore isn't initialized yet!");
@@ -60,6 +62,23 @@ void main() async {
   await FirebaseFirestore.instance.runTransaction((transaction) async {}); //somehow it fixes a crash on windows
   auth = FirebaseAuth.instanceFor(app: app!);
   _firestore = FirebaseFirestore.instance;
+  _firestore?.settings = const Settings(persistenceEnabled: true);
+  await _setupMessaging();
+  FirebaseMessaging.onBackgroundMessage((message) async {
+    print("MESSAGE: ${message}");
+  },);
+  FirebaseFirestore.instance
+      .collection('videos')
+      .snapshots(includeMetadataChanges: true)
+      .listen((snapshot) {
+
+    print("From cache: ${snapshot.metadata.isFromCache}");
+    print("Has pending writes: ${snapshot.metadata.hasPendingWrites}");
+
+    for (var doc in snapshot.docs) {
+      print(doc.data());
+    }
+  });
   initRouter();
   routerConfig.refresh();
   if (auth?.currentUser != null) {
@@ -75,10 +94,37 @@ void main() async {
         routerConfig: routerConfig,
       )
   );
-
-
-  if (kIsWeb) auth!.setPersistence(Persistence.LOCAL);
   print(auth?.currentUser);
+}
+FirebaseMessaging messaging = FirebaseMessaging.instance;
+Future<void> _setupMessaging() async {
+  
+
+  await messaging.requestPermission(
+    alert: true,
+    badge: true,
+    sound: true,
+  );
+
+  final token = await messaging.getToken(vapidKey: "BMzrcPy9WqWjCd72OCbRQS2hdTXcMN2khJ3sZcUED9xRHZq6TQjVDo6y2icQtweVaFOp7kRAS085VeQgqZlFK0E");
+  print('FCM Token: $token');
+
+  FirebaseMessaging.onMessage.listen((RemoteMessage message) {
+    print('Foreground: ${message.notification?.title}');
+  });
+
+  FirebaseMessaging.onMessageOpenedApp.listen((RemoteMessage message) {
+    print('Opened app via Notification: ${message.data}');
+  });
+
+  FirebaseMessaging.instance.onTokenRefresh.listen((newToken) async {
+    final uid = FirebaseAuth.instance.currentUser?.uid;
+    if (uid != null) {
+      await FirebaseFirestore.instance.collection('users').doc(uid).update({
+        'fcmToken': newToken,
+      });
+    }
+  });
 }
 
 ColorScheme getColorScheme() {
@@ -93,8 +139,18 @@ ColorScheme getColorScheme() {
 Future<void> onUserLogin(UserProfile user, [BuildContext? context]) async {
   await onUserLogout();
   _currentUser = user;
+  if (kIsWeb) {
+    auth!.setPersistence(Persistence.LOCAL);
+  }
   _localSeenService = LocalSeenService();
   await _localSeenService!.init();
+  final token = await messaging.getToken(vapidKey: "BMzrcPy9WqWjCd72OCbRQS2hdTXcMN2khJ3sZcUED9xRHZq6TQjVDo6y2icQtweVaFOp7kRAS085VeQgqZlFK0E");
+  await FirebaseFirestore.instance.collection('users').doc(currentUser.id).update({
+    'fcmToken': token,
+  });
+  Future.delayed(const Duration(seconds: 5), () {
+    chatRepository.sendNotification(receiverUid: currentUser.id, title: "HELLOOOOO", body: "WSUPPPP");
+  },);
 }
 
 Future<void> onUserLogout() async {

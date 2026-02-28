@@ -7,7 +7,6 @@ import 'package:wurp/ui/router.dart';
 
 import '../../logic/models/user_model.dart';
 import '../../main.dart';
-import 'home_screen.dart';
 
 class LoginScreen extends StatefulWidget {
   const LoginScreen({super.key});

@@ -9,7 +9,6 @@ import 'widgets/video_widget.dart';
 
 Widget feedVideos(TickerProvider tickerProvider, VideoProvider videoProvider, {FeedViewModel? feedModel, int itemCount = 5000, int initialPage = 0}) {
   feedModel ??= feedViewModel;
-  print("in feed videos, feed model: $feedModel, current provider: $videoProvider");
   feedModel.switchToVideoAt(initialPage,
       videoSource:
           videoProvider); //so that the first video starts bc this function only gets called on page switches and the first page hasn't had a switch yet

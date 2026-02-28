@@ -37,7 +37,7 @@ class VideoRecommender extends VideoRecommenderBase {
 
       final candidateVideos = await _getCandidateVideos(userPreferences: userPreferences, limit: _candidatePoolSize);
       
-      final scoredVideos = _scoreVideos(candidateVideos, userPreferences, recentInteractions);
+      final scoredVideos = await _scoreVideos(candidateVideos, userPreferences, recentInteractions);
 
       final diversifiedVideos = _applyDiversityFilter(scoredVideos, limit: limit);
 
@@ -67,16 +67,19 @@ class VideoRecommender extends VideoRecommenderBase {
 
     final topTags = _getTopTags(userPreferences, 3);
     print("top tags for user: ${topTags}");
-    for (final tag in topTags) {
+    for (final tag in await topTags) {
       final tagVideos = await fetchVideosByTag(tag, limit: limit ~/ 3, onTagVideosEmpty: () {localSeenService.saveBlacklistedTag(tag, DateTime.now()); blacklistedTags?.add(tag);print("tag videos empty! removing $tag");});
       candidates.addAll(tagVideos);
     }
 
-    final newestTimestamp = localSeenService.getNewestSeenTimestamp();
+    final newestTimestamp = await localSeenService.getNewestSeenTimestamp();
     final newVideos = await fetchNewVideos(newestTimestamp, limit - candidates.length);
-    print("${newVideos.length} new videos available");
-    print("${newVideos.where((v) => !localSeenService.hasSeen(v.id)).length} new videos added");
-    final filteredNewVideos = newVideos.where((v) => !localSeenService.hasSeen(v.id));
+    final filteredNewVideos = <Video>[];
+    for (var value in newVideos) {
+      if(await localSeenService.hasSeen(value.id)){
+        filteredNewVideos.add(value);
+      }
+    }
     if (filteredNewVideos.isNotEmpty) {
       candidates.addAll(filteredNewVideos);
       localSeenService.saveNewestSeenTimestamp(filteredNewVideos.last.createdAt);
@@ -84,24 +87,23 @@ class VideoRecommender extends VideoRecommenderBase {
 
     if (candidates.length < limit) {
       final trending = await fetchTrendingVideos(limit: limit ~/ 4);
-      candidates.addAll(trending.where((v) => !localSeenService.hasSeen(v.id)));
+      candidates.addAll(trending);
     }
 
     return removeDuplicates<Video>(candidates.toList(), getCheckedParameter: (vid) => vid.videoUrl).toSet();
   }
 
   List<String>? blacklistedTags;
-  List<String> _getTopTags(UserPreferences prefs, int count) {
-    blacklistedTags ??= localSeenService.getBlacklistedTags();
+  Future<List<String>> _getTopTags(UserPreferences prefs, int count) async {
+    blacklistedTags ??= await localSeenService.getBlacklistedTags();
     final sorted = prefs.tagPreferences.entries.toList()..sort((a, b) => b.value.compareTo(a.value));
     return (sorted.where((element) => !blacklistedTags!.contains(element.key))
         .take(count)
-        .map((e) => e.key).toList())
-      ..forEach((element) => print("picked $element"));
+        .map((e) => e.key).toList());
   }
 
   /// Score videos based on multiple factors
-  List<VideoScore> _scoreVideos(Set<Video> videos, UserPreferences userPreferences, List<UserInteraction> recentInteractions) {
+  Future<List<VideoScore>> _scoreVideos(Set<Video> videos, UserPreferences userPreferences, List<UserInteraction> recentInteractions) async {
     final now = DateTime.now();
     final scoredVideos = <VideoScore>[];
 
@@ -126,7 +128,7 @@ class VideoRecommender extends VideoRecommenderBase {
       score += diversityScore * _diversityWeight;
 
       // 5. Apply penalties
-      if (localSeenService.hasSeen(video.id)) {
+      if (await localSeenService.hasSeen(video.id)) {
         score *= 0.1; // Heavy penalty for already seen videos
       }
 

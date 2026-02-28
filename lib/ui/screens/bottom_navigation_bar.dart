@@ -32,7 +32,6 @@ class BottomNavBarState extends State<BottomNavBar> {
   
   @override
   void initState() {
-    print("state created");
     super.initState();
   }
 

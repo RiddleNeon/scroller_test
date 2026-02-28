@@ -1,4 +1,3 @@
-import 'package:firebase_auth/firebase_auth.dart';
 import 'package:flutter/foundation.dart';
 import 'package:flutter/material.dart';
 import 'package:shimmer_animation/shimmer_animation.dart';
@@ -274,8 +273,8 @@ class _SearchScreenState extends State<SearchScreen> with TickerProviderStateMix
   final Map<String, Future<Uint8List?>> _cachedThumbnails = {};
 
   Future<Uint8List?> _thumbnailFor(Video video) async {
-    if(!(defaultTargetPlatform == TargetPlatform.android || defaultTargetPlatform == TargetPlatform.iOS)) return null;
-    
+    if (!(defaultTargetPlatform == TargetPlatform.android || defaultTargetPlatform == TargetPlatform.iOS)) return null;
+
     _cachedThumbnails[video.videoUrl] ??= VideoThumbnail.thumbnailData(video: video.videoUrl);
     return _cachedThumbnails[video.videoUrl]!;
   }
@@ -463,7 +462,7 @@ class _UserCard extends StatefulWidget {
 
 class _UserCardState extends State<_UserCard> {
   late UserProfile user = widget.initialUser;
-  
+
   @override
   Widget build(BuildContext context) {
     return Container(
@@ -485,22 +484,22 @@ class _UserCardState extends State<_UserCard> {
         child: Row(
           children: [
             Container(
-                padding: const EdgeInsets.all(2),
-                decoration: BoxDecoration(
-                  shape: BoxShape.circle,
-                  gradient: LinearGradient(
-                    colors: [widget.cs.primary, widget.cs.secondary],
-                    begin: Alignment.topLeft,
-                    end: Alignment.bottomRight,
-                  ),
+              padding: const EdgeInsets.all(2),
+              decoration: BoxDecoration(
+                shape: BoxShape.circle,
+                gradient: LinearGradient(
+                  colors: [widget.cs.primary, widget.cs.secondary],
+                  begin: Alignment.topLeft,
+                  end: Alignment.bottomRight,
                 ),
-                child: CircleAvatar(
-                    radius: 26,
-                    backgroundColor: widget.cs.surfaceContainer,
-                    backgroundImage:
-                        (user.profileImageUrl.isNotEmpty) ? NetworkImage(user.profileImageUrl) : NetworkImage(createUserProfileImageUrl(user.username)),
-                  ),
-                ),
+              ),
+              child: CircleAvatar(
+                radius: 26,
+                backgroundColor: widget.cs.surfaceContainer,
+                backgroundImage:
+                    (user.profileImageUrl.isNotEmpty) ? NetworkImage(user.profileImageUrl) : NetworkImage(createUserProfileImageUrl(user.username)),
+              ),
+            ),
             const SizedBox(width: 14),
             Expanded(
               child: Column(
@@ -524,12 +523,22 @@ class _UserCardState extends State<_UserCard> {
                 ],
               ),
             ),
-            FollowButton(onChanged: (followed) {
-              userRepository.toggleFollowUser(currentUser.id, user.id);
-              setState(() {
-                user = user.copyWith(followersCount: user.followersCount+(followed?1:-1));
-              });
-            }, initialSubscribed: localSeenService.isFollowing(user.id)),
+            FutureBuilder(
+              future: localSeenService.isFollowing(user.id),
+              builder: (context, asyncSnapshot) {
+                if(!asyncSnapshot.hasData || asyncSnapshot.hasError) return Container();
+                
+                return FollowButton(
+                    onChanged: (followed) {
+                      userRepository.toggleFollowUser(currentUser.id, user.id);
+                      setState(() {
+                        user = user.copyWith(followersCount: user.followersCount + (followed ? 1 : -1));
+                      });
+                    },
+                    initialSubscribed: asyncSnapshot.data!
+                );
+              }
+            ),
           ],
         ),
       ),
