@@ -20,15 +20,21 @@ class ChatRepository {
 
     final token = doc.data()?['fcmToken'];
     if (token == null) return;
+    
+    String body = jsonEncode({
+      'token': token,
+      'title': 'new Message',
+      'body': {
+        "message": message.text,
+        "sender": currentUser.id
+      }
+    });
+    print("body: $body");
 
     await http.post(
       Uri.parse('https://wurp-fcm-server.onrender.com/send'),
       headers: {'Content-Type': 'application/json'},
-      body: jsonEncode({
-        'token': token,
-        'title': 'new Message',
-        'body': message.text,
-      }),
+      body: body,
     );
     
     String senderUid = currentUser.id;

@@ -1,3 +1,5 @@
+import 'dart:convert';
+
 import 'package:cloud_firestore/cloud_firestore.dart';
 import 'package:firebase_auth/firebase_auth.dart';
 import 'package:firebase_core/firebase_core.dart';
@@ -14,6 +16,7 @@ import 'package:wurp/logic/repositories/user_repository.dart';
 import 'package:wurp/logic/video/video_provider.dart';
 import 'package:wurp/ui/router.dart';
 import 'package:wurp/ui/feed_view_model.dart';
+import 'package:wurp/ui/screens/chat/chat_managing_screen.dart';
 
 
 FirebaseApp? app;
@@ -99,6 +102,9 @@ Future<void> _setupMessaging() async {
 
   FirebaseMessaging.onMessage.listen((RemoteMessage message) {
     print('Foreground: ${message.notification?.title}');
+    print("data: ${message.data}");
+    Map<String, dynamic> bodyContent = jsonDecode(message.notification!.body!);
+    if(currentOpenChat?.partnerId == bodyContent['sender']) {currentOpenChatScreenKey?.currentState?.onReceiveMessage(bodyContent['message']);}
   });
 
   FirebaseMessaging.onMessageOpenedApp.listen((RemoteMessage message) {

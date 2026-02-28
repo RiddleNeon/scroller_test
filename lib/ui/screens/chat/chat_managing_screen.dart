@@ -116,6 +116,8 @@ class _ChatManagingScreenState extends State<ChatManagingScreen> {
   }
 
   Widget _buildMessagingScreen(Chat chat) {
+    currentOpenChatScreenKey = GlobalObjectKey('chat${currentUser.id}-${chat.partnerId}');
+    currentOpenChat = chat;
     return FutureBuilder(
       future: localSeenService.getMessagesWith(chat.partnerId),
       builder: (context, asyncSnapshot) {
@@ -126,6 +128,7 @@ class _ChatManagingScreenState extends State<ChatManagingScreen> {
         }
 
         return MessagingScreen(
+          key: currentOpenChatScreenKey,
           initialMessages: asyncSnapshot.data!,
           recipientName: chat.partnerName,
           recipientAvatarUrl: chat.partnerProfileImageUrl,
@@ -145,3 +148,5 @@ class _ChatManagingScreenState extends State<ChatManagingScreen> {
     );
   }
 }
+Chat? currentOpenChat;
+GlobalObjectKey<MessagingScreenState>? currentOpenChatScreenKey;
