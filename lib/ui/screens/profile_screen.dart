@@ -4,17 +4,20 @@ import 'package:flutter/material.dart';
 import 'package:wurp/logic/models/user_model.dart';
 import 'package:wurp/main.dart';
 import 'package:wurp/ui/widgets/logout_button.dart';
+import 'package:wurp/ui/widgets/overlays/follow_button.dart';
 
 import '../../logic/repositories/user_repository.dart';
 import '../misc/youtube_player.dart';
 import '../widgets/profile_image_picker.dart';
 
 class ProfileScreen extends StatefulWidget {
-  final UserProfile profile;
+  final UserProfile initialProfile;
   final bool ownProfile;
   final bool hasBackButton;
+  final void Function(bool followed) onFollowChange;
+  final bool initialFollowed;
 
-  const ProfileScreen({Key? key, required this.profile, required this.ownProfile, this.hasBackButton = false}) : super(key: key);
+  const ProfileScreen({Key? key, required this.initialProfile, required this.ownProfile, this.hasBackButton = false, required this.onFollowChange, this.initialFollowed = false}) : super(key: key);
 
   @override
   State<ProfileScreen> createState() => _ProfileScreenState();
@@ -23,6 +26,7 @@ class ProfileScreen extends StatefulWidget {
 class _ProfileScreenState extends State<ProfileScreen> with SingleTickerProviderStateMixin {
   bool _editingMode = false;
   late final TabController _tabController;
+  late UserProfile user = widget.initialProfile;
 
   @override
   void initState() {
@@ -91,7 +95,7 @@ class _ProfileScreenState extends State<ProfileScreen> with SingleTickerProvider
             children: [
               if (widget.ownProfile) const LogoutButton() else Container(),
               Text(
-                widget.profile.username,
+                user.username,
                 style: TextStyle(
                   color: cs.onSurface,
                   fontSize: 15,
@@ -118,11 +122,11 @@ class _ProfileScreenState extends State<ProfileScreen> with SingleTickerProvider
       padding: const EdgeInsets.only(top: kToolbarHeight),
       child: Column(
         children: [
-          const SizedBox(height: 20),
+          const SizedBox(height: 16),
           _buildAvatar(cs),
-          const SizedBox(height: 14),
+          const SizedBox(height: 16),
           Text(
-            '@${widget.profile.username}',
+            '@${user.username}',
             style: TextStyle(
               color: cs.onSurface,
               fontSize: 16,
@@ -130,9 +134,9 @@ class _ProfileScreenState extends State<ProfileScreen> with SingleTickerProvider
               letterSpacing: 0.3,
             ),
           ),
-          const SizedBox(height: 20),
+          const SizedBox(height: 16),
           _buildStatsRow(cs),
-          const SizedBox(height: 20),
+          const SizedBox(height: 16),
           _buildActionRow(cs),
           const SizedBox(height: 20),
         ],
@@ -157,9 +161,9 @@ class _ProfileScreenState extends State<ProfileScreen> with SingleTickerProvider
           child: CircleAvatar(
             radius: 26,
             backgroundColor: cs.surfaceContainer,
-            backgroundImage: (widget.profile.profileImageUrl.isNotEmpty)
-                ? NetworkImage(widget.profile.profileImageUrl)
-                : NetworkImage(createUserProfileImageUrl(widget.profile.username)),
+            backgroundImage: (user.profileImageUrl.isNotEmpty)
+                ? NetworkImage(user.profileImageUrl)
+                : NetworkImage(createUserProfileImageUrl(user.username)),
           ),
         ));
 
@@ -195,11 +199,11 @@ class _ProfileScreenState extends State<ProfileScreen> with SingleTickerProvider
     return Row(
       mainAxisAlignment: MainAxisAlignment.center,
       children: [
-        _buildStatItem(cs, '${widget.profile.followingCount ?? 0}', 'Following'),
+        _buildStatItem(cs, '${user.followingCount ?? 0}', 'Following'),
         _buildStatDivider(cs),
-        _buildStatItem(cs, '${widget.profile.followersCount}', 'Followers'),
+        _buildStatItem(cs, '${user.followersCount}', 'Followers'),
         _buildStatDivider(cs),
-        _buildStatItem(cs, '${widget.profile.totalLikesCount ?? 0}', 'Likes'),
+        _buildStatItem(cs, '${user.totalLikesCount ?? 0}', 'Likes'),
       ],
     );
   }
@@ -254,13 +258,16 @@ class _ProfileScreenState extends State<ProfileScreen> with SingleTickerProvider
           ),
         if (!widget.ownProfile) ...[
           const SizedBox(width: 8),
-          _ActionButton(
-            label: 'Follow',
-            width: 100,
-            filled: true,
-            cs: cs,
-            onTap: () {
-              userRepository.followUser(currentUser.id, widget.profile.id);
+          FollowButton(
+            design: FollowButtonDesign.docked,
+            initialSubscribed: widget.initialFollowed,
+            onChanged: (_) async {
+              bool followed = await userRepository.toggleFollowUser(currentUser.id, user.id);
+              setState(() {
+                user = user.copyWith(followersCount: user.followersCount + (followed ? 1 : -1));
+                widget.onFollowChange(followed);
+              });
+              return followed;
             },
           ),
           const SizedBox(width: 8),

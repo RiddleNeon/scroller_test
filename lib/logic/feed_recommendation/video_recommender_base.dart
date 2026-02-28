@@ -114,10 +114,10 @@ abstract class VideoRecommenderBase {
     DateTime? cursor,
     required int limit,
   }) async {
-    final weekAgo = DateTime.now().subtract(const Duration(days: 9));
+    final maxTrendingTime = DateTime.now().subtract(const Duration(days: 40));
 
     Query query =
-    firestore.collection('videos').where('createdAt', isGreaterThan: Timestamp.fromDate(weekAgo)).orderBy('createdAt', descending: true).limit(limit * 3);
+    firestore.collection('videos').where('createdAt', isGreaterThan: Timestamp.fromDate(maxTrendingTime)).orderBy('createdAt', descending: true).limit(limit * 3);
 
     cursor ??= localSeenService.getTrendingCursor();
 

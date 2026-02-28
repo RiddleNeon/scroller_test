@@ -78,10 +78,7 @@ class _SearchScreenState extends State<SearchScreen> with TickerProviderStateMix
   @override
   Widget build(BuildContext context) {
     final cs = Theme.of(context).colorScheme;
-    return Scaffold(
-      backgroundColor: cs.surface,
-      body: _hasSearched ? _buildResultsBody(cs) : _buildLandingBody(cs),
-    );
+    return Scaffold(backgroundColor: cs.surface, body: _hasSearched ? _buildResultsBody(cs) : _buildLandingBody(cs));
   }
 
   Widget _buildLandingBody(ColorScheme cs) {
@@ -92,24 +89,14 @@ class _SearchScreenState extends State<SearchScreen> with TickerProviderStateMix
           mainAxisSize: MainAxisSize.min,
           children: [
             ShaderMask(
-              shaderCallback: (bounds) => LinearGradient(
-                colors: [cs.primary, cs.secondary],
-              ).createShader(bounds),
+              shaderCallback: (bounds) => LinearGradient(colors: [cs.primary, cs.secondary]).createShader(bounds),
               child: Text(
                 'Discover',
-                style: TextStyle(
-                  fontSize: 48,
-                  fontWeight: FontWeight.w900,
-                  letterSpacing: -1,
-                  color: cs.onSurface,
-                ),
+                style: TextStyle(fontSize: 48, fontWeight: FontWeight.w900, letterSpacing: -1, color: cs.onSurface),
               ),
             ),
             const SizedBox(height: 8),
-            Text(
-              'Find videos & creators',
-              style: TextStyle(color: cs.onSurfaceVariant, fontSize: 15),
-            ),
+            Text('Find videos & creators', style: TextStyle(color: cs.onSurfaceVariant, fontSize: 15)),
             const SizedBox(height: 40),
             _buildSearchField(cs),
           ],
@@ -130,10 +117,7 @@ class _SearchScreenState extends State<SearchScreen> with TickerProviderStateMix
           elevation: 0,
           expandedHeight: _kSearchBarHeight + _kPadding * 2,
           flexibleSpace: FlexibleSpaceBar(
-            background: Padding(
-              padding: const EdgeInsets.fromLTRB(_kPadding, _kPadding + 8, _kPadding, _kPadding),
-              child: _buildSearchField(cs),
-            ),
+            background: Padding(padding: const EdgeInsets.fromLTRB(_kPadding, _kPadding + 8, _kPadding, _kPadding), child: _buildSearchField(cs)),
           ),
         ),
         SliverPersistentHeader(
@@ -147,11 +131,7 @@ class _SearchScreenState extends State<SearchScreen> with TickerProviderStateMix
               indicatorColor: cs.primary,
               indicatorWeight: 3,
               indicatorSize: TabBarIndicatorSize.label,
-              labelStyle: const TextStyle(
-                fontWeight: FontWeight.w700,
-                fontSize: 14,
-                letterSpacing: 0.5,
-              ),
+              labelStyle: const TextStyle(fontWeight: FontWeight.w700, fontSize: 14, letterSpacing: 0.5),
               tabs: [
                 Tab(
                   child: Row(
@@ -180,9 +160,7 @@ class _SearchScreenState extends State<SearchScreen> with TickerProviderStateMix
         ),
         if (_loading)
           SliverFillRemaining(
-            child: Center(
-              child: CircularProgressIndicator(color: cs.primary),
-            ),
+            child: Center(child: CircularProgressIndicator(color: cs.primary)),
           )
         else ...[
           if (_tabController.index == 0) _buildVideoSliver(cs) else _buildUserSliver(cs),
@@ -197,12 +175,7 @@ class _SearchScreenState extends State<SearchScreen> with TickerProviderStateMix
       decoration: BoxDecoration(
         color: cs.surfaceContainer,
         borderRadius: BorderRadius.circular(28),
-        boxShadow: [
-          BoxShadow(
-            color: cs.primary.withValues(alpha: 0.15),
-            blurRadius: 20,
-          ),
-        ],
+        boxShadow: [BoxShadow(color: cs.primary.withValues(alpha: 0.15), blurRadius: 20)],
       ),
       child: TextField(
         controller: _controller,
@@ -219,9 +192,7 @@ class _SearchScreenState extends State<SearchScreen> with TickerProviderStateMix
             child: Container(
               margin: const EdgeInsets.all(8),
               decoration: BoxDecoration(
-                gradient: LinearGradient(
-                  colors: [cs.primary, cs.primaryContainer],
-                ),
+                gradient: LinearGradient(colors: [cs.primary, cs.primaryContainer]),
                 borderRadius: BorderRadius.circular(20),
               ),
               child: Icon(Icons.arrow_forward_rounded, color: cs.onPrimary, size: 20),
@@ -236,18 +207,15 @@ class _SearchScreenState extends State<SearchScreen> with TickerProviderStateMix
   Widget _buildVideoSliver(ColorScheme cs) {
     final videos = _searchBarResult?.videoResults ?? [];
     if (videos.isEmpty) {
-      return SliverFillRemaining(child: _EmptyState(label: 'No videos found', cs: cs));
+      return SliverFillRemaining(
+        child: _EmptyState(label: 'No videos found', cs: cs),
+      );
     }
     return SliverPadding(
       padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 8),
       sliver: SliverList(
         delegate: SliverChildBuilderDelegate(
-          (context, index) => _VideoCard(
-            video: videos[index],
-            thumbnail: _thumbnailFor(videos[index]),
-            onTap: () => _openVideoPlayer(index),
-            cs: cs,
-          ),
+          (context, index) => _VideoCard(video: videos[index], thumbnail: _thumbnailFor(videos[index]), onTap: () => _openVideoPlayer(index), cs: cs),
           childCount: videos.length,
         ),
       ),
@@ -257,7 +225,9 @@ class _SearchScreenState extends State<SearchScreen> with TickerProviderStateMix
   Widget _buildUserSliver(ColorScheme cs) {
     final users = _searchBarResult?.userResults ?? [];
     if (users.isEmpty) {
-      return SliverFillRemaining(child: _EmptyState(label: 'No creators found', cs: cs));
+      return SliverFillRemaining(
+        child: _EmptyState(label: 'No creators found', cs: cs),
+      );
     }
     return SliverPadding(
       padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 8),
@@ -295,18 +265,13 @@ class _SearchScreenState extends State<SearchScreen> with TickerProviderStateMix
             child: Container(
               width: MediaQuery.of(context).size.width * 0.95,
               height: MediaQuery.of(context).size.height * 0.88,
-              decoration: BoxDecoration(
-                color: Colors.black,
-                borderRadius: BorderRadius.circular(20),
-              ),
+              decoration: BoxDecoration(color: Colors.black, borderRadius: BorderRadius.circular(20)),
               clipBehavior: Clip.hardEdge,
               child: Stack(
                 children: [
                   feedVideos(
                     this,
-                    SearchVideoResultRecommender(
-                      listedVideos: _searchBarResult!.videoResults,
-                    ),
+                    SearchVideoResultRecommender(listedVideos: _searchBarResult!.videoResults),
                     context,
                     feedModel: _currentSearchViewModel,
                     itemCount: _searchBarResult!.videoResults.length,
@@ -319,10 +284,7 @@ class _SearchScreenState extends State<SearchScreen> with TickerProviderStateMix
                       onTap: () => Navigator.pop(context),
                       child: Container(
                         padding: const EdgeInsets.all(8),
-                        decoration: const BoxDecoration(
-                          color: Colors.black54,
-                          shape: BoxShape.circle,
-                        ),
+                        decoration: const BoxDecoration(color: Colors.black54, shape: BoxShape.circle),
                         child: const Icon(Icons.close_rounded, color: Colors.white, size: 20),
                       ),
                     ),
@@ -337,10 +299,7 @@ class _SearchScreenState extends State<SearchScreen> with TickerProviderStateMix
         final curved = CurvedAnimation(parent: animation, curve: Curves.easeOutCubic);
         return FadeTransition(
           opacity: curved,
-          child: ScaleTransition(
-            scale: Tween(begin: 0.88, end: 1.0).animate(curved),
-            child: child,
-          ),
+          child: ScaleTransition(scale: Tween(begin: 0.88, end: 1.0).animate(curved), child: child),
         );
       },
     );
@@ -348,12 +307,7 @@ class _SearchScreenState extends State<SearchScreen> with TickerProviderStateMix
 }
 
 class _VideoCard extends StatelessWidget {
-  const _VideoCard({
-    required this.video,
-    required this.thumbnail,
-    required this.onTap,
-    required this.cs,
-  });
+  const _VideoCard({required this.video, required this.thumbnail, required this.onTap, required this.cs});
 
   final Video video;
   final Future<Uint8List?> thumbnail;
@@ -375,11 +329,7 @@ class _VideoCard extends StatelessWidget {
           children: [
             ClipRRect(
               borderRadius: const BorderRadius.horizontal(left: Radius.circular(14)),
-              child: SizedBox(
-                width: 140,
-                height: 84,
-                child: _buildThumbnail(),
-              ),
+              child: SizedBox(width: 140, height: 84, child: _buildThumbnail()),
             ),
             Expanded(
               child: Padding(
@@ -391,20 +341,12 @@ class _VideoCard extends StatelessWidget {
                       video.title,
                       maxLines: 2,
                       overflow: TextOverflow.ellipsis,
-                      style: TextStyle(
-                        color: cs.onSurface,
-                        fontSize: 14,
-                        fontWeight: FontWeight.w600,
-                        height: 1.3,
-                      ),
+                      style: TextStyle(color: cs.onSurface, fontSize: 14, fontWeight: FontWeight.w600, height: 1.3),
                     ),
                     const SizedBox(height: 6),
                     Container(
                       padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 2),
-                      decoration: BoxDecoration(
-                        color: cs.primary.withValues(alpha: 0.15),
-                        borderRadius: BorderRadius.circular(20),
-                      ),
+                      decoration: BoxDecoration(color: cs.primary.withValues(alpha: 0.15), borderRadius: BorderRadius.circular(20)),
                       child: Row(
                         mainAxisSize: MainAxisSize.min,
                         children: [
@@ -412,11 +354,7 @@ class _VideoCard extends StatelessWidget {
                           const SizedBox(width: 2),
                           Text(
                             'Watch',
-                            style: TextStyle(
-                              color: cs.primary,
-                              fontSize: 11,
-                              fontWeight: FontWeight.w600,
-                            ),
+                            style: TextStyle(color: cs.primary, fontSize: 11, fontWeight: FontWeight.w600),
                           ),
                         ],
                       ),
@@ -446,9 +384,7 @@ class _VideoCard extends StatelessWidget {
     );
   }
 
-  Widget _shimmer() => Shimmer(
-        child: Container(color: cs.surfaceContainerHighest),
-      );
+  Widget _shimmer() => Shimmer(child: Container(color: cs.surfaceContainerHighest));
 }
 
 class _UserCard extends StatefulWidget {
@@ -463,6 +399,7 @@ class _UserCard extends StatefulWidget {
 
 class _UserCardState extends State<_UserCard> {
   late UserProfile user = widget.initialUser;
+  late final GlobalObjectKey<FollowButtonState> _followButtonState = GlobalObjectKey('followButton${user.id}');
 
   @override
   Widget build(BuildContext context) {
@@ -476,11 +413,24 @@ class _UserCardState extends State<_UserCard> {
       ),
       child: InkWell(
         onTap: () {
-          Navigator.of(context).push(MaterialPageRoute(
-            builder: (context) {
-              return ProfileScreen(profile: user, ownProfile: user.id == currentUser.id, hasBackButton: true);
-            },
-          ));
+          Navigator.of(context).push(
+            MaterialPageRoute(
+              builder: (context) {
+                return ProfileScreen(
+                  initialProfile: user,
+                  ownProfile: user.id == currentUser.id,
+                  hasBackButton: true,
+                  initialFollowed: localSeenService.isFollowing(user.id),
+                  onFollowChange: (bool followed) {
+                    setState(() {
+                      user = user.copyWith(followersCount: user.followersCount + (followed ? 1 : -1));
+                      _followButtonState.currentState?.setFollowed(followed);
+                    });
+                  },
+                );
+              },
+            ),
+          );
         },
         child: Row(
           children: [
@@ -488,17 +438,14 @@ class _UserCardState extends State<_UserCard> {
               padding: const EdgeInsets.all(2),
               decoration: BoxDecoration(
                 shape: BoxShape.circle,
-                gradient: LinearGradient(
-                  colors: [widget.cs.primary, widget.cs.secondary],
-                  begin: Alignment.topLeft,
-                  end: Alignment.bottomRight,
-                ),
+                gradient: LinearGradient(colors: [widget.cs.primary, widget.cs.secondary], begin: Alignment.topLeft, end: Alignment.bottomRight),
               ),
               child: CircleAvatar(
                 radius: 26,
                 backgroundColor: widget.cs.surfaceContainer,
-                backgroundImage:
-                    (user.profileImageUrl.isNotEmpty) ? NetworkImage(user.profileImageUrl) : NetworkImage(createUserProfileImageUrl(user.username)),
+                backgroundImage: (user.profileImageUrl.isNotEmpty)
+                    ? NetworkImage(user.profileImageUrl)
+                    : NetworkImage(createUserProfileImageUrl(user.username)),
               ),
             ),
             const SizedBox(width: 14),
@@ -508,30 +455,24 @@ class _UserCardState extends State<_UserCard> {
                 children: [
                   Text(
                     user.username,
-                    style: TextStyle(
-                      color: widget.cs.onSurface,
-                      fontSize: 15,
-                      fontWeight: FontWeight.w700,
-                    ),
+                    style: TextStyle(color: widget.cs.onSurface, fontSize: 15, fontWeight: FontWeight.w700),
                   ),
-                  ...[
-                    const SizedBox(height: 2),
-                    Text(
-                      '@${user.username}',
-                      style: TextStyle(color: widget.cs.onSurfaceVariant, fontSize: 13),
-                    ),
-                  ],
+                  ...[const SizedBox(height: 2), Text('@${user.username}', style: TextStyle(color: widget.cs.onSurfaceVariant, fontSize: 13))],
                 ],
               ),
             ),
-            FollowButton(
-                onChanged: (followed) {
-                  userRepository.toggleFollowUser(currentUser.id, user.id);
+            if (user.id != currentUser.id)
+              FollowButton(
+                key: _followButtonState,
+                onChanged: (_) async {
+                  bool followed = await userRepository.toggleFollowUser(currentUser.id, user.id);
                   setState(() {
                     user = user.copyWith(followersCount: user.followersCount + (followed ? 1 : -1));
                   });
+                  return followed;
                 },
-                initialSubscribed: localSeenService.isFollowing(user.id))
+                initialSubscribed: localSeenService.isFollowing(user.id),
+              ),
           ],
         ),
       ),

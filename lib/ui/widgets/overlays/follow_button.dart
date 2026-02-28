@@ -1,23 +1,21 @@
 import 'package:flutter/material.dart';
 
+enum FollowButtonDesign { floating, docked }
+
 class FollowButton extends StatefulWidget {
   final bool initialSubscribed;
-  final ValueChanged<bool>? onChanged;
+  final Future<bool> Function(bool)? onChanged;
+  final FollowButtonDesign design;
 
-  const FollowButton({
-    super.key,
-    this.initialSubscribed = false,
-    this.onChanged,
-  });
+  const FollowButton({super.key, this.initialSubscribed = false, this.onChanged, this.design = .floating});
 
   @override
-  State<FollowButton> createState() =>
-      _FollowButtonState();
+  State<FollowButton> createState() => FollowButtonState();
 }
 
-class _FollowButtonState extends State<FollowButton>
-    with SingleTickerProviderStateMixin {
-  late bool _followed;
+class FollowButtonState extends State<FollowButton> with SingleTickerProviderStateMixin {
+  late bool _subscribed = widget.initialSubscribed;
+  bool _isLoading = false;
   late AnimationController _controller;
   late Animation<double> _scaleAnimation;
   late Animation<double> _checkAnimation;
@@ -25,45 +23,40 @@ class _FollowButtonState extends State<FollowButton>
   @override
   void initState() {
     super.initState();
-    _followed = widget.initialSubscribed;
 
-    _controller = AnimationController(
-      vsync: this,
-      duration: const Duration(milliseconds: 350),
-    );
+    _controller = AnimationController(vsync: this, duration: const Duration(milliseconds: 350));
 
-    _scaleAnimation = Tween<double>(begin: 1.0, end: 0.92).animate(
-      CurvedAnimation(parent: _controller, curve: Curves.easeOut),
-    );
+    _scaleAnimation = Tween<double>(begin: 1.0, end: 0.92).animate(CurvedAnimation(parent: _controller, curve: Curves.bounceInOut));
 
-    _checkAnimation = CurvedAnimation(
-      parent: _controller,
-      curve: Curves.linear,
-    );
+    _checkAnimation = CurvedAnimation(parent: _controller, curve: Curves.easeIn);
   }
 
   void _toggle() async {
+    if (_isLoading) return;
+    setState(() => _isLoading = true);
+
     await _controller.forward();
     _controller.reverse();
 
+    _subscribed = await widget.onChanged?.call(_subscribed) ?? !_subscribed;
     setState(() {
-      _followed = !_followed;
+      _isLoading = false;
     });
-
-    widget.onChanged?.call(_followed);
+  }
+  
+  void setFollowed(bool followed){
+    setState(() {
+      _subscribed = followed;
+    });
   }
 
   @override
   Widget build(BuildContext context) {
     final theme = Theme.of(context);
 
-    final backgroundColor = _followed
-        ? theme.colorScheme.secondaryContainer
-        : theme.colorScheme.primary;
+    final backgroundColor = _subscribed ? theme.colorScheme.secondaryContainer : theme.colorScheme.primary;
 
-    final foregroundColor = _followed
-        ? theme.colorScheme.onSecondaryContainer
-        : theme.colorScheme.onPrimary;
+    final foregroundColor = _subscribed ? theme.colorScheme.onSecondaryContainer : theme.colorScheme.onPrimary;
 
     return GestureDetector(
       onTap: _toggle,
@@ -73,11 +66,12 @@ class _FollowButtonState extends State<FollowButton>
         child: AnimatedContainer(
           duration: const Duration(milliseconds: 300),
           curve: Curves.easeInOut,
-          padding:
-          const EdgeInsets.symmetric(horizontal: 24, vertical: 14),
+          padding: const EdgeInsets.symmetric(horizontal: 24, vertical: 14),
           decoration: BoxDecoration(
             color: backgroundColor,
-            borderRadius: BorderRadius.circular(16),
+            borderRadius: widget.design == FollowButtonDesign.floating
+                ? BorderRadius.circular(16)
+                : const BorderRadius.only(topLeft: Radius.circular(16), topRight: Radius.circular(16)),
           ),
           child: AnimatedSwitcher(
             duration: const Duration(milliseconds: 250),
@@ -85,41 +79,28 @@ class _FollowButtonState extends State<FollowButton>
               return FadeTransition(
                 opacity: animation,
                 child: SlideTransition(
-                  position: Tween<Offset>(
-                    begin: const Offset(0.0, 0.3),
-                    end: Offset.zero,
-                  ).animate(animation),
+                  position: Tween<Offset>(begin: const Offset(0.0, 0.3), end: Offset.zero).animate(animation),
                   child: child,
                 ),
               );
             },
             child: Row(
-              key: ValueKey(_followed),
+              key: ValueKey(_subscribed),
               mainAxisSize: MainAxisSize.min,
               children: [
                 AnimatedBuilder(
                   animation: _checkAnimation,
                   builder: (context, child) {
                     return Transform.scale(
-                      scale: _followed
-                          ? 1-_checkAnimation.value
-                          : 1-_checkAnimation.value,
-                      child: Icon(
-                        _followed
-                            ? Icons.check_circle
-                            : Icons.notifications,
-                        color: foregroundColor,
-                      ),
+                      scale: _subscribed ? 1 - _checkAnimation.value : 1 - _checkAnimation.value,
+                      child: Icon(_subscribed ? Icons.check_circle : Icons.notifications, color: foregroundColor),
                     );
                   },
                 ),
                 const SizedBox(width: 10),
                 Text(
-                  _followed ? "Followed" : "Follow",
-                  style: theme.textTheme.labelLarge?.copyWith(
-                    color: foregroundColor,
-                    fontWeight: FontWeight.bold,
-                  ),
+                  _subscribed ? "Followed" : "Follow",
+                  style: theme.textTheme.labelLarge?.copyWith(color: foregroundColor, fontWeight: FontWeight.bold),
                 ),
               ],
             ),

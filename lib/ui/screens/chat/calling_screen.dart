@@ -8,12 +8,15 @@ import 'package:wurp/ui/widgets/camera/web_camera.dart';
 class CallingApp extends StatelessWidget {
   final String name;
   final String? profileImageUrl;
+
   const CallingApp({super.key, required this.name, this.profileImageUrl});
 
   @override
   Widget build(BuildContext context) {
     return CallingScreen(
-      joinFuture: Future.delayed(const Duration(milliseconds: 2500)), name: name, profileImageUrl: profileImageUrl,
+      joinFuture: Future.delayed(const Duration(milliseconds: 2500)),
+      name: name,
+      profileImageUrl: profileImageUrl,
     );
   }
 }
@@ -143,12 +146,16 @@ class _CallingScreenState extends State<CallingScreen> with TickerProviderStateM
                   Container(
                     width: 56,
                     height: 56,
-                    decoration: widget.profileImageUrl == null ? BoxDecoration(
-                      shape: BoxShape.circle,
-                      gradient: LinearGradient(colors: [primary, secondary]),
-                      boxShadow: [BoxShadow(color: Colors.black.withValues(alpha: 0.5), blurRadius: 8, offset: const Offset(0, 4))],
-                    ) : null,
-                    child: widget.profileImageUrl == null ? Center(child: Text(widget.name.substring(0, 2), style: const TextStyle(fontWeight: FontWeight.bold, color: Colors.white))) : Image.network(widget.profileImageUrl!),
+                    decoration: widget.profileImageUrl == null
+                        ? BoxDecoration(
+                            shape: BoxShape.circle,
+                            gradient: LinearGradient(colors: [primary, secondary]),
+                            boxShadow: [BoxShadow(color: Colors.black.withValues(alpha: 0.5), blurRadius: 8, offset: const Offset(0, 4))],
+                          )
+                        : null,
+                    child: widget.profileImageUrl == null
+                        ? Center(child: Text(widget.name.substring(0, 2), style: const TextStyle(fontWeight: FontWeight.bold, color: Colors.white)))
+                        : CircleAvatar(backgroundImage: NetworkImage(widget.profileImageUrl!)),
                   ),
                   const SizedBox(width: 12),
                   Expanded(
@@ -227,8 +234,16 @@ class _CallingScreenState extends State<CallingScreen> with TickerProviderStateM
                         border: Border.all(color: Colors.white12),
                         boxShadow: [BoxShadow(color: Colors.black.withValues(alpha: 0.55), blurRadius: 18, offset: const Offset(0, 12))],
                       ),
-                      child: FittedBox(fit: BoxFit.fitHeight, child: SizedBox(width: 1024, height: 1024, child: ClipRect(
-                          child: Transform.scale(scale: 2, child: const YouTubePlayerWidget(videoUrl: "https://www.youtube.com/watch?v=-Dh6-F4sVmI", showControls: false, autoPlay: true)))))),
+                      child: FittedBox(
+                          fit: BoxFit.fitHeight,
+                          child: SizedBox(
+                              width: 1024,
+                              height: 1024,
+                              child: ClipRect(
+                                  child: Transform.scale(
+                                      scale: 2,
+                                      child: const YouTubePlayerWidget(
+                                          videoUrl: "https://www.youtube.com/watch?v=-Dh6-F4sVmI", showControls: false, autoPlay: true)))))),
                 ),
               ),
             ),
@@ -289,7 +304,9 @@ class _CallingScreenState extends State<CallingScreen> with TickerProviderStateM
                         icon: Icons.cameraswitch,
                         label: 'Flip Camera',
                         bg: theme.colorScheme.secondary,
-                        onTap: () {_cameraKey.currentState?.switchCamera();},
+                        onTap: () {
+                          _cameraKey.currentState?.switchCamera();
+                        },
                         size: 60,
                       ),
                     ],

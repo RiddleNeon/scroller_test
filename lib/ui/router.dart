@@ -17,11 +17,7 @@ void initRouter() {
   routerConfig = GoRouter(
     navigatorKey: appNavigatorKey,
     redirect: (context, state) {
-      final navBarItem = _navigationBarItems
-          .where(
-            (element) => element.id == state.matchedLocation,
-          )
-          .firstOrNull;
+      final navBarItem = _navigationBarItems.where((element) => element.id == state.matchedLocation).firstOrNull;
       if (navBarItem != null) {
         int navBarIndex = _navigationBarItems.indexOf(navBarItem);
         if (navBarIndex != -1) navBarKey.currentState?.switchToIndex(navBarIndex);
@@ -36,33 +32,21 @@ void initRouter() {
       return null;
     },
     routes: [
-      GoRoute(
-        path: '/',
-        builder: (context, state) => const SizedBox.shrink(),
-      ),
+      GoRoute(path: '/', builder: (context, state) => const SizedBox.shrink()),
       ShellRoute(
         builder: (context, state, child) {
-          return Scaffold(
-            body: child,
-            bottomNavigationBar: _bottomNavBar,
-          );
+          return Scaffold(body: child, bottomNavigationBar: _bottomNavBar);
         },
         routes: [
-          GoRoute(
-            path: '/feed',
-            builder: (context, state) => const VideoFeed(),
-          ),
-          GoRoute(
-            path: '/search_screen',
-            builder: (context, state) => const SearchScreen(),
-          ),
+          GoRoute(path: '/feed', builder: (context, state) => const VideoFeed()),
+          GoRoute(path: '/search_screen', builder: (context, state) => const SearchScreen()),
           GoRoute(
             path: '/profile',
-            builder: (context, state) => ProfileScreen(profile: currentUser, ownProfile: true),
-          ),          
+            builder: (context, state) => ProfileScreen(initialProfile: currentUser, ownProfile: true, onFollowChange: (bool followed) {}),
+          ),
           GoRoute(
             path: '/call',
-            builder: (context, state) => const CallingApp(name: "Yo Mama", profileImageUrl: "https://i.ebayimg.com/images/g/0GQAAOSwrIlasZ7p/s-l1200.jpg",),
+            builder: (context, state) => const CallingApp(name: "Yo Mama", profileImageUrl: "https://i.ebayimg.com/images/g/0GQAAOSwrIlasZ7p/s-l1200.jpg"),
           ),
           GoRoute(
             path: '/chat',
@@ -74,34 +58,29 @@ void initRouter() {
               onSend: (message) async {
                 chatRepository.sendNotification(receiverUid: currentUser.id, title: 'New Message by trump!', body: message);
                 Future.delayed(
-                    const Duration(milliseconds: 500), () => _messagingScreenKey.currentState?.onReceiveMessage('heheheha make amerriikkka kreat agaiin blub'));
+                  const Duration(milliseconds: 500),
+                  () => _messagingScreenKey.currentState?.onReceiveMessage('heheheha make amerriikkka kreat agaiin blub'),
+                );
                 print("sent: $message");
               },
               initialMessages: [
                 ChatMessage(id: "${DateTime.now().hashCode}", text: "hii", isMe: true, timestamp: DateTime.now().subtract(const Duration(minutes: 1))),
-                ChatMessage(id: "${DateTime.now().hashCode+1}", text: "no hii", isMe: false, timestamp: DateTime.now().subtract(const Duration(minutes: 2))),
-                ChatMessage(id: "${DateTime.now().hashCode+2}", text: "yes hii", isMe: true, timestamp: DateTime.now().subtract(const Duration(minutes: 3))),
-                ChatMessage(id: "${DateTime.now().hashCode+3}", text: "bye", isMe: false, timestamp: DateTime.now().subtract(const Duration(minutes: 4))),
-                ChatMessage(id: "${DateTime.now().hashCode+3}", text: "bye", isMe: false, timestamp: DateTime.now().subtract(const Duration(minutes: 4))),
-                ChatMessage(id: "${DateTime.now().hashCode+3}", text: "bye", isMe: false, timestamp: DateTime.now().subtract(const Duration(minutes: 4))),
+                ChatMessage(id: "${DateTime.now().hashCode + 1}", text: "no hii", isMe: false, timestamp: DateTime.now().subtract(const Duration(minutes: 2))),
+                ChatMessage(id: "${DateTime.now().hashCode + 2}", text: "yes hii", isMe: true, timestamp: DateTime.now().subtract(const Duration(minutes: 3))),
+                ChatMessage(id: "${DateTime.now().hashCode + 3}", text: "bye", isMe: false, timestamp: DateTime.now().subtract(const Duration(minutes: 4))),
+                ChatMessage(id: "${DateTime.now().hashCode + 3}", text: "bye", isMe: false, timestamp: DateTime.now().subtract(const Duration(minutes: 4))),
+                ChatMessage(id: "${DateTime.now().hashCode + 3}", text: "bye", isMe: false, timestamp: DateTime.now().subtract(const Duration(minutes: 4))),
               ],
             ),
           ),
           GoRoute(
             path: '/rick',
-            builder: (context, state) => YouTubePlayerWidget(
-              autoPlay: true,
-              showControls: false,
-              videoUrl: 'https://www.youtube.com/watch?v=dQw4w9WgXcQ',
-              key: _youtubePlayerWidgetKey,
-            ),
+            builder: (context, state) =>
+                YouTubePlayerWidget(autoPlay: true, showControls: false, videoUrl: 'https://www.youtube.com/watch?v=dQw4w9WgXcQ', key: _youtubePlayerWidgetKey),
           ),
         ],
       ),
-      GoRoute(
-        path: '/login',
-        builder: (context, state) => const LoginScreen(),
-      ),
+      GoRoute(path: '/login', builder: (context, state) => const LoginScreen()),
     ],
   );
 }
