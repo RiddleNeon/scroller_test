@@ -53,6 +53,8 @@ class MessagingScreenState extends State<MessagingScreen>
       vsync: this,
       duration: const Duration(milliseconds: 1200),
     )..repeat();
+
+    _messages.forEach((element) => _createBubbleController(animate: true));
   }
   
   void onReceiveMessage(String text) {

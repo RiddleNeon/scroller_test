@@ -52,23 +52,19 @@ void initRouter() {
           GoRoute(
             path: '/chat',
             builder: (context, state) => FutureBuilder(
-              future: localSeenService.getMessagesWith(currentUser.id, limit: 10),
+              future: localSeenService.getMessagesWith("MrROkFLyYpSqOuxwcePncM8Kk4B3", limit: 10),
               builder: (context, asyncSnapshot) {
                 if(asyncSnapshot.data == null) return Container();
                 
                 return MessagingScreen(
                   key: _messagingScreenKey,
                   isOnline: true,
-                  recipientName: "Donald Trump",
-                  recipientAvatarUrl: "https://i.ebayimg.com/images/g/0GQAAOSwrIlasZ7p/s-l1200.jpg",
+                  recipientName: "Julian",
+                  recipientAvatarUrl: "https://res.cloudinary.com/dvw3vksqx/image/upload/v1772225146/jzrnlvckuyuojqiix37i.png",
                   onSend: (message) async {
                     chatRepository.sendNotification(
-                      receiverUid: currentUser.id,
-                      message: ChatMessage(id: "${DateTime.now().microsecondsSinceEpoch}", text: message, isMe: true, timestamp: DateTime.now()),
-                    );
-                    Future.delayed(
-                      const Duration(milliseconds: 500),
-                      () => _messagingScreenKey.currentState?.onReceiveMessage('heheheha make amerriikkka kreat agaiin blub'),
+                      receiverUid: "MrROkFLyYpSqOuxwcePncM8Kk4B3",
+                      message: ChatMessage(id: "MrROkFLyYpSqOuxwcePncM8Kk4B3-${DateTime.now().microsecondsSinceEpoch}", text: message, isMe: true, timestamp: DateTime.now()),
                     );
                     print("sent: $message");
                   },

@@ -79,6 +79,8 @@ class LocalSeenService {
     await _interactionBox.clear();
     await _blacklistedTagsBox.clear();
     await _likeValsBox.clear();*/
+/*    await _chatBox.clear();
+    await _chatCursorBox.clear();*/
 
     await syncWithFirestore();
     await cleanUpOldEntries();
