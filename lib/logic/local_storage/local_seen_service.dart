@@ -486,7 +486,7 @@ class LocalSeenService {
         .map((e) => _messageFromMap(e.value as Map, conversationId))
         .toList();
 
-    final merged = <String, ChatMessage>{
+    final merged = <String, ChatMessage> {
       for (final m in localMessages) m.id: m,
     };
 

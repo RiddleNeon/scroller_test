@@ -4,6 +4,7 @@ import 'package:wurp/main.dart';
 import 'package:wurp/ui/screens/auth_screen.dart';
 import 'package:wurp/ui/screens/bottom_navigation_bar.dart';
 import 'package:wurp/ui/screens/chat/calling_screen.dart';
+import 'package:wurp/ui/screens/chat/chat_managing_screen.dart';
 import 'package:wurp/ui/screens/chat/chat_screen.dart';
 import 'package:wurp/ui/screens/profile_screen.dart';
 import 'package:wurp/ui/screens/search_screen/search_screen.dart';
@@ -51,27 +52,7 @@ void initRouter() {
           ),
           GoRoute(
             path: '/chat',
-            builder: (context, state) => FutureBuilder(
-              future: localSeenService.getMessagesWith("MrROkFLyYpSqOuxwcePncM8Kk4B3", limit: 10),
-              builder: (context, asyncSnapshot) {
-                if(asyncSnapshot.data == null) return Container();
-                
-                return MessagingScreen(
-                  key: _messagingScreenKey,
-                  isOnline: true,
-                  recipientName: "Julian",
-                  recipientAvatarUrl: "https://res.cloudinary.com/dvw3vksqx/image/upload/v1772225146/jzrnlvckuyuojqiix37i.png",
-                  onSend: (message) async {
-                    chatRepository.sendNotification(
-                      receiverUid: "MrROkFLyYpSqOuxwcePncM8Kk4B3",
-                      message: ChatMessage(id: "MrROkFLyYpSqOuxwcePncM8Kk4B3-${DateTime.now().microsecondsSinceEpoch}", text: message, isMe: true, timestamp: DateTime.now()),
-                    );
-                    print("sent: $message");
-                  },
-                  initialMessages: asyncSnapshot.data!,
-                );
-              }
-            ),
+            builder: (context, state) => const ChatManagingScreen()
           ),
           GoRoute(
             path: '/rick',
