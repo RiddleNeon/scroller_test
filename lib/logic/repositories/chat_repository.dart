@@ -27,14 +27,14 @@ class ChatRepository {
       'body': {
         "message": message.text,
         "sender": currentUser.id
-      }
+      }.toString()
     });
     print("body: $body");
 
     await http.post(
       Uri.parse('https://wurp-fcm-server.onrender.com/send'),
       headers: {'Content-Type': 'application/json'},
-      body: body.toString(),
+      body: body,
     );
     
     String senderUid = currentUser.id;
