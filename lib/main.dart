@@ -97,9 +97,6 @@ Future<void> _setupMessaging() async {
     sound: true,
   );
 
-  final token = await messaging.getToken(vapidKey: "BMzrcPy9WqWjCd72OCbRQS2hdTXcMN2khJ3sZcUED9xRHZq6TQjVDo6y2icQtweVaFOp7kRAS085VeQgqZlFK0E");
-  print('FCM Token: $token');
-
   FirebaseMessaging.onMessage.listen((RemoteMessage message) {
     print('Foreground: ${message.notification?.title}');
   });
@@ -140,9 +137,6 @@ Future<void> onUserLogin(UserProfile user, [BuildContext? context]) async {
   await FirebaseFirestore.instance.collection('users').doc(currentUser.id).update({
     'fcmToken': token,
   });
-  Future.delayed(const Duration(seconds: 5), () {
-    chatRepository.sendNotification(receiverUid: currentUser.id, title: "HELLOOOOO", body: "WSUPPPP");
-  },);
 }
 
 Future<void> onUserLogout() async {

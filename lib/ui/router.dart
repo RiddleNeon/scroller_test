@@ -9,6 +9,7 @@ import 'package:wurp/ui/screens/profile_screen.dart';
 import 'package:wurp/ui/screens/search_screen/search_screen.dart';
 import 'package:wurp/ui/short_video_player.dart';
 
+import '../logic/chat/chat_message.dart';
 import 'misc/youtube_player.dart';
 
 late final GoRouter routerConfig;
@@ -50,27 +51,30 @@ void initRouter() {
           ),
           GoRoute(
             path: '/chat',
-            builder: (context, state) => MessagingScreen(
-              key: _messagingScreenKey,
-              isOnline: true,
-              recipientName: "Donald Trump",
-              recipientAvatarUrl: "https://i.ebayimg.com/images/g/0GQAAOSwrIlasZ7p/s-l1200.jpg",
-              onSend: (message) async {
-                chatRepository.sendNotification(receiverUid: currentUser.id, title: 'New Message by trump!', body: message);
-                Future.delayed(
-                  const Duration(milliseconds: 500),
-                  () => _messagingScreenKey.currentState?.onReceiveMessage('heheheha make amerriikkka kreat agaiin blub'),
+            builder: (context, state) => FutureBuilder(
+              future: localSeenService.getMessagesWith(currentUser.id, limit: 10),
+              builder: (context, asyncSnapshot) {
+                if(asyncSnapshot.data == null) return Container();
+                
+                return MessagingScreen(
+                  key: _messagingScreenKey,
+                  isOnline: true,
+                  recipientName: "Donald Trump",
+                  recipientAvatarUrl: "https://i.ebayimg.com/images/g/0GQAAOSwrIlasZ7p/s-l1200.jpg",
+                  onSend: (message) async {
+                    chatRepository.sendNotification(
+                      receiverUid: currentUser.id,
+                      message: ChatMessage(id: "${DateTime.now().microsecondsSinceEpoch}", text: message, isMe: true, timestamp: DateTime.now()),
+                    );
+                    Future.delayed(
+                      const Duration(milliseconds: 500),
+                      () => _messagingScreenKey.currentState?.onReceiveMessage('heheheha make amerriikkka kreat agaiin blub'),
+                    );
+                    print("sent: $message");
+                  },
+                  initialMessages: asyncSnapshot.data!,
                 );
-                print("sent: $message");
-              },
-              initialMessages: [
-                ChatMessage(id: "${DateTime.now().hashCode}", text: "hii", isMe: true, timestamp: DateTime.now().subtract(const Duration(minutes: 1))),
-                ChatMessage(id: "${DateTime.now().hashCode + 1}", text: "no hii", isMe: false, timestamp: DateTime.now().subtract(const Duration(minutes: 2))),
-                ChatMessage(id: "${DateTime.now().hashCode + 2}", text: "yes hii", isMe: true, timestamp: DateTime.now().subtract(const Duration(minutes: 3))),
-                ChatMessage(id: "${DateTime.now().hashCode + 3}", text: "bye", isMe: false, timestamp: DateTime.now().subtract(const Duration(minutes: 4))),
-                ChatMessage(id: "${DateTime.now().hashCode + 3}", text: "bye", isMe: false, timestamp: DateTime.now().subtract(const Duration(minutes: 4))),
-                ChatMessage(id: "${DateTime.now().hashCode + 3}", text: "bye", isMe: false, timestamp: DateTime.now().subtract(const Duration(minutes: 4))),
-              ],
+              }
             ),
           ),
           GoRoute(

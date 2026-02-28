@@ -2,13 +2,16 @@ import 'dart:convert';
 
 import 'package:cloud_firestore/cloud_firestore.dart';
 import 'package:http/http.dart' as http;
+import 'package:wurp/logic/chat/chat_message.dart';
+import 'package:wurp/main.dart';
 
 class ChatRepository {
   Future<void> sendNotification({
     required String receiverUid,
-    required String title,
-    required String body,
+    required ChatMessage message,
   }) async {
+    
+    localSeenService.sendMessageLocal(receiverUid, message);
     
     final doc = await FirebaseFirestore.instance
         .collection('users')
@@ -23,10 +26,34 @@ class ChatRepository {
       headers: {'Content-Type': 'application/json'},
       body: jsonEncode({
         'token': token,
-        'title': title,
-        'body': body,
+        'title': 'new Message',
+        'body': message.text,
       }),
     );
+    
+    String senderUid = currentUser.id;
+    bool senderIsA = senderUid.hashCode > receiverUid.hashCode;
+    
+    
+    String uidA = senderIsA ? senderUid : receiverUid;
+    String uidB = senderIsA ? receiverUid : senderUid;
+
+    await FirebaseFirestore.instance
+        .collection('chat')
+        .doc("$uidA-${uidB}")
+        .collection('messages')
+        .doc(message.id).set(message.toFirestore(receiverUid == uidB));
+    print("set");
   }
-  
+
+  Future<List<ChatMessage>> getMessagesWith(
+      String otherUserId, {
+        int limit = 30,
+      }) async {
+    return localSeenService.getMessagesWith(otherUserId, limit: limit);
+  }
+
+  ChatMessage? getMessage(String otherUserId, String messageId) {
+    return localSeenService.getMessage(otherUserId, messageId);
+  }
 }

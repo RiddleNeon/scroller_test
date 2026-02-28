@@ -3,25 +3,9 @@ import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
 import 'package:wurp/ui/router.dart';
 
-
-enum MessageStatus { sending, sent, delivered, read }
-
-class ChatMessage {
-  final String id;
-  final String text;
-  final bool isMe;
-  final DateTime timestamp;
-  MessageStatus status;
+import '../../../logic/chat/chat_message.dart';
 
 
-  ChatMessage({
-    required this.id,
-    required this.text,
-    required this.isMe,
-    required this.timestamp,
-    this.status = MessageStatus.sent,
-  });
-}
 
 class MessagingScreen extends StatefulWidget {
   final Future<void> Function(String message) onSend;
