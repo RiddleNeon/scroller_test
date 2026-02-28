@@ -1,65 +1,28 @@
 import 'package:camera/camera.dart';
 import 'package:flutter/material.dart';
+import 'package:wurp/ui/widgets/camera/web_camera.dart';
 
 class WebCameraDialog extends StatefulWidget {
-  const WebCameraDialog();
+  final bool preferFrontCamera;
+  final bool showControls;
+  const WebCameraDialog({this.preferFrontCamera = false, this.showControls = true});
 
   @override
-  State<WebCameraDialog> createState() => _WebCameraDialogState();
+  State createState() => _WebCameraDialogState();
 }
 
 class _WebCameraDialogState extends State<WebCameraDialog> {
-  CameraController? _controller;
-  List<CameraDescription> _cameras = [];
-  bool _loading = true;
-  String? _error;
   bool _takingPhoto = false;
-  int _cameraIndex = 0;
-
-  @override
-  void initState() {
-    super.initState();
-    _initCamera();
+  GlobalObjectKey<WebCameraState> _webCameraState = const GlobalObjectKey('WebCamera'); 
+  
+  CameraController? get _controller => _webCameraState.currentState?.controller;
+  List<CameraDescription> get _cameras => _webCameraState.currentState?.cameras ?? [];
+  
+  void switchCamera(){
+    _webCameraState.currentState?.switchCamera();
   }
 
-  Future<void> _initCamera() async {
-    setState(() { _loading = true; _error = null; });
-    try {
-      _cameras = await availableCameras();
-      if (_cameras.isEmpty) {
-        setState(() { _error = 'No Camera Found.'; _loading = false; });
-        return;
-      }
-      await _startCamera(_cameraIndex);
-    } catch (e) {
-      setState(() { _error = 'Camera-Error: $e'; _loading = false; });
-    }
-  }
-
-  Future<void> _startCamera(int index) async {
-    await _controller?.dispose();
-    final controller = CameraController(
-      _cameras[index],
-      ResolutionPreset.high,
-      enableAudio: false,
-    );
-    await controller.initialize();
-    if (!mounted) return;
-    setState(() {
-      _controller = controller;
-      _cameraIndex = index;
-      _loading = false;
-    });
-  }
-
-  Future<void> _switchCamera() async {
-    if (_cameras.length < 2) return;
-    final next = (_cameraIndex + 1) % _cameras.length;
-    setState(() => _loading = true);
-    await _startCamera(next);
-  }
-
-  Future<void> _takePhoto() async {
+  Future _takePhoto() async {
     if (_controller == null || !_controller!.value.isInitialized || _takingPhoto) return;
     setState(() => _takingPhoto = true);
     try {
@@ -76,8 +39,17 @@ class _WebCameraDialogState extends State<WebCameraDialog> {
 
   @override
   void dispose() {
-    _controller?.dispose();
     super.dispose();
+  }
+  
+  @override
+  void initState() {
+    Future.delayed(const Duration(milliseconds: 500), () {
+      if(mounted){
+        setState(() {});
+      }
+    });
+    super.initState();
   }
 
   @override
@@ -94,25 +66,7 @@ class _WebCameraDialogState extends State<WebCameraDialog> {
           child: Stack(
             fit: StackFit.expand,
             children: [
-              if (_loading)
-                const Center(child: CircularProgressIndicator(color: Colors.white))
-              else if (_error != null)
-                Center(
-                  child: Padding(
-                    padding: const EdgeInsets.all(24),
-                    child: Text(_error!, style: const TextStyle(color: Colors.white70), textAlign: TextAlign.center),
-                  ),
-                )
-              else if (_controller != null)
-                  FittedBox(
-                    fit: BoxFit.cover,
-                    child: SizedBox(
-                      width: _controller!.value.previewSize?.height ?? 380,
-                      height: _controller!.value.previewSize?.width ?? 520,
-                      child: CameraPreview(_controller!),
-                    ),
-                  ),
-
+              WebCamera(preferFrontCamera: widget.preferFrontCamera, key: _webCameraState),
               Positioned(
                 top: 12,
                 left: 12,
@@ -135,7 +89,7 @@ class _WebCameraDialogState extends State<WebCameraDialog> {
                   top: 12,
                   right: 12,
                   child: GestureDetector(
-                    onTap: _switchCamera,
+                    onTap: switchCamera,
                     child: Container(
                       width: 36,
                       height: 36,

@@ -79,6 +79,8 @@ class YouTubePlayerWidgetState extends State<YouTubePlayerWidget> {
       ..style.width = '100%'
       ..style.height = '100%';
 
+    _iframe.style.pointerEvents = 'none';
+
     ui_web.platformViewRegistry.registerViewFactory(
       _viewId,
           (int viewId) => _iframe,

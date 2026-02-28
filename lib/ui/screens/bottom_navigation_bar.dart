@@ -11,16 +11,7 @@ class BottomNavBar extends StatefulWidget {
 }
 
 class BottomNavBarState extends State<BottomNavBar> {
-  int currentSelectedIndex = 0;
-
-  static const __items = [
-    (icon: Icons.home, label: 'Home', id: 'home'),
-    (icon: Icons.search, label: 'Discover', id: 'search'),
-    (icon: Icons.add_box_outlined, label: '', id: 'create'),
-    (icon: Icons.notifications_none, label: 'Inbox', id: 'notifications'),
-    (icon: Icons.person_outline, label: 'Profile', id: 'profile'),
-  ];
-  
+  int currentSelectedIndex = 0;  
   List get items => widget.items;
   
   void switchToIndex(int index) {

@@ -76,12 +76,15 @@ void main() async {
 
   print("running now ");
   runApp(
-      MaterialApp.router(
-        debugShowCheckedModeBanner: false,
-        theme: ThemeData.from(colorScheme: getColorScheme()),
-        routerConfig: routerConfig,
-      )
+    MaterialApp.router(
+      debugShowCheckedModeBanner: false,
+      theme: ThemeData.from(colorScheme: getColorScheme()).copyWith(
+        scaffoldBackgroundColor: const Color(0xFF0B1220),
+      ),
+      routerConfig: routerConfig,
+    ),
   );
+
   print(auth?.currentUser);
 }
 FirebaseMessaging messaging = FirebaseMessaging.instance;
@@ -121,6 +124,7 @@ ColorScheme getColorScheme() {
     onSecondary: Color(0xFF002828),
     primary: Colors.teal,
     tertiary: Colors.tealAccent,
+    brightness: Brightness.dark,
   );
 }
 

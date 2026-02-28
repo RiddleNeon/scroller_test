@@ -8,7 +8,8 @@ import 'package:http/http.dart' as http;
 import 'package:image_picker/image_picker.dart';
 import 'package:wurp/main.dart';
 import 'package:wurp/logic/repositories/user_repository.dart';
-import 'package:wurp/ui/widgets/web_camera.dart';
+
+import 'camera/camera_dialog.dart';
 
 Future<String?> showProfileImagePicker(BuildContext context) {
   return showModalBottomSheet<String>(
@@ -81,7 +82,7 @@ class _ProfileImagePickerSheetState extends State<_ProfileImagePickerSheet>
     final bytes = await showDialog<Uint8List>(
       context: context,
       barrierDismissible: false,
-      builder: (_) => const WebCameraDialog(),
+      builder: (_) => const WebCameraDialog(preferFrontCamera: true),
     );
     if (bytes != null && mounted) {
       setState(() {
