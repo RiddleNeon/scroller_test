@@ -67,18 +67,6 @@ void main() async {
   FirebaseMessaging.onBackgroundMessage((message) async {
     print("MESSAGE: ${message}");
   },);
-  FirebaseFirestore.instance
-      .collection('videos')
-      .snapshots(includeMetadataChanges: true)
-      .listen((snapshot) {
-
-    print("From cache: ${snapshot.metadata.isFromCache}");
-    print("Has pending writes: ${snapshot.metadata.hasPendingWrites}");
-
-    for (var doc in snapshot.docs) {
-      print(doc.data());
-    }
-  });
   initRouter();
   routerConfig.refresh();
   if (auth?.currentUser != null) {

@@ -216,18 +216,14 @@ class LocalSeenService {
         "following: $lastSyncFollowing");
 
     await Future.wait([
-      /*_syncSeenInteractions(lastSyncSeen, onlyLoad: onlyLoad),
+      _syncSeenInteractions(lastSyncSeen, onlyLoad: onlyLoad),
       _syncLikes(lastSyncLikes, onlyLoad: onlyLoad),
       _syncDislikes(lastSyncDislikes, onlyLoad: onlyLoad),
-      _syncPreferences(lastSyncPreferences, onlyLoad: onlyLoad),*/
+      _syncPreferences(lastSyncPreferences, onlyLoad: onlyLoad),
       _syncFollowing(lastSyncFollowing, onlyLoad: onlyLoad),
     ]);
     print("successfully synced!");
   }
-
-  // ---------------------------------------------------------------------------
-  // Seen interactions sync
-  // ---------------------------------------------------------------------------
 
   Future<void> _syncSeenInteractions(DateTime lastSync, {required bool onlyLoad}) async {
     if (!onlyLoad) {
