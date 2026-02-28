@@ -26,6 +26,8 @@ jobs:
 
       - run: cp web/coi-serviceworker.js build/web/
 
+      - run: cp web/firebase-messaging-sw.js build/web/
+
       - uses: actions/upload-pages-artifact@v3
         with:
           path: build/web
