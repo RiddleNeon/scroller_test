@@ -25,14 +25,9 @@ jobs:
       - run: flutter build web --release --base-href /scroller_test/
       - run: cp web/coi-serviceworker.js build/web/
       - run: cp web/firebase-messaging-sw.js build/web/
-      - run: mkdir -p build/root/scroller_test
-      - run: cp -r build/web/. build/root/scroller_test/
-      - run: cp web/firebase-messaging-sw.js build/root/firebase-messaging-sw.js
-      - run: echo '<html><head><meta http-equiv="refresh" content="0; url=https://riddleneon.github.io/scroller_test/"></head></html>' > build/root/index.html
-
       - uses: actions/upload-pages-artifact@v3
         with:
-          path: build/root
+          path: build/web
 
   deploy:
     needs: build
