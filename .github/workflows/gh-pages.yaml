@@ -23,15 +23,15 @@ jobs:
       - run: flutter config --enable-web
 
       - run: flutter build web --release --base-href /scroller_test/
-
       - run: cp web/coi-serviceworker.js build/web/
-
       - run: cp web/firebase-messaging-sw.js build/web/
-      - run: mkdir -p build/web/../ && cp web/firebase-messaging-sw.js build/firebase-messaging-sw.js
+      - run: mkdir -p build/root/scroller_test
+      - run: cp -r build/web/. build/root/scroller_test/
+      - run: cp web/firebase-messaging-sw.js build/root/firebase-messaging-sw.js
 
       - uses: actions/upload-pages-artifact@v3
         with:
-          path: build/web
+          path: build/root
 
   deploy:
     needs: build
