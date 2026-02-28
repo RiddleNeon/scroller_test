@@ -41,10 +41,12 @@
     For more details:
     * https://docs.flutter.dev/platform-integration/web/initialization
   -->
-
   <script>
     if ('serviceWorker' in navigator) {
-      navigator.serviceWorker.register('/scroller_test/firebase-messaging-sw.js');
+      navigator.serviceWorker.register('/scroller_test/firebase-messaging-sw.js')
+        .then(function(registration) {
+          console.log('SW registered:', registration);
+        });
     }
   </script>
   
