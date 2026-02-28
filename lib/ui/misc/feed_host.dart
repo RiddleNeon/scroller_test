@@ -32,6 +32,6 @@ class _FeedHostState extends State<FeedHost> with TickerProviderStateMixin {
 
   @override
   Widget build(BuildContext context) {
-    return feedVideos(this, widget.provider, feedModel: model, initialPage: widget.initialPage);
+    return feedVideos(this, widget.provider, context, feedModel: model, initialPage: widget.initialPage);
   }
 }

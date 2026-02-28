@@ -307,6 +307,7 @@ class _SearchScreenState extends State<SearchScreen> with TickerProviderStateMix
                     SearchVideoResultRecommender(
                       listedVideos: _searchBarResult!.videoResults,
                     ),
+                    context,
                     feedModel: _currentSearchViewModel,
                     itemCount: _searchBarResult!.videoResults.length,
                     initialPage: videoIndex,
@@ -523,22 +524,14 @@ class _UserCardState extends State<_UserCard> {
                 ],
               ),
             ),
-            FutureBuilder(
-              future: localSeenService.isFollowing(user.id),
-              builder: (context, asyncSnapshot) {
-                if(!asyncSnapshot.hasData || asyncSnapshot.hasError) return Container();
-                
-                return FollowButton(
-                    onChanged: (followed) {
-                      userRepository.toggleFollowUser(currentUser.id, user.id);
-                      setState(() {
-                        user = user.copyWith(followersCount: user.followersCount + (followed ? 1 : -1));
-                      });
-                    },
-                    initialSubscribed: asyncSnapshot.data!
-                );
-              }
-            ),
+            FollowButton(
+                onChanged: (followed) {
+                  userRepository.toggleFollowUser(currentUser.id, user.id);
+                  setState(() {
+                    user = user.copyWith(followersCount: user.followersCount + (followed ? 1 : -1));
+                  });
+                },
+                initialSubscribed: localSeenService.isFollowing(user.id))
           ],
         ),
       ),

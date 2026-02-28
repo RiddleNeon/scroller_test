@@ -70,6 +70,7 @@ class WebCameraState extends State<WebCamera> {
   }
 
   Future switchCamera() async {
+    print("switching camera");
     if (cameras.length < 2) return;
     final next = (_cameraIndex + 1) % cameras.length;
     setState(() => _loading = true);

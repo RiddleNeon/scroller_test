@@ -2,36 +2,28 @@ import 'dart:async';
 
 import 'package:flutter/material.dart';
 import 'package:wurp/ui/misc/youtube_player.dart';
+import 'package:wurp/ui/router.dart';
 import 'package:wurp/ui/widgets/camera/web_camera.dart';
 
-void main() => runApp(const CallingApp());
-
 class CallingApp extends StatelessWidget {
-  const CallingApp({super.key});
+  final String name;
+  final String? profileImageUrl;
+  const CallingApp({super.key, required this.name, this.profileImageUrl});
 
   @override
   Widget build(BuildContext context) {
-    return CallingScreenWithJoinFuture(
-      joinFuture: Future.delayed(const Duration(milliseconds: 2500)),
+    return CallingScreen(
+      joinFuture: Future.delayed(const Duration(milliseconds: 2500)), name: name, profileImageUrl: profileImageUrl,
     );
-  }
-}
-
-class CallingScreenWithJoinFuture extends StatelessWidget {
-  final Future<void> joinFuture;
-
-  const CallingScreenWithJoinFuture({super.key, required this.joinFuture});
-
-  @override
-  Widget build(BuildContext context) {
-    return CallingScreen(joinFuture: joinFuture);
   }
 }
 
 class CallingScreen extends StatefulWidget {
   final Future<void> joinFuture;
+  final String name;
+  final String? profileImageUrl;
 
-  const CallingScreen({super.key, required this.joinFuture});
+  const CallingScreen({super.key, required this.joinFuture, required this.name, this.profileImageUrl});
 
   @override
   State<CallingScreen> createState() => _CallingScreenState();
@@ -43,6 +35,7 @@ class _CallingScreenState extends State<CallingScreen> with TickerProviderStateM
   late AnimationController _videoAppearController;
   bool _joined = false;
   bool _cameraConnected = false;
+  final GlobalObjectKey<WebCameraState> _cameraKey = GlobalObjectKey("CallCamera");
 
   @override
   void initState() {
@@ -150,19 +143,19 @@ class _CallingScreenState extends State<CallingScreen> with TickerProviderStateM
                   Container(
                     width: 56,
                     height: 56,
-                    decoration: BoxDecoration(
+                    decoration: widget.profileImageUrl == null ? BoxDecoration(
                       shape: BoxShape.circle,
                       gradient: LinearGradient(colors: [primary, secondary]),
                       boxShadow: [BoxShadow(color: Colors.black.withValues(alpha: 0.5), blurRadius: 8, offset: const Offset(0, 4))],
-                    ),
-                    child: const Center(child: Text('AB', style: TextStyle(fontWeight: FontWeight.bold, color: Colors.white))),
+                    ) : null,
+                    child: widget.profileImageUrl == null ? Center(child: Text(widget.name.substring(0, 2), style: const TextStyle(fontWeight: FontWeight.bold, color: Colors.white))) : Image.network(widget.profileImageUrl!),
                   ),
                   const SizedBox(width: 12),
-                  const Expanded(
+                  Expanded(
                     child: Column(
                       crossAxisAlignment: CrossAxisAlignment.start,
                       children: [
-                        Text('Alex Müller', style: TextStyle(fontSize: 18, fontWeight: FontWeight.bold, color: Colors.white)),
+                        Text(widget.name, style: const TextStyle(fontSize: 18, fontWeight: FontWeight.bold, color: Colors.white)),
                       ],
                     ),
                   ),
@@ -257,7 +250,9 @@ class _CallingScreenState extends State<CallingScreen> with TickerProviderStateM
                         size: 60,
                       ),
                       GestureDetector(
-                        onTap: () {},
+                        onTap: () {
+                          routerConfig.pop();
+                        },
                         child: Column(
                           children: [
                             Stack(
@@ -286,7 +281,7 @@ class _CallingScreenState extends State<CallingScreen> with TickerProviderStateM
                               ],
                             ),
                             const SizedBox(height: 8),
-                            const Text('Auflegen', style: TextStyle(color: Colors.white70, fontSize: 12)),
+                            const Text('Hang Up', style: TextStyle(color: Colors.white70, fontSize: 12)),
                           ],
                         ),
                       ),
@@ -294,7 +289,7 @@ class _CallingScreenState extends State<CallingScreen> with TickerProviderStateM
                         icon: Icons.cameraswitch,
                         label: 'Flip Camera',
                         bg: theme.colorScheme.secondary,
-                        onTap: () {},
+                        onTap: () {_cameraKey.currentState?.switchCamera();},
                         size: 60,
                       ),
                     ],
@@ -314,6 +309,7 @@ class _CallingScreenState extends State<CallingScreen> with TickerProviderStateM
                     borderRadius: const BorderRadiusGeometry.all(Radius.circular(5)),
                     child: WebCamera(
                         preferFrontCamera: true,
+                        key: _cameraKey,
                         onCameraConnected: () {
                           setState(() {
                             _cameraConnected = true;

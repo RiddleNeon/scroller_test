@@ -36,8 +36,8 @@ class VideoRecommender extends VideoRecommenderBase {
       final recentInteractions = await localSeenService.getRecentInteractionsLocal();
 
       final candidateVideos = await _getCandidateVideos(userPreferences: userPreferences, limit: _candidatePoolSize);
-      
-      final scoredVideos = await _scoreVideos(candidateVideos, userPreferences, recentInteractions);
+
+      final scoredVideos = _scoreVideos(candidateVideos, userPreferences, recentInteractions);
 
       final diversifiedVideos = _applyDiversityFilter(scoredVideos, limit: limit);
 
@@ -72,14 +72,9 @@ class VideoRecommender extends VideoRecommenderBase {
       candidates.addAll(tagVideos);
     }
 
-    final newestTimestamp = await localSeenService.getNewestSeenTimestamp();
+    final newestTimestamp = localSeenService.getNewestSeenTimestamp();
     final newVideos = await fetchNewVideos(newestTimestamp, limit - candidates.length);
-    final filteredNewVideos = <Video>[];
-    for (var value in newVideos) {
-      if(await localSeenService.hasSeen(value.id)){
-        filteredNewVideos.add(value);
-      }
-    }
+    final filteredNewVideos = newVideos.where((v) => !localSeenService.hasSeen(v.id));
     if (filteredNewVideos.isNotEmpty) {
       candidates.addAll(filteredNewVideos);
       localSeenService.saveNewestSeenTimestamp(filteredNewVideos.last.createdAt);
@@ -103,7 +98,7 @@ class VideoRecommender extends VideoRecommenderBase {
   }
 
   /// Score videos based on multiple factors
-  Future<List<VideoScore>> _scoreVideos(Set<Video> videos, UserPreferences userPreferences, List<UserInteraction> recentInteractions) async {
+  List<VideoScore> _scoreVideos(Set<Video> videos, UserPreferences userPreferences, List<UserInteraction> recentInteractions) {
     final now = DateTime.now();
     final scoredVideos = <VideoScore>[];
 
@@ -128,7 +123,7 @@ class VideoRecommender extends VideoRecommenderBase {
       score += diversityScore * _diversityWeight;
 
       // 5. Apply penalties
-      if (await localSeenService.hasSeen(video.id)) {
+      if (localSeenService.hasSeen(video.id)) {
         score *= 0.1; // Heavy penalty for already seen videos
       }
 

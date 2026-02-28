@@ -62,7 +62,7 @@ void initRouter() {
           ),          
           GoRoute(
             path: '/call',
-            builder: (context, state) => const CallingApp(),
+            builder: (context, state) => const CallingApp(name: "Yo Mama", profileImageUrl: "https://i.ebayimg.com/images/g/0GQAAOSwrIlasZ7p/s-l1200.jpg",),
           ),
           GoRoute(
             path: '/chat',

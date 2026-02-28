@@ -117,32 +117,27 @@ abstract class VideoRecommenderBase {
     final weekAgo = DateTime.now().subtract(const Duration(days: 9));
 
     Query query =
-        firestore.collection('videos').where('createdAt', isGreaterThan: Timestamp.fromDate(weekAgo)).orderBy('createdAt', descending: true).limit(limit * 3);
+    firestore.collection('videos').where('createdAt', isGreaterThan: Timestamp.fromDate(weekAgo)).orderBy('createdAt', descending: true).limit(limit * 3);
 
-    cursor ??= await localSeenService.getTrendingCursor();
-    
+    cursor ??= localSeenService.getTrendingCursor();
+
     if (cursor != null) {
       query = query.where('createdAt', isLessThan: Timestamp.fromDate(cursor));
     }
-    
+
     final snapshot = await query.get();
-    final videos = <Video>[];
-    for(final video in snapshot.docs.map((doc) => Video.fromFirestore(doc))){
-      if(!(await localSeenService.hasSeen(video.id))){
-        videos.add(video);
-      }
-    }
-    
+    final videos = snapshot.docs.map((doc) => Video.fromFirestore(doc)).where((v) => !localSeenService.hasSeen(v.id)).toList();
+
     videos.sort((a, b) => calculateGlobalEngagementScore(b).compareTo(calculateGlobalEngagementScore(a)));
 
     final filteredVideos = videos.take(limit);
-    
+
     if(filteredVideos.isNotEmpty) {
       localSeenService.saveTrendingCursor(filteredVideos.last.createdAt);
     }
-    
+
     print("vids length: ${videos.length}");
-    
+
     return filteredVideos.toSet();
   }
 
@@ -150,7 +145,7 @@ abstract class VideoRecommenderBase {
 
   Future<List<Video>> fetchVideosByTag(String tag, {required int limit, required void Function() onTagVideosEmpty}) async {
     final List<Video> unseen = [];
-    DateTime? cursor = await localSeenService.getTagCursor(tag);
+    DateTime? cursor = localSeenService.getTagCursor(tag);
 
     int attempts = 0;
     while (unseen.length < limit && attempts < _maxRetryAttempts) {
@@ -164,13 +159,9 @@ abstract class VideoRecommenderBase {
       if (snapshot.docs.isEmpty) break;
 
       final videos = snapshot.docs.map((doc) => Video.fromFirestore(doc)).toList();
-      
-      for(final video in videos){
-        if(!(await localSeenService.hasSeen(video.id))){
-          unseen.add(video);
-        }
-      }
-      
+
+      unseen.addAll(videos.where((v) => !localSeenService.hasSeen(v.id)));
+
       int lastCountingIndex = min(videos.length - 1, limit);
       cursor = videos.elementAtOrNull(lastCountingIndex)?.createdAt;
     }
@@ -178,7 +169,7 @@ abstract class VideoRecommenderBase {
     if (cursor != null) {
       await localSeenService.saveTagCursor(tag, cursor);
     }
-    
+
     if(unseen.isEmpty){
       onTagVideosEmpty();
     }

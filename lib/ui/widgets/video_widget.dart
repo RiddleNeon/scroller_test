@@ -158,7 +158,7 @@ class _VideoItemState extends State<VideoItem> {
         disliked: _isDisliked,
         shared: _hasShared,
         commented: _hasCommented,
-        saved: _hasSaved, 
+        saved: _hasSaved,
         userId: auth!.currentUser!.uid,
       );
 
@@ -176,7 +176,7 @@ class _VideoItemState extends State<VideoItem> {
       _isLiked = isLiked;
       if (isLiked) _isDisliked = false; // Can't like and dislike
     });
-    if(isLiked) {
+    if (isLiked) {
       localSeenService.saveLike(widget.video.id);
     } else {
       localSeenService.removeLike(widget.video.id);
@@ -189,7 +189,7 @@ class _VideoItemState extends State<VideoItem> {
       _isDisliked = isDisliked;
       if (isDisliked) _isLiked = false; // Can't like and dislike
     });
-    if(isDisliked) {
+    if (isDisliked) {
       localSeenService.saveDislike(widget.video.id);
     } else {
       localSeenService.removeDislike(widget.video.id);
@@ -237,27 +237,18 @@ class _VideoItemState extends State<VideoItem> {
                         ),
                       ),
                     ),
-                    FutureBuilder(
-                      future: Future.microtask(() async => (liked: await localSeenService.isLiked(widget.video.id), disliked: await localSeenService.isDisliked(widget.video.id))),
-                      builder: (context, asyncSnapshot) {
-                        if(!asyncSnapshot.hasData || asyncSnapshot.hasError){
-                          return Container();
-                        }
-                        
-                        return PageOverlay(
-                          provider: widget.provider,
-                          video: widget.video,
-                          onLikeChanged: onLikeChanged,
-                          onDislikeChanged: onDislikeChanged,
-                          onShareChanged: onShareChanged,
-                          onSaveChanged: onSaveChanged,
-                          onCommentChanged: onCommentChanged,
-                          initiallyLiked: asyncSnapshot.data!.liked, 
-                          initiallyDisliked: asyncSnapshot.data!.disliked,
-                          index: widget.index,
-                          child: Container(),
-                        );
-                      }
+                    PageOverlay(
+                      provider: widget.provider,
+                      video: widget.video,
+                      onLikeChanged: onLikeChanged,
+                      onDislikeChanged: onDislikeChanged,
+                      onShareChanged: onShareChanged,
+                      onSaveChanged: onSaveChanged,
+                      onCommentChanged: onCommentChanged,
+                      initiallyLiked: localSeenService.isLiked(widget.video.id),
+                      initiallyDisliked: localSeenService.isDisliked(widget.video.id),
+                      index: widget.index,
+                      child: Container(),
                     ),
                   ],
                 );
