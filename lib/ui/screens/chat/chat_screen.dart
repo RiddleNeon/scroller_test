@@ -1,9 +1,11 @@
 import 'dart:math';
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
+import 'package:wurp/logic/repositories/user_repository.dart';
 import 'package:wurp/ui/router.dart';
 
 import '../../../logic/chat/chat_message.dart';
+import 'calling_screen.dart';
 
 
 
@@ -242,7 +244,9 @@ class MessagingScreenState extends State<MessagingScreen>
         IconButton(
           icon: Icon(Icons.videocam_rounded, color: cs.onSurface),
           onPressed: () {
-            routerConfig.push("/call");
+            Navigator.push(context, MaterialPageRoute(builder: (context) {
+              return CallingApp(name: widget.recipientName ?? "Unknown User", profileImageUrl: widget.recipientAvatarUrl ?? createUserProfileImageUrl(widget.recipientName ?? ""));
+            },));
           },
         ),
         IconButton(

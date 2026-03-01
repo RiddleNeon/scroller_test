@@ -47,10 +47,6 @@ void initRouter() {
             builder: (context, state) => ProfileScreen(initialProfile: currentUser, ownProfile: true, onFollowChange: (bool followed) {}),
           ),
           GoRoute(
-            path: '/call',
-            builder: (context, state) => const CallingApp(name: "Yo Mama", profileImageUrl: "https://i.ebayimg.com/images/g/0GQAAOSwrIlasZ7p/s-l1200.jpg"),
-          ),
-          GoRoute(
             path: '/chat',
             builder: (context, state) => const ChatManagingScreen()
           ),
@@ -67,7 +63,6 @@ void initRouter() {
 }
 
 GlobalObjectKey<YouTubePlayerWidgetState> _youtubePlayerWidgetKey = GlobalObjectKey(DateTime.now());
-GlobalObjectKey<MessagingScreenState> _messagingScreenKey = const GlobalObjectKey("messaging_screen");
 
 GlobalObjectKey<BottomNavBarState> navBarKey = const GlobalObjectKey('bottomNavBarKey');
 BottomNavBar _bottomNavBar = BottomNavBar(

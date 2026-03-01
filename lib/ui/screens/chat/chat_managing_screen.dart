@@ -2,7 +2,7 @@ import 'package:flutter/material.dart';
 import 'package:wurp/logic/chat/chat_message.dart';
 import 'package:wurp/main.dart';
 import 'package:wurp/ui/screens/chat/chat_screen.dart';
-import 'chat.dart';
+import '../../../logic/chat/chat.dart';
 
 class ChatManagingScreen extends StatefulWidget {
   const ChatManagingScreen({super.key});
@@ -110,43 +110,44 @@ class _ChatManagingScreenState extends State<ChatManagingScreen> {
   void _openChat(Chat chat) {
     Navigator.of(context).push(
       MaterialPageRoute(
-        builder: (context) => _buildMessagingScreen(chat),
+        builder: (context) => buildMessagingScreen(chat),
       ),
-    );
-  }
-
-  Widget _buildMessagingScreen(Chat chat) {
-    currentOpenChatScreenKey = GlobalObjectKey('chat${currentUser.id}-${chat.partnerId}');
-    currentOpenChat = chat;
-    return FutureBuilder(
-      future: localSeenService.getMessagesWith(chat.partnerId),
-      builder: (context, asyncSnapshot) {
-        if (asyncSnapshot.data == null) {
-          return const Scaffold(
-            body: Center(child: CircularProgressIndicator()),
-          );
-        }
-
-        return MessagingScreen(
-          key: currentOpenChatScreenKey,
-          initialMessages: asyncSnapshot.data!,
-          recipientName: chat.partnerName,
-          recipientAvatarUrl: chat.partnerProfileImageUrl,
-          onSend: (message) async {
-            await chatRepository.sendNotification(
-              receiverUid: chat.partnerId,
-              message: ChatMessage(
-                id: "${chat.partnerId}-${DateTime.now().microsecondsSinceEpoch}",
-                text: message,
-                isMe: true,
-                timestamp: DateTime.now(),
-              ),
-            );
-          },
-        );
-      },
     );
   }
 }
 Chat? currentOpenChat;
 GlobalObjectKey<MessagingScreenState>? currentOpenChatScreenKey;
+
+Widget buildMessagingScreen(Chat chat) {
+  currentOpenChatScreenKey = GlobalObjectKey('chat${currentUser.id}-${chat.partnerId}');
+  currentOpenChat = chat;
+  return FutureBuilder(
+    future: localSeenService.getMessagesWith(chat.partnerId),
+    builder: (context, asyncSnapshot) {
+      if (asyncSnapshot.data == null) {
+        return const Scaffold(
+          body: Center(child: CircularProgressIndicator()),
+        );
+      }
+
+      return MessagingScreen(
+        key: currentOpenChatScreenKey,
+        initialMessages: asyncSnapshot.data!,
+        recipientName: chat.partnerName,
+        recipientAvatarUrl: chat.partnerProfileImageUrl,
+        onSend: (message) async {
+          chatManager.addChat(chat, replaceExisting: false);
+          await chatRepository.sendNotification(
+            receiverUid: chat.partnerId,
+            message: ChatMessage(
+              id: "${chat.partnerId}-${DateTime.now().microsecondsSinceEpoch}",
+              text: message,
+              isMe: true,
+              timestamp: DateTime.now(),
+            ),
+          );
+        },
+      );
+    },
+  );
+}

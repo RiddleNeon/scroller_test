@@ -1,6 +1,7 @@
 import 'dart:ui';
 
 import 'package:flutter/material.dart';
+import 'package:wurp/logic/chat/chat.dart';
 import 'package:wurp/logic/models/user_model.dart';
 import 'package:wurp/main.dart';
 import 'package:wurp/ui/widgets/logout_button.dart';
@@ -9,6 +10,7 @@ import 'package:wurp/ui/widgets/overlays/follow_button.dart';
 import '../../logic/repositories/user_repository.dart';
 import '../misc/youtube_player.dart';
 import '../widgets/profile_image_picker.dart';
+import 'chat/chat_managing_screen.dart';
 
 class ProfileScreen extends StatefulWidget {
   final UserProfile initialProfile;
@@ -283,6 +285,25 @@ class _ProfileScreenState extends State<ProfileScreen> with SingleTickerProvider
                   borderRadius: BorderRadius.circular(8),
                 ),
                 child: Icon(Icons.flag_rounded, size: 20, color: cs.onSurfaceVariant),
+              ),
+            ),
+          ),
+          const SizedBox(width: 8),
+          Tooltip(
+            message: 'Chat with User',
+            child: GestureDetector(
+              onTap: () {
+                Chat chat = Chat(partnerId: user.id, partnerProfileImageUrl: user.profileImageUrl, partnerName: user.username);
+                Navigator.of(context).push(MaterialPageRoute(builder: (context) => buildMessagingScreen(chat)));
+              },
+              child: Container(
+                width: 46,
+                height: 38,
+                decoration: BoxDecoration(
+                  border: Border.all(color: cs.outlineVariant),
+                  borderRadius: BorderRadius.circular(8),
+                ),
+                child: Icon(Icons.chat, size: 20, color: cs.onSurfaceVariant),
               ),
             ),
           ),

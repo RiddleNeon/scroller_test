@@ -19,10 +19,17 @@ class ChatManager {
   }
   ChatManager._internal(this.userId);
   String userId;
-  List<Chat> chats = [
-    Chat(partnerId: "gKp7WtS40RVFeFUXHoYZ76LfBo73", partnerProfileImageUrl: "https://res.cloudinary.com/dvw3vksqx/image/upload/v1772302017/gk8v7xns1n0j4yum11ty.png", partnerName: "JuSer"),
-    Chat(partnerId: "MrROkFLyYpSqOuxwcePncM8Kk4B3", partnerProfileImageUrl: "https://res.cloudinary.com/dvw3vksqx/image/upload/v1772225146/jzrnlvckuyuojqiix37i.png", partnerName: "Julian")
-  ];
+  List<Chat> chats = [];
+  
+  void addChat(Chat chat, {bool replaceExisting = true}){
+    if(!chats.any((element) => element.partnerId == chat.partnerId)) {
+      chats.add(chat);
+    } else if(replaceExisting) {
+      chats.remove(chat); 
+      chats.add(chat);
+    }
+  }
+  
 }
 
 ChatManager get chatManager => ChatManager();
