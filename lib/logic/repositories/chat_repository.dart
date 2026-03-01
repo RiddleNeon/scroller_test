@@ -20,17 +20,16 @@ class ChatRepository {
 
     final token = doc.data()?['fcmToken'];
     if (token == null) return;
+
+    final inner = jsonEncode({
+      'message': message.text,
+      'sender': currentUser.id,
+    });
     
     String body = jsonEncode({
       'token': token,
       'title': 'new Message',
-      'body': 
-        """
-        {
-          "message": "${message.text}",
-          "sender": "${currentUser.id}"
-        }
-        """
+      'body': inner
     });
     print("body: $body");
 
