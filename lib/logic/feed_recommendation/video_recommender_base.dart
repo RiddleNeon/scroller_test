@@ -116,10 +116,10 @@ abstract class VideoRecommenderBase {
   }) async {
     final maxTrendingTime = DateTime.now().subtract(const Duration(days: 40));
 
-    Query query =
-    firestore.collection('videos').where('createdAt', isGreaterThan: Timestamp.fromDate(maxTrendingTime)).orderBy('createdAt', descending: true).limit(limit * 3);
+    Query query = firestore.collection('videos').where('createdAt', isGreaterThan: Timestamp.fromDate(maxTrendingTime)).orderBy('createdAt', descending: true).limit(limit * 3);
 
     cursor ??= localSeenService.getTrendingCursor();
+    print("cursor: $cursor");
 
     if (cursor != null) {
       query = query.where('createdAt', isLessThan: Timestamp.fromDate(cursor));
@@ -132,8 +132,8 @@ abstract class VideoRecommenderBase {
 
     final filteredVideos = videos.take(limit);
 
-    if(filteredVideos.isNotEmpty) {
-      localSeenService.saveTrendingCursor(filteredVideos.last.createdAt);
+    if(videos.isNotEmpty) {
+      localSeenService.saveTrendingCursor(videos.last.createdAt);
     }
 
     print("vids length: ${videos.length}");

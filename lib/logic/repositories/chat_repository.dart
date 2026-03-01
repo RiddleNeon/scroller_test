@@ -5,53 +5,77 @@ import 'package:http/http.dart' as http;
 import 'package:wurp/logic/chat/chat_message.dart';
 import 'package:wurp/main.dart';
 
+import '../chat/chat.dart';
+
 class ChatRepository {
   Future<void> sendNotification({
-    required String receiverUid,
+    required Chat chat,
     required ChatMessage message,
   }) async {
-    
-    localSeenService.sendMessageLocal(receiverUid, message);
-    
-    final doc = await FirebaseFirestore.instance
-        .collection('users')
-        .doc(receiverUid)
-        .get();
+    String receiverUid = chat.partnerId;
 
-    final token = doc.data()?['fcmToken'];
-    if (token == null) return;
+
+    String? token = await localSeenService.getFcmToken(receiverUid);
+    if(token == null) {
+      print("Targeted User has no fcm token!");
+      //return; //todo re-add
+    }
+
+    final ref = firestore
+        .collection('users')
+        .doc(currentUser.id)
+        .collection('contacts')
+        .doc(receiverUid);
+    
+    if(!localSeenService.hasChatWith(receiverUid)){
+      print("opened new chat with $receiverUid");
+      await ref.set({
+        'createdAt': FieldValue.serverTimestamp(),
+        'lastMessageAt': FieldValue.serverTimestamp(),
+        'lastMessage': message.text,
+        'partnerName': chat.partnerName,
+        'partnerProfileImageUrl': chat.partnerProfileImageUrl
+      }, SetOptions(merge: true));
+    } else {
+      print("alr has chat with that person, updating");
+      await ref.set({
+        'lastMessageAt': FieldValue.serverTimestamp(),
+        'lastMessage': message.text,
+        'partnerName': chat.partnerName,
+        'partnerProfileImageUrl': chat.partnerProfileImageUrl
+      }, SetOptions(merge: true));
+    }
 
     final inner = jsonEncode({
       'message': message.text,
       'sender': currentUser.id,
     });
-    
-    String body = jsonEncode({
-      'token': token,
-      'title': 'new Message',
-      'body': inner
-    });
-    print("body: $body");
 
-    await http.post(
-      Uri.parse('https://wurp-fcm-server.onrender.com/send'),
-      headers: {'Content-Type': 'application/json'},
-      body: body,
-    );
-    
-    String senderUid = currentUser.id;
-    bool senderIsA = senderUid.hashCode > receiverUid.hashCode;
-    
-    
-    String uidA = senderIsA ? senderUid : receiverUid;
-    String uidB = senderIsA ? receiverUid : senderUid;
+    if(token != null){
+      String body = jsonEncode({
+        'token': token,
+        'title': 'new Message',
+        'body': inner
+      });
+      print("body: $body");
 
-    await FirebaseFirestore.instance
-        .collection('chat')
-        .doc("$uidA-${uidB}")
+      await http.post(
+        Uri.parse('https://wurp-fcm-server.onrender.com/send'),
+        headers: {'Content-Type': 'application/json'},
+        body: body,
+      );
+    }
+    
+    await firestore
+        .collection('chats')
+        .doc(getChatId(receiverId: receiverUid))
         .collection('messages')
-        .doc(message.id).set(message.toFirestore(receiverUid == uidB));
+        .doc(message.id).set(message.toFirestore(currentUser.id.compareTo(receiverUid) > 0));
     print("set");
+
+    await localSeenService.sendMessageLocal(chat, message);
+    chat.lastMessage = message.text;
+    chat.lastMessageAt = DateTime.now();
   }
 
   Future<List<ChatMessage>> getMessagesWith(
@@ -64,4 +88,10 @@ class ChatRepository {
   ChatMessage? getMessage(String otherUserId, String messageId) {
     return localSeenService.getMessage(otherUserId, messageId);
   }
+}
+
+String getChatId({String? currentUserId, required String receiverId}){
+  currentUserId ??= currentUser.id;
+  final ids = [currentUser.id, receiverId]..sort();
+  return "${ids[0]}-${ids[1]}";
 }

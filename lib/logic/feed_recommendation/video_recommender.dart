@@ -89,8 +89,8 @@ class VideoRecommender extends VideoRecommenderBase {
   }
 
   List<String>? blacklistedTags;
-  Future<List<String>> _getTopTags(UserPreferences prefs, int count) async {
-    blacklistedTags ??= await localSeenService.getBlacklistedTags();
+  List<String> _getTopTags(UserPreferences prefs, int count) {
+    blacklistedTags ??= localSeenService.getBlacklistedTags();
     final sorted = prefs.tagPreferences.entries.toList()..sort((a, b) => b.value.compareTo(a.value));
     return (sorted.where((element) => !blacklistedTags!.contains(element.key))
         .take(count)

@@ -293,8 +293,9 @@ class _ProfileScreenState extends State<ProfileScreen> with SingleTickerProvider
             message: 'Chat with User',
             child: GestureDetector(
               onTap: () {
-                Chat chat = Chat(partnerId: user.id, partnerProfileImageUrl: user.profileImageUrl, partnerName: user.username);
-                Navigator.of(context).push(MaterialPageRoute(builder: (context) => buildMessagingScreen(chat)));
+                Chat? chat = localSeenService.getChatWith(user.id);
+                chat ??= Chat(partnerId: user.id, partnerProfileImageUrl: user.profileImageUrl, partnerName: user.username, lastMessage: '', lastMessageAt: null);
+                Navigator.of(context).push(MaterialPageRoute(builder: (context) => buildMessagingScreen(chat!)));
               },
               child: Container(
                 width: 46,

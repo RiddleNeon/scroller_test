@@ -93,7 +93,6 @@ void main() async {
 FirebaseMessaging messaging = FirebaseMessaging.instance;
 Future<void> _setupMessaging() async {
   
-
   await messaging.requestPermission(
     alert: true,
     badge: true,
@@ -112,7 +111,7 @@ Future<void> _setupMessaging() async {
     Map<String, dynamic> bodyContent = jsonDecode(message.notification!.body!);
     if(currentOpenChat?.partnerId == bodyContent['sender']) {currentOpenChatScreenKey?.currentState?.onReceiveMessage(bodyContent['message']);}
   });
-
+  
   FirebaseMessaging.onMessageOpenedApp.listen((RemoteMessage message) {
     print('Opened app via Notification: ${message.data}');
   });

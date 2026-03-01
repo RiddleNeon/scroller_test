@@ -243,9 +243,8 @@ class _CommentsOverlayState extends State<CommentsOverlay> {
 
     final target = _replyTarget;
 
-    // Generate a client-side ID. In production replace with:
-    //   FirebaseFirestore.instance.collection('...').doc().id
-    final newId = '${DateTime.now().millisecondsSinceEpoch}_${text.hashCode.abs()}';
+    
+    final newId = '${DateTime.now().millisecondsSinceEpoch}}';
 
     final newComment = Comment(
       id: newId,

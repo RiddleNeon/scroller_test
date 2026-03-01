@@ -138,7 +138,7 @@ Widget buildMessagingScreen(Chat chat) {
         onSend: (message) async {
           chatManager.addChat(chat, replaceExisting: false);
           await chatRepository.sendNotification(
-            receiverUid: chat.partnerId,
+            chat: chat,
             message: ChatMessage(
               id: "${chat.partnerId}-${DateTime.now().microsecondsSinceEpoch}",
               text: message,
