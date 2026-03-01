@@ -121,18 +121,8 @@ GlobalObjectKey<MessagingScreenState>? currentOpenChatScreenKey;
 Widget buildMessagingScreen(Chat chat) {
   currentOpenChatScreenKey = GlobalObjectKey('chat${currentUser.id}-${chat.partnerId}');
   currentOpenChat = chat;
-  return FutureBuilder(
-    future: localSeenService.getMessagesWith(chat.partnerId),
-    builder: (context, asyncSnapshot) {
-      if (asyncSnapshot.data == null) {
-        return const Scaffold(
-          body: Center(child: CircularProgressIndicator()),
-        );
-      }
-
-      return MessagingScreen(
+  return MessagingScreen(
         key: currentOpenChatScreenKey,
-        initialMessages: asyncSnapshot.data!,
         recipientName: chat.partnerName,
         recipientAvatarUrl: chat.partnerProfileImageUrl,
         onSend: (message) async {
@@ -146,8 +136,9 @@ Widget buildMessagingScreen(Chat chat) {
               timestamp: DateTime.now(),
             ),
           );
+        }, 
+        loadMoreMessages: (int limit, DateTime lastVisibleMessage) async {
+          return localSeenService.getMessagesWith(chat.partnerId, startOffset: lastVisibleMessage, limit: limit);
         },
-      );
-    },
   );
 }

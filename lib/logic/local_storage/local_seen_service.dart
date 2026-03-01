@@ -738,6 +738,7 @@ class LocalSeenService {
   Future<List<ChatMessage>> getMessagesWith(
       String otherUserId, {
         int limit = 30,
+        DateTime? startOffset,
       }) async {
     final conversationId = _conversationId(otherUserId);
     final isA = currentUser.id.compareTo(otherUserId) > 0;
@@ -746,6 +747,7 @@ class LocalSeenService {
         .toMap()
         .entries
         .where((e) => (e.key as String).startsWith('$conversationId:'))
+        .where((element) => element.value['createdAt'] < startOffset?.millisecondsSinceEpoch ?? double.infinity)
         .map((e) => _messageFromMap(e.value as Map, conversationId))
         .toList();
 
@@ -760,10 +762,11 @@ class LocalSeenService {
         .collection('chats')
         .doc(conversationId)
         .collection('messages')
+        .where('createdAt', isLessThan: startOffset)
         .orderBy('createdAt', descending: true)
         .limit(limit);
 
-    if (cursor != null) {
+    if (cursor != null && startOffset != null) {
       query = query.where('createdAt', isGreaterThan: Timestamp.fromDate(cursor));
     }
 
@@ -772,7 +775,7 @@ class LocalSeenService {
       print("getMessagesWith: Firestore returned ${snapshot.docs.length} new docs "
           "(source: ${snapshot.metadata.isFromCache ? "CACHE" : "SERVER"})");
 
-      DateTime? newestTimestamp = cursor;
+      DateTime? newestTimestamp = (startOffset == null ) ? cursor : null;
 
       for (final doc in snapshot.docs) {
         final message = ChatMessage.fromFirestore(doc.data(), doc.id, isA);

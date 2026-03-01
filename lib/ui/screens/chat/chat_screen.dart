@@ -11,11 +11,11 @@ import 'calling_screen.dart';
 
 class MessagingScreen extends StatefulWidget {
   final Future<void> Function(String message) onSend;
+  final Future<List<ChatMessage>> Function(int limit, DateTime lastVisibleMessage) loadMoreMessages;
   
   final String? recipientName;
   final String? recipientAvatarUrl;
   final bool isOnline;
-  final List<ChatMessage> initialMessages;
 
   const MessagingScreen({
     super.key,
@@ -23,7 +23,7 @@ class MessagingScreen extends StatefulWidget {
     this.recipientName = 'Alex Rivera',
     this.recipientAvatarUrl,
     this.isOnline = true,
-    required this.initialMessages,
+    required this.loadMoreMessages,
   });
 
   @override
@@ -35,8 +35,11 @@ class MessagingScreenState extends State<MessagingScreen>
   final TextEditingController _textController = TextEditingController();
   final ScrollController _scrollController = ScrollController();
   final FocusNode _focusNode = FocusNode();
+  
+  bool moreMessagesAvailable = true;
+  DateTime? currentMessageCursor;
 
-  late final List<ChatMessage> _messages = widget.initialMessages;
+  late final List<ChatMessage> _messages = [];
   final List<AnimationController> _bubbleControllers = [];
 
   bool _isTyping = false;
@@ -57,6 +60,26 @@ class MessagingScreenState extends State<MessagingScreen>
     )..repeat();
 
     _messages.forEach((element) => _createBubbleController(animate: true));
+    _preloadMore();
+  }
+  
+  bool preloading = false;
+  void _preloadMore({int limit = 30}) async {
+    if(!moreMessagesAvailable || preloading) return;
+    preloading = true;
+    
+    print("preloading!");
+    List<ChatMessage> loadedMessages = await widget.loadMoreMessages(limit, currentMessageCursor ?? DateTime.now());
+    
+    if(loadedMessages.isEmpty || loadedMessages.length < limit) {
+      moreMessagesAvailable = false;
+    }
+    loadedMessages.sort((a, b) => b.timestamp.compareTo(a.timestamp));
+    
+    _addMessages(loadedMessages, appendToEnd: false);
+    
+    currentMessageCursor = loadedMessages.last.timestamp;
+    preloading = false;
   }
   
   void onReceiveMessage(String text) {
@@ -79,9 +102,10 @@ class MessagingScreenState extends State<MessagingScreen>
     );
     _bubbleControllers.add(ctrl);
     if (animate) ctrl.forward();
+    else ctrl.animateTo(1, duration: Duration.zero);
   }
 
-  void _addMessage({required String text, required bool isMe, Future<void>? sendingFuture}) {
+  void _addMessage({required String text, required bool isMe, Future<void>? sendingFuture, bool animated = true, bool appendToEnd = true}) {
     final msg = ChatMessage(
       id: DateTime.now().millisecondsSinceEpoch.toString(),
       text: text,
@@ -89,8 +113,11 @@ class MessagingScreenState extends State<MessagingScreen>
       timestamp: DateTime.now(),
       status: isMe ? MessageStatus.sending : MessageStatus.delivered,
     );
-    setState(() => _messages.add(msg));
-    _createBubbleController();
+    setState(() {
+      if(appendToEnd) _messages.add(msg);
+      else _messages.insert(0, msg);
+    });
+    _createBubbleController(animate: animated);
     _scrollToBottom();
 
     if (isMe) {
@@ -100,12 +127,16 @@ class MessagingScreenState extends State<MessagingScreen>
           setState(() => msg.status = MessageStatus.sent);
         }
       });
-      Future.delayed(const Duration(milliseconds: 1200), () {
+      Future.delayed(const Duration(milliseconds: 100), () {
         if (mounted) {
           setState(() => msg.status = MessageStatus.delivered);
         }
       });
     }
+  }
+
+  void _addMessages(List<ChatMessage> messages, {bool appendToEnd = true}) {
+    messages.forEach((element) => _addMessage(text: element.text, isMe: element.isMe, animated: false, appendToEnd: appendToEnd));
   }
 
   Future<void> _sendMessage() async {
@@ -131,6 +162,10 @@ class MessagingScreenState extends State<MessagingScreen>
       setState(() => _showScrollDown = true);
     } else if (atBottom && _showScrollDown) {
       setState(() => _showScrollDown = false);
+    }
+    final atTop = _scrollController.offset <= 100;
+    if(atTop){
+      _preloadMore();
     }
   }
 
