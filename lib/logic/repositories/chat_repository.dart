@@ -24,10 +24,13 @@ class ChatRepository {
     String body = jsonEncode({
       'token': token,
       'title': 'new Message',
-      'body': {
-        "message": "\"${message.text}\"",
-        "sender": "\"${currentUser.id}\""
-      }.toString()
+      'body': 
+        """
+        {
+          "message": "${message.text}",
+          "sender": "${currentUser.id}"
+        }
+        """
     });
     print("body: $body");
 
