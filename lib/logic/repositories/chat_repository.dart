@@ -25,8 +25,8 @@ class ChatRepository {
       'token': token,
       'title': 'new Message',
       'body': {
-        "message": message.text,
-        "sender": currentUser.id
+        "message": "\"${message.text}\"",
+        "sender": "\"${currentUser.id}\""
       }.toString()
     });
     print("body: $body");

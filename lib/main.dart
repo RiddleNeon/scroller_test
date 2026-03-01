@@ -102,7 +102,7 @@ Future<void> _setupMessaging() async {
 
   FirebaseMessaging.onMessage.listen((RemoteMessage message) {
     print('Foreground: ${message.notification?.title}');
-    print("data: ${message.data}");
+    print("data: ${message.notification?.body}");
     Map<String, dynamic> bodyContent = jsonDecode(message.notification!.body!);
     if(currentOpenChat?.partnerId == bodyContent['sender']) {currentOpenChatScreenKey?.currentState?.onReceiveMessage(bodyContent['message']);}
   });
