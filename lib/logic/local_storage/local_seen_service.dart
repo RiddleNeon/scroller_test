@@ -81,7 +81,8 @@ class LocalSeenService {
     await _cursorDirtyBox.clear();
     await _interactionBox.clear();
     await _blacklistedTagsBox.clear();
-    await _likeValsBox.clear();*/
+    await _likeValsBox.clear();
+    _settingsBox.delete(_lastSyncSeenKey);*/
 /*    await _chatBox.clear();
     await _chatCursorBox.clear();
     await _conversationBox.clear();*/

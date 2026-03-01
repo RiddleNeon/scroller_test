@@ -1,6 +1,7 @@
 import 'dart:async';
 
 import 'package:flutter/material.dart';
+import 'package:wurp/ui/misc/avatar.dart';
 import 'package:wurp/ui/misc/youtube_player.dart';
 import 'package:wurp/ui/router.dart';
 import 'package:wurp/ui/widgets/camera/web_camera.dart';
@@ -155,7 +156,7 @@ class _CallingScreenState extends State<CallingScreen> with TickerProviderStateM
                         : null,
                     child: widget.profileImageUrl == null
                         ? Center(child: Text(widget.name.substring(0, 2), style: const TextStyle(fontWeight: FontWeight.bold, color: Colors.white)))
-                        : CircleAvatar(backgroundImage: NetworkImage(widget.profileImageUrl!)),
+                        : Avatar(imageUrl: widget.profileImageUrl, name: widget.name, colorScheme: theme.colorScheme),
                   ),
                   const SizedBox(width: 12),
                   Expanded(

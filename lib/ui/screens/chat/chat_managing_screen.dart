@@ -1,6 +1,7 @@
 import 'package:flutter/material.dart';
 import 'package:wurp/logic/chat/chat_message.dart';
 import 'package:wurp/main.dart';
+import 'package:wurp/ui/misc/avatar.dart';
 import 'package:wurp/ui/screens/chat/chat_screen.dart';
 import '../../../logic/chat/chat.dart';
 
@@ -62,7 +63,7 @@ class _ChatManagingScreenState extends State<ChatManagingScreen> {
           padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 14),
           child: Row(
             children: [
-              _buildAvatar(chat.partnerProfileImageUrl, theme.colorScheme),
+              Avatar(imageUrl: chat.partnerProfileImageUrl, name: chat.partnerName, colorScheme: theme.colorScheme),
               const SizedBox(width: 16),
               Expanded(
                 child: _buildChatLabel(chat.partnerName),
@@ -75,21 +76,6 @@ class _ChatManagingScreenState extends State<ChatManagingScreen> {
             ],
           ),
         ),
-      ),
-    );
-  }
-
-  Widget _buildAvatar(String profileImageUrl, ColorScheme cs) {
-    return Container(
-      padding: const EdgeInsets.all(2),
-      decoration: BoxDecoration(
-        shape: BoxShape.circle,
-        gradient: LinearGradient(colors: [cs.primary, cs.secondary], begin: Alignment.topLeft, end: Alignment.bottomRight),
-      ),
-      child: CircleAvatar(
-        radius: 26,
-        backgroundColor: cs.surfaceContainer,
-        backgroundImage: NetworkImage(profileImageUrl)
       ),
     );
   }

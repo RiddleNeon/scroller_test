@@ -5,6 +5,7 @@ import 'dart:ui';
 import 'package:cloud_firestore/cloud_firestore.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
+import 'package:wurp/ui/misc/avatar.dart';
 
 import '../../logic/comments/comment.dart';
 import '../../logic/repositories/video_repository.dart';
@@ -584,7 +585,7 @@ class _CommentsOverlayState extends State<CommentsOverlay> {
       padding: EdgeInsets.fromLTRB(12, 10, 12, 10 + bottomPadding),
       child: Row(
         children: [
-          _Avatar(url: widget.currentUserProfileImageUrl, radius: 18),
+          _Avatar(url: widget.currentUserProfileImageUrl, radius: 18, username: widget.currentUsername),
           const SizedBox(width: 10),
           Expanded(
             child: Container(
@@ -683,7 +684,7 @@ class _CommentTile extends StatelessWidget {
       child: Row(
         crossAxisAlignment: CrossAxisAlignment.start,
         children: [
-          _Avatar(url: vm.comment.userProfileImageUrl, radius: avatarRadius),
+          _Avatar(url: vm.comment.userProfileImageUrl, radius: avatarRadius, username: vm.comment.username),
           const SizedBox(width: 12),
           Expanded(
             child: Column(
@@ -827,55 +828,14 @@ class _LikeButtonState extends State<_LikeButton> with SingleTickerProviderState
 
 
 class _Avatar extends StatelessWidget {
-  final String url;
+  final String? url;
+  final String username;
   final double radius;
 
-  const _Avatar({required this.url, required this.radius});
-
-  Color _colorFromUrl(String url) {
-    const colors = [
-      Color(0xFF1DB954),
-      Color(0xFF3B82F6),
-      Color(0xFFF59E0B),
-      Color(0xFFEC4899),
-      Color(0xFF8B5CF6),
-      Color(0xFF06B6D4),
-    ];
-    return colors[url.hashCode.abs() % colors.length];
-  }
+  const _Avatar({required this.url, required this.radius, required this.username});
 
   @override
   Widget build(BuildContext context) {
-    return CircleAvatar(
-      radius: radius,
-      backgroundColor: _colorFromUrl(url),
-      child: ClipOval(
-        child: Image.network(
-          url,
-          width: radius * 2,
-          height: radius * 2,
-          fit: BoxFit.cover,
-          errorBuilder: (_, __, ___) => Icon(
-            Icons.person_rounded,
-            size: radius,
-            color: Colors.white.withValues(alpha: 0.9),
-          ),
-          loadingBuilder: (_, child, progress) {
-            if (progress == null) return child;
-            return Center(
-              child: SizedBox(
-                width: radius * 0.8,
-                height: radius * 0.8,
-                child: CircularProgressIndicator(
-                  strokeWidth: 1.5,
-                  value: progress.expectedTotalBytes != null ? progress.cumulativeBytesLoaded / progress.expectedTotalBytes! : null,
-                  color: Colors.white54,
-                ),
-              ),
-            );
-          },
-        ),
-      ),
-    );
+    return Avatar(imageUrl: url, name: username, colorScheme: Theme.of(context).colorScheme);
   }
 }

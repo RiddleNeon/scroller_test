@@ -2,6 +2,7 @@ import 'dart:math';
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
 import 'package:wurp/logic/repositories/user_repository.dart';
+import 'package:wurp/ui/misc/avatar.dart';
 import 'package:wurp/ui/router.dart';
 
 import '../../../logic/chat/chat_message.dart';
@@ -61,10 +62,13 @@ class MessagingScreenState extends State<MessagingScreen>
 
     _messages.forEach((element) => _createBubbleController(animate: true));
     _preloadMore();
+    WidgetsBinding.instance.addPostFrameCallback((timeStamp) {
+      _scrollController.animateTo(_scrollController.position.maxScrollExtent, duration: Duration.zero, curve: Curves.linear);
+    },);
   }
   
   bool preloading = false;
-  void _preloadMore({int limit = 30}) async {
+  Future<void> _preloadMore({int limit = 30}) async {
     if(!moreMessagesAvailable || preloading) return;
     preloading = true;
     
@@ -163,7 +167,7 @@ class MessagingScreenState extends State<MessagingScreen>
     } else if (atBottom && _showScrollDown) {
       setState(() => _showScrollDown = false);
     }
-    final atTop = _scrollController.offset <= 100;
+    final atTop = _scrollController.offset <= 30;
     if(atTop){
       _preloadMore();
     }
@@ -744,27 +748,9 @@ class _AvatarWidget extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     final cs = colorScheme;
-    final initials = name.isNotEmpty
-        ? name.split(' ').map((w) => w[0]).take(2).join().toUpperCase()
-        : '?';
-
     return Stack(
       children: [
-        CircleAvatar(
-          radius: radius,
-          backgroundColor: cs.primaryContainer,
-          backgroundImage: imageUrl != null ? NetworkImage(imageUrl!) : null,
-          child: imageUrl == null
-              ? Text(
-            initials,
-            style: TextStyle(
-              color: cs.onPrimaryContainer,
-              fontSize: radius * 0.7,
-              fontWeight: FontWeight.w700,
-            ),
-          )
-              : null,
-        ),
+        Avatar(imageUrl: imageUrl, name: name, colorScheme: colorScheme),
         if (isOnline)
           Positioned(
             right: 0,

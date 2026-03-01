@@ -92,7 +92,7 @@ abstract class VideoRecommenderBase {
     Query query = firestore.collection('videos').orderBy('createdAt', descending: true).limit(limit);
 
     if (newestSeen != null) {
-      query = query.where('createdAt', isGreaterThan: Timestamp.fromDate(newestSeen));
+      query = query.where('createdAt', isLessThan: Timestamp.fromDate(newestSeen));
     }
 
     final snapshot = await query.get();
@@ -126,15 +126,17 @@ abstract class VideoRecommenderBase {
     }
 
     final snapshot = await query.get();
-    final videos = snapshot.docs.map((doc) => Video.fromFirestore(doc)).where((v) => !localSeenService.hasSeen(v.id)).toList();
+    final videos = snapshot.docs.map((doc) => Video.fromFirestore(doc)).where((v) => !localSeenService.hasSeen(v.id)).toList()..sort((a, b) => a.createdAt.compareTo(b.createdAt));
+
+    if(videos.isNotEmpty) {
+      localSeenService.saveTrendingCursor(videos.first.createdAt);
+    }
 
     videos.sort((a, b) => calculateGlobalEngagementScore(b).compareTo(calculateGlobalEngagementScore(a)));
 
     final filteredVideos = videos.take(limit);
 
-    if(videos.isNotEmpty) {
-      localSeenService.saveTrendingCursor(videos.last.createdAt);
-    }
+
 
     print("vids length: ${videos.length}");
 

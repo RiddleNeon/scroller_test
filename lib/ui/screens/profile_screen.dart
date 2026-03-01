@@ -4,6 +4,7 @@ import 'package:flutter/material.dart';
 import 'package:wurp/logic/chat/chat.dart';
 import 'package:wurp/logic/models/user_model.dart';
 import 'package:wurp/main.dart';
+import 'package:wurp/ui/misc/avatar.dart';
 import 'package:wurp/ui/widgets/logout_button.dart';
 import 'package:wurp/ui/widgets/overlays/follow_button.dart';
 
@@ -150,24 +151,7 @@ class _ProfileScreenState extends State<ProfileScreen> with SingleTickerProvider
     final avatar = Container(
         width: 100,
         height: 100,
-        decoration: BoxDecoration(
-          shape: BoxShape.circle,
-          gradient: LinearGradient(
-            colors: [cs.primary, cs.secondary],
-            begin: Alignment.topLeft,
-            end: Alignment.bottomRight,
-          ),
-        ),
-        padding: const EdgeInsets.all(2.5),
-        child: ClipOval(
-          child: CircleAvatar(
-            radius: 26,
-            backgroundColor: cs.surfaceContainer,
-            backgroundImage: (user.profileImageUrl.isNotEmpty)
-                ? NetworkImage(user.profileImageUrl)
-                : NetworkImage(createUserProfileImageUrl(user.username)),
-          ),
-        ));
+        child: Avatar(name: user.username, colorScheme: cs, imageUrl: user.profileImageUrl));
 
     if (widget.ownProfile && _editingMode) {
       return Stack(

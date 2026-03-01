@@ -23,31 +23,31 @@ class VideoRecommender extends VideoRecommenderBase {
   static const double _diversityWeight = 0.1;
   static const double _personalizedWeight = 0.50;
   static const int _candidatePoolSize = 50;
-  
+
   VideoRecommender();
-  
+
   /// Main recommendation function
   Future<Set<Video>> getRecommendedVideos({int limit = 20}) async {
     try {
       // Get user preferences
       final userPreferences = await getUserPreferences();
-      
+
       // Get recent interactions for diversity (limited to last N)
       final recentInteractions = await localSeenService.getRecentInteractionsLocal();
-      
+
       final candidateVideos = await _getCandidateVideos(userPreferences: userPreferences, limit: _candidatePoolSize);
-      
+
       final scoredVideos = _scoreVideos(candidateVideos, userPreferences, recentInteractions);
-      
+
       final diversifiedVideos = _applyDiversityFilter(scoredVideos, limit: limit);
-      
+
       if (diversifiedVideos.isEmpty) {
         print("no more videos!");
         return fetchTrendingVideos(limit: limit);
       } else {
         diversifiedVideos.forEach((element) => localSeenService.markAsSeen(element.video));
       }
-      
+
       return (diversifiedVideos.take(limit).map((vs) => vs.video).toList()..shuffle()).toSet();
     } catch (e) {
       print('Error getting recommendations: $e. stacktrace: ${StackTrace.current}');
@@ -57,85 +57,90 @@ class VideoRecommender extends VideoRecommenderBase {
   }
 
   /// Get candidate videos with smart filtering based on user preferences
-  Future<Set<Video>> _getCandidateVideos({
-    required UserPreferences userPreferences,
-    required int limit,
-  }) async {
+  Future<Set<Video>> _getCandidateVideos({required UserPreferences userPreferences, required int limit}) async {
     if (userPreferences.isNewUser) return fetchTrendingVideos(limit: limit);
-    
+
     final Set<Video> candidates = {};
-    
+
     final topTags = _getTopTags(userPreferences, 3);
     print("top tags for user: ${topTags}");
     for (final tag in await topTags) {
-      final tagVideos = await fetchVideosByTag(tag, limit: limit ~/ 3, onTagVideosEmpty: () {localSeenService.saveBlacklistedTag(tag, DateTime.now()); blacklistedTags?.add(tag);print("tag videos empty! removing $tag");});
+      final tagVideos = await fetchVideosByTag(
+        tag,
+        limit: limit ~/ 3,
+        onTagVideosEmpty: () {
+          localSeenService.saveBlacklistedTag(tag, DateTime.now());
+          blacklistedTags?.add(tag);
+          print("tag videos empty! removing $tag");
+        },
+      );
       candidates.addAll(tagVideos);
     }
-    
+
     final newestTimestamp = localSeenService.getNewestSeenTimestamp();
-    final newVideos = await fetchNewVideos(newestTimestamp, limit - candidates.length);
-    final filteredNewVideos = newVideos/*.where((v) => !localSeenService.hasSeen(v.id))*/;
+    final newVideos = await fetchNewVideos(newestTimestamp, (limit - candidates.length) + 10);
+    final filteredNewVideos = newVideos.where((v) => !localSeenService.hasSeen(v.id)).toList();
     if (filteredNewVideos.isNotEmpty) {
       candidates.addAll(filteredNewVideos);
-      localSeenService.saveNewestSeenTimestamp(filteredNewVideos.last.createdAt);
+      localSeenService.saveNewestSeenTimestamp((filteredNewVideos..sort((a, b) => a.createdAt.compareTo(b.createdAt))).last.createdAt);
+    } else {
+      print("filtered is empty! candidates length: ${candidates.length}, unfiltered length: ${newVideos.length}, timestamp: $newestTimestamp");
     }
-    
-    
+
     if (candidates.length < limit) {
       final trending = await fetchTrendingVideos(limit: limit ~/ 4);
       candidates.addAll(trending);
     }
-    
+
     return removeDuplicates<Video>(candidates.toList(), getCheckedParameter: (vid) => vid.videoUrl).toSet();
   }
-  
+
   List<String>? blacklistedTags;
+
   List<String> _getTopTags(UserPreferences prefs, int count) {
     blacklistedTags ??= localSeenService.getBlacklistedTags();
     final sorted = prefs.tagPreferences.entries.toList()..sort((a, b) => b.value.compareTo(a.value));
-    return (sorted.where((element) => !blacklistedTags!.contains(element.key))
-        .take(count)
-        .map((e) => e.key).toList());
+    return (sorted.where((element) => !blacklistedTags!.contains(element.key)).take(count).map((e) => e.key).toList());
   }
-  
+
   /// Score videos based on multiple factors
   List<VideoScore> _scoreVideos(Set<Video> videos, UserPreferences userPreferences, List<UserInteraction> recentInteractions) {
     final now = DateTime.now();
     final scoredVideos = <VideoScore>[];
-    
+
     for (final video in videos) {
       double score = 0.0;
-      
+
       // 1. Recency Score (newer is better)
       final ageInHours = now.difference(video.createdAt).inHours;
       final recencyScore = _calculateRecencyScore(ageInHours);
       score += recencyScore * _recencyWeight;
-      
+
       // 2. Engagement Score (based on video metrics)
       final engagementScore = calculateGlobalEngagementScore(video);
       score += engagementScore * _engagementWeight;
-      
+
       // 3. Personalization Score (optimized with preferences)
       final personalizationScore = calculatePersonalizationScore(video, userPreferences);
       score += personalizationScore * _personalizedWeight;
-      
+
       // 4. Diversity Score (penalize similar content to recently seen)
       final diversityScore = _calculateDiversityScore(video, recentInteractions);
       score += diversityScore * _diversityWeight;
-      
+
       // 5. Apply penalties
       if (localSeenService.hasSeen(video.id)) {
         score *= 0.1; // Heavy penalty for already seen videos
       }
-      
+
       scoredVideos.add(VideoScore(score: score, video: video));
     }
-    
+
     // Sort by score descending
     scoredVideos.sort((a, b) => b.score.compareTo(a.score));
     return scoredVideos;
   }
-  
+
   /// Calculate recency score (exponential decay)
   double _calculateRecencyScore(int ageInHours) {
     // Videos lose 50% score every 24 hours
