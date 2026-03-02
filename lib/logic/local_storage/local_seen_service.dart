@@ -770,9 +770,6 @@ class LocalSeenService {
       for (final m in localMessages) m.id: m,
     };
 
-    final cursor = _chatCursorBox.get(conversationId);
-
-
     Query<Map<String, dynamic>> query = firestore
         .collection('chats')
         .doc(conversationId)
@@ -781,17 +778,10 @@ class LocalSeenService {
         .orderBy('createdAt', descending: true)
         .limit(limit);
 
-    if (cursor != null && startOffset != null) {
-      query = query.where('createdAt', isGreaterThan: Timestamp.fromDate(cursor));
-    }
-
     try {
       final snapshot = await query.get();
       print("getMessagesWith: Firestore returned ${snapshot.docs.length} new docs "
-          "(source: ${snapshot.metadata.isFromCache ? "CACHE" : "SERVER"})");
-
-      DateTime? newestTimestamp = (startOffset == null ) ? cursor : null;
-
+          "(source: ${snapshot.metadata.isFromCache ? "CACHE" : "SERVER"}), offset: $startOffset, conversation: $conversationId, limit: $limit");
       for (final doc in snapshot.docs) {
         final message = ChatMessage.fromFirestore(doc.data(), doc.id, isA);
 
@@ -801,14 +791,6 @@ class LocalSeenService {
         );
 
         merged[message.id] = message;
-
-        if (newestTimestamp == null || message.timestamp.isAfter(newestTimestamp)) {
-          newestTimestamp = message.timestamp;
-        }
-      }
-
-      if (newestTimestamp != null && newestTimestamp != cursor) {
-        await _chatCursorBox.put(conversationId, newestTimestamp);
       }
     } catch (e) {
       print("getMessagesWith: Firestore sync failed, returning local cache. Error: $e");
