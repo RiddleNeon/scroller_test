@@ -97,7 +97,7 @@ Future<void> _setupMessaging() async {
     return;
   }
   
-  await messaging.requestPermission(
+  messaging.requestPermission(
     alert: true,
     badge: true,
     sound: true,
