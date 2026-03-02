@@ -227,7 +227,7 @@ class UserRepository {
     int limit = 20,
     DocumentSnapshot? startAfter,
   }) async {
-    var queryRef = firestore.collection('users').orderBy('username').startAt([query.toLowerCase()]).endAt([query.toLowerCase() + '\uf8ff']).limit(limit);
+    var queryRef = firestore.collection('users').orderBy('username').startAt([query]).endAt([query + '\uf8ff']).limit(limit);
 
     if (startAfter != null) {
       queryRef = queryRef.startAfterDocument(startAfter);

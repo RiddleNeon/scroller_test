@@ -12,7 +12,7 @@ import 'calling_screen.dart';
 
 class MessagingScreen extends StatefulWidget {
   final Future<void> Function(String message) onSend;
-  final Future<List<ChatMessage>> Function(int limit, DateTime lastVisibleMessage) loadMoreMessages;
+  final Future<List<ChatMessage>> Function(int limit, DateTime? lastVisibleMessage) loadMoreMessages;
   
   final String? recipientName;
   final String? recipientAvatarUrl;
@@ -73,7 +73,7 @@ class MessagingScreenState extends State<MessagingScreen>
     preloading = true;
     
     print("preloading!");
-    List<ChatMessage> loadedMessages = await widget.loadMoreMessages(limit, currentMessageCursor ?? DateTime.now());
+    List<ChatMessage> loadedMessages = await widget.loadMoreMessages(limit, currentMessageCursor);
     
     if(loadedMessages.isEmpty) {
       moreMessagesAvailable = false;

@@ -75,13 +75,15 @@ class LocalSeenService {
     _conversationBox = await Hive.openBox('${userId}_$_conversationBoxName');
     _authorBox = await Hive.openBox('${userId}_$_authorBoxName');
 
-    print("before initialisation: ${_seenBox.length} seen videos for user $userId, "
-        "last sync seen: ${_settingsBox.get(_lastSyncSeenKey)}, "
-        "last sync likes: ${_settingsBox.get(_lastSyncLikesKey)}, "
-        "last sync dislikes: ${_settingsBox.get(_lastSyncDislikesKey)}"
-        "last update authors: ${_settingsBox.get(_lastUpdateAuthorsKey)}");
+    print(
+      "before initialisation: ${_seenBox.length} seen videos for user $userId, "
+      "last sync seen: ${_settingsBox.get(_lastSyncSeenKey)}, "
+      "last sync likes: ${_settingsBox.get(_lastSyncLikesKey)}, "
+      "last sync dislikes: ${_settingsBox.get(_lastSyncDislikesKey)}"
+      "last update authors: ${_settingsBox.get(_lastUpdateAuthorsKey)}",
+    );
 
-/*    await _seenBox.clear();
+    /*    await _seenBox.clear();
     await _settingsBox.clear();
     await _cursorBox.clear();
     await _cursorDirtyBox.clear();
@@ -89,26 +91,26 @@ class LocalSeenService {
     await _blacklistedTagsBox.clear();
     await _likeValsBox.clear();
     _settingsBox.delete(_lastSyncSeenKey);*/
-/*    await _chatBox.clear();
+    /*    await _chatBox.clear();
     await _chatCursorBox.clear();
     await _conversationBox.clear();*/
-    
+
     DateTime? lastAuthorUpdate = (_settingsBox.get(_lastUpdateAuthorsKey) as DateTime?);
-    
-    if(lastAuthorUpdate == null || lastAuthorUpdate.difference(DateTime.now()) > const Duration(days: 2)){
+
+    if (lastAuthorUpdate == null || lastAuthorUpdate.difference(DateTime.now()) > const Duration(days: 2)) {
       await _authorBox.clear();
       _settingsBox.put(_lastUpdateAuthorsKey, DateTime.now());
     }
-    
-    
 
     await syncWithFirestore();
     await cleanUpOldEntries();
-    print("initialized LocalSeenService with ${_seenBox.length} seen videos for user $userId, "
-        "last sync seen: ${_settingsBox.get(_lastSyncSeenKey)}, "
-        "last sync likes: ${_settingsBox.get(_lastSyncLikesKey)}, "
-        "last sync dislikes: ${_settingsBox.get(_lastSyncDislikesKey)}"
-        "last sync chats: ${_settingsBox.get(_lastSyncConversationKey)}");
+    print(
+      "initialized LocalSeenService with ${_seenBox.length} seen videos for user $userId, "
+      "last sync seen: ${_settingsBox.get(_lastSyncSeenKey)}, "
+      "last sync likes: ${_settingsBox.get(_lastSyncLikesKey)}, "
+      "last sync dislikes: ${_settingsBox.get(_lastSyncDislikesKey)}"
+      "last sync chats: ${_settingsBox.get(_lastSyncConversationKey)}",
+    );
   }
 
   Future<void> dispose() {
@@ -117,10 +119,7 @@ class LocalSeenService {
 
   void markAsSeen(Video video) {
     _seenBox.put(video.id, DateTime.now());
-    _interactionBox.put(video.id, {
-      'authorId': video.authorId,
-      'tags': video.tags,
-    });
+    _interactionBox.put(video.id, {'authorId': video.authorId, 'tags': video.tags});
   }
 
   bool hasSeen(String videoId) => _seenBox.containsKey(videoId);
@@ -167,20 +166,16 @@ class LocalSeenService {
   // ---------------------------------------------------------------------------
 
   Future<void> syncWithFirestore({bool onlyLoad = true}) async {
-    final lastSyncSeen = _settingsBox.get(_lastSyncSeenKey) as DateTime? ??
-        DateTime.now().subtract(const Duration(days: 7));
-    final lastSyncLikes = _settingsBox.get(_lastSyncLikesKey) as DateTime? ??
-        DateTime.now().subtract(const Duration(days: 7));
-    final lastSyncDislikes = _settingsBox.get(_lastSyncDislikesKey) as DateTime? ??
-        DateTime.now().subtract(const Duration(days: 7));
-    final lastSyncPreferences = _settingsBox.get(_lastSyncPreferencesKey) as DateTime? ??
-        DateTime.now().subtract(const Duration(days: 7));
-    final lastSyncFollowing = _settingsBox.get(_lastSyncFollowingKey) as DateTime? ??
-        DateTime.now().subtract(const Duration(days: 7));    
-    final lastSyncConversation = _settingsBox.get(_lastSyncConversationKey) as DateTime? ??
-        DateTime.now().subtract(const Duration(days: 7));
+    final lastSyncSeen = _settingsBox.get(_lastSyncSeenKey) as DateTime? ?? DateTime.now().subtract(const Duration(days: 7));
+    final lastSyncLikes = _settingsBox.get(_lastSyncLikesKey) as DateTime? ?? DateTime.now().subtract(const Duration(days: 7));
+    final lastSyncDislikes = _settingsBox.get(_lastSyncDislikesKey) as DateTime? ?? DateTime.now().subtract(const Duration(days: 7));
+    final lastSyncPreferences = _settingsBox.get(_lastSyncPreferencesKey) as DateTime? ?? DateTime.now().subtract(const Duration(days: 7));
+    final lastSyncFollowing = _settingsBox.get(_lastSyncFollowingKey) as DateTime? ?? DateTime.now().subtract(const Duration(days: 7));
+    final lastSyncConversation = _settingsBox.get(_lastSyncConversationKey) as DateTime? ?? DateTime.now().subtract(const Duration(days: 7));
 
-    print("syncing — seen: $lastSyncSeen, likes: $lastSyncLikes, dislikes: $lastSyncDislikes, preferences: $lastSyncPreferences, following: $lastSyncFollowing, conversation: $lastSyncConversation");
+    print(
+      "syncing — seen: $lastSyncSeen, likes: $lastSyncLikes, dislikes: $lastSyncDislikes, preferences: $lastSyncPreferences, following: $lastSyncFollowing, conversation: $lastSyncConversation",
+    );
 
     await Future.wait([
       _syncSeenInteractions(lastSyncSeen, onlyLoad: onlyLoad),
@@ -188,7 +183,7 @@ class LocalSeenService {
       _syncDislikes(lastSyncDislikes, onlyLoad: onlyLoad),
       _syncPreferences(lastSyncPreferences, onlyLoad: onlyLoad),
       _syncFollowing(lastSyncFollowing, onlyLoad: onlyLoad),
-      _syncConversations(lastSyncConversation)
+      _syncConversations(lastSyncConversation),
     ]);
     print("successfully synced!");
   }
@@ -201,9 +196,7 @@ class LocalSeenService {
     if (!onlyLoad) {
       print("Uploading local seen-changes to Firestore...");
 
-      final localEntries = Map<String, DateTime>.from(
-        _seenBox.toMap()..removeWhere((key, value) => (value).isBefore(lastSync)),
-      );
+      final localEntries = Map<String, DateTime>.from(_seenBox.toMap()..removeWhere((key, value) => (value).isBefore(lastSync)));
 
       final batch = firestore.batch();
       int uploadCount = 0;
@@ -212,16 +205,12 @@ class LocalSeenService {
 
       for (final entry in localEntries.entries) {
         final meta = _interactionBox.get(entry.key) as Map?;
-        batch.set(
-          docRef.doc(entry.key),
-          {
-            'videoId': entry.key,
-            'timestamp': Timestamp.fromDate(entry.value),
-            if (meta != null) 'authorId': meta['authorId'],
-            if (meta != null) 'tags': meta['tags'],
-          },
-          SetOptions(merge: true),
-        );
+        batch.set(docRef.doc(entry.key), {
+          'videoId': entry.key,
+          'timestamp': Timestamp.fromDate(entry.value),
+          if (meta != null) 'authorId': meta['authorId'],
+          if (meta != null) 'tags': meta['tags'],
+        }, SetOptions(merge: true));
         uploadCount++;
       }
 
@@ -255,10 +244,7 @@ class LocalSeenService {
       final local = _seenBox.get(videoId);
       if (local == null || seenAt.isAfter(local)) {
         newSeenEntries[videoId] = seenAt;
-        newInteractionEntries[videoId] = {
-          'authorId': data['authorId'] ?? '',
-          'tags': data['tags'] ?? [],
-        };
+        newInteractionEntries[videoId] = {'authorId': data['authorId'] ?? '', 'tags': data['tags'] ?? []};
       }
     }
 
@@ -295,7 +281,8 @@ class LocalSeenService {
   // likes  →  users/{uid}/liked_videos/{videoId}
   // ---------------------------------------------------------------------------
 
-  Future<void> _syncLikes(DateTime lastSync, {required bool onlyLoad}) async { //todo handle removed likes / dislikes / follows locally
+  Future<void> _syncLikes(DateTime lastSync, {required bool onlyLoad}) async {
+    //todo handle removed likes / dislikes / follows locally
     final likesRef = firestore.collection('users').doc(userId).collection('liked_videos');
 
     if (!onlyLoad) {
@@ -306,11 +293,7 @@ class LocalSeenService {
       for (final key in _likeValsBox.keys) {
         final videoId = key as String;
         if (_likeValsBox.get(videoId) != true) continue;
-        batch.set(
-          likesRef.doc(videoId),
-          {'videoId': videoId, 'likedAt': FieldValue.serverTimestamp()},
-          SetOptions(merge: true),
-        );
+        batch.set(likesRef.doc(videoId), {'videoId': videoId, 'likedAt': FieldValue.serverTimestamp()}, SetOptions(merge: true));
         count++;
       }
 
@@ -318,10 +301,7 @@ class LocalSeenService {
       print("Uploaded $count liked videos");
     }
 
-    final snapshot = await likesRef
-        .where('likedAt', isGreaterThan: Timestamp.fromDate(lastSync))
-        .orderBy('likedAt', descending: true)
-        .get();
+    final snapshot = await likesRef.where('likedAt', isGreaterThan: Timestamp.fromDate(lastSync)).orderBy('likedAt', descending: true).get();
 
     if (snapshot.docs.isEmpty) {
       print("Nothing new from Firestore (likes)");
@@ -336,7 +316,7 @@ class LocalSeenService {
       await _settingsBox.put(_lastSyncLikesKey, latestLikedAt);
     }
   }
-  
+
   Future<void> _syncDislikes(DateTime lastSync, {required bool onlyLoad}) async {
     final dislikesRef = firestore.collection('users').doc(userId).collection('disliked_videos');
 
@@ -348,11 +328,7 @@ class LocalSeenService {
       for (final key in _likeValsBox.keys) {
         final videoId = key as String;
         if (_likeValsBox.get(videoId) != false) continue;
-        batch.set(
-          dislikesRef.doc(videoId),
-          {'videoId': videoId, 'dislikedAt': FieldValue.serverTimestamp()},
-          SetOptions(merge: true),
-        );
+        batch.set(dislikesRef.doc(videoId), {'videoId': videoId, 'dislikedAt': FieldValue.serverTimestamp()}, SetOptions(merge: true));
         count++;
       }
 
@@ -360,10 +336,7 @@ class LocalSeenService {
       print("Uploaded $count disliked videos");
     }
 
-    final snapshot = await dislikesRef
-        .where('dislikedAt', isGreaterThan: Timestamp.fromDate(lastSync))
-        .orderBy('dislikedAt', descending: true)
-        .get();
+    final snapshot = await dislikesRef.where('dislikedAt', isGreaterThan: Timestamp.fromDate(lastSync)).orderBy('dislikedAt', descending: true).get();
 
     if (snapshot.docs.isEmpty) {
       print("Nothing new from Firestore (dislikes)");
@@ -379,11 +352,7 @@ class LocalSeenService {
     }
   }
 
-  DocumentReference get _preferencesDoc => firestore
-      .collection('users')
-      .doc(userId)
-      .collection('profile')
-      .doc('preferences');
+  DocumentReference get _preferencesDoc => firestore.collection('users').doc(userId).collection('profile').doc('preferences');
 
   Future<void> _syncPreferences(DateTime lastSync, {required bool onlyLoad}) async {
     if (!onlyLoad) {
@@ -391,25 +360,20 @@ class LocalSeenService {
 
       final Map<String, Timestamp> changedCursors = {
         for (final key in _cursorBox.keys)
-          if ((_cursorDirtyBox.get(key))?.isAfter(lastSync) ?? false)
-            key as String: Timestamp.fromDate(_cursorBox.get(key) as DateTime),
+          if ((_cursorDirtyBox.get(key))?.isAfter(lastSync) ?? false) key as String: Timestamp.fromDate(_cursorBox.get(key) as DateTime),
       };
 
       final Map<String, Timestamp> changedBlacklistedTags = {
         for (final key in _blacklistedTagsBox.keys)
-          if ((_blacklistedTagsBox.get(key) as DateTime).isAfter(lastSync))
-            key as String: Timestamp.fromDate(_blacklistedTagsBox.get(key) as DateTime),
+          if ((_blacklistedTagsBox.get(key) as DateTime).isAfter(lastSync)) key as String: Timestamp.fromDate(_blacklistedTagsBox.get(key) as DateTime),
       };
 
       if (changedCursors.isNotEmpty || changedBlacklistedTags.isNotEmpty) {
-        await _preferencesDoc.set(
-          {
-            if (changedCursors.isNotEmpty) 'cursor_vector': changedCursors,
-            if (changedBlacklistedTags.isNotEmpty) 'blacklisted_tags': changedBlacklistedTags,
-            'updatedAt': FieldValue.serverTimestamp(),
-          },
-          SetOptions(merge: true),
-        );
+        await _preferencesDoc.set({
+          if (changedCursors.isNotEmpty) 'cursor_vector': changedCursors,
+          if (changedBlacklistedTags.isNotEmpty) 'blacklisted_tags': changedBlacklistedTags,
+          'updatedAt': FieldValue.serverTimestamp(),
+        }, SetOptions(merge: true));
         print("Uploaded ${changedCursors.length} cursors, ${changedBlacklistedTags.length} blacklisted tags");
       } else {
         print("No preference changes since last sync — skipping upload");
@@ -538,6 +502,7 @@ class LocalSeenService {
   }
 
   bool isLiked(String videoId) => _likeValsBox.get(videoId) == true;
+
   bool isDisliked(String videoId) => _likeValsBox.get(videoId) == false;
 
   // ---------------------------------------------------------------------------
@@ -556,11 +521,7 @@ class LocalSeenService {
         final followedUserId = key as String;
         final followedAt = _followingBox.get(followedUserId)!;
         if (!followedAt.isAfter(lastSync)) continue;
-        batch.set(
-          followingRef.doc(followedUserId),
-          {'followedAt': Timestamp.fromDate(followedAt)},
-          SetOptions(merge: true),
-        );
+        batch.set(followingRef.doc(followedUserId), {'followedAt': Timestamp.fromDate(followedAt)}, SetOptions(merge: true));
         count++;
       }
 
@@ -568,10 +529,7 @@ class LocalSeenService {
       print("Uploaded $count following entries");
     }
 
-    final snapshot = await followingRef
-        .where('followedAt', isGreaterThan: Timestamp.fromDate(lastSync))
-        .orderBy('followedAt', descending: true)
-        .get();
+    final snapshot = await followingRef.where('followedAt', isGreaterThan: Timestamp.fromDate(lastSync)).orderBy('followedAt', descending: true).get();
 
     if (snapshot.docs.isEmpty) {
       print("Nothing new from Firestore (following)");
@@ -601,15 +559,9 @@ class LocalSeenService {
   }
 
   Future<void> _syncConversations(DateTime lastSync) async {
-    final conversationRef = firestore
-        .collection('users')
-        .doc(userId)
-        .collection('contacts');
+    final conversationRef = firestore.collection('users').doc(userId).collection('contacts');
 
-    final snapshot = await conversationRef
-        .where('lastMessageAt', isGreaterThan: Timestamp.fromDate(lastSync))
-        .orderBy('lastMessageAt', descending: true)
-        .get();
+    final snapshot = await conversationRef.where('lastMessageAt', isGreaterThan: Timestamp.fromDate(lastSync)).orderBy('lastMessageAt', descending: true).get();
 
     if (snapshot.docs.isEmpty) {
       await _settingsBox.put(_lastSyncConversationKey, DateTime.now());
@@ -625,9 +577,7 @@ class LocalSeenService {
       final lastMessageAt = (data['lastMessageAt'] as Timestamp).toDate();
 
       final local = _conversationBox.get(doc.id) as Map?;
-      final localLastMessageAt = local != null
-          ? DateTime.fromMillisecondsSinceEpoch(local['lastMessageAt'] as int)
-          : null;
+      final localLastMessageAt = local != null ? DateTime.fromMillisecondsSinceEpoch(local['lastMessageAt'] as int) : null;
 
       if (localLastMessageAt == null || lastMessageAt.isAfter(localLastMessageAt)) {
         toWrite[doc.id] = {
@@ -703,23 +653,23 @@ class LocalSeenService {
       status: MessageStatus.values[map['status'] as int],
     );
   }
-  
-  bool hasChatWith(String otherUserId){
+
+  bool hasChatWith(String otherUserId) {
     final conversationId = _conversationId(otherUserId);
     print("${_chatCursorBox.toMap()}, conversation: $conversationId");
     return _chatCursorBox.containsKey(conversationId);
   }
 
-  List<Chat> getChats(){
+  List<Chat> getChats() {
     List<Chat> chats = _conversationBox.toMap().values.map((e) {
       print("${e.runtimeType}: $e");
       return Chat.fromJson(e);
     }).toList();
     return chats;
   }
-  
-  Chat? getChatWith(String userId){
-    if(!_conversationBox.containsKey(userId)) return null;
+
+  Chat? getChatWith(String userId) {
+    if (!_conversationBox.containsKey(userId)) return null;
     Chat chat = Chat.fromJson(_conversationBox.get(userId));
     return chat;
   }
@@ -734,8 +684,8 @@ class LocalSeenService {
     if (existing == null || message.timestamp.isAfter(existing)) {
       await _chatCursorBox.put(conversationId, message.timestamp);
     }
-    
-    if(!_conversationBox.containsKey(chat.partnerId)){
+
+    if (!_conversationBox.containsKey(chat.partnerId)) {
       _conversationBox.put(chat.partnerId, chat.toJson());
     }
 
@@ -749,46 +699,44 @@ class LocalSeenService {
     if (raw == null) return null;
     return _messageFromMap(raw, conversationId);
   }
-  
-  Future<List<ChatMessage>> getMessagesWith(
-      String otherUserId, {
-        int limit = 30,
-        DateTime? startOffset,
-      }) async {
+
+  Future<List<ChatMessage>> getMessagesWith(String otherUserId, {int limit = 30, DateTime? startOffset}) async {
     final conversationId = _conversationId(otherUserId);
     final isA = currentUser.id.compareTo(otherUserId) > 0;
+    
+    final localMessages =
+        _chatBox
+            .toMap()
+            .entries
+            .where((e) => (e.key as String).startsWith('$conversationId:'))
+            .where((element) => (element.value['createdAt'] ?? 0) < (startOffset?.millisecondsSinceEpoch ?? double.infinity))
+            .map((e) => _messageFromMap(e.value as Map, conversationId))
+            .toList()
+          ..sort((a, b) => a.timestamp.compareTo(b.timestamp));
 
-    final localMessages = _chatBox
-        .toMap()
-        .entries
-        .where((e) => (e.key as String).startsWith('$conversationId:'))
-        .where((element) => element.value['createdAt'] < startOffset?.millisecondsSinceEpoch ?? double.infinity)
-        .map((e) => _messageFromMap(e.value as Map, conversationId))
-        .toList();
+    DateTime? firstLocal = localMessages.firstOrNull?.timestamp;
 
-    final merged = <String, ChatMessage> {
-      for (final m in localMessages) m.id: m,
-    };
+    final merged = <String, ChatMessage>{for (final m in localMessages) m.id: m};
 
-    Query<Map<String, dynamic>> query = firestore
-        .collection('chats')
-        .doc(conversationId)
-        .collection('messages')
-        .where('createdAt', isLessThan: startOffset)
-        .orderBy('createdAt', descending: true)
-        .limit(limit);
+    Query<Map<String, dynamic>> query = firestore.collection('chats').doc(conversationId).collection('messages').orderBy('createdAt', descending: true);
+
+    if (startOffset != null) {
+      query = query.where('createdAt', isLessThan: olderDate(startOffset, firstLocal));
+    } else if (localMessages.isNotEmpty) {
+      DateTime latestLocal = localMessages.last.timestamp;
+      query = query.where('createdAt', isGreaterThan: latestLocal);
+    }
 
     try {
-      final snapshot = await query.get();
-      print("getMessagesWith: Firestore returned ${snapshot.docs.length} new docs "
-          "(source: ${snapshot.metadata.isFromCache ? "CACHE" : "SERVER"}), offset: $startOffset, conversation: $conversationId, limit: $limit");
+      final snapshot = await query.limit(limit).get();
+      print(
+        "getMessagesWith: Firestore returned ${snapshot.docs.length} new docs "
+        "(source: ${snapshot.metadata.isFromCache ? "CACHE" : "SERVER"}), offset: $startOffset, conversation: $conversationId, limit: $limit",
+      );
       for (final doc in snapshot.docs) {
         final message = ChatMessage.fromFirestore(doc.data(), doc.id, isA);
 
-        await _chatBox.put(
-          _chatKey(conversationId, message.id),
-          _messageToMap(message, conversationId),
-        );
+        await _chatBox.put(_chatKey(conversationId, message.id), _messageToMap(message, conversationId));
 
         merged[message.id] = message;
       }
@@ -796,36 +744,39 @@ class LocalSeenService {
       print("getMessagesWith: Firestore sync failed, returning local cache. Error: $e");
     }
 
-    final result = merged.values.toList()
-      ..sort((a, b) => a.timestamp.compareTo(b.timestamp));
+    final result = merged.values.toList()..sort((a, b) => a.timestamp.compareTo(b.timestamp));
 
     return result.length > limit ? result.sublist(result.length - limit) : result;
   }
-  
-  Map<String, String> cachedFcmTokens = {};
-  Future<String?> getFcmToken(String userId) async {
-    if(cachedFcmTokens.containsKey(userId)) return cachedFcmTokens[userId]!;
 
-    final doc = await FirebaseFirestore.instance
-        .collection('users')
-        .doc(userId)
-        .get();
+  Map<String, String> cachedFcmTokens = {};
+
+  Future<String?> getFcmToken(String userId) async {
+    if (cachedFcmTokens.containsKey(userId)) return cachedFcmTokens[userId]!;
+
+    final doc = await FirebaseFirestore.instance.collection('users').doc(userId).get();
 
     final token = doc.data()?['fcmToken'];
     if (token == null) return null;
     cachedFcmTokens[userId] = token;
-    
+
     return token;
   }
-  
-  
+
   Future<void> saveAuthor(UserProfile user) async {
     await _authorBox.put(user.id, user.toJson());
   }
-  
-  UserProfile? getAuthorFromCache(String id){
+
+  UserProfile? getAuthorFromCache(String id) {
     Map<String, dynamic>? json = _authorBox.get(id);
-    if(json == null) return null;
+    if (json == null) return null;
     return UserProfile.fromJson(json);
   }
+}
+
+DateTime olderDate(DateTime? d1, DateTime? d2) {
+  assert(!(d1 == null && d2 == null));
+  if (d1 == null) return d2!;
+  if (d2 == null) return d1;
+  return d1.isBefore(d2) ? d1 : d2;
 }

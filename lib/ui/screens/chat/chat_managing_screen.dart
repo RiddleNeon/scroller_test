@@ -123,7 +123,7 @@ Widget buildMessagingScreen(Chat chat) {
             ),
           );
         }, 
-        loadMoreMessages: (int limit, DateTime lastVisibleMessage) async {
+        loadMoreMessages: (int limit, DateTime? lastVisibleMessage) async {
           return localSeenService.getMessagesWith(chat.partnerId, startOffset: lastVisibleMessage, limit: limit);
         },
   );
