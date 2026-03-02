@@ -92,6 +92,10 @@ void main() async {
 }
 FirebaseMessaging messaging = FirebaseMessaging.instance;
 Future<void> _setupMessaging() async {
+  if (!await FirebaseMessaging.instance.isSupported()) {
+    print("Messaging not supported! skipping!");
+    return;
+  }
   
   await messaging.requestPermission(
     alert: true,
@@ -144,6 +148,10 @@ Future<void> onUserLogin(UserProfile user, [BuildContext? context]) async {
   }
   _localSeenService = LocalSeenService();
   await _localSeenService!.init();
+  if (!await FirebaseMessaging.instance.isSupported()) {
+    print("Messaging not supported! skipping uploading!");
+    return;
+  }
   final token = await messaging.getToken(vapidKey: "BMzrcPy9WqWjCd72OCbRQS2hdTXcMN2khJ3sZcUED9xRHZq6TQjVDo6y2icQtweVaFOp7kRAS085VeQgqZlFK0E");
   await FirebaseFirestore.instance.collection('users').doc(currentUser.id).update({
     'fcmToken': token,

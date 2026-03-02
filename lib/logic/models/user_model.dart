@@ -3,7 +3,6 @@ import 'package:wurp/logic/repositories/user_repository.dart';
 import 'package:wurp/logic/repositories/video_repository.dart';
 import 'package:wurp/logic/video/video.dart';
 
-
 class UserProfile {
   final String id;
   final String username;
@@ -27,7 +26,7 @@ class UserProfile {
     this.followingCount,
     this.totalVideosCount,
     this.totalLikesCount,
-    this.totalDislikesCount, 
+    this.totalDislikesCount,
     required this.usesCustomProfileImage,
   });
 
@@ -47,15 +46,40 @@ class UserProfile {
       usesCustomProfileImage: data['usesCustomProfileImage'] ?? false,
     );
   }
-  
-  
-  UserProfile copyWith({
-    String? username,
-    String? profileImageUrl,
-    String? bio,
-    int? followersCount,
-    bool? usesCustomProfileImage,
-  }) {
+
+  factory UserProfile.fromJson(Map<String, dynamic> data) {
+    return UserProfile(
+      id: data['id'],
+      username: data['username'] ?? '',
+      profileImageUrl: data['profileImageUrl'] ?? createUserProfileImageUrl(data['username']),
+      bio: data['bio'] ?? '',
+      createdAt: (data['createdAt'] as Timestamp).toDate(),
+      followersCount: data['followersCount'] ?? 0,
+      followingCount: data['followingCount'],
+      totalVideosCount: data['totalVideosCount'],
+      totalLikesCount: data['totalLikesCount'],
+      totalDislikesCount: data['totalDislikesCount'],
+      usesCustomProfileImage: data['usesCustomProfileImage'] ?? false,
+    );
+  }
+
+  Map<String, dynamic> toJson() {
+    return {
+      "id": id,
+      "username": username,
+      "profileImageUrl": profileImageUrl,
+      "bio": bio,
+      "createdAt": createdAt,
+      "followersCount": followersCount,
+      "followingCount": followingCount,
+      "totalVideosCount": totalVideosCount,
+      "totalLikesCount": totalLikesCount,
+      "totalDislikesCount": totalDislikesCount,
+      "usesCustomProfileImage": usesCustomProfileImage,
+    };
+  }
+
+  UserProfile copyWith({String? username, String? profileImageUrl, String? bio, int? followersCount, bool? usesCustomProfileImage}) {
     return UserProfile(
       id: id,
       username: username ?? this.username,
@@ -70,7 +94,6 @@ class UserProfile {
       usesCustomProfileImage: usesCustomProfileImage ?? this.usesCustomProfileImage,
     );
   }
-  
 
   @override
   String toString() =>
@@ -91,7 +114,7 @@ class CreatorUserProfile extends UserProfile {
     super.totalVideosCount,
     super.totalLikesCount,
     super.totalDislikesCount,
-    required this.publishedVideoIds, 
+    required this.publishedVideoIds,
     required super.usesCustomProfileImage,
   });
 

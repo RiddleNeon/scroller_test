@@ -75,9 +75,14 @@ class MessagingScreenState extends State<MessagingScreen>
     print("preloading!");
     List<ChatMessage> loadedMessages = await widget.loadMoreMessages(limit, currentMessageCursor ?? DateTime.now());
     
-    if(loadedMessages.isEmpty || loadedMessages.length < limit) {
+    if(loadedMessages.isEmpty) {
+      moreMessagesAvailable = false;
+      preloading = false;
+      return;
+    } else if(loadedMessages.length < limit) {
       moreMessagesAvailable = false;
     }
+    
     loadedMessages.sort((a, b) => b.timestamp.compareTo(a.timestamp));
     
     _addMessages(loadedMessages, appendToEnd: false);

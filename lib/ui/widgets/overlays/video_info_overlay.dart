@@ -1,31 +1,25 @@
 import 'package:flutter/material.dart';
+
 import '../../../logic/video/video.dart';
 
 class VideoInfoOverlay extends StatelessWidget {
-  final VideoWithAuthor videoWithAuthor;
+  final Video video;
 
-  const VideoInfoOverlay({super.key, required this.videoWithAuthor});
+  const VideoInfoOverlay({super.key, required this.video});
 
   @override
   Widget build(BuildContext context) {
-    final video = videoWithAuthor.video;
-    final author = videoWithAuthor.author;
-
     return Container(
       padding: const EdgeInsets.fromLTRB(16, 60, 16, 24),
       decoration: const BoxDecoration(
-        gradient: LinearGradient(
-          begin: Alignment.bottomCenter,
-          end: Alignment.topCenter,
-          colors: [Colors.black87, Colors.transparent],
-        ),
+        gradient: LinearGradient(begin: Alignment.bottomCenter, end: Alignment.topCenter, colors: [Colors.black87, Colors.transparent]),
       ),
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.start,
         mainAxisSize: MainAxisSize.min,
         children: [
           Text(
-            '@${author.username}',
+            '@${video.authorName}',
             style: const TextStyle(
               color: Colors.white,
               fontWeight: FontWeight.bold,
@@ -62,15 +56,20 @@ class VideoInfoOverlay extends StatelessWidget {
             const SizedBox(height: 6),
             Wrap(
               spacing: 6,
-              children: video.tags.take(4).map((tag) => Text(
-                '#$tag',
-                style: const TextStyle(
-                  color: Colors.white,
-                  fontWeight: FontWeight.bold,
-                  fontSize: 13,
-                  shadows: [Shadow(blurRadius: 4, color: Colors.black54)],
-                ),
-              )).toList(),
+              children: video.tags
+                  .take(4)
+                  .map(
+                    (tag) => Text(
+                      '#$tag',
+                      style: const TextStyle(
+                        color: Colors.white,
+                        fontWeight: FontWeight.bold,
+                        fontSize: 13,
+                        shadows: [Shadow(blurRadius: 4, color: Colors.black54)],
+                      ),
+                    ),
+                  )
+                  .toList(),
             ),
           ],
           const SizedBox(height: 10),
@@ -78,12 +77,7 @@ class VideoInfoOverlay extends StatelessWidget {
             children: [
               const Icon(Icons.music_note, color: Colors.white, size: 16),
               const SizedBox(width: 6),
-              // ✅ Isolated StatefulWidget – only this widget rebuilds per frame
-              Expanded(
-                child: ScrollingAudioText(
-                  text: 'Original Sound – @${author.username}',
-                ),
-              ),
+              Expanded(child: ScrollingAudioText(text: 'Original Sound – @${video.authorName}')),
             ],
           ),
         ],
@@ -97,28 +91,22 @@ class VideoInfoOverlay extends StatelessWidget {
 /// Only this widget rebuilds on each animation frame – nothing above it.
 class ScrollingAudioText extends StatefulWidget {
   final String text;
+
   const ScrollingAudioText({super.key, required this.text});
 
   @override
   State<ScrollingAudioText> createState() => _ScrollingAudioTextState();
 }
 
-class _ScrollingAudioTextState extends State<ScrollingAudioText>
-    with SingleTickerProviderStateMixin {
+class _ScrollingAudioTextState extends State<ScrollingAudioText> with SingleTickerProviderStateMixin {
   late final AnimationController _ctrl;
   late final Animation<Offset> _offset;
 
   @override
   void initState() {
     super.initState();
-    _ctrl = AnimationController(
-      vsync: this,
-      duration: const Duration(seconds: 6),
-    )..repeat();
-    _offset = Tween<Offset>(
-      begin: const Offset(0.3, 0),
-      end: const Offset(-1.0, 0),
-    ).animate(CurvedAnimation(parent: _ctrl, curve: Curves.linear));
+    _ctrl = AnimationController(vsync: this, duration: const Duration(seconds: 10), value: 0.2)..repeat();
+    _offset = Tween<Offset>(begin: const Offset(1, 0), end: const Offset(-1, 0)).animate(CurvedAnimation(parent: _ctrl, curve: Curves.linear));
   }
 
   @override
@@ -129,19 +117,35 @@ class _ScrollingAudioTextState extends State<ScrollingAudioText>
 
   @override
   Widget build(BuildContext context) {
-    return ClipRect(
-      child: SlideTransition(
-        position: _offset,
-        child: Text(
-          widget.text,
-          style: const TextStyle(
-            color: Colors.white,
-            fontSize: 13,
-            shadows: [Shadow(blurRadius: 4, color: Colors.black54)],
+    return FractionallySizedBox(
+      alignment: AlignmentGeometry.bottomLeft,
+      widthFactor: 0.5,
+      child: ShaderMask(
+        shaderCallback: (Rect bounds) {
+          return const LinearGradient(
+            begin: Alignment.centerLeft,
+            end: Alignment.centerRight,
+            colors: [Colors.transparent, Colors.white, Colors.white, Colors.transparent],
+            stops: [0.0, 0.1, 0.9, 1.0],
+          ).createShader(bounds);
+        },
+        blendMode: BlendMode.dstIn,
+
+        child: ClipRect(
+          child: SlideTransition(
+            position: _offset,
+            child: Text(
+              widget.text,
+              style: const TextStyle(
+                color: Colors.white,
+                fontSize: 13,
+                shadows: [Shadow(blurRadius: 4, color: Colors.black54)],
+              ),
+              maxLines: 1,
+              overflow: TextOverflow.visible,
+              softWrap: false,
+            ),
           ),
-          maxLines: 1,
-          overflow: TextOverflow.visible,
-          softWrap: false,
         ),
       ),
     );

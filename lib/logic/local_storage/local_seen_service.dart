@@ -3,6 +3,7 @@ import 'package:hive_flutter/hive_flutter.dart';
 import 'package:wurp/logic/chat/chat.dart';
 import 'package:wurp/logic/chat/chat_message.dart';
 import 'package:wurp/logic/feed_recommendation/user_interaction.dart';
+import 'package:wurp/logic/models/user_model.dart';
 import 'package:wurp/logic/video/video.dart';
 import 'package:wurp/main.dart';
 
@@ -17,6 +18,7 @@ class LocalSeenService {
   static const String _chatBoxName = 'chat_messages';
   static const String _chatCursorBoxName = 'chat_cursors';
   static const String _conversationBoxName = 'conversations';
+  static const String _authorBoxName = 'authors';
   static const double maxLocalStorage = 5e5; //500k
 
   // Settings keys
@@ -26,6 +28,7 @@ class LocalSeenService {
   static const String _lastSyncPreferencesKey = 'lastSyncPreferencesTimestamp';
   static const String _lastSyncFollowingKey = 'lastSyncFollowingTimestamp';
   static const String _lastSyncConversationKey = 'lastSyncConversationTimestamp';
+  static const String _lastUpdateAuthorsKey = 'lastUpdateAuthorsTimestamp';
 
   // Firestore paths:
   // users/{uid}/liked_videos/{videoId}
@@ -41,6 +44,7 @@ class LocalSeenService {
   late Box<bool> _likeValsBox; //bool: true -> like, false -> dislike, not in box: nothing
   late Box<DateTime> _followingBox; // key: userId, value: followedAt
 
+  late Box<Map<String, dynamic>> _authorBox; // key: userId, value: followedAt
 
   late Box _chatBox;
   late Box<DateTime> _chatCursorBox;
@@ -69,11 +73,13 @@ class LocalSeenService {
     _chatBox = await Hive.openBox('${userId}_$_chatBoxName');
     _chatCursorBox = await Hive.openBox<DateTime>('${userId}_$_chatCursorBoxName');
     _conversationBox = await Hive.openBox('${userId}_$_conversationBoxName');
+    _authorBox = await Hive.openBox('${userId}_$_authorBoxName');
 
     print("before initialisation: ${_seenBox.length} seen videos for user $userId, "
         "last sync seen: ${_settingsBox.get(_lastSyncSeenKey)}, "
         "last sync likes: ${_settingsBox.get(_lastSyncLikesKey)}, "
-        "last sync dislikes: ${_settingsBox.get(_lastSyncDislikesKey)}");
+        "last sync dislikes: ${_settingsBox.get(_lastSyncDislikesKey)}"
+        "last update authors: ${_settingsBox.get(_lastUpdateAuthorsKey)}");
 
 /*    await _seenBox.clear();
     await _settingsBox.clear();
@@ -86,6 +92,14 @@ class LocalSeenService {
 /*    await _chatBox.clear();
     await _chatCursorBox.clear();
     await _conversationBox.clear();*/
+    
+    DateTime? lastAuthorUpdate = (_settingsBox.get(_lastUpdateAuthorsKey) as DateTime?);
+    
+    if(lastAuthorUpdate == null || lastAuthorUpdate.difference(DateTime.now()) > const Duration(days: 2)){
+      await _authorBox.clear();
+      _settingsBox.put(_lastUpdateAuthorsKey, DateTime.now());
+    }
+    
     
 
     await syncWithFirestore();
@@ -822,4 +836,14 @@ class LocalSeenService {
     return token;
   }
   
+  
+  Future<void> saveAuthor(UserProfile user) async {
+    await _authorBox.put(user.id, user.toJson());
+  }
+  
+  UserProfile? getAuthorFromCache(String id){
+    Map<String, dynamic>? json = _authorBox.get(id);
+    if(json == null) return null;
+    return UserProfile.fromJson(json);
+  }
 }

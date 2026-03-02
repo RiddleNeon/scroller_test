@@ -2,11 +2,12 @@ import 'package:flutter/cupertino.dart';
 import 'package:wurp/logic/repositories/video_repository.dart';
 import 'package:wurp/logic/video/video.dart';
 import 'package:wurp/ui/screens/comment_overlay.dart';
+import 'package:wurp/ui/widgets/overlays/video_info_overlay.dart';
 
-import '../main.dart';
-import 'widgets/overlays/comment_button.dart';
-import 'widgets/overlays/dislike_button.dart';
-import 'widgets/overlays/like_button.dart';
+import '../../../main.dart';
+import 'comment_button.dart';
+import 'dislike_button.dart';
+import 'like_button.dart';
 
 class PageOverlay extends StatefulWidget {
   final TickerProvider provider;
@@ -66,6 +67,16 @@ class _PageOverlayState extends State<PageOverlay> {
             ],
           ),
         ),
+        Transform.translate(
+          offset: const Offset(0, 0),
+          child: Transform.scale(
+            scaleX: 1.005,
+            child: Align(
+              alignment: AlignmentGeometry.bottomCenter,
+              child: VideoInfoOverlay(video: widget.video),
+            ),
+          ),
+        ),
       ],
     );
   }
@@ -93,20 +104,21 @@ class _PageOverlayState extends State<PageOverlay> {
     _updateDislikeInFirestore(newDisliked);
     widget.onDislikeChanged(newDisliked);
   }
-  
-  void _onCommentButtonPressed(){
+
+  void _onCommentButtonPressed() {
     openCommentsForVideo(widget.video, context);
   }
 
   void _updateDislikeInFirestore(bool isDisliked) {
-    if(isDisliked) {
+    if (isDisliked) {
       videoRepo.dislikeVideo(auth!.currentUser!.uid, widget.video.id);
     } else {
       videoRepo.undislikeVideo(auth!.currentUser!.uid, widget.video.id);
     }
   }
+
   void _updateLikeInFirestore(bool isLiked) {
-    if(isLiked) {
+    if (isLiked) {
       videoRepo.likeVideo(auth!.currentUser!.uid, widget.video.id, widget.video.authorId);
     } else {
       videoRepo.unlikeVideo(auth!.currentUser!.uid, widget.video.id, widget.video.authorId);

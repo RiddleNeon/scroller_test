@@ -9,7 +9,7 @@ import 'package:wurp/logic/video/video_provider.dart';
 import '../../logic/batches/batch_service.dart';
 import '../../logic/video/video.dart';
 import '../../main.dart';
-import '../overlays.dart';
+import 'overlays/overlays.dart';
 
 class VideoItem extends StatefulWidget {
   final VideoPlayerController controller;
