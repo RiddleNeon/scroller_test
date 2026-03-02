@@ -93,7 +93,7 @@ void main() async {
 FirebaseMessaging messaging = FirebaseMessaging.instance;
 Future<void> _setupMessaging() async {
   
-  await messaging.requestPermission(
+  messaging.requestPermission(
     alert: true,
     badge: true,
     sound: true,
