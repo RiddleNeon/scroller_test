@@ -48,7 +48,9 @@ void initRouter() {
           ),
           GoRoute(
             path: '/chat',
-            builder: (context, state) => const ChatManagingScreen()
+            builder: (context, state) => ChatManagingScreen(
+              preloadMoreChats: (current) => chatRepository.getChats(currentUser.id, offset: current, limit: 15),
+            )
           ),
           GoRoute(
             path: '/rick',

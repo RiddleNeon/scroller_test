@@ -91,7 +91,7 @@ class LocalSeenService {
     await _blacklistedTagsBox.clear();
     await _likeValsBox.clear();
     _settingsBox.delete(_lastSyncSeenKey);*/
-    /*    await _chatBox.clear();
+/*            await _chatBox.clear();
     await _chatCursorBox.clear();
     await _conversationBox.clear();*/
 
@@ -559,6 +559,7 @@ class LocalSeenService {
   }
 
   Future<void> _syncConversations(DateTime lastSync) async {
+    print("syncing conversations");
     final conversationRef = firestore.collection('users').doc(userId).collection('contacts');
 
     final snapshot = await conversationRef.where('lastMessageAt', isGreaterThan: Timestamp.fromDate(lastSync)).orderBy('lastMessageAt', descending: true).get();
@@ -568,7 +569,7 @@ class LocalSeenService {
       return;
     }
 
-    print("conversation snapshot: 🔥 Source: ${snapshot.metadata.isFromCache ? "CACHE" : "SERVER"}");
+    print("conversation snapshot: Source: ${snapshot.metadata.isFromCache ? "CACHE" : "SERVER"}");
 
     final Map<String, Map<String, dynamic>> toWrite = {};
 
@@ -577,18 +578,19 @@ class LocalSeenService {
       final lastMessageAt = (data['lastMessageAt'] as Timestamp).toDate();
 
       final local = _conversationBox.get(doc.id) as Map?;
-      final localLastMessageAt = local != null ? DateTime.fromMillisecondsSinceEpoch(local['lastMessageAt'] as int) : null;
+      final localLastMessageAt = local != null ? (local['lastMessageAt']) : null;
 
       if (localLastMessageAt == null || lastMessageAt.isAfter(localLastMessageAt)) {
         toWrite[doc.id] = {
           'partnerId': doc.id,
-          'lastMessageAt': lastMessageAt.millisecondsSinceEpoch,
+          'lastMessageAt': lastMessageAt,
           'lastMessage': data['lastMessage'] ?? '',
-          'createdAt': (data['createdAt'] as Timestamp).toDate().millisecondsSinceEpoch,
+          'createdAt': (data['createdAt'] as Timestamp).toDate(),
           'currentUserId': userId,
           'partnerName': data['partnerName'],
           'partnerProfileImageUrl': data['partnerProfileImageUrl'],
         };
+        
 
         final cursor = _chatCursorBox.get(_conversationId(doc.id));
         if (cursor == null || lastMessageAt.isAfter(cursor)) {
@@ -634,13 +636,7 @@ class LocalSeenService {
 
   Map<String, dynamic> _messageToMap(ChatMessage message, String conversationId) {
     final isA = currentUser.id.compareTo(conversationId.split('-')[1]) > 0;
-    return {
-      'id': message.id,
-      'message': message.text,
-      'isA': isA == message.isMe,
-      'createdAt': message.timestamp.millisecondsSinceEpoch,
-      'status': message.status.index,
-    };
+    return {'id': message.id, 'message': message.text, 'isA': isA == message.isMe, 'createdAt': message.timestamp, 'status': message.status.index};
   }
 
   ChatMessage _messageFromMap(Map map, String conversationId) {
@@ -649,20 +645,18 @@ class LocalSeenService {
       id: map['id'] as String,
       text: map['message'] as String,
       isMe: (map['isA'] as bool) == isA,
-      timestamp: DateTime.fromMillisecondsSinceEpoch(map['createdAt'] as int),
+      timestamp: map['createdAt'],
       status: MessageStatus.values[map['status'] as int],
     );
   }
 
   bool hasChatWith(String otherUserId) {
     final conversationId = _conversationId(otherUserId);
-    print("${_chatCursorBox.toMap()}, conversation: $conversationId");
     return _chatCursorBox.containsKey(conversationId);
   }
 
   List<Chat> getChats() {
     List<Chat> chats = _conversationBox.toMap().values.map((e) {
-      print("${e.runtimeType}: $e");
       return Chat.fromJson(e);
     }).toList();
     return chats;
@@ -703,16 +697,20 @@ class LocalSeenService {
   Future<List<ChatMessage>> getMessagesWith(String otherUserId, {int limit = 30, DateTime? startOffset}) async {
     final conversationId = _conversationId(otherUserId);
     final isA = currentUser.id.compareTo(otherUserId) > 0;
-    
+
     final localMessages =
         _chatBox
             .toMap()
             .entries
             .where((e) => (e.key as String).startsWith('$conversationId:'))
-            .where((element) => (element.value['createdAt'] ?? 0) < (startOffset?.millisecondsSinceEpoch ?? double.infinity))
+            .where((element) {
+              print("created at: ${element.value['createdAt']}, type: ${element.value['createdAt'].runtimeType}");
+              return ((element.value['createdAt'] ?? DateTime(0)) as DateTime).isBefore(startOffset ?? DateTime.now());
+        })
             .map((e) => _messageFromMap(e.value as Map, conversationId))
             .toList()
           ..sort((a, b) => a.timestamp.compareTo(b.timestamp));
+    print("DONE");
 
     DateTime? firstLocal = localMessages.firstOrNull?.timestamp;
 
@@ -724,7 +722,7 @@ class LocalSeenService {
       query = query.where('createdAt', isLessThan: olderDate(startOffset, firstLocal));
     } else if (localMessages.isNotEmpty) {
       DateTime latestLocal = localMessages.last.timestamp;
-      query = query.where('createdAt', isGreaterThan: latestLocal);
+      query = query.where('createdAt', isGreaterThan: Timestamp.fromDate(latestLocal));
     }
 
     try {
@@ -734,12 +732,14 @@ class LocalSeenService {
         "(source: ${snapshot.metadata.isFromCache ? "CACHE" : "SERVER"}), offset: $startOffset, conversation: $conversationId, limit: $limit",
       );
       for (final doc in snapshot.docs) {
+        print("from firestore");
         final message = ChatMessage.fromFirestore(doc.data(), doc.id, isA);
 
         await _chatBox.put(_chatKey(conversationId, message.id), _messageToMap(message, conversationId));
 
         merged[message.id] = message;
       }
+      print("for loop done");
     } catch (e) {
       print("getMessagesWith: Firestore sync failed, returning local cache. Error: $e");
     }

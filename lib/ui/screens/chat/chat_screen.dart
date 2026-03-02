@@ -1,19 +1,17 @@
 import 'dart:math';
+
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
 import 'package:wurp/logic/repositories/user_repository.dart';
 import 'package:wurp/ui/misc/avatar.dart';
-import 'package:wurp/ui/router.dart';
 
 import '../../../logic/chat/chat_message.dart';
 import 'calling_screen.dart';
 
-
-
 class MessagingScreen extends StatefulWidget {
   final Future<void> Function(String message) onSend;
   final Future<List<ChatMessage>> Function(int limit, DateTime? lastVisibleMessage) loadMoreMessages;
-  
+
   final String? recipientName;
   final String? recipientAvatarUrl;
   final bool isOnline;
@@ -31,12 +29,11 @@ class MessagingScreen extends StatefulWidget {
   State<MessagingScreen> createState() => MessagingScreenState();
 }
 
-class MessagingScreenState extends State<MessagingScreen>
-    with TickerProviderStateMixin {
+class MessagingScreenState extends State<MessagingScreen> with TickerProviderStateMixin {
   final TextEditingController _textController = TextEditingController();
   final ScrollController _scrollController = ScrollController();
   final FocusNode _focusNode = FocusNode();
-  
+
   bool moreMessagesAvailable = true;
   DateTime? currentMessageCursor;
 
@@ -55,42 +52,40 @@ class MessagingScreenState extends State<MessagingScreen>
     _textController.addListener(_onTextChanged);
     _scrollController.addListener(_onScroll);
 
-    _typingDotController = AnimationController(
-      vsync: this,
-      duration: const Duration(milliseconds: 1200),
-    )..repeat();
+    _typingDotController = AnimationController(vsync: this, duration: const Duration(milliseconds: 1200))..repeat();
 
     _messages.forEach((element) => _createBubbleController(animate: true));
     _preloadMore();
     WidgetsBinding.instance.addPostFrameCallback((timeStamp) {
       _scrollController.animateTo(_scrollController.position.maxScrollExtent, duration: Duration.zero, curve: Curves.linear);
-    },);
+    });
   }
-  
+
   bool preloading = false;
+
   Future<void> _preloadMore({int limit = 30}) async {
-    if(!moreMessagesAvailable || preloading) return;
+    if (!moreMessagesAvailable || preloading) return;
     preloading = true;
-    
+
     print("preloading!");
     List<ChatMessage> loadedMessages = await widget.loadMoreMessages(limit, currentMessageCursor);
-    
-    if(loadedMessages.isEmpty) {
+
+    if (loadedMessages.isEmpty) {
       moreMessagesAvailable = false;
       preloading = false;
       return;
-    } else if(loadedMessages.length < limit) {
+    } else if (loadedMessages.length < limit) {
       moreMessagesAvailable = false;
     }
-    
+
     loadedMessages.sort((a, b) => b.timestamp.compareTo(a.timestamp));
-    
+
     _addMessages(loadedMessages, appendToEnd: false);
-    
+
     currentMessageCursor = loadedMessages.last.timestamp;
     preloading = false;
   }
-  
+
   void onReceiveMessage(String text) {
     _addMessage(text: text, isMe: false);
     if (_partnerTyping) {
@@ -103,15 +98,13 @@ class MessagingScreenState extends State<MessagingScreen>
     if (typing) _scrollToBottom();
   }
 
-
   void _createBubbleController({bool animate = true}) {
-    final ctrl = AnimationController(
-      vsync: this,
-      duration: const Duration(milliseconds: 350),
-    );
+    final ctrl = AnimationController(vsync: this, duration: const Duration(milliseconds: 350));
     _bubbleControllers.add(ctrl);
-    if (animate) ctrl.forward();
-    else ctrl.animateTo(1, duration: Duration.zero);
+    if (animate)
+      ctrl.forward();
+    else
+      ctrl.animateTo(1, duration: Duration.zero);
   }
 
   void _addMessage({required String text, required bool isMe, Future<void>? sendingFuture, bool animated = true, bool appendToEnd = true}) {
@@ -123,14 +116,16 @@ class MessagingScreenState extends State<MessagingScreen>
       status: isMe ? MessageStatus.sending : MessageStatus.delivered,
     );
     setState(() {
-      if(appendToEnd) _messages.add(msg);
-      else _messages.insert(0, msg);
+      if (appendToEnd)
+        _messages.add(msg);
+      else
+        _messages.insert(0, msg);
     });
     _createBubbleController(animate: animated);
     _scrollToBottom();
 
     if (isMe) {
-      if(sendingFuture == null) setState(() => msg.status = MessageStatus.sent);
+      if (sendingFuture == null) setState(() => msg.status = MessageStatus.sent);
       sendingFuture?.then((val) {
         if (mounted) {
           setState(() => msg.status = MessageStatus.sent);
@@ -165,15 +160,14 @@ class MessagingScreenState extends State<MessagingScreen>
   }
 
   void _onScroll() {
-    final atBottom =
-        _scrollController.offset >= _scrollController.position.maxScrollExtent - 80;
+    final atBottom = _scrollController.offset >= _scrollController.position.maxScrollExtent - 80;
     if (!atBottom && !_showScrollDown) {
       setState(() => _showScrollDown = true);
     } else if (atBottom && _showScrollDown) {
       setState(() => _showScrollDown = false);
     }
     final atTop = _scrollController.offset <= 30;
-    if(atTop){
+    if (atTop) {
       _preloadMore();
     }
   }
@@ -181,11 +175,7 @@ class MessagingScreenState extends State<MessagingScreen>
   void _scrollToBottom() {
     WidgetsBinding.instance.addPostFrameCallback((_) {
       if (_scrollController.hasClients) {
-        _scrollController.animateTo(
-          _scrollController.position.maxScrollExtent,
-          duration: const Duration(milliseconds: 300),
-          curve: Curves.easeOut,
-        );
+        _scrollController.animateTo(_scrollController.position.maxScrollExtent, duration: const Duration(milliseconds: 300), curve: Curves.easeOut);
       }
     });
   }
@@ -201,7 +191,6 @@ class MessagingScreenState extends State<MessagingScreen>
     }
     super.dispose();
   }
-
 
   @override
   Widget build(BuildContext context) {
@@ -226,10 +215,7 @@ class MessagingScreenState extends State<MessagingScreen>
             curve: Curves.easeOut,
             bottom: _showScrollDown ? 80 : -60,
             right: 16,
-            child: _ScrollDownButton(
-              onTap: _scrollToBottom,
-              colorScheme: cs,
-            ),
+            child: _ScrollDownButton(onTap: _scrollToBottom, colorScheme: cs),
           ),
         ],
       ),
@@ -241,24 +227,14 @@ class MessagingScreenState extends State<MessagingScreen>
       backgroundColor: cs.surface,
       elevation: 0,
       scrolledUnderElevation: 0,
-      systemOverlayStyle: SystemUiOverlayStyle(
-        statusBarBrightness: theme.brightness == Brightness.dark
-            ? Brightness.dark
-            : Brightness.light,
-      ),
+      systemOverlayStyle: SystemUiOverlayStyle(statusBarBrightness: theme.brightness == Brightness.dark ? Brightness.dark : Brightness.light),
       leading: IconButton(
         icon: Icon(Icons.arrow_back_ios_new_rounded, size: 20, color: cs.onSurface),
         onPressed: () => Navigator.maybePop(context),
       ),
       title: Row(
         children: [
-          _AvatarWidget(
-            name: widget.recipientName ?? '',
-            imageUrl: widget.recipientAvatarUrl,
-            isOnline: widget.isOnline,
-            radius: 18,
-            colorScheme: cs,
-          ),
+          _AvatarWidget(name: widget.recipientName ?? '', imageUrl: widget.recipientAvatarUrl, isOnline: widget.isOnline, radius: 18, colorScheme: cs),
           const SizedBox(width: 10),
           Column(
             crossAxisAlignment: CrossAxisAlignment.start,
@@ -266,19 +242,11 @@ class MessagingScreenState extends State<MessagingScreen>
             children: [
               Text(
                 widget.recipientName ?? '',
-                style: theme.textTheme.titleMedium?.copyWith(
-                  fontWeight: FontWeight.w700,
-                  fontSize: 15,
-                  color: cs.onSurface,
-                ),
+                style: theme.textTheme.titleMedium?.copyWith(fontWeight: FontWeight.w700, fontSize: 15, color: cs.onSurface),
               ),
               Text(
                 widget.isOnline ? 'Active now' : 'Offline',
-                style: TextStyle(
-                  fontSize: 11,
-                  color: widget.isOnline ? const Color(0xFF20D070) : cs.outline,
-                  fontWeight: FontWeight.w500,
-                ),
+                style: TextStyle(fontSize: 11, color: widget.isOnline ? const Color(0xFF20D070) : cs.outline, fontWeight: FontWeight.w500),
               ),
             ],
           ),
@@ -288,9 +256,17 @@ class MessagingScreenState extends State<MessagingScreen>
         IconButton(
           icon: Icon(Icons.videocam_rounded, color: cs.onSurface),
           onPressed: () {
-            Navigator.push(context, MaterialPageRoute(builder: (context) {
-              return CallingApp(name: widget.recipientName ?? "Unknown User", profileImageUrl: widget.recipientAvatarUrl ?? createUserProfileImageUrl(widget.recipientName ?? ""));
-            },));
+            Navigator.push(
+              context,
+              MaterialPageRoute(
+                builder: (context) {
+                  return CallingApp(
+                    name: widget.recipientName ?? "Unknown User",
+                    profileImageUrl: widget.recipientAvatarUrl ?? createUserProfileImageUrl(widget.recipientName ?? ""),
+                  );
+                },
+              ),
+            );
           },
         ),
         IconButton(
@@ -312,16 +288,11 @@ class MessagingScreenState extends State<MessagingScreen>
           final msg = _messages[i];
           final prevMsg = i > 0 ? _messages[i - 1] : null;
           final nextMsg = i < _messages.length - 1 ? _messages[i + 1] : null;
-          
-          final showAvatar = !msg.isMe &&
-              (nextMsg == null || nextMsg.isMe || _isNewGroup(msg, nextMsg));
-          final showTimestamp = nextMsg == null ||
-              msg.timestamp.difference(nextMsg.timestamp).abs() >
-                  const Duration(minutes: 10);
 
-          final ctrl = i < _bubbleControllers.length
-              ? _bubbleControllers[i]
-              : AnimationController(vsync: this, value: 1.0);
+          final showAvatar = !msg.isMe && (nextMsg == null || nextMsg.isMe || _isNewGroup(msg, nextMsg));
+          final showTimestamp = nextMsg == null || msg.timestamp.difference(nextMsg.timestamp).abs() > const Duration(minutes: 10);
+
+          final ctrl = i < _bubbleControllers.length ? _bubbleControllers[i] : AnimationController(vsync: this, value: 1.0);
 
           return _MessageBubble(
             key: ValueKey(msg.id),
@@ -350,10 +321,7 @@ class MessagingScreenState extends State<MessagingScreen>
       padding: const EdgeInsets.only(left: 56, bottom: 4, right: 80),
       child: Align(
         alignment: Alignment.centerLeft,
-        child: _TypingBubble(
-          controller: _typingDotController,
-          colorScheme: cs,
-        ),
+        child: _TypingBubble(controller: _typingDotController, colorScheme: cs),
       ),
     );
   }
@@ -364,24 +332,16 @@ class MessagingScreenState extends State<MessagingScreen>
         left: 12,
         right: 12,
         top: 8,
-        bottom: MediaQuery.of(context).viewInsets.bottom > 0
-            ? 8
-            : max(MediaQuery.of(context).padding.bottom, 12),
+        bottom: MediaQuery.of(context).viewInsets.bottom > 0 ? 8 : max(MediaQuery.of(context).padding.bottom, 12),
       ),
       decoration: BoxDecoration(
         color: cs.surface,
-        border: Border(
-          top: BorderSide(color: cs.outlineVariant.withValues(alpha: 0.3), width: 0.5),
-        ),
+        border: Border(top: BorderSide(color: cs.outlineVariant.withValues(alpha: 0.3), width: 0.5)),
       ),
       child: Row(
         crossAxisAlignment: CrossAxisAlignment.end,
         children: [
-          _InputIconButton(
-            icon: Icons.add_circle_outline_rounded,
-            color: cs.onSurfaceVariant,
-            onTap: () {},
-          ),
+          _InputIconButton(icon: Icons.add_circle_outline_rounded, color: cs.onSurfaceVariant, onTap: () {}),
           const SizedBox(width: 6),
           Expanded(
             child: Container(
@@ -389,47 +349,39 @@ class MessagingScreenState extends State<MessagingScreen>
               decoration: BoxDecoration(
                 color: cs.surfaceContainerHighest.withValues(alpha: 0.6),
                 borderRadius: BorderRadius.circular(24),
-                border: Border.all(
-                  color: cs.outlineVariant.withValues(alpha: 0.4),
-                  width: 1,
-                ),
+                border: Border.all(color: cs.outlineVariant.withValues(alpha: 0.4), width: 1),
               ),
               child: Row(
                 crossAxisAlignment: CrossAxisAlignment.end,
                 children: [
                   Expanded(
-                    child: TextField(
-                      controller: _textController,
-                      focusNode: _focusNode,
-                      minLines: 1,
-                      maxLines: 5,
-                      textInputAction: TextInputAction.newline,
-                      style: TextStyle(
-                        color: cs.onSurface,
-                        fontSize: 15,
-                        height: 1.4,
-                      ),
-                      decoration: InputDecoration(
-                        hintText: 'Message…',
-                        hintStyle: TextStyle(
-                          color: cs.onSurfaceVariant.withValues(alpha: 0.6),
-                          fontSize: 15,
+                    child: Focus(
+                      onKeyEvent: (node, event) {
+                        if (event is KeyDownEvent &&
+                            event.logicalKey == LogicalKeyboardKey.enter &&
+                            !HardwareKeyboard.instance.logicalKeysPressed.contains(LogicalKeyboardKey.shiftLeft) &&
+                            !HardwareKeyboard.instance.logicalKeysPressed.contains(LogicalKeyboardKey.shiftRight)) {
+                          _sendMessage();
+                          return KeyEventResult.handled;
+                        }
+                        return KeyEventResult.ignored;
+                      },
+                      child: TextField(
+                        controller: _textController,
+                        onSubmitted: (value) => _sendMessage(),
+                        focusNode: _focusNode,
+                        minLines: 1,
+                        maxLines: 5,
+                        textInputAction: TextInputAction.newline,
+                        style: TextStyle(color: cs.onSurface, fontSize: 15, height: 1.4),
+                        decoration: InputDecoration(
+                          hintText: 'Message…',
+                          hintStyle: TextStyle(color: cs.onSurfaceVariant.withValues(alpha: 0.6), fontSize: 15),
+                          border: InputBorder.none,
+                          contentPadding: const EdgeInsets.symmetric(horizontal: 16, vertical: 10),
+                          isDense: true,
                         ),
-                        border: InputBorder.none,
-                        contentPadding: const EdgeInsets.symmetric(
-                          horizontal: 16,
-                          vertical: 10,
-                        ),
-                        isDense: true,
                       ),
-                    ),
-                  ),
-                  Padding(
-                    padding: const EdgeInsets.only(right: 4, bottom: 4),
-                    child: _InputIconButton(
-                      icon: Icons.emoji_emotions_outlined,
-                      color: cs.onSurfaceVariant,
-                      onTap: () {},
                     ),
                   ),
                 ],
@@ -439,22 +391,10 @@ class MessagingScreenState extends State<MessagingScreen>
           const SizedBox(width: 6),
           AnimatedSwitcher(
             duration: const Duration(milliseconds: 200),
-            transitionBuilder: (child, anim) => ScaleTransition(
-              scale: anim,
-              child: child,
-            ),
+            transitionBuilder: (child, anim) => ScaleTransition(scale: anim, child: child),
             child: _isTyping
-                ? _SendButton(
-              key: const ValueKey('send'),
-              onTap: _sendMessage,
-              colorScheme: cs,
-            )
-                : _InputIconButton(
-              key: const ValueKey('mic'),
-              icon: Icons.mic_none_rounded,
-              color: cs.onSurfaceVariant,
-              onTap: () {},
-            ),
+                ? _SendButton(key: const ValueKey('send'), onTap: _sendMessage, colorScheme: cs)
+                : _InputIconButton(key: const ValueKey('mic'), icon: Icons.mic_none_rounded, color: cs.onSurfaceVariant, onTap: () {}),
           ),
         ],
       ),
@@ -496,10 +436,7 @@ class _MessageBubble extends StatelessWidget {
     final slide = Tween<Offset>(
       begin: Offset(isMe ? 0.3 : -0.3, 0.1),
       end: Offset.zero,
-    ).animate(CurvedAnimation(
-      parent: animationController,
-      curve: Curves.easeOutCubic,
-    ));
+    ).animate(CurvedAnimation(parent: animationController, curve: Curves.easeOutCubic));
     final fade = CurvedAnimation(parent: animationController, curve: Curves.easeOut);
 
     return FadeTransition(
@@ -507,26 +444,16 @@ class _MessageBubble extends StatelessWidget {
       child: SlideTransition(
         position: slide,
         child: Padding(
-          padding: EdgeInsets.only(
-            top: isFirst ? 8 : 2,
-            bottom: isLast ? 6 : 2,
-          ),
+          padding: EdgeInsets.only(top: isFirst ? 8 : 2, bottom: isLast ? 6 : 2),
           child: Row(
-            mainAxisAlignment:
-            isMe ? MainAxisAlignment.end : MainAxisAlignment.start,
+            mainAxisAlignment: isMe ? MainAxisAlignment.end : MainAxisAlignment.start,
             crossAxisAlignment: CrossAxisAlignment.end,
             children: [
               if (!isMe) ...[
                 SizedBox(
                   width: 32,
                   child: showAvatar
-                      ? _AvatarWidget(
-                    name: recipientName,
-                    imageUrl: recipientAvatarUrl,
-                    isOnline: false,
-                    radius: 14,
-                    colorScheme: cs,
-                  )
+                      ? _AvatarWidget(name: recipientName, imageUrl: recipientAvatarUrl, isOnline: false, radius: 14, colorScheme: cs)
                       : const SizedBox(),
                 ),
                 const SizedBox(width: 6),
@@ -534,36 +461,17 @@ class _MessageBubble extends StatelessWidget {
 
               Flexible(
                 child: Column(
-                  crossAxisAlignment:
-                  isMe ? CrossAxisAlignment.end : CrossAxisAlignment.start,
+                  crossAxisAlignment: isMe ? CrossAxisAlignment.end : CrossAxisAlignment.start,
                   children: [
-                    _BubbleBody(
-                      message: message,
-                      isMe: isMe,
-                      isFirst: isFirst,
-                      isLast: isLast,
-                      colorScheme: cs,
-                    ),
+                    _BubbleBody(message: message, isMe: isMe, isFirst: isFirst, isLast: isLast, colorScheme: cs),
                     if (showTimestamp || (isMe && isLast))
                       Padding(
                         padding: const EdgeInsets.only(top: 4, left: 4, right: 4),
                         child: Row(
                           mainAxisSize: MainAxisSize.min,
                           children: [
-                            Text(
-                              _formatTime(message.timestamp),
-                              style: TextStyle(
-                                fontSize: 10,
-                                color: cs.onSurfaceVariant.withValues(alpha: 0.5),
-                              ),
-                            ),
-                            if (isMe) ...[
-                              const SizedBox(width: 3),
-                              _StatusIcon(
-                                status: message.status,
-                                colorScheme: cs,
-                              ),
-                            ],
+                            Text(_formatTime(message.timestamp), style: TextStyle(fontSize: 10, color: cs.onSurfaceVariant.withValues(alpha: 0.5))),
+                            if (isMe) ...[const SizedBox(width: 3), _StatusIcon(status: message.status, colorScheme: cs)],
                           ],
                         ),
                       ),
@@ -593,13 +501,7 @@ class _BubbleBody extends StatelessWidget {
   final bool isLast;
   final ColorScheme colorScheme;
 
-  const _BubbleBody({
-    required this.message,
-    required this.isMe,
-    required this.isFirst,
-    required this.isLast,
-    required this.colorScheme,
-  });
+  const _BubbleBody({required this.message, required this.isMe, required this.isFirst, required this.isLast, required this.colorScheme});
 
   @override
   Widget build(BuildContext context) {
@@ -610,19 +512,9 @@ class _BubbleBody extends StatelessWidget {
 
     BorderRadius borderRadius;
     if (isMe) {
-      borderRadius = BorderRadius.only(
-        topLeft: r,
-        topRight: isFirst ? r : rSmall,
-        bottomLeft: r,
-        bottomRight: isLast ? const Radius.circular(4) : rSmall,
-      );
+      borderRadius = BorderRadius.only(topLeft: r, topRight: isFirst ? r : rSmall, bottomLeft: r, bottomRight: isLast ? const Radius.circular(4) : rSmall);
     } else {
-      borderRadius = BorderRadius.only(
-        topLeft: isFirst ? r : rSmall,
-        topRight: r,
-        bottomLeft: isLast ? const Radius.circular(4) : rSmall,
-        bottomRight: r,
-      );
+      borderRadius = BorderRadius.only(topLeft: isFirst ? r : rSmall, topRight: r, bottomLeft: isLast ? const Radius.circular(4) : rSmall, bottomRight: r);
     }
 
     return GestureDetector(
@@ -633,22 +525,9 @@ class _BubbleBody extends StatelessWidget {
         decoration: BoxDecoration(
           color: isMe ? cs.primary : cs.secondary,
           borderRadius: borderRadius,
-          boxShadow: [
-            BoxShadow(
-              color: (isMe ? cs.primary : cs.shadow).withValues(alpha: 0.12),
-              blurRadius: 8,
-              offset: const Offset(0, 2),
-            ),
-          ],
+          boxShadow: [BoxShadow(color: (isMe ? cs.primary : cs.shadow).withValues(alpha: 0.12), blurRadius: 8, offset: const Offset(0, 2))],
         ),
-        child: Text(
-          message.text,
-          style: TextStyle(
-            color: isMe ? cs.onPrimary : cs.onSurface,
-            fontSize: 15,
-            height: 1.4,
-          ),
-        ),
+        child: Text(message.text, style: TextStyle(color: isMe ? cs.onPrimary : cs.onSurface, fontSize: 15, height: 1.4)),
       ),
     );
   }
@@ -664,27 +543,16 @@ class _StatusIcon extends StatelessWidget {
   Widget build(BuildContext context) {
     switch (status) {
       case MessageStatus.sending:
-        return SizedBox(
-          width: 12,
-          height: 12,
-          child: CircularProgressIndicator(
-            strokeWidth: 1.5,
-            color: colorScheme.onSurfaceVariant.withValues(alpha: 0.4),
-          ),
-        );
+        return SizedBox(width: 12, height: 12, child: CircularProgressIndicator(strokeWidth: 1.5, color: colorScheme.onSurfaceVariant.withValues(alpha: 0.4)));
       case MessageStatus.sent:
-        return Icon(Icons.check_rounded,
-            size: 12, color: colorScheme.onSurfaceVariant.withValues(alpha: 0.5));
+        return Icon(Icons.check_rounded, size: 12, color: colorScheme.onSurfaceVariant.withValues(alpha: 0.5));
       case MessageStatus.delivered:
-        return Icon(Icons.done_all_rounded,
-            size: 12, color: colorScheme.onSurfaceVariant.withValues(alpha: 0.5));
+        return Icon(Icons.done_all_rounded, size: 12, color: colorScheme.onSurfaceVariant.withValues(alpha: 0.5));
       case MessageStatus.read:
-        return Icon(Icons.done_all_rounded,
-            size: 12, color: colorScheme.primary);
+        return Icon(Icons.done_all_rounded, size: 12, color: colorScheme.primary);
     }
   }
 }
-
 
 class _TypingBubble extends StatelessWidget {
   final AnimationController controller;
@@ -721,10 +589,7 @@ class _TypingBubble extends StatelessWidget {
                   width: 7,
                   height: 7,
                   margin: EdgeInsets.only(right: i < 2 ? 4 : 0),
-                  decoration: BoxDecoration(
-                    color: cs.onSurfaceVariant.withValues(alpha: 0.5),
-                    shape: BoxShape.circle,
-                  ),
+                  decoration: BoxDecoration(color: cs.onSurfaceVariant.withValues(alpha: 0.5), shape: BoxShape.circle),
                 ),
               );
             },
@@ -742,13 +607,7 @@ class _AvatarWidget extends StatelessWidget {
   final double radius;
   final ColorScheme colorScheme;
 
-  const _AvatarWidget({
-    required this.name,
-    required this.isOnline,
-    required this.radius,
-    required this.colorScheme,
-    this.imageUrl,
-  });
+  const _AvatarWidget({required this.name, required this.isOnline, required this.radius, required this.colorScheme, this.imageUrl});
 
   @override
   Widget build(BuildContext context) {
@@ -785,23 +644,15 @@ class _SendButton extends StatefulWidget {
   State<_SendButton> createState() => _SendButtonState();
 }
 
-class _SendButtonState extends State<_SendButton>
-    with SingleTickerProviderStateMixin {
+class _SendButtonState extends State<_SendButton> with SingleTickerProviderStateMixin {
   late AnimationController _ctrl;
   late Animation<double> _scaleAnim;
 
   @override
   void initState() {
     super.initState();
-    _ctrl = AnimationController(
-      vsync: this,
-      duration: const Duration(milliseconds: 120),
-      lowerBound: 0.0,
-      upperBound: 1.0,
-    );
-    _scaleAnim = Tween(begin: 1.0, end: 0.88).animate(
-      CurvedAnimation(parent: _ctrl, curve: Curves.easeOut),
-    );
+    _ctrl = AnimationController(vsync: this, duration: const Duration(milliseconds: 120), lowerBound: 0.0, upperBound: 1.0);
+    _scaleAnim = Tween(begin: 1.0, end: 0.88).animate(CurvedAnimation(parent: _ctrl, curve: Curves.easeOut));
   }
 
   @override
@@ -826,25 +677,11 @@ class _SendButtonState extends State<_SendButton>
           width: 42,
           height: 42,
           decoration: BoxDecoration(
-            gradient: LinearGradient(
-              colors: [cs.primary, cs.tertiary],
-              begin: Alignment.topLeft,
-              end: Alignment.bottomRight,
-            ),
+            gradient: LinearGradient(colors: [cs.primary, cs.tertiary], begin: Alignment.topLeft, end: Alignment.bottomRight),
             shape: BoxShape.circle,
-            boxShadow: [
-              BoxShadow(
-                color: cs.primary.withValues(alpha: 0.4),
-                blurRadius: 12,
-                offset: const Offset(0, 4),
-              ),
-            ],
+            boxShadow: [BoxShadow(color: cs.primary.withValues(alpha: 0.4), blurRadius: 12, offset: const Offset(0, 4))],
           ),
-          child: Icon(
-            Icons.send_rounded,
-            color: cs.onPrimary,
-            size: 20,
-          ),
+          child: Icon(Icons.send_rounded, color: cs.onPrimary, size: 20),
         ),
       ),
     );
@@ -869,16 +706,9 @@ class _ScrollDownButton extends StatelessWidget {
           color: cs.surfaceContainerHigh,
           shape: BoxShape.circle,
           border: Border.all(color: cs.outlineVariant, width: 1),
-          boxShadow: [
-            BoxShadow(
-              color: cs.shadow.withValues(alpha: 0.15),
-              blurRadius: 8,
-              offset: const Offset(0, 2),
-            ),
-          ],
+          boxShadow: [BoxShadow(color: cs.shadow.withValues(alpha: 0.15), blurRadius: 8, offset: const Offset(0, 2))],
         ),
-        child: Icon(Icons.keyboard_arrow_down_rounded,
-            color: cs.onSurface, size: 20),
+        child: Icon(Icons.keyboard_arrow_down_rounded, color: cs.onSurface, size: 20),
       ),
     );
   }
@@ -889,22 +719,13 @@ class _InputIconButton extends StatelessWidget {
   final Color color;
   final VoidCallback onTap;
 
-  const _InputIconButton({
-    super.key,
-    required this.icon,
-    required this.color,
-    required this.onTap,
-  });
+  const _InputIconButton({super.key, required this.icon, required this.color, required this.onTap});
 
   @override
   Widget build(BuildContext context) {
     return GestureDetector(
       onTap: onTap,
-      child: SizedBox(
-        width: 36,
-        height: 36,
-        child: Icon(icon, color: color, size: 24),
-      ),
+      child: SizedBox(width: 36, height: 36, child: Icon(icon, color: color, size: 24)),
     );
   }
 }
