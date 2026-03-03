@@ -2,6 +2,7 @@ import 'dart:math';
 
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
+import 'package:wurp/logic/repositories/chat_repository.dart';
 import 'package:wurp/logic/repositories/user_repository.dart';
 import 'package:wurp/ui/misc/avatar.dart';
 
@@ -10,9 +11,11 @@ import 'calling_screen.dart';
 
 class MessagingScreen extends StatefulWidget {
   final Future<void> Function(String message) onSend;
+  final void Function(ChatMessage message) onMessageUpdate;
   final Future<List<ChatMessage>> Function(int limit, DateTime? lastVisibleMessage) loadMoreMessages;
 
   final String? recipientName;
+  final String recipientId;
   final String? recipientAvatarUrl;
   final bool isOnline;
 
@@ -22,7 +25,9 @@ class MessagingScreen extends StatefulWidget {
     this.recipientName = 'Alex Rivera',
     this.recipientAvatarUrl,
     this.isOnline = true,
-    required this.loadMoreMessages,
+    required this.loadMoreMessages, 
+    required this.onMessageUpdate, 
+    required this.recipientId,
   });
 
   @override
@@ -80,7 +85,7 @@ class MessagingScreenState extends State<MessagingScreen> with TickerProviderSta
 
     loadedMessages.sort((a, b) => b.timestamp.compareTo(a.timestamp));
 
-    _addMessages(loadedMessages, appendToEnd: false);
+    _addMessages(loadedMessages, appendToEnd: false, isNewMessage: false);
 
     currentMessageCursor = loadedMessages.last.timestamp;
     preloading = false;
@@ -107,7 +112,8 @@ class MessagingScreenState extends State<MessagingScreen> with TickerProviderSta
       ctrl.animateTo(1, duration: Duration.zero);
   }
 
-  void _addMessage({required String text, required bool isMe, Future<void>? sendingFuture, bool animated = true, bool appendToEnd = true}) {
+  void _addMessage({required String text, required bool isMe, Future<void>? sendingFuture, bool animated = true, bool appendToEnd = true, bool isNewMessage = true}) {
+    if(isNewMessage) widget.onMessageUpdate(ChatMessage(id: getChatId(receiverId: widget.recipientId), text: text, isMe: isMe, timestamp: DateTime.now()));
     final msg = ChatMessage(
       id: DateTime.now().millisecondsSinceEpoch.toString(),
       text: text,
@@ -139,8 +145,8 @@ class MessagingScreenState extends State<MessagingScreen> with TickerProviderSta
     }
   }
 
-  void _addMessages(List<ChatMessage> messages, {bool appendToEnd = true}) {
-    messages.forEach((element) => _addMessage(text: element.text, isMe: element.isMe, animated: false, appendToEnd: appendToEnd));
+  void _addMessages(List<ChatMessage> messages, {bool appendToEnd = true, bool isNewMessage = true}) {
+    messages.forEach((element) => _addMessage(text: element.text, isMe: element.isMe, animated: false, appendToEnd: appendToEnd, isNewMessage: isNewMessage));
   }
 
   Future<void> _sendMessage() async {

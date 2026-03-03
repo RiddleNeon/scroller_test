@@ -1,7 +1,10 @@
-import 'dart:ui_web' as ui_web;
-import 'package:flutter/material.dart';
 // ignore: deprecated_member_use
 import 'dart:html' as html;
+import 'dart:ui_web' as ui_web;
+
+import 'package:flutter/material.dart';
+import 'package:hive_flutter/adapters.dart';
+import 'package:wurp/ui/misc/basic_player.dart';
 
 class YouTubePlayerWidget extends StatefulWidget {
   final String? videoUrl;
@@ -10,17 +13,8 @@ class YouTubePlayerWidget extends StatefulWidget {
   final bool showControls;
   final double aspectRatio;
 
-  const YouTubePlayerWidget({
-    super.key,
-    this.videoUrl,
-    this.videoId,
-    this.autoPlay = false,
-    this.showControls = true,
-    this.aspectRatio = 16 / 9,
-  }) : assert(
-  (videoUrl != null) != (videoId != null),
-  'Either a video id or a video url has to be set!',
-  );
+  const YouTubePlayerWidget({super.key, this.videoUrl, this.videoId, this.autoPlay = false, this.showControls = true, this.aspectRatio = 16 / 9})
+    : assert((videoUrl != null) != (videoId != null), 'Either a video id or a video url has to be set!');
 
   static String? extractVideoId(String url) {
     final patterns = [
@@ -62,18 +56,14 @@ class YouTubePlayerWidgetState extends State<YouTubePlayerWidget> {
       _videoId = extracted;
     }
 
-    _viewId =
-    'youtube-player-$_videoId-${DateTime.now().microsecondsSinceEpoch}';
+    _viewId = 'youtube-player-$_videoId-${DateTime.now().microsecondsSinceEpoch}';
 
     final autoplay = widget.autoPlay ? 1 : 0;
     final controls = widget.showControls ? 1 : 0;
 
-    // enablejsapi=1 ist notwendig, damit postMessage funktioniert
     _iframe = html.IFrameElement()
-      ..src =
-          'https://www.youtube.com/embed/$_videoId?autoplay=$autoplay&controls=$controls&playsinline=1&rel=0&enablejsapi=1'
-      ..allow =
-          'accelerometer; autoplay; clipboard-write; encrypted-media; gyroscope; picture-in-picture; fullscreen'
+      ..src = 'https://www.youtube.com/embed/$_videoId?autoplay=$autoplay&controls=$controls&playsinline=1&rel=0&enablejsapi=1'
+      ..allow = 'accelerometer; autoplay; clipboard-write; encrypted-media; gyroscope; picture-in-picture; fullscreen'
       ..allowFullscreen = true
       ..style.border = 'none'
       ..style.width = '100%'
@@ -81,18 +71,12 @@ class YouTubePlayerWidgetState extends State<YouTubePlayerWidget> {
 
     _iframe.style.pointerEvents = 'none';
 
-    ui_web.platformViewRegistry.registerViewFactory(
-      _viewId,
-          (int viewId) => _iframe,
-    );
+    ui_web.platformViewRegistry.registerViewFactory(_viewId, (int viewId) => _iframe);
   }
 
   /// Pausiert den YouTube-Player über die IFrame API via postMessage.
   void stopPlayback() {
-    _iframe.contentWindow?.postMessage(
-      '{"event":"command","func":"pauseVideo","args":""}',
-      '*',
-    );
+    _iframe.contentWindow?.postMessage('{"event":"command","func":"pauseVideo","args":""}', '*');
   }
 
   @override
@@ -101,10 +85,7 @@ class YouTubePlayerWidgetState extends State<YouTubePlayerWidget> {
       return AspectRatio(
         aspectRatio: widget.aspectRatio,
         child: Container(
-          decoration: BoxDecoration(
-            color: Colors.black,
-            borderRadius: BorderRadius.circular(8),
-          ),
+          decoration: BoxDecoration(color: Colors.black, borderRadius: BorderRadius.circular(8)),
           child: Column(
             mainAxisAlignment: MainAxisAlignment.center,
             children: [
@@ -133,23 +114,24 @@ class YouTubePlayerWidgetState extends State<YouTubePlayerWidget> {
 
 Future<void> showRickDialog(BuildContext context) {
   return showDialog(
-      context: context,
-      builder: (context) {
-        return
-          Card(
-            margin: const EdgeInsetsGeometry.all(120),
-            child: YouTubePlayerWidget(
-              autoPlay: true,
-              showControls: false,
-              videoUrl: 'https://www.youtube.com/watch?v=dQw4w9WgXcQ',
-              key: _youtubePlayerWidgetKey,
-            ),
-          );
-      }).then(
-        (value) {
-      _youtubePlayerWidgetKey.currentState?.stopPlayback();
-      _youtubePlayerWidgetKey = GlobalObjectKey(DateTime.now());
+    fullscreenDialog: false,
+    barrierDismissible: true,
+    context: context,
+    builder: (context) {
+      return Dialog(
+        insetPadding: const EdgeInsets.symmetric(horizontal: 16, vertical: 24),
+        child: SizedBox(
+          width: double.infinity,
+          child: IntrinsicHeight(
+            child: BasicMemePlayer(vid: MemeVid.rick),
+          ),
+        ),
+      );
     },
-  );
+  ).then((value) {
+    _youtubePlayerWidgetKey.currentState?.stopPlayback();
+    _youtubePlayerWidgetKey = GlobalObjectKey(DateTime.now());
+  });
 }
+
 GlobalObjectKey<YouTubePlayerWidgetState> _youtubePlayerWidgetKey = GlobalObjectKey(DateTime.now());

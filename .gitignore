@@ -11,6 +11,7 @@
 .svn/
 .swiftpm/
 migrate_working_dir/
+*.env
 
 # IntelliJ related
 *.iml
@@ -49,3 +50,5 @@ app.*.map.json
 /android/app/src/main/
 /._git/
 **/flutter/
+/.env
+/config.prod.json

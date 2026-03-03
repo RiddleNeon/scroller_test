@@ -3,14 +3,11 @@ import 'package:go_router/go_router.dart';
 import 'package:wurp/main.dart';
 import 'package:wurp/ui/screens/auth_screen.dart';
 import 'package:wurp/ui/screens/bottom_navigation_bar.dart';
-import 'package:wurp/ui/screens/chat/calling_screen.dart';
 import 'package:wurp/ui/screens/chat/chat_managing_screen.dart';
-import 'package:wurp/ui/screens/chat/chat_screen.dart';
 import 'package:wurp/ui/screens/profile_screen.dart';
 import 'package:wurp/ui/screens/search_screen/search_screen.dart';
 import 'package:wurp/ui/short_video_player.dart';
 
-import '../logic/chat/chat_message.dart';
 import 'misc/youtube_player.dart';
 
 late final GoRouter routerConfig;

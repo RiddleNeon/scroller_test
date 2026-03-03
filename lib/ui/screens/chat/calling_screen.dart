@@ -2,6 +2,7 @@ import 'dart:async';
 
 import 'package:flutter/material.dart';
 import 'package:wurp/ui/misc/avatar.dart';
+import 'package:wurp/ui/misc/basic_player.dart';
 import 'package:wurp/ui/misc/youtube_player.dart';
 import 'package:wurp/ui/router.dart';
 import 'package:wurp/ui/widgets/camera/web_camera.dart';
@@ -235,16 +236,12 @@ class _CallingScreenState extends State<CallingScreen> with TickerProviderStateM
                         border: Border.all(color: Colors.white12),
                         boxShadow: [BoxShadow(color: Colors.black.withValues(alpha: 0.55), blurRadius: 18, offset: const Offset(0, 12))],
                       ),
-                      child: FittedBox(
+                      child: Transform.scale(scale: 2, child: FittedBox(
                           fit: BoxFit.fitHeight,
                           child: SizedBox(
                               width: 1024,
                               height: 1024,
-                              child: ClipRect(
-                                  child: Transform.scale(
-                                      scale: 2,
-                                      child: const YouTubePlayerWidget(
-                                          videoUrl: "https://www.youtube.com/watch?v=-Dh6-F4sVmI", showControls: false, autoPlay: true)))))),
+                              child: BasicMemePlayer(vid: MemeVid.hamster)))))
                 ),
               ),
             ),

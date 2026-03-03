@@ -109,6 +109,7 @@ class _ProfileScreenState extends State<ProfileScreen> with SingleTickerProvider
               IconButton(
                 icon: Icon(Icons.settings, color: cs.onSurface),
                 onPressed: () {
+                  print("pressed!");
                   showRickDialog(context);
                 },
               ),
@@ -279,7 +280,7 @@ class _ProfileScreenState extends State<ProfileScreen> with SingleTickerProvider
               onTap: () {
                 Chat? chat = localSeenService.getChatWith(user.id);
                 chat ??= Chat(partnerId: user.id, partnerProfileImageUrl: user.profileImageUrl, partnerName: user.username, lastMessage: '', lastMessageAt: null, lastMessageByMe: true, createdAt: DateTime.now());
-                Navigator.of(context).push(MaterialPageRoute(builder: (context) => buildMessagingScreen(chat!)));
+                Navigator.of(context).push(MaterialPageRoute(builder: (context) => buildMessagingScreen(chat!, (p0){})));
               },
               child: Container(
                 width: 46,

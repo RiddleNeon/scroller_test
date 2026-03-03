@@ -6,6 +6,7 @@ import 'package:wurp/ui/misc/avatar.dart';
 import 'package:wurp/ui/screens/chat/chat_screen.dart';
 
 import '../../../logic/chat/chat.dart';
+import '../../../util/misc/time_formatting.dart';
 
 class ChatManagingScreen extends StatefulWidget {
   final Future<({List<Chat> result, DocumentSnapshot? newCurrent})> Function(DocumentSnapshot? current) preloadMoreChats;
@@ -74,6 +75,10 @@ class _ChatManagingScreenState extends State<ChatManagingScreen> {
       body: Padding(padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 12), child: _buildChatList(chats)),
     );
   }
+  
+  void onMessageUpdate(Chat chat, ChatMessage message){
+    print("message updated!");
+  }
 
   Widget _buildChatList(List<Chat> chats) {
     if (chats.isEmpty) {
@@ -84,14 +89,17 @@ class _ChatManagingScreenState extends State<ChatManagingScreen> {
       itemCount: chats.length,
       separatorBuilder: (_, __) => const SizedBox(height: 12),
       itemBuilder: (context, index) {
-        return _buildChatEntry(chats[index]);
+        return _buildChatEntry(chats[index], (message) => onMessageUpdate(chats[index], message));
       },
       controller: _scrollController,
     );
   }
 
-  Widget _buildChatEntry(Chat chat) {
+  Widget _buildChatEntry(Chat chat, void Function(ChatMessage onMessage) onMessageUpdate) {
     final theme = Theme.of(context);
+
+    final lastMessageTime = chat.lastMessageAt ?? chat.createdAt;
+    final timeString = formatTime(lastMessageTime);
 
     return Card(
       elevation: 4,
@@ -99,15 +107,71 @@ class _ChatManagingScreenState extends State<ChatManagingScreen> {
       color: theme.colorScheme.surfaceContainerHighest,
       child: InkWell(
         borderRadius: BorderRadius.circular(16),
-        onTap: () => _openChat(chat),
+        onTap: () => _openChat(chat, onMessageUpdate),
         child: Padding(
           padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 14),
           child: Row(
+            crossAxisAlignment: CrossAxisAlignment.center,
             children: [
-              Avatar(imageUrl: chat.partnerProfileImageUrl, name: chat.partnerName, colorScheme: theme.colorScheme),
+              Avatar(
+                imageUrl: chat.partnerProfileImageUrl,
+                name: chat.partnerName,
+                colorScheme: theme.colorScheme,
+              ),
               const SizedBox(width: 16),
-              Expanded(child: _buildChatLabel(chat.partnerName)),
-              Icon(Icons.arrow_forward_ios_rounded, size: 18, color: theme.colorScheme.primary),
+
+              Expanded(
+                child: Column(
+                  crossAxisAlignment: CrossAxisAlignment.start,
+                  children: [
+                    Text(
+                      chat.partnerName,
+                      style: theme.textTheme.titleMedium?.copyWith(
+                        fontWeight: FontWeight.w600,
+                        color: theme.colorScheme.onSurface,
+                      ),
+                      overflow: TextOverflow.ellipsis,
+                    ),
+                    const SizedBox(height: 4),
+
+                    Text(
+                      "${chat.lastMessageByMe ? "You: " : ""}${chat.lastMessage}",
+                      style: theme.textTheme.bodyMedium?.copyWith(
+                        color: theme.colorScheme.onSurfaceVariant,
+                        fontWeight: chat.lastMessageByMe
+                            ? FontWeight.w400
+                            : FontWeight.w500,
+                      ),
+                      overflow: TextOverflow.ellipsis,
+                    ),
+                  ],
+                ),
+              ),
+
+              const SizedBox(width: 12),
+
+              Column(
+                crossAxisAlignment: CrossAxisAlignment.end,
+                children: [
+                  Text(
+                    timeString,
+                    style: theme.textTheme.bodySmall?.copyWith(
+                      color: theme.colorScheme.primary,
+                    ),
+                  ),
+                  const SizedBox(height: 6),
+
+                  if (!chat.lastMessageByMe)
+                    Container(
+                      width: 8,
+                      height: 8,
+                      decoration: BoxDecoration(
+                        color: theme.colorScheme.primary,
+                        shape: BoxShape.circle,
+                      ),
+                    ),
+                ],
+              ),
             ],
           ),
         ),
@@ -125,21 +189,23 @@ class _ChatManagingScreenState extends State<ChatManagingScreen> {
     );
   }
 
-  void _openChat(Chat chat) {
-    Navigator.of(context).push(MaterialPageRoute(builder: (context) => buildMessagingScreen(chat)));
+  void _openChat(Chat chat, void Function(ChatMessage) onMessageUpdate) {
+    Navigator.of(context).push(MaterialPageRoute(builder: (context) => buildMessagingScreen(chat, onMessageUpdate)));
   }
 }
 
 Chat? currentOpenChat;
 GlobalObjectKey<MessagingScreenState>? currentOpenChatScreenKey;
 
-Widget buildMessagingScreen(Chat chat) {
+Widget buildMessagingScreen(Chat chat, void Function(ChatMessage) onMessageUpdate) {
   currentOpenChatScreenKey = GlobalObjectKey('chat${currentUser.id}-${chat.partnerId}');
   currentOpenChat = chat;
   return MessagingScreen(
     key: currentOpenChatScreenKey,
     recipientName: chat.partnerName,
-    recipientAvatarUrl: chat.partnerProfileImageUrl,
+    recipientAvatarUrl: chat.partnerProfileImageUrl, 
+    recipientId: chat.partnerId,
+    onMessageUpdate: onMessageUpdate,
     onSend: (message) async {
       chatManager.addChat(chat, replaceExisting: false);
       print("message sent");
