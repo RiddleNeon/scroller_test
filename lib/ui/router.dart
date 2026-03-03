@@ -8,8 +8,6 @@ import 'package:wurp/ui/screens/profile_screen.dart';
 import 'package:wurp/ui/screens/search_screen/search_screen.dart';
 import 'package:wurp/ui/short_video_player.dart';
 
-import 'misc/youtube_player.dart';
-
 late final GoRouter routerConfig;
 
 void initRouter() {
