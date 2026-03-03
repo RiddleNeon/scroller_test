@@ -49,11 +49,6 @@ void initRouter() {
               preloadMoreChats: (current) => chatRepository.getChats(currentUser.id, offset: current, limit: 15),
             )
           ),
-          GoRoute(
-            path: '/rick',
-            builder: (context, state) =>
-                YouTubePlayerWidget(autoPlay: true, showControls: false, videoUrl: 'https://www.youtube.com/watch?v=dQw4w9WgXcQ', key: _youtubePlayerWidgetKey),
-          ),
         ],
       ),
       GoRoute(path: '/login', builder: (context, state) => const LoginScreen()),
@@ -61,7 +56,6 @@ void initRouter() {
   );
 }
 
-GlobalObjectKey<YouTubePlayerWidgetState> _youtubePlayerWidgetKey = GlobalObjectKey(DateTime.now());
 
 GlobalObjectKey<BottomNavBarState> navBarKey = const GlobalObjectKey('bottomNavBarKey');
 BottomNavBar _bottomNavBar = BottomNavBar(

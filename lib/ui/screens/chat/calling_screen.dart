@@ -3,7 +3,6 @@ import 'dart:async';
 import 'package:flutter/material.dart';
 import 'package:wurp/ui/misc/avatar.dart';
 import 'package:wurp/ui/misc/basic_player.dart';
-import 'package:wurp/ui/misc/youtube_player.dart';
 import 'package:wurp/ui/router.dart';
 import 'package:wurp/ui/widgets/camera/web_camera.dart';
 

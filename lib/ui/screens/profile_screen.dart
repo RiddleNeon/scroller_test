@@ -8,8 +8,7 @@ import 'package:wurp/ui/misc/avatar.dart';
 import 'package:wurp/ui/widgets/logout_button.dart';
 import 'package:wurp/ui/widgets/overlays/follow_button.dart';
 
-import '../../logic/repositories/user_repository.dart';
-import '../misc/youtube_player.dart';
+import '../misc/basic_player.dart';
 import '../widgets/profile_image_picker.dart';
 import 'chat/chat_managing_screen.dart';
 

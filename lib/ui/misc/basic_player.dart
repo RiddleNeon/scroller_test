@@ -35,3 +35,22 @@ enum MemeVid {
   final String url;
   const MemeVid(this.url);
 }
+
+Future<void> showRickDialog(BuildContext context) {
+  return showDialog(
+    fullscreenDialog: false,
+    barrierDismissible: true,
+    context: context,
+    builder: (context) {
+      return Dialog(
+        insetPadding: const EdgeInsets.symmetric(horizontal: 16, vertical: 24),
+        child: SizedBox(
+          width: double.infinity,
+          child: IntrinsicHeight(
+            child: BasicMemePlayer(vid: MemeVid.rick),
+          ),
+        ),
+      );
+    },
+  );
+}
