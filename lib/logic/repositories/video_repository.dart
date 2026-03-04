@@ -3,7 +3,7 @@ import 'package:wurp/logic/batches/batch_service.dart';
 import 'package:wurp/logic/comments/comment.dart';
 import 'package:wurp/logic/video/video.dart';
 
-import '../../main.dart';
+import '../../base_logic.dart';
 
 VideoRepository videoRepo = VideoRepository();
 final FirestoreBatchQueue batchQueue = FirestoreBatchQueue();

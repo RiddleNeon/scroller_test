@@ -2,7 +2,8 @@ import 'package:cloud_firestore/cloud_firestore.dart';
 import 'package:wurp/logic/models/user_model.dart';
 import 'package:wurp/logic/repositories/video_repository.dart';
 import 'package:wurp/logic/video/video.dart';
-import 'package:wurp/main.dart';
+
+import '../../../base_logic.dart';
 
 class SearchBarResult {
   String searchText;

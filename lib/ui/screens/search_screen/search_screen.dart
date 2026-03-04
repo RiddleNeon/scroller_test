@@ -5,13 +5,14 @@ import 'package:video_thumbnail/video_thumbnail.dart';
 import 'package:wurp/logic/feed_recommendation/search_video_result_recommender.dart';
 import 'package:wurp/logic/models/user_model.dart';
 import 'package:wurp/logic/video/video.dart';
-import 'package:wurp/main.dart';
 import 'package:wurp/ui/feed_view_model.dart';
 import 'package:wurp/ui/screens/profile_screen.dart';
 import 'package:wurp/ui/screens/search_screen/search_bar_result.dart';
 import 'package:wurp/ui/short_video_player.dart';
 import 'package:wurp/ui/widgets/overlays/follow_button.dart';
 
+import '../../../base_logic.dart';
+import '../../../logic/local_storage/local_seen_service.dart';
 import '../../../logic/repositories/user_repository.dart';
 
 class SearchScreen extends StatefulWidget {

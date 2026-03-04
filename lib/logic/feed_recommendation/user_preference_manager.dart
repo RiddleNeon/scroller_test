@@ -1,7 +1,7 @@
 import 'package:cloud_firestore/cloud_firestore.dart';
 import 'package:wurp/util/extensions/num_distance.dart';
 
-import '../../main.dart';
+import '../../base_logic.dart';
 import '../batches/batch_service.dart';
 import '../video/video.dart';
 

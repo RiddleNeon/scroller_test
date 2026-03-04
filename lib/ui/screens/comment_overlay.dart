@@ -7,10 +7,10 @@ import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
 import 'package:wurp/ui/misc/avatar.dart';
 
+import '../../base_logic.dart';
 import '../../logic/comments/comment.dart';
 import '../../logic/repositories/video_repository.dart';
 import '../../logic/video/video.dart';
-import '../../main.dart';
 
 class _CommentVM {
   final Comment comment;

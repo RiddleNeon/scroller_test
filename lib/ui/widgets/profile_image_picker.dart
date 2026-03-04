@@ -6,9 +6,9 @@ import 'package:flutter/foundation.dart';
 import 'package:flutter/material.dart';
 import 'package:http/http.dart' as http;
 import 'package:image_picker/image_picker.dart';
-import 'package:wurp/main.dart';
 import 'package:wurp/logic/repositories/user_repository.dart';
 
+import '../../base_logic.dart';
 import 'camera/camera_dialog.dart';
 
 Future<String?> showProfileImagePicker(BuildContext context) {

@@ -39,7 +39,7 @@ class _CallingScreenState extends State<CallingScreen> with TickerProviderStateM
   late AnimationController _videoAppearController;
   bool _joined = false;
   bool _cameraConnected = false;
-  final GlobalObjectKey<WebCameraState> _cameraKey = GlobalObjectKey("CallCamera");
+  static const GlobalObjectKey<WebCameraState> _cameraKey = GlobalObjectKey("CallCamera");
 
   @override
   void initState() {

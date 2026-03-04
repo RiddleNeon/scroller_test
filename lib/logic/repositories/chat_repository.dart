@@ -1,12 +1,12 @@
 import 'dart:convert';
-import 'dart:math';
 
 import 'package:cloud_firestore/cloud_firestore.dart';
 import 'package:http/http.dart' as http;
 import 'package:wurp/logic/chat/chat_message.dart';
-import 'package:wurp/main.dart';
 
+import '../../base_logic.dart';
 import '../chat/chat.dart';
+import '../local_storage/local_seen_service.dart';
 
 class ChatRepository {
   Future<void> sendNotification({required Chat chat, required ChatMessage message}) async {

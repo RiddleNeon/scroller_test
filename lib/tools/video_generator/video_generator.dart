@@ -4,8 +4,8 @@ import 'package:cloud_firestore/cloud_firestore.dart';
 import 'package:flutter/services.dart';
 import 'package:wurp/logic/repositories/video_repository.dart';
 
+import '../../base_logic.dart';
 import '../../logic/models/user_model.dart';
-import '../../main.dart';
 
 class VideoGenerator {}
 

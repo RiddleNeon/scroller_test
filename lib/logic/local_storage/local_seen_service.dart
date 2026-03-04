@@ -5,7 +5,22 @@ import 'package:wurp/logic/chat/chat_message.dart';
 import 'package:wurp/logic/feed_recommendation/user_interaction.dart';
 import 'package:wurp/logic/models/user_model.dart';
 import 'package:wurp/logic/video/video.dart';
-import 'package:wurp/main.dart';
+
+import '../../base_logic.dart';
+
+
+LocalSeenService get localSeenService {
+  if (_localSeenService == null) throw StateError("Local Seen Service isn't initialized yet!");
+  return _localSeenService!;
+}
+LocalSeenService? _localSeenService;
+Future<void> initLocalSeenService() async{
+  _localSeenService = LocalSeenService();
+  await _localSeenService!.init();
+}
+Future<void> disposeLocalSeenService() async {
+  return await _localSeenService?.dispose();
+}
 
 class LocalSeenService {
   static const String _seenBoxName = 'seen_videos';

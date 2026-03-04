@@ -1,7 +1,8 @@
 import 'package:cloud_firestore/cloud_firestore.dart';
 import 'package:wurp/logic/repositories/video_repository.dart';
 
-import '../../main.dart';
+import '../../base_logic.dart';
+import '../local_storage/local_seen_service.dart';
 import '../models/user_model.dart';
 import '../video/video.dart';
 

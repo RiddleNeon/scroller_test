@@ -6,9 +6,10 @@ import 'package:video_player/video_player.dart';
 import 'package:wurp/logic/feed_recommendation/video_recommender_base.dart';
 import 'package:wurp/logic/video/video_provider.dart';
 
+import '../../base_logic.dart';
 import '../../logic/batches/batch_service.dart';
+import '../../logic/local_storage/local_seen_service.dart';
 import '../../logic/video/video.dart';
-import '../../main.dart';
 import 'overlays/overlays.dart';
 
 class VideoItem extends StatefulWidget {

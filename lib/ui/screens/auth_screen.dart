@@ -5,8 +5,8 @@ import 'package:flutter_login/flutter_login.dart';
 import 'package:font_awesome_flutter/font_awesome_flutter.dart';
 import 'package:wurp/ui/router.dart';
 
+import '../../base_logic.dart';
 import '../../logic/models/user_model.dart';
-import '../../main.dart';
 
 class LoginScreen extends StatefulWidget {
   const LoginScreen({super.key});

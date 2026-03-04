@@ -4,7 +4,7 @@ import 'package:wurp/logic/video/video.dart';
 import 'package:wurp/ui/screens/comment_overlay.dart';
 import 'package:wurp/ui/widgets/overlays/video_info_overlay.dart';
 
-import '../../../main.dart';
+import '../../../base_logic.dart';
 import 'comment_button.dart';
 import 'dislike_button.dart';
 import 'like_button.dart';

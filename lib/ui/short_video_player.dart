@@ -1,10 +1,10 @@
 import 'package:flutter/material.dart';
 import 'package:preload_page_view/preload_page_view.dart';
 import 'package:wurp/logic/video/video_provider.dart';
-import 'package:wurp/main.dart';
 import 'package:wurp/ui/feed_view_model.dart';
 import 'package:wurp/ui/router.dart';
 
+import '../base_logic.dart';
 import 'widgets/video_widget.dart';
 
 Widget feedVideos(TickerProvider tickerProvider, VideoProvider videoProvider, BuildContext context, {FeedViewModel? feedModel, int itemCount = 5000, int initialPage = 0}) {

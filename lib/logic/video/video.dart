@@ -1,6 +1,6 @@
 import 'package:cloud_firestore/cloud_firestore.dart';
 
-import '../../main.dart';
+import '../../base_logic.dart';
 import '../models/user_model.dart';
 
 class Video {

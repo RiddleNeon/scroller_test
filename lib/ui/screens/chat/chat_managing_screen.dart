@@ -1,11 +1,12 @@
 import 'package:cloud_firestore/cloud_firestore.dart';
 import 'package:flutter/material.dart';
 import 'package:wurp/logic/chat/chat_message.dart';
-import 'package:wurp/main.dart';
 import 'package:wurp/ui/misc/avatar.dart';
 import 'package:wurp/ui/screens/chat/chat_screen.dart';
 
+import '../../../base_logic.dart';
 import '../../../logic/chat/chat.dart';
+import '../../../logic/local_storage/local_seen_service.dart';
 import '../../../util/misc/time_formatting.dart';
 
 class ChatManagingScreen extends StatefulWidget {

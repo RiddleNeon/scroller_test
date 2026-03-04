@@ -5,8 +5,9 @@ import 'package:wurp/logic/feed_recommendation/user_interaction.dart';
 import 'package:wurp/logic/feed_recommendation/user_preference_manager.dart';
 import 'package:wurp/logic/feed_recommendation/user_preferences.dart';
 
-import '../../main.dart';
+import '../../base_logic.dart';
 import '../batches/batch_service.dart';
+import '../local_storage/local_seen_service.dart';
 import '../video/video.dart';
 
 abstract class VideoRecommenderBase {

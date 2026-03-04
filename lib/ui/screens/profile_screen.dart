@@ -3,11 +3,12 @@ import 'dart:ui';
 import 'package:flutter/material.dart';
 import 'package:wurp/logic/chat/chat.dart';
 import 'package:wurp/logic/models/user_model.dart';
-import 'package:wurp/main.dart';
 import 'package:wurp/ui/misc/avatar.dart';
 import 'package:wurp/ui/widgets/logout_button.dart';
 import 'package:wurp/ui/widgets/overlays/follow_button.dart';
 
+import '../../base_logic.dart';
+import '../../logic/local_storage/local_seen_service.dart';
 import '../misc/basic_player.dart';
 import '../widgets/profile_image_picker.dart';
 import 'chat/chat_managing_screen.dart';

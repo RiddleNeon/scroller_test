@@ -1,7 +1,7 @@
 import 'dart:async';
 import 'package:cloud_firestore/cloud_firestore.dart';
 
-import '../../main.dart';
+import '../../base_logic.dart';
 
 class FirestoreBatchQueue {
   static final FirestoreBatchQueue instance = FirestoreBatchQueue._internal();

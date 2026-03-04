@@ -4,9 +4,9 @@ import 'package:wurp/logic/feed_recommendation/user_interaction.dart';
 import 'package:wurp/logic/feed_recommendation/user_preferences.dart';
 import 'package:wurp/logic/feed_recommendation/video_recommender_base.dart';
 import 'package:wurp/logic/video/video.dart';
-import 'package:wurp/main.dart';
 
 import '../../util/misc/lists.dart';
+import '../local_storage/local_seen_service.dart';
 
 class VideoScore {
   final double score;

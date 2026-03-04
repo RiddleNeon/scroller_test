@@ -1,5 +1,7 @@
 import 'package:cloud_firestore/cloud_firestore.dart';
-import 'package:wurp/main.dart';
+
+import '../../base_logic.dart';
+import '../local_storage/local_seen_service.dart';
 
 class Chat {
   DateTime createdAt;

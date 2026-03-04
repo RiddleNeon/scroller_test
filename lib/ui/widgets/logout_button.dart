@@ -1,7 +1,7 @@
 import 'package:flutter/material.dart';
 import 'package:wurp/ui/screens/auth_screen.dart';
 
-import '../../main.dart';
+import '../../base_logic.dart';
 
 class LogoutButton extends StatefulWidget {
   const LogoutButton({super.key});
