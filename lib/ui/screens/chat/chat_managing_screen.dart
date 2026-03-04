@@ -39,7 +39,7 @@ class _ChatManagingScreenState extends State<ChatManagingScreen> {
       _preload();
     }
   }
-  
+
   void _preload() async {
     print("preloading more chats!");
     loading = true;
@@ -48,10 +48,11 @@ class _ChatManagingScreenState extends State<ChatManagingScreen> {
     currentLastIndex = preloadedChatsResult.newCurrent;
     final preloadedChats = preloadedChatsResult.result;
     chats.addAll(preloadedChats);
-    if(mounted){
+    chats.sort((a, b) => b.lastMessageAt?.compareTo(a.lastMessageAt ?? DateTime.now()) ?? -1);
+    if (mounted) {
       setState(() {});
     }
-    if(preloadedChats.isEmpty || currentLastIndex == null) {
+    if (preloadedChats.isEmpty || currentLastIndex == null) {
       print("no more chats!");
       noMoreChats = true;
     }
@@ -75,9 +76,14 @@ class _ChatManagingScreenState extends State<ChatManagingScreen> {
       body: Padding(padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 12), child: _buildChatList(chats)),
     );
   }
-  
-  void onMessageUpdate(Chat chat, ChatMessage message){
-    print("message updated!");
+
+  void onMessageUpdate(Chat chat, ChatMessage message) {
+    setState(() {
+      chat.lastMessage = message.text;
+      chat.lastMessageAt = message.timestamp;
+      chat.lastMessageByMe = message.isMe;
+      chats.sort((a, b) => b.lastMessageAt?.compareTo(a.lastMessageAt ?? DateTime.now()) ?? -1);
+    });
   }
 
   Widget _buildChatList(List<Chat> chats) {
@@ -113,11 +119,7 @@ class _ChatManagingScreenState extends State<ChatManagingScreen> {
           child: Row(
             crossAxisAlignment: CrossAxisAlignment.center,
             children: [
-              Avatar(
-                imageUrl: chat.partnerProfileImageUrl,
-                name: chat.partnerName,
-                colorScheme: theme.colorScheme,
-              ),
+              Avatar(imageUrl: chat.partnerProfileImageUrl, name: chat.partnerName, colorScheme: theme.colorScheme),
               const SizedBox(width: 16),
 
               Expanded(
@@ -126,10 +128,7 @@ class _ChatManagingScreenState extends State<ChatManagingScreen> {
                   children: [
                     Text(
                       chat.partnerName,
-                      style: theme.textTheme.titleMedium?.copyWith(
-                        fontWeight: FontWeight.w600,
-                        color: theme.colorScheme.onSurface,
-                      ),
+                      style: theme.textTheme.titleMedium?.copyWith(fontWeight: FontWeight.w600, color: theme.colorScheme.onSurface),
                       overflow: TextOverflow.ellipsis,
                     ),
                     const SizedBox(height: 4),
@@ -138,9 +137,7 @@ class _ChatManagingScreenState extends State<ChatManagingScreen> {
                       "${chat.lastMessageByMe ? "You: " : ""}${chat.lastMessage}",
                       style: theme.textTheme.bodyMedium?.copyWith(
                         color: theme.colorScheme.onSurfaceVariant,
-                        fontWeight: chat.lastMessageByMe
-                            ? FontWeight.w400
-                            : FontWeight.w500,
+                        fontWeight: chat.lastMessageByMe ? FontWeight.w400 : FontWeight.w500,
                       ),
                       overflow: TextOverflow.ellipsis,
                     ),
@@ -153,22 +150,14 @@ class _ChatManagingScreenState extends State<ChatManagingScreen> {
               Column(
                 crossAxisAlignment: CrossAxisAlignment.end,
                 children: [
-                  Text(
-                    timeString,
-                    style: theme.textTheme.bodySmall?.copyWith(
-                      color: theme.colorScheme.primary,
-                    ),
-                  ),
+                  Text(timeString, style: theme.textTheme.bodySmall?.copyWith(color: theme.colorScheme.primary)),
                   const SizedBox(height: 6),
 
                   if (!chat.lastMessageByMe)
                     Container(
                       width: 8,
                       height: 8,
-                      decoration: BoxDecoration(
-                        color: theme.colorScheme.primary,
-                        shape: BoxShape.circle,
-                      ),
+                      decoration: BoxDecoration(color: theme.colorScheme.primary, shape: BoxShape.circle),
                     ),
                 ],
               ),
@@ -203,12 +192,11 @@ Widget buildMessagingScreen(Chat chat, void Function(ChatMessage) onMessageUpdat
   return MessagingScreen(
     key: currentOpenChatScreenKey,
     recipientName: chat.partnerName,
-    recipientAvatarUrl: chat.partnerProfileImageUrl, 
+    recipientAvatarUrl: chat.partnerProfileImageUrl,
     recipientId: chat.partnerId,
     onMessageUpdate: onMessageUpdate,
     onSend: (message) async {
       chatManager.addChat(chat, replaceExisting: false);
-      print("message sent");
       await chatRepository.sendNotification(
         chat: chat,
         message: ChatMessage(id: "${chat.partnerId}-${DateTime.now().microsecondsSinceEpoch}", text: message, isMe: true, timestamp: DateTime.now()),

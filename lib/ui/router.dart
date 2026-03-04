@@ -29,7 +29,6 @@ void initRouter() {
       return null;
     },
     routes: [
-      GoRoute(path: '/', builder: (context, state) => const SizedBox.shrink()),
       ShellRoute(
         builder: (context, state, child) {
           return Scaffold(body: child, bottomNavigationBar: _bottomNavBar);
@@ -50,6 +49,7 @@ void initRouter() {
         ],
       ),
       GoRoute(path: '/login', builder: (context, state) => const LoginScreen()),
+      GoRoute(path: '/', builder: (context, state) => const SizedBox.shrink()),
     ],
   );
 }
