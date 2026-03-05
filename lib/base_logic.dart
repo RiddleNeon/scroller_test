@@ -5,6 +5,7 @@ import 'package:firebase_messaging/firebase_messaging.dart';
 import 'package:flutter/foundation.dart';
 import 'package:flutter/material.dart';
 import 'package:fvp/fvp.dart' as fvp;
+import 'package:wurp/tools/supabase_tests/supabase_login_test.dart';
 import 'package:wurp/ui/feed_view_model.dart';
 
 import 'logic/feed_recommendation/user_preference_manager.dart';
@@ -59,6 +60,7 @@ Future<void> initLogic() async {
 }
 
 Future<void> onUserLogin(UserProfile user, [BuildContext? context]) async {
+  await onUserLoginSupabaseTest();
   await onUserLogout();
   _currentUser = user;
   if (kIsWeb) {

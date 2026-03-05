@@ -13,10 +13,9 @@ class Video {
   final String authorName;
   final DateTime createdAt;
   final List<String> tags;
+  final Duration? duration;
 
-  // Engagement metrics (optional - can be loaded separately)
   final int? likesCount;
-  final int? sharesCount;
   final int? commentsCount;
   final int? viewsCount;
 
@@ -30,10 +29,10 @@ class Video {
     required this.createdAt,
     required this.tags,
     this.likesCount,
-    this.sharesCount,
     this.commentsCount,
     this.viewsCount,
     required this.authorName,
+    this.duration,
   });
 
   factory Video.fromFirestore(DocumentSnapshot doc) {
@@ -48,10 +47,27 @@ class Video {
       createdAt: (data['createdAt'] as Timestamp).toDate(),
       tags: data['tags'] != null ? List<String>.from(data['tags']) : [],
       likesCount: data['likesCount'],
-      sharesCount: data['sharesCount'],
       commentsCount: data['commentsCount'],
       viewsCount: data['viewsCount'],
       authorName: data['authorName'] ?? "No Name Provided",
+    );
+  }
+
+  factory Video.fromSupabase(Map<String, dynamic> data, String authorName, List<String> tags) {
+    return Video(
+      id: data['id'],
+      title: data['title'] ?? '',
+      description: data['description'] ?? '',
+      videoUrl: (data['videoUrl'] ?? '').toString().replaceAll("_large.", "_tiny.").replaceAll("_medium.", "_tiny.").replaceAll("_small.", "_tiny."), //fixme only tmp solution
+      thumbnailUrl: data['thumbnail_url'],
+      authorId: data['author_id'] ?? '',
+      createdAt: DateTime.parse(data['created_at']).toLocal(),
+      likesCount: data['like_count'],
+      viewsCount: data['view_count'],
+      tags: tags,
+      commentsCount: data['comment_count'],
+      authorName: authorName,
+      duration: Duration(milliseconds: data['duration_ms'])
     );
   }
 
@@ -110,7 +126,7 @@ class Video {
   double get engagementRate {
     if (viewsCount == null || viewsCount == 0) return 0.0;
 
-    final totalEngagements = (likesCount ?? 0) + (sharesCount ?? 0) + (commentsCount ?? 0);
+    final totalEngagements = (likesCount ?? 0) + (commentsCount ?? 0);
 
     return (totalEngagements / viewsCount!) * 100;
   }
@@ -125,29 +141,16 @@ class VideoWithAuthor {
   final bool isLiked;
   final bool isAuthorFollowed;
 
-  VideoWithAuthor({
-    required this.video,
-    required this.author,
-    this.isLiked = false,
-    this.isAuthorFollowed = false,
-  });
+  VideoWithAuthor({required this.video, required this.author, this.isLiked = false, this.isAuthorFollowed = false});
 
-  static Future<VideoWithAuthor?> fromVideo(
-    Video video,
-    String currentUserId,
-  ) async {
+  static Future<VideoWithAuthor?> fromVideo(Video video, String currentUserId) async {
     final author = await video.getAuthorProfile();
     if (author == null) return null;
 
     final isLiked = await video.isLikedByUser(currentUserId);
     final isFollowed = await video.isAuthorFollowedByUser(currentUserId);
 
-    return VideoWithAuthor(
-      video: video,
-      author: author,
-      isLiked: isLiked,
-      isAuthorFollowed: isFollowed,
-    );
+    return VideoWithAuthor(video: video, author: author, isLiked: isLiked, isAuthorFollowed: isFollowed);
   }
 
   static Future<Map<String, UserProfile>> fetchAuthorProfiles(List<Video> videos) async {

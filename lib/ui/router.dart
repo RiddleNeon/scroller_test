@@ -12,10 +12,11 @@ import '../base_logic.dart';
 
 late final GoRouter routerConfig;
 
-void initRouter() {
+void initRouter([bool onlyLogin = false]) {
   routerConfig = GoRouter(
     navigatorKey: appNavigatorKey,
     redirect: (context, state) {
+      if(userLoggedIn) return null;
       final navBarItem = _navigationBarItems.where((element) => element.id == state.matchedLocation).firstOrNull;
       if (navBarItem != null) {
         int navBarIndex = _navigationBarItems.indexOf(navBarItem);
@@ -27,7 +28,7 @@ void initRouter() {
 
       if (!loggedIn && !onLogin) return '/login';
       if (loggedIn && onLogin) return '/feed';
-      if (loggedIn && state.matchedLocation == '/') return '/feed';
+      if (loggedIn && state.matchedLocation == '/' &&!onlyLogin) return '/feed';
       return null;
     },
     routes: [
@@ -56,6 +57,16 @@ void initRouter() {
   );
 }
 
+late final GoRouter loginOnlyRouterConfig;
+
+void initLoginOnlyRouter() {
+  loginOnlyRouterConfig = GoRouter(
+    navigatorKey: appNavigatorKey,
+    routes: [
+      GoRoute(path: '/', builder: (context, state) => const LoginScreen()),
+    ],
+  );
+}
 
 GlobalObjectKey<BottomNavBarState> navBarKey = const GlobalObjectKey('bottomNavBarKey');
 BottomNavBar _bottomNavBar = BottomNavBar(

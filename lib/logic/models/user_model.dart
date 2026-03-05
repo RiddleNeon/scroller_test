@@ -13,8 +13,6 @@ class UserProfile {
   final int? followingCount;
   final int? totalVideosCount;
   final int? totalLikesCount;
-  final int? totalDislikesCount;
-  final bool usesCustomProfileImage;
 
   const UserProfile({
     required this.id,
@@ -26,8 +24,6 @@ class UserProfile {
     this.followingCount,
     this.totalVideosCount,
     this.totalLikesCount,
-    this.totalDislikesCount,
-    required this.usesCustomProfileImage,
   });
 
   factory UserProfile.fromFirestore(DocumentSnapshot doc) {
@@ -42,8 +38,21 @@ class UserProfile {
       followingCount: data['followingCount'],
       totalVideosCount: data['totalVideosCount'],
       totalLikesCount: data['totalLikesCount'],
-      totalDislikesCount: data['totalDislikesCount'],
-      usesCustomProfileImage: data['usesCustomProfileImage'] ?? false,
+    );
+  }
+
+  factory UserProfile.fromSupabase(Map<String, dynamic> data) {
+    
+    return UserProfile(
+      id: data['id'],
+      username: data['username'] ?? '',
+      profileImageUrl: data['avatar_url'] ?? createUserProfileImageUrl(data['username']),
+      bio: data['bio'] ?? '',
+      createdAt: (data['created_at'] as Timestamp).toDate(),
+      followersCount: data['followers_count'] ?? 0,
+      followingCount: data['following_count'],
+      totalVideosCount: data['total_videos_count'],
+      totalLikesCount: data['total_likes_count'],
     );
   }
 
@@ -58,8 +67,6 @@ class UserProfile {
       followingCount: data['followingCount'],
       totalVideosCount: data['totalVideosCount'],
       totalLikesCount: data['totalLikesCount'],
-      totalDislikesCount: data['totalDislikesCount'],
-      usesCustomProfileImage: data['usesCustomProfileImage'] ?? false,
     );
   }
 
@@ -74,12 +81,10 @@ class UserProfile {
       "followingCount": followingCount,
       "totalVideosCount": totalVideosCount,
       "totalLikesCount": totalLikesCount,
-      "totalDislikesCount": totalDislikesCount,
-      "usesCustomProfileImage": usesCustomProfileImage,
     };
   }
 
-  UserProfile copyWith({String? username, String? profileImageUrl, String? bio, int? followersCount, bool? usesCustomProfileImage}) {
+  UserProfile copyWith({String? username, String? profileImageUrl, String? bio, int? followersCount}) {
     return UserProfile(
       id: id,
       username: username ?? this.username,
@@ -90,14 +95,12 @@ class UserProfile {
       followingCount: followingCount,
       totalVideosCount: totalVideosCount,
       totalLikesCount: totalLikesCount,
-      totalDislikesCount: totalDislikesCount,
-      usesCustomProfileImage: usesCustomProfileImage ?? this.usesCustomProfileImage,
     );
   }
 
   @override
   String toString() =>
-      'UserProfile{id: $id, username: $username, profileImageUrl: $profileImageUrl ${usesCustomProfileImage ? "(custom)" : "(inherited from account)"}, bio: $bio, createdAt: $createdAt, followersCount: $followersCount}';
+      'UserProfile{id: $id, username: $username, profileImageUrl: $profileImageUrl, bio: $bio, createdAt: $createdAt, followersCount: $followersCount}';
 }
 
 class CreatorUserProfile extends UserProfile {
@@ -113,9 +116,7 @@ class CreatorUserProfile extends UserProfile {
     super.followingCount,
     super.totalVideosCount,
     super.totalLikesCount,
-    super.totalDislikesCount,
     required this.publishedVideoIds,
-    required super.usesCustomProfileImage,
   });
 
   Future<List<Video>> getPublishedVideosDetailed() async {

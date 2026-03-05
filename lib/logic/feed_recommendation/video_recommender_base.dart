@@ -184,11 +184,10 @@ abstract class VideoRecommenderBase {
   double calculateGlobalEngagementScore(Video video) {
     int views = video.viewsCount ?? 1;
     final likes = video.likesCount ?? 0;
-    final shares = video.sharesCount ?? 0;
     final comments = video.commentsCount ?? 0;
     if (views == 0) views = 1; // Avoid division by zero
 
-    final engagementRate = (likes + shares * 2 + comments * 1.5 + 1) / views;
+    final engagementRate = (likes + comments * 1.5 + 1) / views;
     return (engagementRate * 100).clamp(0.0, 1.0);
   }
 }
