@@ -66,6 +66,19 @@ class Comment {
         depth: (data['depth'] as int?) ?? 0,
         replyCount: (data['replyCount'] as int?) ?? 0,
       );
+
+  factory Comment.fromSupabase(Map<String, dynamic> data) => Comment(
+    id: data['id'].toString(),
+    userId: data['author_id'] as String,
+    username: data['profiles']['username'] as String,
+    userProfileImageUrl: data['profiles']['avatar_url'] as String? ?? '',
+    message: data['content'] as String,
+    date: DateTime.parse(data['created_at']).toLocal(),
+    likeCount: 0, //todo
+    parentId: data['parent_id']?.toString(),
+    depth: data['parent_id'] != null ? 1 : 0,
+    replyCount: data['reply_count'] as int? ?? 0,
+  );
   
   void addReply(Comment reply) {
     _replies.add(reply);
