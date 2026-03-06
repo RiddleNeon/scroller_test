@@ -9,6 +9,7 @@ import '../../base_logic.dart';
 VideoRepository videoRepo = VideoRepository();
 final FirestoreBatchQueue batchQueue = FirestoreBatchQueue();
 
+/// Repository for video-related operations
 class VideoRepository {
   Future<Video> getVideoById(String id) async {
     DocumentSnapshot doc = await firestore.collection('videos').doc(id).get();
@@ -46,6 +47,7 @@ class VideoRepository {
 
   int videoQueueLength = 0;
 
+  /// Publish a new video
   Future<void> publishVideo({
     required String title,
     required String description,
@@ -177,6 +179,10 @@ class VideoRepository {
     batchQueue.update(firestore.collection('videos').doc(videoId), {'shares': FieldValue.increment(1)});
   }
 
+  Future<void> incrementShareCountSupabase(int videoId) async {
+    await supabaseClient.rpc('increment_share_count', params: {'p_video_id': videoId});
+  }
+
   /// Add a comment
   Future<void> addComment(String videoId, Comment comment) async {
     print("adding ${comment.toFirestore()} to ${comment.id}");
@@ -269,9 +275,24 @@ class VideoRepository {
     batchQueue.set(firestore.collection('users').doc(userId).collection('saved_videos').doc(videoId), {'savedAt': FieldValue.serverTimestamp()});
   }
 
+  Future<void> saveVideoSupabase(String userId, int videoId) async {
+    await supabaseClient.from('saved_videos').upsert(
+      {'user_id': userId, 'video_id': videoId},
+      onConflict: 'user_id, video_id',
+    );
+  }
+
   /// Unsave video
   void unsaveVideo(String userId, String videoId) {
     batchQueue.delete(firestore.collection('users').doc(userId).collection('saved_videos').doc(videoId));
+  }
+
+  Future<void> unsaveVideoSupabase(String userId, int videoId) async {
+    await supabaseClient
+        .from('saved_videos')
+        .delete()
+        .eq('user_id', userId)
+        .eq('video_id', videoId);
   }
 
   /// Report a video
@@ -281,6 +302,15 @@ class VideoRepository {
       'videoId': videoId,
       'reason': reason,
       'reportedAt': FieldValue.serverTimestamp(),
+      'status': 'pending',
+    });
+  }
+
+  Future<void> reportVideoSupabase(String userId, int videoId, String reason) async {
+    await supabaseClient.from('video_reports').insert({
+      'user_id': userId,
+      'video_id': videoId,
+      'reason': reason,
       'status': 'pending',
     });
   }
@@ -316,6 +346,41 @@ class VideoRepository {
     }
   }
 
+  Future<List<Video>> getFollowingFeedSupabase(String userId, {int limit = 20, int offset = 0}) async {
+    final result = await supabaseClient
+        .from('videos')
+        .select('''
+        *,
+        profiles (
+          display_name,
+          username
+        ),
+        video_tags (
+          tags (
+            name
+          )
+        )
+      ''')
+        .inFilter('author_id', (await supabaseClient
+        .from('follows')
+        .select('following_id')
+        .eq('follower_id', userId))
+        .map((e) => e['following_id'] as String)
+        .toList())
+        .eq('is_published', true)
+        .order('created_at', ascending: false)
+        .range(offset, offset + limit - 1);
+
+    return result.map<Video>((e) {
+      final profile = e['profiles'] as Map<String, dynamic>;
+      final authorName = profile['display_name'] ?? profile['username'] ?? '';
+      final tags = (e['video_tags'] as List)
+          .map((vt) => vt['tags']['name'] as String)
+          .toList();
+      return Video.fromSupabase(e, authorName, tags);
+    }).toList();
+  }
+
   /// Get trending videos
   Future<List<Video>> getTrendingVideos({int limit = 20}) async {
     try {
@@ -337,6 +402,36 @@ class VideoRepository {
       print('Error getting trending videos: $e');
       return [];
     }
+  }
+
+  Future<List<Video>> getTrendingVideosSupabase({int limit = 20}) async {
+    final result = await supabaseClient
+        .from('videos')
+        .select('''
+        *,
+        profiles (
+          display_name,
+          username
+        ),
+        video_tags (
+          tags (
+            name
+          )
+        )
+      ''')
+        .eq('is_published', true)
+        .gte('created_at', DateTime.now().subtract(const Duration(days: 1)).toIso8601String())
+        .order('views_count', ascending: false)
+        .limit(limit);
+
+    return result.map<Video>((e) {
+      final profile = e['profiles'] as Map<String, dynamic>;
+      final authorName = profile['display_name'] ?? profile['username'] ?? '';
+      final tags = (e['video_tags'] as List)
+          .map((vt) => vt['tags']['name'] as String)
+          .toList();
+      return Video.fromSupabase(e, authorName, tags);
+    }).toList();
   }
 
   /// Search videos by title or tags
@@ -442,6 +537,48 @@ class VideoRepository {
     }
   }
 
+  Future<List<Video>> getVideosByTagsSupabase(List<String> tags, {int limit = 20, int offset = 0}) async {
+    final taggedVideoIds = await supabaseClient
+        .from('video_tags')
+        .select('video_id, tags!inner(name)')
+        .inFilter('tags.name', tags);
+
+    final videoIds = taggedVideoIds
+        .map((e) => e['video_id'])
+        .toSet()
+        .toList();
+
+    if (videoIds.isEmpty) return [];
+
+    final result = await supabaseClient
+        .from('videos')
+        .select('''
+        *,
+        profiles (
+          display_name,
+          username
+        ),
+        video_tags (
+          tags (
+            name
+          )
+        )
+      ''')
+        .inFilter('id', videoIds)
+        .eq('is_published', true)
+        .order('created_at', ascending: false)
+        .range(offset, offset + limit - 1);
+
+    return result.map<Video>((e) {
+      final profile = e['profiles'] as Map<String, dynamic>;
+      final authorName = profile['display_name'] ?? profile['username'] ?? '';
+      final tagNames = (e['video_tags'] as List)
+          .map((vt) => vt['tags']['name'] as String)
+          .toList();
+      return Video.fromSupabase(e, authorName, tagNames);
+    }).toList();
+  }
+
   /// Get related videos based on tags
   Future<List<Video>> getRelatedVideos(Video video, {int limit = 10}) async {
     try {
@@ -459,6 +596,51 @@ class VideoRepository {
       print('Error getting related videos: $e');
       return [];
     }
+  }
+
+  Future<List<Video>> getRelatedVideosSupabase(Video video, {int limit = 10}) async {
+    if (video.tags.isEmpty) return [];
+
+    final taggedVideoIds = await supabaseClient
+        .from('video_tags')
+        .select('video_id, tags!inner(name)')
+        .inFilter('tags.name', video.tags.take(5).toList());
+
+    final videoIds = taggedVideoIds
+        .map((e) => e['video_id'])
+        .where((id) => id.toString() != video.id)
+        .toSet()
+        .toList();
+
+    if (videoIds.isEmpty) return [];
+
+    final result = await supabaseClient
+        .from('videos')
+        .select('''
+        *,
+        profiles (
+          display_name,
+          username
+        ),
+        video_tags (
+          tags (
+            name
+          )
+        )
+      ''')
+        .inFilter('id', videoIds)
+        .eq('is_published', true)
+        .order('created_at', ascending: false)
+        .limit(limit);
+
+    return result.map<Video>((e) {
+      final profile = e['profiles'] as Map<String, dynamic>;
+      final authorName = profile['display_name'] ?? profile['username'] ?? '';
+      final tags = (e['video_tags'] as List)
+          .map((vt) => vt['tags']['name'] as String)
+          .toList();
+      return Video.fromSupabase(e, authorName, tags);
+    }).toList();
   }
 
   Future<List<Video>> getSavedVideos(String userId, {int limit = 20}) async {
@@ -485,6 +667,41 @@ class VideoRepository {
     }
   }
 
+  Future<List<Video>> getSavedVideosSupabase(String userId, {int limit = 20, int offset = 0}) async {
+    final result = await supabaseClient
+        .from('saved_videos')
+        .select('''
+        video_id,
+        videos (
+          *,
+          profiles (
+            display_name,
+            username
+          ),
+          video_tags (
+            tags (
+              name
+            )
+          )
+        )
+      ''')
+        .eq('user_id', userId)
+        .order('created_at', ascending: false)
+        .range(offset, offset + limit - 1);
+
+    return result
+        .where((e) => e['videos'] != null)
+        .map((e) {
+      final video = e['videos'] as Map<String, dynamic>;
+      final profile = video['profiles'] as Map<String, dynamic>;
+      final authorName = profile['display_name'] ?? profile['username'] ?? '';
+      final tags = (video['video_tags'] as List)
+          .map((vt) => vt['tags']['name'] as String)
+          .toList();
+      return Video.fromSupabase(video, authorName, tags);
+    }).toList();
+  }
+
   Future<List<Video>> fetchVideosByIds(List<String> ids) async {
     if (ids.isEmpty) return [];
 
@@ -495,5 +712,35 @@ class VideoRepository {
       videos.addAll(snapshot.docs.map((doc) => Video.fromFirestore(doc)));
     }
     return videos;
+  }
+
+
+  Future<List<Video>> fetchVideosByIdsSupabase(List<int> ids) async {
+    if (ids.isEmpty) return [];
+
+    final result = await supabaseClient
+        .from('videos')
+        .select('''
+        *,
+        profiles (
+          display_name,
+          username
+        ),
+        video_tags (
+          tags (
+            name
+          )
+        )
+      ''')
+        .inFilter('id', ids);
+
+    return result.map<Video>((e) {
+      final profile = e['profiles'] as Map<String, dynamic>;
+      final authorName = profile['display_name'] ?? profile['username'] ?? '';
+      final tags = (e['video_tags'] as List)
+          .map((vt) => vt['tags']['name'] as String)
+          .toList();
+      return Video.fromSupabase(e, authorName, tags);
+    }).toList();
   }
 }
