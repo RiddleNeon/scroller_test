@@ -694,11 +694,12 @@ class LocalSeenService {
       await _chatCursorBox.put(conversationId, message.timestamp);
     }
 
-    if (!_conversationBox.containsKey(chat.partnerId)) {
-      _conversationBox.put(chat.partnerId, chat.toJson());
-    }
+    chat.lastMessage = message.text;
+    chat.lastMessageAt = message.timestamp;
+    chat.lastMessageByMe = message.isMe;
+    await _conversationBox.put(chat.partnerId, chat.toJson());
 
-    print("sendMessage: stored $key locally and written to Firestore");
+    print("sendMessage: stored $key locally");
   }
 
   ChatMessage? getMessage(String otherUserId, String messageId) {
@@ -709,9 +710,8 @@ class LocalSeenService {
     return _messageFromMap(raw, conversationId);
   }
 
-  Future<List<ChatMessage>> getMessagesWith(String otherUserId, {int limit = 30, DateTime? startOffset}) async {
+  Future<List<ChatMessage>> getMessagesWithLocal(String otherUserId, {int limit = 30, DateTime? startOffset}) async {
     final conversationId = _conversationId(otherUserId);
-    final isA = currentUser.id.compareTo(otherUserId) > 0;
 
     final localMessages =
         _chatBox
@@ -726,42 +726,49 @@ class LocalSeenService {
             .toList()
           ..sort((a, b) => a.timestamp.compareTo(b.timestamp));
     print("DONE");
+    return localMessages.length > limit ? localMessages.sublist(localMessages.length - limit) : localMessages;
+  }
 
-    DateTime? firstLocal = localMessages.firstOrNull?.timestamp;
+  Future<void> saveMessagesLocal(String otherUserId, Iterable<ChatMessage> messages) async {
+    final conversationId = _conversationId(otherUserId);
+    DateTime? latestTimestamp;
 
-    final merged = <String, ChatMessage>{for (final m in localMessages) m.id: m};
-
-    Query<Map<String, dynamic>> query = firestore.collection('chats').doc(conversationId).collection('messages').orderBy('createdAt', descending: true);
-
-    if (startOffset != null) {
-      query = query.where('createdAt', isLessThan: olderDate(startOffset, firstLocal));
-    } else if (localMessages.isNotEmpty) {
-      DateTime latestLocal = localMessages.last.timestamp;
-      query = query.where('createdAt', isGreaterThan: Timestamp.fromDate(latestLocal));
-    }
-
-    try {
-      final snapshot = await query.limit(limit).get();
-      print(
-        "getMessagesWith: Firestore returned ${snapshot.docs.length} new docs "
-        "(source: ${snapshot.metadata.isFromCache ? "CACHE" : "SERVER"}), offset: $startOffset, conversation: $conversationId, limit: $limit",
-      );
-      for (final doc in snapshot.docs) {
-        print("from firestore");
-        final message = ChatMessage.fromFirestore(doc.data(), doc.id, isA);
-
-        await _chatBox.put(_chatKey(conversationId, message.id), _messageToMap(message, conversationId));
-
-        merged[message.id] = message;
+    for (final message in messages) {
+      await _chatBox.put(_chatKey(conversationId, message.id), _messageToMap(message, conversationId));
+      if (latestTimestamp == null || message.timestamp.isAfter(latestTimestamp)) {
+        latestTimestamp = message.timestamp;
       }
-      print("for loop done");
-    } catch (e) {
-      print("getMessagesWith: Firestore sync failed, returning local cache. Error: $e");
     }
 
-    final result = merged.values.toList()..sort((a, b) => a.timestamp.compareTo(b.timestamp));
+    if (latestTimestamp != null) {
+      final existing = _chatCursorBox.get(conversationId);
+      if (existing == null || latestTimestamp.isAfter(existing)) {
+        await _chatCursorBox.put(conversationId, latestTimestamp);
+      }
+    }
+  }
 
-    return result.length > limit ? result.sublist(result.length - limit) : result;
+  Future<void> saveChatsLocal(Iterable<Chat> chats) async {
+    for (final chat in chats) {
+      final existingRaw = _conversationBox.get(chat.partnerId) as Map?;
+      final existing = existingRaw == null ? null : Chat.fromJson(Map<String, dynamic>.from(existingRaw));
+      final existingTimestamp = existing?.lastMessageAt ?? existing?.createdAt;
+      final incomingTimestamp = chat.lastMessageAt ?? chat.createdAt;
+
+      if (existingTimestamp == null || incomingTimestamp.isAfter(existingTimestamp) || existing == null) {
+        await _conversationBox.put(chat.partnerId, chat.toJson());
+      }
+
+      final conversationId = _conversationId(chat.partnerId);
+      final currentCursor = _chatCursorBox.get(conversationId);
+      if (currentCursor == null || incomingTimestamp.isAfter(currentCursor)) {
+        await _chatCursorBox.put(conversationId, incomingTimestamp);
+      }
+    }
+  }
+
+  Future<List<ChatMessage>> getMessagesWith(String otherUserId, {int limit = 30, DateTime? startOffset}) async {
+    return getMessagesWithLocal(otherUserId, limit: limit, startOffset: startOffset);
   }
 
   Map<String, String> cachedFcmTokens = {};

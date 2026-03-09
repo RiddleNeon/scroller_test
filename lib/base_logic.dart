@@ -72,9 +72,7 @@ Future<void> onUserLogin(UserProfile user, [BuildContext? context]) async {
     return;
   }
   final token = await messaging.getToken(vapidKey: "BMzrcPy9WqWjCd72OCbRQS2hdTXcMN2khJ3sZcUED9xRHZq6TQjVDo6y2icQtweVaFOp7kRAS085VeQgqZlFK0E");
-  await FirebaseFirestore.instance.collection('users').doc(currentUser.id).update({
-    'fcmToken': token,
-  });
+  await userRepository.updateFcmTokenSupabase(currentUser.id, token);
 }
 
 Future<void> onUserLogout() async {

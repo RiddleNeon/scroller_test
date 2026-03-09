@@ -45,28 +45,28 @@ class UserProfile {
     
     return UserProfile(
       id: data['id'],
-      username: data['username'] ?? '',
-      profileImageUrl: data['avatar_url'] ?? createUserProfileImageUrl(data['username']),
+      username: data['display_name'] ?? data['username'] ?? '',
+      profileImageUrl: data['avatar_url'] ?? data['profileImageUrl'] ?? createUserProfileImageUrl(data['username']),
       bio: data['bio'] ?? '',
-      createdAt: (data['created_at'] as Timestamp).toDate(),
-      followersCount: data['followers_count'] ?? 0,
-      followingCount: data['following_count'],
-      totalVideosCount: data['total_videos_count'],
-      totalLikesCount: data['total_likes_count'],
+      createdAt: _parseDateTime(data['created_at'] ?? data['createdAt']),
+      followersCount: data['followers_count'] ?? data['followersCount'] ?? 0,
+      followingCount: data['following_count'] ?? data['followingCount'],
+      totalVideosCount: data['total_videos_count'] ?? data['totalVideosCount'],
+      totalLikesCount: data['total_likes_count'] ?? data['totalLikesCount'],
     );
   }
 
   factory UserProfile.fromJson(Map<String, dynamic> data) {
     return UserProfile(
       id: data['id'],
-      username: data['username'] ?? '',
-      profileImageUrl: data['profileImageUrl'] ?? createUserProfileImageUrl(data['username']),
+      username: data['display_name'] ?? data['username'] ?? '',
+      profileImageUrl: data['profileImageUrl'] ?? data['avatar_url'] ?? createUserProfileImageUrl(data['username']),
       bio: data['bio'] ?? '',
-      createdAt: (data['createdAt'] as Timestamp).toDate(),
-      followersCount: data['followersCount'] ?? 0,
-      followingCount: data['followingCount'],
-      totalVideosCount: data['totalVideosCount'],
-      totalLikesCount: data['totalLikesCount'],
+      createdAt: _parseDateTime(data['createdAt'] ?? data['created_at']),
+      followersCount: data['followersCount'] ?? data['followers_count'] ?? 0,
+      followingCount: data['followingCount'] ?? data['following_count'],
+      totalVideosCount: data['totalVideosCount'] ?? data['total_videos_count'],
+      totalLikesCount: data['totalLikesCount'] ?? data['total_likes_count'],
     );
   }
 
@@ -101,6 +101,13 @@ class UserProfile {
   @override
   String toString() =>
       'UserProfile{id: $id, username: $username, profileImageUrl: $profileImageUrl, bio: $bio, createdAt: $createdAt, followersCount: $followersCount}';
+}
+
+DateTime _parseDateTime(Object? value) {
+  if (value is Timestamp) return value.toDate();
+  if (value is DateTime) return value;
+  if (value is String) return DateTime.parse(value);
+  return DateTime.now();
 }
 
 class CreatorUserProfile extends UserProfile {

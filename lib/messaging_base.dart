@@ -1,10 +1,11 @@
 
 import 'dart:convert';
 
-import 'package:cloud_firestore/cloud_firestore.dart';
 import 'package:firebase_auth/firebase_auth.dart';
 import 'package:firebase_messaging/firebase_messaging.dart';
 import 'package:wurp/ui/screens/chat/chat_managing_screen.dart';
+
+import 'base_logic.dart';
 
 FirebaseMessaging messaging = FirebaseMessaging.instance;
 Future<void> setupMessaging() async {
@@ -39,9 +40,7 @@ Future<void> setupMessaging() async {
   FirebaseMessaging.instance.onTokenRefresh.listen((newToken) async {
     final uid = FirebaseAuth.instance.currentUser?.uid;
     if (uid != null) {
-      await FirebaseFirestore.instance.collection('users').doc(uid).update({
-        'fcmToken': newToken,
-      });
+      await userRepository.updateFcmTokenSupabase(uid, newToken);
     }
   });
 }

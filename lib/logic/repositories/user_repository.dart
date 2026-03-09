@@ -74,6 +74,16 @@ class UserRepository {
     );
   }
 
+  Future<void> upsertCurrentUserProfile(UserProfile user) async {
+    await supabaseClient.from("profiles").upsert({
+      "id": user.id,
+      "username": user.username,
+      "display_name": user.username,
+      "avatar_url": user.profileImageUrl,
+      "bio": user.bio,
+    });
+  }
+
   @Deprecated("firebase is deprecated! use createCurrentUser() instead!")
   Future<UserProfile> createUser({required String id, required String username, String? profileImageUrl, String bio = ''}) async {
     await firestore.collection('users').doc(id).set({
@@ -528,6 +538,24 @@ class UserRepository {
   Future<UserProfile> updateProfileImageUrlSupabase(UserProfile user, String? newUrl) async {
     await supabaseClient.from('profiles').update({"avatar_url": newUrl}).eq('id', user.id);
     return user.copyWith(profileImageUrl: newUrl);
+  }
+
+  Future<void> updateFcmTokenSupabase(String userId, String? token) async {
+    try {
+      await supabaseClient.from('profiles').update({'fcm_token': token}).eq('id', userId);
+    } catch (e) {
+      print('Error updating FCM token in Supabase: $e');
+    }
+  }
+
+  Future<String?> getFcmTokenSupabase(String userId) async {
+    try {
+      final response = await supabaseClient.from('profiles').select('fcm_token').eq('id', userId).maybeSingle();
+      return response?['fcm_token'] as String?;
+    } catch (e) {
+      print('Error fetching FCM token from Supabase: $e');
+      return null;
+    }
   }
   
   

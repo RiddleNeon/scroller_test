@@ -3,6 +3,7 @@ import 'package:flutter/foundation.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter_login/flutter_login.dart';
 import 'package:font_awesome_flutter/font_awesome_flutter.dart';
+import 'package:wurp/tools/supabase_tests/supabase_login_test.dart';
 import 'package:wurp/ui/router.dart';
 
 import '../../base_logic.dart';
@@ -43,7 +44,8 @@ class _LoginScreenState extends State<LoginScreen> {
       return "an unknown error has occurred!";
     }
 
-    user = await userRepository.getUser(credential.user!.uid);
+    await ensureSupabaseInitialized();
+    user = await userRepository.getUserSupabase(credential.user!.uid) ?? await userRepository.getOrCreateCurrentUser();
     print(user);
     return null; //no error message -> success
   }
@@ -67,7 +69,10 @@ class _LoginScreenState extends State<LoginScreen> {
       return "an unknown error has occurred!";
     }
 
-    user = await userRepository.createUser(id: credential.user!.uid, username: credential.user?.displayName ?? credential.user!.email!.split("@").first);
+    await ensureSupabaseInitialized();
+    user = await userRepository.createCurrentUser(
+      username: credential.user?.displayName ?? credential.user!.email!.split("@").first,
+    );
     print(user);
     return null; //no error message -> success
   }
@@ -134,7 +139,8 @@ class _LoginScreenState extends State<LoginScreen> {
       return e.message;
     }
     print("getting user");
-    user = await userRepository.getOrCreateUser(auth!.currentUser!.uid);
+    await ensureSupabaseInitialized();
+    user = await userRepository.getOrCreateCurrentUser();
     return null;
   }
 

@@ -14,7 +14,14 @@ void main() async {
 
 Future<void> onUserLoginSupabaseTest() async {
   print("logged into supabase, auth: ${auth?.currentUser?.uid}");
-  supabase = await Supabase.initialize(
+  await ensureSupabaseInitialized();
+  print("supabase initialized!");
+  await userRepository.upsertCurrentUserProfile(currentUser);
+}
+
+Future<void> ensureSupabaseInitialized() async {
+  if (_supabase != null) return;
+  _supabase = await Supabase.initialize(
     url: const String.fromEnvironment('SUPABASE_URL'),
     anonKey: const String.fromEnvironment('SUPABASE_ANON_KEY'),
     accessToken: () async {
@@ -22,15 +29,13 @@ Future<void> onUserLoginSupabaseTest() async {
       return token;
     },
   );
-  print("supabase initialized!");
-  await supabase.client.from("profiles").insert({
-    "id": currentUser.id,
-    "username": currentUser.username,
-    "display_name": currentUser.username,
-    "avatar_url": currentUser.profileImageUrl,
-    "bio": currentUser.bio,
-  });
 }
 
-late final Supabase supabase;
+Supabase? _supabase;
+Supabase get supabase {
+  if (_supabase == null) {
+    throw StateError('Supabase has not been initialized yet.');
+  }
+  return _supabase!;
+}
 SupabaseClient get supabaseClient => supabase.client;
