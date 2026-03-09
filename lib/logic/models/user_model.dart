@@ -46,7 +46,7 @@ class UserProfile {
     return UserProfile(
       id: data['id'],
       username: data['display_name'] ?? data['username'] ?? '',
-      profileImageUrl: data['avatar_url'] ?? data['profileImageUrl'] ?? createUserProfileImageUrl(data['username']),
+      profileImageUrl: data['avatar_url'] ?? data['profileImageUrl'] ?? createUserProfileImageUrl(_avatarSeed(data)),
       bio: data['bio'] ?? '',
       createdAt: _parseDateTime(data['created_at'] ?? data['createdAt']),
       followersCount: data['followers_count'] ?? data['followersCount'] ?? 0,
@@ -60,7 +60,7 @@ class UserProfile {
     return UserProfile(
       id: data['id'],
       username: data['display_name'] ?? data['username'] ?? '',
-      profileImageUrl: data['profileImageUrl'] ?? data['avatar_url'] ?? createUserProfileImageUrl(data['username']),
+      profileImageUrl: data['profileImageUrl'] ?? data['avatar_url'] ?? createUserProfileImageUrl(_avatarSeed(data)),
       bio: data['bio'] ?? '',
       createdAt: _parseDateTime(data['createdAt'] ?? data['created_at']),
       followersCount: data['followersCount'] ?? data['followers_count'] ?? 0,
@@ -109,6 +109,8 @@ DateTime _parseDateTime(Object? value) {
   if (value is String) return DateTime.parse(value);
   return DateTime.now();
 }
+
+String? _avatarSeed(Map<String, dynamic> data) => data['display_name'] ?? data['username'] ?? data['id']?.toString();
 
 class CreatorUserProfile extends UserProfile {
   final List<String> publishedVideoIds;

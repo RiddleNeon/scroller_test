@@ -544,7 +544,7 @@ class UserRepository {
     try {
       await supabaseClient.from('profiles').update({'fcm_token': token}).eq('id', userId);
     } catch (e) {
-      print('Error updating FCM token in Supabase: $e');
+      print('Error updating FCM token in Supabase for user $userId: $e');
     }
   }
 
@@ -553,7 +553,7 @@ class UserRepository {
       final response = await supabaseClient.from('profiles').select('fcm_token').eq('id', userId).maybeSingle();
       return response?['fcm_token'] as String?;
     } catch (e) {
-      print('Error fetching FCM token from Supabase: $e');
+      print('Error fetching FCM token from Supabase for user $userId: $e');
       return null;
     }
   }

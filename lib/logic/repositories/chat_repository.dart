@@ -34,11 +34,8 @@ class ChatRepository {
     final token = await userRepository.getFcmTokenSupabase(receiverUid);
     if (token == null) {
       print("Targeted User has no fcm token!");
-    }
-
-    final inner = jsonEncode({'message': storedMessage.text, 'sender': currentUser.id});
-
-    if (token != null) {
+    } else {
+      final inner = jsonEncode({'message': storedMessage.text, 'sender': currentUser.id});
       final body = jsonEncode({'token': token, 'title': 'new Message', 'body': inner});
       print("body: $body");
 
@@ -191,6 +188,7 @@ class ChatRepository {
         );
         final partnerProfile = UserProfile.fromJson({
           'id': partnerMember['profile_id'],
+          'username': profileData['display_name'] ?? profileData['username'] ?? partnerMember['profile_id'],
           ...profileData,
         });
 
@@ -315,8 +313,8 @@ class ChatRepository {
 }
 
 String getChatId({String? currentUserId, required String receiverId}) {
-  currentUserId ??= currentUser.id;
-  final ids = [currentUserId, receiverId]..sort();
+  final userId = currentUserId ?? currentUser.id;
+  final ids = [userId, receiverId]..sort();
   return "${ids[0]}-${ids[1]}";
 }
 

@@ -755,7 +755,7 @@ class LocalSeenService {
       final existingTimestamp = existing?.lastMessageAt ?? existing?.createdAt;
       final incomingTimestamp = chat.lastMessageAt ?? chat.createdAt;
 
-      if (existingTimestamp == null || incomingTimestamp.isAfter(existingTimestamp) || existing == null) {
+      if (existingTimestamp == null || incomingTimestamp.isAfter(existingTimestamp)) {
         await _conversationBox.put(chat.partnerId, chat.toJson());
       }
 

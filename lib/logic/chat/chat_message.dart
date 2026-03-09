@@ -1,3 +1,5 @@
+import 'package:cloud_firestore/cloud_firestore.dart';
+
 class ChatMessage {
   final String id;
   final String text;
@@ -52,8 +54,9 @@ class ChatMessage {
 enum MessageStatus { sending, sent, delivered, read }
 
 DateTime _parseDateTime(Object? value) {
+  if (value is Timestamp) return value.toDate();
   if (value is DateTime) return value;
   if (value is String) return DateTime.parse(value);
   if (value == null) return DateTime.now();
-  return (value as dynamic).toDate() as DateTime;
+  throw FormatException('Unsupported chat message timestamp type: ${value.runtimeType}');
 }
