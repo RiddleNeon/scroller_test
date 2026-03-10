@@ -89,7 +89,7 @@ class _PageOverlayState extends State<PageOverlay> {
         disliked = false;
       });
     }
-    _updateLikeInFirestore(newLiked);
+    _updateLikeState(newLiked);
     widget.onLikeChanged(newLiked);
   }
 
@@ -101,7 +101,7 @@ class _PageOverlayState extends State<PageOverlay> {
         liked = false;
       });
     }
-    _updateDislikeInFirestore(newDisliked);
+    _updateDislikeState(newDisliked);
     widget.onDislikeChanged(newDisliked);
   }
 
@@ -109,19 +109,19 @@ class _PageOverlayState extends State<PageOverlay> {
     openCommentsForVideo(widget.video, context);
   }
 
-  void _updateDislikeInFirestore(bool isDisliked) {
+  void _updateDislikeState(bool isDisliked) {
     if (isDisliked) {
-      videoRepo.dislikeVideo(auth!.currentUser!.uid, widget.video.id);
+      videoRepo.dislikeVideo(currentAuthUserId(), widget.video.id);
     } else {
-      videoRepo.undislikeVideo(auth!.currentUser!.uid, widget.video.id);
+      videoRepo.undislikeVideo(currentAuthUserId(), widget.video.id);
     }
   }
 
-  void _updateLikeInFirestore(bool isLiked) {
+  void _updateLikeState(bool isLiked) {
     if (isLiked) {
-      videoRepo.likeVideo(auth!.currentUser!.uid, widget.video.id, widget.video.authorId);
+      videoRepo.likeVideo(currentAuthUserId(), widget.video.id, widget.video.authorId);
     } else {
-      videoRepo.unlikeVideo(auth!.currentUser!.uid, widget.video.id, widget.video.authorId);
+      videoRepo.unlikeVideo(currentAuthUserId(), widget.video.id, widget.video.authorId);
     }
   }
 }

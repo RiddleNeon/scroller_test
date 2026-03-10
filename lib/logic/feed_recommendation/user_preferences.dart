@@ -1,5 +1,3 @@
-import 'package:cloud_firestore/cloud_firestore.dart';
-
 /// User preferences aggregated from interactions
 class UserPreferences {
   final Map<String, double> tagPreferences;
@@ -10,15 +8,14 @@ class UserPreferences {
 
   UserPreferences({required this.tagPreferences, required this.authorPreferences, this.avgCompletionRate = 0.0, this.totalInteractions = 0, this.lastUpdated});
 
-  factory UserPreferences.fromFirestore(DocumentSnapshot doc) {
-    print("Loading user preferences from Firestore for document: ${doc.id}");
-    
-    if (!doc.exists) {
-      print("User preferences document does not exist. Initializing with empty preferences.");
+  factory UserPreferences.fromSupabase(Map<String, dynamic>? data) {
+    print("Loading user preferences from Supabase");
+
+    if (data == null) {
+      print("User preferences row does not exist. Initializing with empty preferences.");
       return UserPreferences(tagPreferences: {}, authorPreferences: {});
     }
 
-    final data = doc.data() as Map<String, dynamic>;
     final profile = data['recommendationProfile'] ?? {};
 
     if(profile['totalInteractions'] != null) {
@@ -32,7 +29,7 @@ class UserPreferences {
       authorPreferences: Map<String, double>.from(profile['authorVector'] ?? {}),
       avgCompletionRate: (profile['avgCompletionRate'] ?? 0.0).toDouble(),
       totalInteractions: profile['totalInteractions'] ?? 0,
-      lastUpdated: profile['lastUpdated'] != null ? (profile['lastUpdated'] as Timestamp).toDate() : null,
+      lastUpdated: profile['lastUpdated'] != null ? DateTime.parse(profile['lastUpdated'] as String).toLocal() : null,
     );
   }
 

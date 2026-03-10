@@ -1,8 +1,6 @@
-import 'package:cloud_firestore/cloud_firestore.dart';
 import 'package:wurp/util/extensions/num_distance.dart';
 
 import '../../base_logic.dart';
-import '../batches/batch_service.dart';
 import '../video/video.dart';
 
 class UserPreferenceManager {
@@ -44,12 +42,10 @@ class UserPreferenceManager {
 
   Future<void> _loadCacheInternal() async {
     try {
-      final userRef = firestore.collection('users').doc(auth!.currentUser!.uid).collection('profile').doc('preferences');
-      final snapshot = await userRef.get();
+      final data = await supabaseClient.from('user_preferences').select('recommendation_profile').eq('user_id', currentAuthUserId()).maybeSingle();
 
-      if (snapshot.exists) {
-        final data = snapshot.data()!;
-        final profile = data['recommendationProfile'] ?? {};
+      if (data != null) {
+        final profile = data['recommendation_profile'] ?? data['recommendationProfile'] ?? {};
 
         cachedTagPrefs = Map<String, double>.from(
           profile['tagVector'] ?? {},
@@ -109,21 +105,17 @@ class UserPreferenceManager {
     cachedAvgCompletion = (cachedAvgCompletion * cachedTotalInteractions + normalizedEngagementScore) / (cachedTotalInteractions + 1);
     cachedTotalInteractions++;
 
-    final userRef = firestore.collection('users').doc(auth!.currentUser!.uid).collection('profile').doc('preferences');
-
-    userRef.batchSet({
-      'recommendationProfile': {
+    await supabaseClient.from('user_preferences').upsert({
+      'user_id': currentAuthUserId(),
+      'recommendation_profile': {
         'tagVector': Map<String, dynamic>.from(networkTagEffects),
         'authorVector': Map<String, dynamic>.from(networkAuthorEffects),
         'avgCompletionRate': cachedAvgCompletion,
         'totalInteractions': cachedTotalInteractions,
-        'lastUpdated': FieldValue.serverTimestamp(),
+        'lastUpdated': DateTime.now().toIso8601String(),
       },
-    }, merge: true);
-
-    if (cachedTotalInteractions % 5 == 0) {
-      await FirestoreBatchQueue().commit();
-    }
+      'updated_at': DateTime.now().toIso8601String(),
+    }, onConflict: 'user_id');
   }
 
   List<MapEntry<String, TagInteraction>> sortByRelevancy(Map<String, TagInteraction> tagPrefs) {

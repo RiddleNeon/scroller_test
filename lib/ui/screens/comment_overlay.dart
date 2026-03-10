@@ -2,7 +2,6 @@
 
 import 'dart:ui';
 
-import 'package:cloud_firestore/cloud_firestore.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
 import 'package:wurp/ui/misc/avatar.dart';
@@ -46,12 +45,12 @@ Future<void> openCommentsForVideo(Video video, BuildContext context) async {
   final commentQueryResult = await videoRepo.getComments(videoId);
   List<Comment> comments = commentQueryResult.comments;
   print("comments: $comments}");
-  DocumentSnapshot? lastCommentDoc = commentQueryResult.lastDoc;
-  DocumentSnapshot? lastCommentRepliesDoc;
+  int? lastCommentOffset = commentQueryResult.nextOffset;
+  final Map<String, int> replyOffsets = {};
   showCommentsOverlay(
     context: context,
     comments: comments,
-    currentUserId: auth!.currentUser!.uid,
+    currentUserId: currentAuthUserId(),
     currentUsername: currentUser.username,
     currentUserProfileImageUrl: currentUser.profileImageUrl,
     initialCommentsCount: video.commentsCount,
@@ -59,14 +58,18 @@ Future<void> openCommentsForVideo(Video video, BuildContext context) async {
       videoRepo.addComment(videoId, p0);
     },
     onLoadMore: () async {
-      final commentQueryResult = await videoRepo.getComments(videoId, startAfter: lastCommentDoc);
+      if (lastCommentOffset == null) return [];
+      final commentQueryResult = await videoRepo.getComments(videoId, offset: lastCommentOffset!);
       List<Comment> comments = commentQueryResult.comments;
-      lastCommentDoc = commentQueryResult.lastDoc;
+      lastCommentOffset = commentQueryResult.nextOffset;
       return comments;
     },
     onLoadReplies: (parent) async {
-      final result = await videoRepo.getComments(videoId, commentId: parent.id, startAfter: lastCommentRepliesDoc);
-      lastCommentRepliesDoc = result.lastDoc;
+      final replyOffset = replyOffsets[parent.id] ?? 0;
+      final result = await videoRepo.getComments(videoId, commentId: parent.id, offset: replyOffset);
+      if (result.nextOffset != null) {
+        replyOffsets[parent.id] = result.nextOffset!;
+      }
       return result.comments;
     },
   );
@@ -274,7 +277,7 @@ class _CommentsOverlayState extends State<CommentsOverlay> {
       } else {
         _vms.insert(0, newVm);
       }
-      // Single callback – caller writes to Firestore
+      // Single callback – caller persists the comment
       widget.onCommentAdded(newComment);
       _replyTarget = null;
       _isSending = false;

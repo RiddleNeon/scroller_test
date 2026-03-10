@@ -29,7 +29,7 @@ class _MyHomePageState extends State<MyHomePage> with TickerProviderStateMixin, 
     super.initState();
     WidgetsBinding.instance.addObserver(this);
     Timer.periodic(const Duration(minutes: 3), (timer) {
-      localSeenService.syncWithFirestore(onlyLoad: false);
+      localSeenService.syncWithSupabase(onlyLoad: false);
     });
   }
   
@@ -75,8 +75,8 @@ class _MyHomePageState extends State<MyHomePage> with TickerProviderStateMixin, 
   @override
   void didChangeAppLifecycleState(AppLifecycleState state) {
     if (state == AppLifecycleState.paused || state == AppLifecycleState.detached) {
-      localSeenService.syncWithFirestore(onlyLoad: false);
-      print("synced with firestore!");
+      localSeenService.syncWithSupabase(onlyLoad: false);
+      print("synced with supabase!");
     }
   }
 }*/

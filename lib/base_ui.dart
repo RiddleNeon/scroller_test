@@ -8,7 +8,7 @@ void startApp([bool onlyLogin = false]) async {
 
   if (auth?.currentUser != null) {
     await ensureSupabaseInitialized();
-    final user = await userRepository.getUserSupabase(auth!.currentUser!.uid) ?? await userRepository.getOrCreateCurrentUser();
+    final user = await userRepository.getUserSupabase(auth!.currentUser!.id) ?? await userRepository.getOrCreateCurrentUser();
     await onUserLogin(user);
   }
   

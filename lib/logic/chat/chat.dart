@@ -1,5 +1,3 @@
-import 'package:cloud_firestore/cloud_firestore.dart';
-
 import '../../base_logic.dart';
 import '../local_storage/local_seen_service.dart';
 import '../models/user_model.dart';
@@ -44,30 +42,10 @@ class Chat {
     String partnerId = json['partnerId'] ?? customPartnerId ?? '';
     String partnerName = json['partnerName'];
     String partnerProfileImageUrl = json['partnerProfileImageUrl'];
-    print("now the last message date: ${json['lastMessageAt']}");
-    DateTime? lastMessageAt;
-    if(json['lastMessageAt'] is Timestamp){
-      print("cast to timestamp");
-      print("test: ${(json['lastMessageAt'] as Timestamp)}");
-      lastMessageAt = (json['lastMessageAt'] as Timestamp).toDate();
-      print("done!");
-    } else {
-      lastMessageAt = (json['lastMessageAt'] as DateTime?);
-    }
-    print("DONE");
+    DateTime? lastMessageAt = _parseDateTimeNullable(json['lastMessageAt']);
     String lastMessage = json['lastMessage'];
     bool lastMessageByMe = json['lastMessageByMe'] ?? true;
-    print("is by me: $lastMessageByMe");
-    DateTime createdAt;
-    if(json['createdAt'] is Timestamp){
-      print("cast to timestamp");
-      print("test: ${(json['createdAt'] as Timestamp)}");
-      createdAt = (json['createdAt'] as Timestamp).toDate();
-      print("done!");
-    } else {
-      createdAt = (json['createdAt'] as DateTime);
-    }
-    print("everything else too");
+    DateTime createdAt = _parseDateTime(json['createdAt']);
     return Chat(
       conversationId: json['conversationId'] as int?,
       partnerId: partnerId,
@@ -135,8 +113,12 @@ class ChatManager {
 ChatManager get chatManager => ChatManager();
 
 DateTime _parseDateTime(Object? value) {
-  if (value is Timestamp) return value.toDate();
   if (value is DateTime) return value;
   if (value is String) return DateTime.parse(value);
   return DateTime.now();
+}
+
+DateTime? _parseDateTimeNullable(Object? value) {
+  if (value == null) return null;
+  return _parseDateTime(value);
 }

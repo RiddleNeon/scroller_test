@@ -92,7 +92,7 @@ Widget feedVideos(TickerProvider tickerProvider, VideoProvider videoProvider, Bu
                     video: snapshot.data!.video!,
                     provider: tickerProvider,
                     videoProvider: videoProvider,
-                    userId: auth!.currentUser!.uid,
+                    userId: currentAuthUserId(),
                     index: index,
                   );
                 });

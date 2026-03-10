@@ -1,4 +1,3 @@
-import 'package:cloud_firestore/cloud_firestore.dart';
 import 'package:wurp/logic/repositories/user_repository.dart';
 import 'package:wurp/logic/repositories/video_repository.dart';
 import 'package:wurp/logic/video/video.dart';
@@ -25,21 +24,6 @@ class UserProfile {
     this.totalVideosCount,
     this.totalLikesCount,
   });
-
-  factory UserProfile.fromFirestore(DocumentSnapshot doc) {
-    Map data = doc.data() as Map<String, dynamic>;
-    return UserProfile(
-      id: doc.id,
-      username: data['username'] ?? '',
-      profileImageUrl: data['profileImageUrl'] ?? createUserProfileImageUrl(data['username']),
-      bio: data['bio'] ?? '',
-      createdAt: (data['createdAt'] as Timestamp).toDate(),
-      followersCount: data['followersCount'] ?? 0,
-      followingCount: data['followingCount'],
-      totalVideosCount: data['totalVideosCount'],
-      totalLikesCount: data['totalLikesCount'],
-    );
-  }
 
   factory UserProfile.fromSupabase(Map<String, dynamic> data) {
     
@@ -104,7 +88,6 @@ class UserProfile {
 }
 
 DateTime _parseDateTime(Object? value) {
-  if (value is Timestamp) return value.toDate();
   if (value is DateTime) return value;
   if (value is String) return DateTime.parse(value);
   return DateTime.now();

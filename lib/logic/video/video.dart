@@ -1,10 +1,8 @@
-import 'package:cloud_firestore/cloud_firestore.dart';
-
 import '../../base_logic.dart';
 import '../models/user_model.dart';
 
 class Video {
-  final String id; // Added video ID
+  final String id;
   final String title;
   final String description;
   final String videoUrl;
@@ -35,99 +33,64 @@ class Video {
     this.duration,
   });
 
-  factory Video.fromFirestore(DocumentSnapshot doc) {
-    Map data = doc.data() as Map<String, dynamic>;
-    return Video(
-      id: doc.id,
-      title: data['title'] ?? '',
-      description: data['description'] ?? '',
-      videoUrl: (data['videoUrl'] ?? '').toString().replaceAll("_large.", "_tiny.").replaceAll("_medium.", "_tiny.").replaceAll("_small.", "_tiny."),
-      thumbnailUrl: data['thumbnailUrl'],
-      authorId: data['authorId'] ?? '',
-      createdAt: (data['createdAt'] as Timestamp).toDate(),
-      tags: data['tags'] != null ? List<String>.from(data['tags']) : [],
-      likesCount: data['likesCount'],
-      commentsCount: data['commentsCount'],
-      viewsCount: data['viewsCount'],
-      authorName: data['authorName'] ?? "No Name Provided",
-    );
-  }
-
   factory Video.fromSupabase(Map<String, dynamic> data, String authorName, List<String> tags) {
+    final durationMs = data['duration_ms'] as int?;
     return Video(
-      id: data['id'],
+      id: data['id'].toString(),
       title: data['title'] ?? '',
       description: data['description'] ?? '',
-      videoUrl: (data['videoUrl'] ?? '').toString().replaceAll("_large.", "_tiny.").replaceAll("_medium.", "_tiny.").replaceAll("_small.", "_tiny."), //fixme only tmp solution
-      thumbnailUrl: data['thumbnail_url'],
+      videoUrl: (data['video_url'] ?? '').toString().replaceAll("_large.", "_tiny.").replaceAll("_medium.", "_tiny.").replaceAll("_small.", "_tiny."),
+      thumbnailUrl: data['thumbnail_url'] as String?,
       authorId: data['author_id'] ?? '',
-      createdAt: DateTime.parse(data['created_at']).toLocal(),
-      likesCount: data['like_count'],
-      viewsCount: data['view_count'],
+      createdAt: DateTime.parse(data['created_at'] as String).toLocal(),
+      likesCount: data['like_count'] as int?,
+      viewsCount: data['view_count'] as int?,
       tags: tags,
-      commentsCount: data['comment_count'],
+      commentsCount: data['comment_count'] as int?,
       authorName: authorName,
-      duration: Duration(milliseconds: data['duration_ms'])
+      duration: durationMs == null ? null : Duration(milliseconds: durationMs),
     );
   }
 
-  /// Get the author's profile
   Future<UserProfile?> getAuthorProfile() async {
     try {
-      final doc = await FirebaseFirestore.instance.collection('users').doc(authorId).get();
-
-      if (doc.exists) {
-        return UserProfile.fromFirestore(doc);
-      }
-      return null;
+      return await userRepository.getUserSupabase(authorId);
     } catch (e) {
       print('Error fetching author profile: $e');
       return null;
     }
   }
 
-  /// Check if a user has liked this video
   Future<bool> isLikedByUser(String userId) async {
     try {
-      final doc = await FirebaseFirestore.instance.collection('videos').doc(id).collection('likes').doc(userId).get();
-
-      return doc.exists;
+      return (await supabaseClient.from('likes').select().eq('user_id', userId).eq('video_id', int.parse(id)).maybeSingle()) != null;
     } catch (e) {
       print('Error checking like status: $e');
       return false;
     }
   }
 
-  /// Check if a user has disliked this video
   Future<bool> isDislikedByUser(String userId) async {
     try {
-      final doc = await FirebaseFirestore.instance.collection('videos').doc(id).collection('dislikes').doc(userId).get();
-
-      return doc.exists;
+      return (await supabaseClient.from('dislikes').select().eq('user_id', userId).eq('video_id', int.parse(id)).maybeSingle()) != null;
     } catch (e) {
-      print('Error checking like status: $e');
+      print('Error checking dislike status: $e');
       return false;
     }
   }
 
-  /// Check if a user is following the video author
   Future<bool> isAuthorFollowedByUser(String userId) async {
     try {
-      final doc = await FirebaseFirestore.instance.collection('users').doc(userId).collection('following').doc(authorId).get();
-
-      return doc.exists;
+      return userRepository.isFollowingSupabase(userId, authorId);
     } catch (e) {
       print('Error checking follow status: $e');
       return false;
     }
   }
 
-  /// Get engagement rate (percentage of viewers who engaged)
   double get engagementRate {
     if (viewsCount == null || viewsCount == 0) return 0.0;
-
     final totalEngagements = (likesCount ?? 0) + (commentsCount ?? 0);
-
     return (totalEngagements / viewsCount!) * 100;
   }
 
@@ -155,9 +118,12 @@ class VideoWithAuthor {
 
   static Future<Map<String, UserProfile>> fetchAuthorProfiles(List<Video> videos) async {
     final authorIds = videos.map((v) => v.authorId).toSet().toList();
-
-    final snapshot = await firestore.collection('users').where(FieldPath.documentId, whereIn: authorIds).get();
-
-    return Map.fromEntries(snapshot.docs.map((doc) => MapEntry(doc.id, UserProfile.fromFirestore(doc))));
+    final profiles = await supabaseClient.from('profiles').select().inFilter('id', authorIds);
+    return Map.fromEntries(
+      profiles.map((profile) {
+        final user = UserProfile.fromSupabase(profile);
+        return MapEntry(user.id, user);
+      }),
+    );
   }
 }

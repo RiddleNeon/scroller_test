@@ -1,9 +1,8 @@
-import 'package:firebase_auth/firebase_auth.dart' hide User;
 import 'package:flutter/foundation.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter_login/flutter_login.dart';
 import 'package:font_awesome_flutter/font_awesome_flutter.dart';
-import 'package:wurp/tools/supabase_tests/supabase_login_test.dart';
+import 'package:supabase_flutter/supabase_flutter.dart';
 import 'package:wurp/ui/router.dart';
 
 import '../../base_logic.dart';
@@ -26,11 +25,15 @@ class _LoginScreenState extends State<LoginScreen> {
     if(auth?.currentUser != null){
       await auth!.signOut();
     }
-    
-    UserCredential? credential;
+
     try {
-      credential = await FirebaseAuth.instance.signInWithEmailAndPassword(email: data.name, password: data.password);
-    } on FirebaseAuthException catch (e) {
+      final response = await supabaseClient.auth.signInWithPassword(email: data.name, password: data.password);
+      final signedInUser = response.user;
+      if (signedInUser == null) return "Unable to sign in.";
+      user = await userRepository.getUserSupabase(signedInUser.id) ?? await userRepository.getOrCreateCurrentUser();
+      print(user);
+      return null;
+    } on AuthException catch (e) {
       String? fullMessage = e.message;
       print("$fullMessage");
       if (fullMessage?.contains("internal") ?? false) {
@@ -43,11 +46,6 @@ class _LoginScreenState extends State<LoginScreen> {
       print("unknown signup error! $e");
       return "an unknown error has occurred!";
     }
-
-    await ensureSupabaseInitialized();
-    user = await userRepository.getUserSupabase(credential.user!.uid) ?? await userRepository.getOrCreateCurrentUser();
-    print(user);
-    return null; //no error message -> success
   }
 
   Future<String?> _signupUser(SignupData data) async {
@@ -57,10 +55,15 @@ class _LoginScreenState extends State<LoginScreen> {
     
     
     if (data.password == null || data.name == null) return "please enter a valid email or password!";
-    UserCredential? credential;
     try {
-      credential = await FirebaseAuth.instance.createUserWithEmailAndPassword(email: data.name!, password: data.password!);
-    } on FirebaseAuthException catch (e) {
+      final response = await supabaseClient.auth.signUp(email: data.name!, password: data.password!);
+      if (response.user == null) return "Unable to create user.";
+      user = await userRepository.createCurrentUser(
+        username: currentAuthUsername(),
+      );
+      print(user);
+      return null;
+    } on AuthException catch (e) {
       String? fullMessage = e.message;
       print("$fullMessage");
       return fullMessage ?? "An unknown error has occurred!";
@@ -68,20 +71,13 @@ class _LoginScreenState extends State<LoginScreen> {
       print("unknown signup error! $e");
       return "an unknown error has occurred!";
     }
-
-    await ensureSupabaseInitialized();
-    user = await userRepository.createCurrentUser(
-      username: credential.user?.displayName ?? credential.user!.email!.split("@").first,
-    );
-    print(user);
-    return null; //no error message -> success
   }
 
   Future<String?> _recoverPassword(String email) async {
-    try {      
-      await FirebaseAuth.instance.sendPasswordResetEmail(email: email.trim());
+    try {
+      await supabaseClient.auth.resetPasswordForEmail(email.trim());
       return null;
-    } on FirebaseAuthException catch (e) {
+    } on AuthException catch (e) {
       return e.message ?? 'Password reset failed';
     }
   }
@@ -115,33 +111,26 @@ class _LoginScreenState extends State<LoginScreen> {
           LoginProvider(
             icon: FontAwesomeIcons.google,
             label: 'Google',
-            callback: () => signInWithProvider(GoogleAuthProvider()),
+            callback: signInWithGoogle,
           ),
       ],
     );
   }
 
-  Future<String?> signInWithProvider(AuthProvider provider) async{
+  Future<String?> signInWithGoogle() async{
     if(auth?.currentUser != null){
       await auth!.signOut();
     }
-    
+
     try {
-      if (kIsWeb) {
-        await FirebaseAuth.instance.signInWithPopup(GoogleAuthProvider());
-      } else if (defaultTargetPlatform == TargetPlatform.android || defaultTargetPlatform == TargetPlatform.iOS) {
-        print("trying to log in with provider");
-        await FirebaseAuth.instance.signInWithProvider(provider);
-      } else {
-        return "Unsupported Device! Please use regular login!";
-      }
-    } on FirebaseAuthException catch(e) {
+      await supabaseClient.auth.signInWithOAuth(
+        OAuthProvider.google,
+        redirectTo: kIsWeb ? null : 'io.supabase.wurp://login-callback/',
+      );
+      return null;
+    } on AuthException catch(e) {
       return e.message;
     }
-    print("getting user");
-    await ensureSupabaseInitialized();
-    user = await userRepository.getOrCreateCurrentUser();
-    return null;
   }
 
   bool get notWindows =>

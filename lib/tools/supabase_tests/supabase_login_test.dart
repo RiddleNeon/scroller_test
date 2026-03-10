@@ -1,4 +1,3 @@
-import 'package:firebase_auth/firebase_auth.dart';
 import 'package:wurp/base_logic.dart';
 import 'package:wurp/base_ui.dart';
 import 'package:supabase_flutter/supabase_flutter.dart' hide User;
@@ -13,7 +12,7 @@ void main() async {
 }
 
 Future<void> onUserLoginSupabaseTest() async {
-  print("logged into supabase, auth: ${auth?.currentUser?.uid}");
+  print("logged into supabase, auth: ${auth?.currentUser?.id}");
   await ensureSupabaseInitialized();
   print("supabase initialized!");
   await userRepository.upsertCurrentUserProfile(currentUser);
@@ -24,10 +23,6 @@ Future<void> ensureSupabaseInitialized() async {
   _supabase = await Supabase.initialize(
     url: const String.fromEnvironment('SUPABASE_URL'),
     anonKey: const String.fromEnvironment('SUPABASE_ANON_KEY'),
-    accessToken: () async {
-      final token = await FirebaseAuth.instance.currentUser?.getIdToken();
-      return token;
-    },
   );
 }
 
