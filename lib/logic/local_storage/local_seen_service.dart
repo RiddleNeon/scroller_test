@@ -6,6 +6,7 @@ import 'package:wurp/logic/models/user_model.dart';
 import 'package:wurp/logic/video/video.dart';
 
 import '../../base_logic.dart';
+import '../../tools/supabase_tests/supabase_login_test.dart';
 
 
 LocalSeenService get localSeenService {
@@ -664,7 +665,7 @@ class LocalSeenService {
 
   Future<void> _upsertInChunks(String table, List<Map<String, dynamic>> payload, {required String onConflict, int chunkSize = 200}) async {
     for (int i = 0; i < payload.length; i += chunkSize) {
-      final end = (i + chunkSize).clamp(i, payload.length) as int;
+      final end = (i + chunkSize).clamp(i, payload.length);
       await supabaseClient.from(table).upsert(payload.sublist(i, end), onConflict: onConflict);
     }
   }

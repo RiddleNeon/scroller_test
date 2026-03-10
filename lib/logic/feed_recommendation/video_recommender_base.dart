@@ -4,7 +4,7 @@ import 'package:wurp/logic/feed_recommendation/user_interaction.dart';
 import 'package:wurp/logic/feed_recommendation/user_preference_manager.dart';
 import 'package:wurp/logic/feed_recommendation/user_preferences.dart';
 
-import '../../base_logic.dart';
+import '../../tools/supabase_tests/supabase_login_test.dart';
 import '../local_storage/local_seen_service.dart';
 import '../repositories/video_repository.dart';
 import '../video/video.dart';

@@ -1,4 +1,5 @@
 import '../../base_logic.dart';
+import '../../tools/supabase_tests/supabase_login_test.dart';
 import '../models/user_model.dart';
 
 class Video {

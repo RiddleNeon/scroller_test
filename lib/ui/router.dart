@@ -12,23 +12,23 @@ import '../base_logic.dart';
 
 late final GoRouter routerConfig;
 
-void initRouter([bool onlyLogin = false]) {
+void initRouter() {
   routerConfig = GoRouter(
     navigatorKey: appNavigatorKey,
     redirect: (context, state) {
-      if(userLoggedIn) return null;
+      print("redirecting from ${state.matchedLocation}, logged in: $userLoggedIn");
       final navBarItem = _navigationBarItems.where((element) => element.id == state.matchedLocation).firstOrNull;
       if (navBarItem != null) {
         int navBarIndex = _navigationBarItems.indexOf(navBarItem);
         if (navBarIndex != -1) navBarKey.currentState?.switchToIndex(navBarIndex);
       }
 
-      final loggedIn = userLoggedIn;
       final onLogin = state.matchedLocation == '/login';
 
-      if (!loggedIn && !onLogin) return '/login';
-      if (loggedIn && onLogin) return '/feed';
-      if (loggedIn && state.matchedLocation == '/' &&!onlyLogin) return '/feed';
+      if (!userLoggedIn && !onLogin) return '/login';
+      if (userLoggedIn && onLogin) return '/feed';
+      if (userLoggedIn && state.matchedLocation == '/') return '/feed';
+      print("no redirect");
       return null;
     },
     routes: [
@@ -46,24 +46,16 @@ void initRouter([bool onlyLogin = false]) {
           GoRoute(
             path: '/chat',
             builder: (context, state) => ChatManagingScreen(
-              preloadMoreChats: (current) => chatRepository.getChats(currentUser.id, offset: current, limit: 15),
+              preloadMoreChats: (current) => chatRepository.getChats(currentUser.id, offset: current ?? 0, limit: 15),
             )
           ),
         ],
       ),
       GoRoute(path: '/login', builder: (context, state) => const LoginScreen()),
-      GoRoute(path: '/', builder: (context, state) => const SizedBox.shrink()),
-    ],
-  );
-}
-
-late final GoRouter loginOnlyRouterConfig;
-
-void initLoginOnlyRouter() {
-  loginOnlyRouterConfig = GoRouter(
-    navigatorKey: appNavigatorKey,
-    routes: [
-      GoRoute(path: '/', builder: (context, state) => const LoginScreen()),
+      GoRoute(path: '/', builder: (context, state) {
+        print("matched /");
+        return const SizedBox.shrink();
+      }),
     ],
   );
 }

@@ -1,3 +1,4 @@
+import 'package:firebase_auth/firebase_auth.dart';
 import 'package:firebase_core/firebase_core.dart';
 import 'package:wurp/base_logic.dart';
 import 'package:wurp/base_ui.dart';
@@ -11,7 +12,7 @@ void main() async {
   print("logic initialized");
   
   
-  startApp(true);
+  startApp();
 }
 
 Future<void> onUserLoginSupabaseTest() async {
@@ -19,6 +20,7 @@ Future<void> onUserLoginSupabaseTest() async {
   await ensureSupabaseInitialized();
   print("supabase initialized!");
   await userRepository.upsertCurrentUserProfile(currentUser);
+  print("upserted user profile");
 }
 
 Future<void> ensureSupabaseInitialized() async {
@@ -30,6 +32,10 @@ Future<void> ensureSupabaseInitialized() async {
   _supabase = await Supabase.initialize(
     url: const String.fromEnvironment('SUPABASE_URL'),
     anonKey: const String.fromEnvironment('SUPABASE_ANON_KEY'),
+    accessToken: () async {
+      final token = await auth?.currentUser?.getIdToken();
+      return token;
+    },
   );
 }
 

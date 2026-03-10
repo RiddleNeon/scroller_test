@@ -58,6 +58,7 @@ class UserRepository {
   }
 
   Future<void> upsertCurrentUserProfile(UserProfile user) async {
+    print("Upserting user profile for ${user.id} with username ${user.username}, current id: ${auth?.currentUser?.uid}");
     await supabaseClient.from("profiles").upsert({
       "id": user.id,
       "username": user.username,
