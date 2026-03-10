@@ -396,9 +396,7 @@ class UserRepository {
   }
 
   Future<void> _adjustProfileMetric(String userId, String column, int delta) async {
-    final response = await supabaseClient.from('profiles').select(column).eq('id', userId).maybeSingle();
-    final currentValue = (response?[column] as int?) ?? 0;
-    await supabaseClient.from('profiles').update({column: (currentValue + delta).clamp(0, 1 << 30)}).eq('id', userId);
+    await supabaseClient.rpc('increment_profile_metric', params: {'p_user_id': userId, 'p_column': column, 'p_delta': delta});
   }
 }
 

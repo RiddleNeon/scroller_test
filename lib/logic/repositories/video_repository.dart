@@ -117,9 +117,9 @@ class VideoRepository {
 
     final removedLikes = await supabaseClient.from('likes').delete().eq('user_id', userId).eq('video_id', parsedVideoId).select();
     if ((removedLikes as List).isNotEmpty) {
-      final author = await getVideoById(videoId);
+      final authorRow = await supabaseClient.from('videos').select('author_id').eq('id', parsedVideoId).single();
       await _adjustVideoMetric(parsedVideoId, 'like_count', -1);
-      await _adjustProfileMetric(author.authorId, 'total_likes_count', -1);
+      await _adjustProfileMetric(authorRow['author_id'] as String, 'total_likes_count', -1);
     }
 
     await supabaseClient.from('dislikes').insert({'user_id': userId, 'video_id': parsedVideoId});
@@ -396,21 +396,15 @@ class VideoRepository {
   }
 
   Future<void> _adjustVideoMetric(int videoId, String column, int delta) async {
-    final current = await supabaseClient.from('videos').select(column).eq('id', videoId).maybeSingle();
-    final currentValue = (current?[column] as int?) ?? 0;
-    await supabaseClient.from('videos').update({column: (currentValue + delta).clamp(0, 1 << 30)}).eq('id', videoId);
+    await supabaseClient.rpc('increment_video_metric', params: {'p_video_id': videoId, 'p_column': column, 'p_delta': delta});
   }
 
   Future<void> _adjustProfileMetric(String userId, String column, int delta) async {
-    final current = await supabaseClient.from('profiles').select(column).eq('id', userId).maybeSingle();
-    final currentValue = (current?[column] as int?) ?? 0;
-    await supabaseClient.from('profiles').update({column: (currentValue + delta).clamp(0, 1 << 30)}).eq('id', userId);
+    await supabaseClient.rpc('increment_profile_metric', params: {'p_user_id': userId, 'p_column': column, 'p_delta': delta});
   }
 
   Future<void> _adjustCommentMetric(int commentId, String column, int delta) async {
-    final current = await supabaseClient.from('comments').select(column).eq('id', commentId).maybeSingle();
-    final currentValue = (current?[column] as int?) ?? 0;
-    await supabaseClient.from('comments').update({column: (currentValue + delta).clamp(0, 1 << 30)}).eq('id', commentId);
+    await supabaseClient.rpc('increment_comment_metric', params: {'p_comment_id': commentId, 'p_column': column, 'p_delta': delta});
   }
 
   Video _toVideo(Map<String, dynamic> data) {
@@ -423,7 +417,13 @@ class VideoRepository {
     return Video.fromSupabase(data, authorName, tags);
   }
 
-  int _parseVideoId(String videoId) => int.parse(videoId);
+  int _parseVideoId(String videoId) {
+    final parsedVideoId = int.tryParse(videoId);
+    if (parsedVideoId == null) {
+      throw FormatException('Expected numeric Supabase video id, got: $videoId');
+    }
+    return parsedVideoId;
+  }
 }
 
 const String _videoSelectInner = '''

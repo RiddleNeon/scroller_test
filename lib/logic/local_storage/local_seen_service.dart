@@ -220,7 +220,7 @@ class LocalSeenService {
       }
 
       if (payload.isNotEmpty) {
-        await supabaseClient.from('recent_interactions').upsert(payload, onConflict: 'user_id, video_id');
+        await _upsertInChunks('recent_interactions', payload, onConflict: 'user_id, video_id');
       }
       final uploadCount = payload.length;
       print("Uploaded $uploadCount local seen entries");
@@ -296,7 +296,7 @@ class LocalSeenService {
         payload.add({'user_id': userId, 'video_id': parsedVideoId});
       }
       if (payload.isNotEmpty) {
-        await supabaseClient.from('likes').upsert(payload, onConflict: 'user_id, video_id');
+        await _upsertInChunks('likes', payload, onConflict: 'user_id, video_id');
       }
       print("Uploaded ${payload.length} liked videos");
     }
@@ -331,7 +331,7 @@ class LocalSeenService {
         payload.add({'user_id': userId, 'video_id': parsedVideoId});
       }
       if (payload.isNotEmpty) {
-        await supabaseClient.from('dislikes').upsert(payload, onConflict: 'user_id, video_id');
+        await _upsertInChunks('dislikes', payload, onConflict: 'user_id, video_id');
       }
       print("Uploaded ${payload.length} disliked videos");
     }
@@ -523,7 +523,7 @@ class LocalSeenService {
         });
       }
       if (payload.isNotEmpty) {
-        await supabaseClient.from('follows').upsert(payload, onConflict: 'follower_id, following_id');
+        await _upsertInChunks('follows', payload, onConflict: 'follower_id, following_id');
       }
       print("Uploaded ${payload.length} following entries");
     }
@@ -592,13 +592,23 @@ class LocalSeenService {
 
     for (final conversation in conversations) {
       final conversationId = conversation['id'] as int;
-      final partner = memberRows.cast<Map<String, dynamic>>().firstWhere(
-        (row) => row['conversation_id'] == conversationId && row['profile_id'] != userId,
-      );
-      final lastMessage = messages.cast<Map<String, dynamic>?>().firstWhere(
-        (row) => row?['conversation_id'] == conversationId,
-        orElse: () => null,
-      );
+      Map<String, dynamic>? partner;
+      for (final rawRow in memberRows) {
+        final row = Map<String, dynamic>.from(rawRow);
+        if (row['conversation_id'] == conversationId && row['profile_id'] != userId) {
+          partner = row;
+          break;
+        }
+      }
+      if (partner == null) continue;
+      Map<String, dynamic>? lastMessage;
+      for (final rawMessage in messages) {
+        final message = Map<String, dynamic>.from(rawMessage);
+        if (message['conversation_id'] == conversationId) {
+          lastMessage = message;
+          break;
+        }
+      }
       final lastMessageAt = lastMessage != null
           ? DateTime.parse(lastMessage['created_at'] as String).toLocal()
           : DateTime.parse(conversation['updated_at'] as String).toLocal();
@@ -803,6 +813,13 @@ class LocalSeenService {
     Map<String, dynamic>? json = _authorBox.get(id);
     if (json == null) return null;
     return UserProfile.fromJson(json);
+  }
+
+  Future<void> _upsertInChunks(String table, List<Map<String, dynamic>> payload, {required String onConflict, int chunkSize = 200}) async {
+    for (int i = 0; i < payload.length; i += chunkSize) {
+      final end = (i + chunkSize).clamp(i, payload.length) as int;
+      await supabaseClient.from(table).upsert(payload.sublist(i, end), onConflict: onConflict);
+    }
   }
 }
 
