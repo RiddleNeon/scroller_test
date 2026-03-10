@@ -161,24 +161,6 @@ Future<void> trackInteraction({
   bool commented = false,
   bool saved = false,
 }) async {
-  final parsedVideoId = int.tryParse(video.id);
-  if (parsedVideoId != null) {
-    await supabaseClient.from('recent_interactions').insert({
-      'user_id': userId,
-      'video_id': parsedVideoId,
-      'watch_time': watchTime,
-      'video_duration': videoDuration,
-      'liked': liked,
-      'disliked': disliked,
-      'shared': shared,
-      'commented': commented,
-      'saved': saved,
-      'timestamp': DateTime.now().toIso8601String(),
-      'author_id': video.authorId,
-      'tags': video.tags,
-    });
-  }
-
   await UserPreferenceManager().updatePreferences(
     video: video,
     normalizedEngagementScore: calculateNormalizedEngagementScore(

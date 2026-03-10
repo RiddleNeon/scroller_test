@@ -1,7 +1,3 @@
-import 'dart:convert';
-
-import 'package:http/http.dart' as http;
-
 import '../../base_logic.dart';
 import '../chat/chat.dart';
 import '../chat/chat_message.dart';
@@ -18,37 +14,14 @@ class ChatRepository {
     );
     chat.conversationId = conversationId;
 
-    final insertedMessage = await supabaseClient
-        .from('messages')
-        .insert(message.toSupabase(conversationId: conversationId, senderId: currentUser.id))
-        .select('id, conversation_id, sender_id, content, created_at')
-        .single();
-
     await supabaseClient
         .from('conversations')
-        .update({'updated_at': (insertedMessage['created_at'] as String?) ?? DateTime.now().toIso8601String()})
+        .update({'updated_at': DateTime.now().toIso8601String()})
         .eq('id', conversationId);
 
-    final storedMessage = ChatMessage.fromSupabase(insertedMessage, currentUserId: currentUser.id);
-
-    final token = await userRepository.getFcmTokenSupabase(receiverUid);
-    if (token == null) {
-      print("Targeted User has no fcm token!");
-    } else {
-      final inner = jsonEncode({'message': storedMessage.text, 'sender': currentUser.id});
-      final body = jsonEncode({'token': token, 'title': 'new Message', 'body': inner});
-      print("body: $body");
-
-      await http.post(
-        Uri.parse('https://wurp-fcm-server.onrender.com/send'),
-        headers: {'Content-Type': 'application/json'},
-        body: body,
-      );
-    }
-
-    await localSeenService.sendMessageLocal(chat, storedMessage);
-    chat.lastMessage = storedMessage.text;
-    chat.lastMessageAt = storedMessage.timestamp;
+    await localSeenService.sendMessageLocal(chat, message);
+    chat.lastMessage = message.text;
+    chat.lastMessageAt = message.timestamp;
     chat.lastMessageByMe = true;
   }
 
@@ -63,37 +36,6 @@ class ChatRepository {
       startOffset: startOffset,
     );
     final merged = <String, ChatMessage>{for (final message in localMessages) message.id: message};
-
-    final conversationId = await _findDirectConversationId(otherUserId);
-    if (conversationId == null) {
-      return localMessages;
-    }
-
-    dynamic query = supabaseClient
-        .from('messages')
-        .select('id, conversation_id, sender_id, content, created_at')
-        .eq('conversation_id', conversationId)
-        .order('created_at', ascending: false);
-
-    if (startOffset != null) {
-      query = query.lt('created_at', startOffset.toIso8601String());
-    } else if (localMessages.isNotEmpty) {
-      query = query.gt('created_at', localMessages.last.timestamp.toIso8601String());
-    }
-
-    try {
-      final response = await query.limit(limit);
-      final remoteMessages =
-          (response as List).map<ChatMessage>((row) => ChatMessage.fromSupabase(Map<String, dynamic>.from(row), currentUserId: currentUser.id)).toList();
-
-      await localSeenService.saveMessagesLocal(otherUserId, remoteMessages);
-
-      for (final message in remoteMessages) {
-        merged[message.id] = message;
-      }
-    } catch (e) {
-      print('getMessagesWith: Supabase sync failed, returning local cache. Error: $e');
-    }
 
     final result = merged.values.toList()..sort((a, b) => a.timestamp.compareTo(b.timestamp));
     return result.length > limit ? result.sublist(result.length - limit) : result;
@@ -148,24 +90,11 @@ class ChatRepository {
           .from('conversation_members')
           .select('conversation_id, profile_id, profiles!conversation_members_profile_id_fkey(id, username, display_name, avatar_url, bio, created_at)')
           .inFilter('conversation_id', pagedConversationIds);
-      final messageResponse = await supabaseClient
-          .from('messages')
-          .select('id, conversation_id, sender_id, content, created_at')
-          .inFilter('conversation_id', pagedConversationIds)
-          .order('created_at', ascending: false);
-
       final membersByConversation = <int, List<Map<String, dynamic>>>{};
       for (final rawMember in membersResponse as List) {
         final member = Map<String, dynamic>.from(rawMember);
         final conversationId = member['conversation_id'] as int;
         membersByConversation.putIfAbsent(conversationId, () => []).add(member);
-      }
-
-      final lastMessageByConversation = <int, Map<String, dynamic>>{};
-      for (final rawMessage in messageResponse as List) {
-        final message = Map<String, dynamic>.from(rawMessage);
-        final conversationId = message['conversation_id'] as int;
-        lastMessageByConversation.putIfAbsent(conversationId, () => message);
       }
 
       final chats = <Chat>[];
@@ -197,7 +126,7 @@ class ChatRepository {
             conversation: conversation,
             partner: partnerProfile,
             currentUserId: userId,
-            lastMessage: lastMessageByConversation[conversationId],
+            lastMessage: null,
           ),
         );
       }

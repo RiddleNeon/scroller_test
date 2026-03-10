@@ -1,3 +1,4 @@
+import 'package:firebase_auth/firebase_auth.dart';
 import 'package:flutter/foundation.dart';
 import 'package:flutter/material.dart';
 import 'package:fvp/fvp.dart' as fvp;
@@ -13,7 +14,7 @@ import 'logic/repositories/user_repository.dart';
 import 'logic/video/video_provider.dart';
 import 'messaging_base.dart';
 
-GoTrueClient? auth;
+FirebaseAuth? auth;
 
 UserRepository userRepository = UserRepository();
 ChatRepository chatRepository = ChatRepository();
@@ -42,7 +43,7 @@ Future<void> initLogic() async {
   WidgetsFlutterBinding.ensureInitialized();
   fvp.registerWith();
   await ensureSupabaseInitialized();
-  auth = supabaseClient.auth;
+  auth = FirebaseAuth.instance;
 }
 
 Future<void> onUserLogin(UserProfile user, [BuildContext? context]) async {
@@ -64,15 +65,14 @@ Future<void> onUserLogout() async {
 
 bool runningOnMobile = defaultTargetPlatform == TargetPlatform.iOS || defaultTargetPlatform == TargetPlatform.android;
 
-String currentAuthUserId() => auth?.currentUser?.id ?? currentUser.id;
+String currentAuthUserId() => auth?.currentUser?.uid ?? currentUser.id;
 
 String currentAuthUsername() {
-  final metadata = auth?.currentUser?.userMetadata ?? const {};
-  final displayName = metadata['display_name'] ?? metadata['full_name'] ?? metadata['name'];
-  if (displayName is String && displayName.trim().isNotEmpty) return displayName;
+  final displayName = auth?.currentUser?.displayName;
+  if (displayName != null && displayName.trim().isNotEmpty) return displayName;
   final email = auth?.currentUser?.email;
   if (email != null && email.contains('@')) {
     return email.split('@').first;
   }
-  return auth?.currentUser?.id ?? currentUser.id;
+  return auth?.currentUser?.uid ?? currentUser.id;
 }

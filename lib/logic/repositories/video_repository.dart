@@ -92,10 +92,7 @@ class VideoRepository {
     final existing = await supabaseClient.from('likes').select().eq('user_id', userId).eq('video_id', parsedVideoId).maybeSingle();
     if (existing != null) return;
 
-    final removedDislike = await supabaseClient.from('dislikes').delete().eq('user_id', userId).eq('video_id', parsedVideoId).select();
-    if ((removedDislike as List).isNotEmpty) {
-      await _adjustVideoMetric(parsedVideoId, 'dislike_count', -1);
-    }
+    await supabaseClient.from('dislikes').delete().eq('user_id', userId).eq('video_id', parsedVideoId).select();
 
     await supabaseClient.from('likes').insert({'user_id': userId, 'video_id': parsedVideoId});
     await _adjustVideoMetric(parsedVideoId, 'like_count', 1);
@@ -123,14 +120,12 @@ class VideoRepository {
     }
 
     await supabaseClient.from('dislikes').insert({'user_id': userId, 'video_id': parsedVideoId});
-    await _adjustVideoMetric(parsedVideoId, 'dislike_count', 1);
   }
 
   Future<void> undislikeVideo(String userId, String videoId) async {
     final parsedVideoId = _parseVideoId(videoId);
     final removed = await supabaseClient.from('dislikes').delete().eq('user_id', userId).eq('video_id', parsedVideoId).select();
     if ((removed as List).isEmpty) return;
-    await _adjustVideoMetric(parsedVideoId, 'dislike_count', -1);
   }
 
   Future<void> incrementViewCount(String videoId) async {
@@ -146,7 +141,7 @@ class VideoRepository {
   }
 
   Future<void> incrementShareCountSupabase(int videoId) async {
-    await _adjustVideoMetric(videoId, 'share_count', 1);
+    print('Skipping share count update for $videoId because the provided videos schema has no share_count column.');
   }
 
   Future<void> addComment(String videoId, Comment comment) async {

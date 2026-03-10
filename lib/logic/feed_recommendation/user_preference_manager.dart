@@ -41,25 +41,10 @@ class UserPreferenceManager {
   }
 
   Future<void> _loadCacheInternal() async {
-    try {
-      final data = await supabaseClient.from('user_preferences').select('recommendation_profile').eq('user_id', currentAuthUserId()).maybeSingle();
-
-      if (data != null) {
-        final profile = data['recommendation_profile'] ?? data['recommendationProfile'] ?? {};
-
-        cachedTagPrefs = Map<String, double>.from(
-          profile['tagVector'] ?? {},
-        ).map<String, TagInteraction>((key, value) => MapEntry(key, TagInteraction(engagementScore: value)));
-        cachedAuthorPrefs = Map<String, double>.from(
-          profile['authorVector'] ?? {},
-        ).map<String, TagInteraction>((key, value) => MapEntry(key, TagInteraction(engagementScore: value)));
-        cachedAvgCompletion = (profile['avgCompletionRate'] ?? 0.0).toDouble();
-        cachedTotalInteractions = profile['totalInteractions'] ?? 0;
-      }
-    } catch (e) {
-      print('Error loading cache');
-      rethrow;
-    }
+    cachedTagPrefs = {};
+    cachedAuthorPrefs = {};
+    cachedAvgCompletion = 0.0;
+    cachedTotalInteractions = 0;
   }
 
   Future<void> updatePreferences({required Video video, required double normalizedEngagementScore}) async {
@@ -105,17 +90,7 @@ class UserPreferenceManager {
     cachedAvgCompletion = (cachedAvgCompletion * cachedTotalInteractions + normalizedEngagementScore) / (cachedTotalInteractions + 1);
     cachedTotalInteractions++;
 
-    await supabaseClient.from('user_preferences').upsert({
-      'user_id': currentAuthUserId(),
-      'recommendation_profile': {
-        'tagVector': Map<String, dynamic>.from(networkTagEffects),
-        'authorVector': Map<String, dynamic>.from(networkAuthorEffects),
-        'avgCompletionRate': cachedAvgCompletion,
-        'totalInteractions': cachedTotalInteractions,
-        'lastUpdated': DateTime.now().toIso8601String(),
-      },
-      'updated_at': DateTime.now().toIso8601String(),
-    }, onConflict: 'user_id');
+    print('Keeping recommendation preferences in memory/local state because the provided Supabase schema has no user_preferences table.');
   }
 
   List<MapEntry<String, TagInteraction>> sortByRelevancy(Map<String, TagInteraction> tagPrefs) {

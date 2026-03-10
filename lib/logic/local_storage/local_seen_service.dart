@@ -203,81 +203,9 @@ class LocalSeenService {
 
   Future<void> _syncSeenInteractions(DateTime lastSync, {required bool onlyLoad}) async {
     if (!onlyLoad) {
-      print("Uploading local seen-changes to Supabase...");
-      final localEntries = Map<String, DateTime>.from(_seenBox.toMap()..removeWhere((key, value) => (value).isBefore(lastSync)));
-      final payload = <Map<String, dynamic>>[];
-      for (final entry in localEntries.entries) {
-        final videoId = int.tryParse(entry.key);
-        if (videoId == null) continue;
-        final meta = _interactionBox.get(entry.key) as Map?;
-        payload.add({
-          'user_id': userId,
-          'video_id': videoId,
-          'timestamp': entry.value.toIso8601String(),
-          if (meta != null) 'author_id': meta['authorId'],
-          if (meta != null) 'tags': List<String>.from(meta['tags'] ?? const []),
-        });
-      }
-
-      if (payload.isNotEmpty) {
-        await _upsertInChunks('recent_interactions', payload, onConflict: 'user_id, video_id');
-      }
-      final uploadCount = payload.length;
-      print("Uploaded $uploadCount local seen entries");
+      print('Skipping remote seen sync because the provided Supabase schema has no recent_interactions table.');
     }
-
-    final snapshot = await supabaseClient
-        .from('recent_interactions')
-        .select('video_id, timestamp, author_id, tags')
-        .eq('user_id', userId)
-        .gt('timestamp', lastSync.toIso8601String())
-        .order('timestamp', ascending: false);
-
-    if (snapshot.isEmpty) {
-      print("Nothing new from Supabase (seen)");
-      return;
-    }
-
-    final Map<String, DateTime> newSeenEntries = {};
-    final Map<String, Map<String, dynamic>> newInteractionEntries = {};
-
-    for (final data in snapshot) {
-      final videoId = data['video_id'].toString();
-      final seenAt = DateTime.parse(data['timestamp'] as String).toLocal();
-
-      final local = _seenBox.get(videoId);
-      if (local == null || seenAt.isAfter(local)) {
-        newSeenEntries[videoId] = seenAt;
-        newInteractionEntries[videoId] = {'authorId': data['author_id'] ?? '', 'tags': data['tags'] ?? []};
-      }
-    }
-
-    print("Syncing ${newSeenEntries.length} seen entries from Supabase...");
-    await _seenBox.putAll(newSeenEntries);
-    await _interactionBox.putAll(newInteractionEntries);
-
-    final Map<String, DateTime> tagOldestSeen = {};
-    for (final data in snapshot) {
-      final tags = data['tags'] != null ? List<String>.from(data['tags'] as List) : <String>[];
-      final seenAt = DateTime.parse(data['timestamp'] as String).toLocal();
-
-      for (final tag in tags) {
-        if (!tagOldestSeen.containsKey(tag) || seenAt.isBefore(tagOldestSeen[tag]!)) {
-          tagOldestSeen[tag] = seenAt;
-        }
-      }
-    }
-
-    for (final entry in tagOldestSeen.entries) {
-      final existing = getTagCursor(entry.key);
-      if (existing == null || entry.value.isBefore(existing)) {
-        await saveTagCursor(entry.key, entry.value);
-      }
-    }
-    print("Updated tag cursors for ${tagOldestSeen.length} tags");
-
-    final latestTime = DateTime.parse(snapshot.first['timestamp'] as String).toLocal();
-    await _settingsBox.put(_lastSyncSeenKey, latestTime);
+    await _settingsBox.put(_lastSyncSeenKey, DateTime.now());
   }
 
   // ---------------------------------------------------------------------------
@@ -356,75 +284,9 @@ class LocalSeenService {
 
   Future<void> _syncPreferences(DateTime lastSync, {required bool onlyLoad}) async {
     if (!onlyLoad) {
-      print("Uploading cursors & blacklisted tags to Supabase...");
-
-      final Map<String, String> changedCursors = {
-        for (final key in _cursorBox.keys)
-          if ((_cursorDirtyBox.get(key))?.isAfter(lastSync) ?? false) key as String: (_cursorBox.get(key) as DateTime).toIso8601String(),
-      };
-
-      final Map<String, String> changedBlacklistedTags = {
-        for (final key in _blacklistedTagsBox.keys)
-          if ((_blacklistedTagsBox.get(key) as DateTime).isAfter(lastSync)) key as String: (_blacklistedTagsBox.get(key) as DateTime).toIso8601String(),
-      };
-
-      if (changedCursors.isNotEmpty || changedBlacklistedTags.isNotEmpty) {
-        await supabaseClient.from('user_preferences').upsert({
-          'user_id': userId,
-          if (changedCursors.isNotEmpty) 'cursor_vector': changedCursors,
-          if (changedBlacklistedTags.isNotEmpty) 'blacklisted_tags': changedBlacklistedTags,
-          'updated_at': DateTime.now().toIso8601String(),
-        }, onConflict: 'user_id');
-        print("Uploaded ${changedCursors.length} cursors, ${changedBlacklistedTags.length} blacklisted tags");
-      } else {
-        print("No preference changes since last sync — skipping upload");
-      }
+      print('Skipping remote preference sync because the provided Supabase schema has no user_preferences table.');
     }
-
-    final data = await supabaseClient.from('user_preferences').select().eq('user_id', userId).maybeSingle();
-    if (data == null) {
-      print("Nothing new from Supabase (preferences)");
-      return;
-    }
-
-    final remoteUpdatedAt = data['updated_at'] != null ? DateTime.parse(data['updated_at'] as String).toLocal() : null;
-    if (remoteUpdatedAt != null && !remoteUpdatedAt.isAfter(lastSync)) {
-      print("Preferences unchanged since last sync — skipping download");
-      return;
-    }
-
-    final remoteCursors = (data['cursor_vector'] as Map?)?.cast<String, dynamic>();
-    int cursorSyncCount = 0;
-    if (remoteCursors != null) {
-      for (final entry in remoteCursors.entries) {
-        final remoteTs = DateTime.parse(entry.value as String).toLocal();
-        final local = _cursorBox.get(entry.key) as DateTime?;
-        if (local == null || remoteTs.isBefore(local)) {
-          await _cursorBox.put(entry.key, remoteTs);
-          cursorSyncCount++;
-        }
-      }
-      print("Synced $cursorSyncCount/${remoteCursors.length} cursors from Supabase");
-    }
-
-    final remoteTags = (data['blacklisted_tags'] as Map?)?.cast<String, dynamic>();
-    if (remoteTags != null) {
-      final Map<String, DateTime> toWrite = {};
-      for (final entry in remoteTags.entries) {
-        final remoteTs = DateTime.parse(entry.value as String).toLocal();
-        final local = _blacklistedTagsBox.get(entry.key);
-        if (local == null || remoteTs.isBefore(local)) {
-          toWrite[entry.key] = remoteTs;
-        }
-      }
-      await _blacklistedTagsBox.putAll(toWrite);
-      print("Synced ${toWrite.length} blacklisted tags from Supabase");
-    }
-
-    if (remoteUpdatedAt != null) {
-      await _settingsBox.put(_lastSyncPreferencesKey, remoteUpdatedAt);
-      print("synced to ${remoteUpdatedAt.toLocal()}");
-    }
+    await _settingsBox.put(_lastSyncPreferencesKey, DateTime.now());
   }
 
   // ---------------------------------------------------------------------------
@@ -584,11 +446,6 @@ class LocalSeenService {
         .from('conversation_members')
         .select('conversation_id, profile_id, profiles!conversation_members_profile_id_fkey(id, username, display_name, avatar_url, bio, created_at)')
         .inFilter('conversation_id', conversations.map((e) => e['id']).toList());
-    final messages = await supabaseClient
-        .from('messages')
-        .select('conversation_id, sender_id, content, created_at')
-        .inFilter('conversation_id', conversations.map((e) => e['id']).toList())
-        .order('created_at', ascending: false);
 
     for (final conversation in conversations) {
       final conversationId = conversation['id'] as int;
@@ -601,20 +458,10 @@ class LocalSeenService {
         }
       }
       if (partner == null) continue;
-      Map<String, dynamic>? lastMessage;
-      for (final rawMessage in messages) {
-        final message = Map<String, dynamic>.from(rawMessage);
-        if (message['conversation_id'] == conversationId) {
-          lastMessage = message;
-          break;
-        }
-      }
-      final lastMessageAt = lastMessage != null
-          ? DateTime.parse(lastMessage['created_at'] as String).toLocal()
-          : DateTime.parse(conversation['updated_at'] as String).toLocal();
       final partnerId = partner['profile_id'] as String;
-      final local = _conversationBox.get(partnerId) as Map?;
-      final localLastMessageAt = local != null ? (local['lastMessageAt']) : null;
+      final existingLocal = _conversationBox.get(partnerId) as Map?;
+      final lastMessageAt = DateTime.parse(conversation['updated_at'] as String).toLocal();
+      final localLastMessageAt = existingLocal != null ? (existingLocal['lastMessageAt']) : null;
 
       if (localLastMessageAt == null || lastMessageAt.isAfter(localLastMessageAt)) {
         final partnerProfile = Map<String, dynamic>.from((partner['profiles'] as Map?)?.cast<String, dynamic>() ?? {});
@@ -622,12 +469,12 @@ class LocalSeenService {
           'conversationId': conversationId,
           'partnerId': partnerId,
           'lastMessageAt': lastMessageAt,
-          'lastMessage': lastMessage?['content'] ?? '',
+          'lastMessage': existingLocal?['lastMessage'] ?? '',
           'createdAt': DateTime.parse(conversation['created_at'] as String).toLocal(),
           'currentUserId': userId,
           'partnerName': partnerProfile['display_name'] ?? partnerProfile['username'] ?? partnerId,
           'partnerProfileImageUrl': partnerProfile['avatar_url'] ?? '',
-          'lastMessageByMe': lastMessage?['sender_id'] == userId,
+          'lastMessageByMe': existingLocal?['lastMessageByMe'] ?? false,
         };
 
         final cursor = _chatCursorBox.get(_conversationId(partnerId));

@@ -1,6 +1,9 @@
+import 'package:firebase_core/firebase_core.dart';
 import 'package:wurp/base_logic.dart';
 import 'package:wurp/base_ui.dart';
 import 'package:supabase_flutter/supabase_flutter.dart' hide User;
+
+import '../../logic/firebase_options.dart';
 
 void main() async {
   print("running main");
@@ -12,13 +15,17 @@ void main() async {
 }
 
 Future<void> onUserLoginSupabaseTest() async {
-  print("logged into supabase, auth: ${auth?.currentUser?.id}");
+  print("logged into supabase, auth: ${auth?.currentUser?.uid}");
   await ensureSupabaseInitialized();
   print("supabase initialized!");
   await userRepository.upsertCurrentUserProfile(currentUser);
 }
 
 Future<void> ensureSupabaseInitialized() async {
+  if (_supabase != null && Firebase.apps.isNotEmpty) return;
+  if (Firebase.apps.isEmpty) {
+    await Firebase.initializeApp(options: DefaultFirebaseOptions.currentPlatform);
+  }
   if (_supabase != null) return;
   _supabase = await Supabase.initialize(
     url: const String.fromEnvironment('SUPABASE_URL'),

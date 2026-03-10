@@ -26,7 +26,7 @@ class UserRepository {
   }
 
   Future<UserProfile> getOrCreateCurrentUser() async {
-    final supabaseResult = await supabaseClient.from('profiles').select().eq('id', auth!.currentUser!.id).maybeSingle();
+    final supabaseResult = await supabaseClient.from('profiles').select().eq('id', auth!.currentUser!.uid).maybeSingle();
 
     if (supabaseResult != null) {
       UserProfile model = UserProfile.fromSupabase(supabaseResult);
@@ -40,7 +40,7 @@ class UserRepository {
   Future<UserProfile> createCurrentUser({String? username, String? profileImageUrl, String bio = ''}) async {
     username ??= currentAuthUsername();
     await supabaseClient.from("profiles").insert({
-      "id": auth!.currentUser!.id,
+      "id": auth!.currentUser!.uid,
       "username": username,
       "display_name": username,
       "avatar_url": profileImageUrl ?? createUserProfileImageUrl(username),
@@ -48,7 +48,7 @@ class UserRepository {
     });
 
     return UserProfile(
-      id: auth!.currentUser!.id,
+      id: auth!.currentUser!.uid,
       username: username,
       profileImageUrl: profileImageUrl ?? createUserProfileImageUrl(username),
       bio: bio,
@@ -378,21 +378,11 @@ class UserRepository {
   }
 
   Future<void> updateFcmTokenSupabase(String userId, String? token) async {
-    try {
-      await supabaseClient.from('profiles').update({'fcm_token': token}).eq('id', userId);
-    } catch (e) {
-      print('Error updating FCM token in Supabase for user $userId: $e');
-    }
+    print('Skipping FCM token update for $userId because the provided profiles schema has no fcm_token column.');
   }
 
   Future<String?> getFcmTokenSupabase(String userId) async {
-    try {
-      final response = await supabaseClient.from('profiles').select('fcm_token').eq('id', userId).maybeSingle();
-      return response?['fcm_token'] as String?;
-    } catch (e) {
-      print('Error fetching FCM token from Supabase for user $userId: $e');
-      return null;
-    }
+    return null;
   }
 
   Future<void> _adjustProfileMetric(String userId, String column, int delta) async {
