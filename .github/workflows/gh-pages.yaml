@@ -24,7 +24,6 @@ jobs:
 
       - run: flutter build web --release --base-href /scroller_test/ --dart-define=RICK_URL=${{secrets.RICK_URL}} --dart-define=HAMSTER_URL=${{secrets.HAMSTER_URL}}
       - run: cp web/coi-serviceworker.js build/web/
-      - run: cp web/firebase-messaging-sw.js build/web/
       - uses: actions/upload-pages-artifact@v3
         with:
           path: build/web

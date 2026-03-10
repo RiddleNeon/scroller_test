@@ -1,8 +1,6 @@
-import 'package:cloud_firestore/cloud_firestore.dart';
 import 'package:wurp/util/extensions/num_distance.dart';
 
 import '../../base_logic.dart';
-import '../batches/batch_service.dart';
 import '../video/video.dart';
 
 class UserPreferenceManager {
@@ -43,27 +41,10 @@ class UserPreferenceManager {
   }
 
   Future<void> _loadCacheInternal() async {
-    try {
-      final userRef = firestore.collection('users').doc(auth!.currentUser!.uid).collection('profile').doc('preferences');
-      final snapshot = await userRef.get();
-
-      if (snapshot.exists) {
-        final data = snapshot.data()!;
-        final profile = data['recommendationProfile'] ?? {};
-
-        cachedTagPrefs = Map<String, double>.from(
-          profile['tagVector'] ?? {},
-        ).map<String, TagInteraction>((key, value) => MapEntry(key, TagInteraction(engagementScore: value)));
-        cachedAuthorPrefs = Map<String, double>.from(
-          profile['authorVector'] ?? {},
-        ).map<String, TagInteraction>((key, value) => MapEntry(key, TagInteraction(engagementScore: value)));
-        cachedAvgCompletion = (profile['avgCompletionRate'] ?? 0.0).toDouble();
-        cachedTotalInteractions = profile['totalInteractions'] ?? 0;
-      }
-    } catch (e) {
-      print('Error loading cache');
-      rethrow;
-    }
+    cachedTagPrefs = {};
+    cachedAuthorPrefs = {};
+    cachedAvgCompletion = 0.0;
+    cachedTotalInteractions = 0;
   }
 
   Future<void> updatePreferences({required Video video, required double normalizedEngagementScore}) async {
@@ -109,21 +90,7 @@ class UserPreferenceManager {
     cachedAvgCompletion = (cachedAvgCompletion * cachedTotalInteractions + normalizedEngagementScore) / (cachedTotalInteractions + 1);
     cachedTotalInteractions++;
 
-    final userRef = firestore.collection('users').doc(auth!.currentUser!.uid).collection('profile').doc('preferences');
-
-    userRef.batchSet({
-      'recommendationProfile': {
-        'tagVector': Map<String, dynamic>.from(networkTagEffects),
-        'authorVector': Map<String, dynamic>.from(networkAuthorEffects),
-        'avgCompletionRate': cachedAvgCompletion,
-        'totalInteractions': cachedTotalInteractions,
-        'lastUpdated': FieldValue.serverTimestamp(),
-      },
-    }, merge: true);
-
-    if (cachedTotalInteractions % 5 == 0) {
-      await FirestoreBatchQueue().commit();
-    }
+    print('Keeping recommendation preferences in memory/local state because the provided Supabase schema has no user_preferences table.');
   }
 
   List<MapEntry<String, TagInteraction>> sortByRelevancy(Map<String, TagInteraction> tagPrefs) {

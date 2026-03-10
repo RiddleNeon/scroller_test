@@ -1,4 +1,3 @@
-import 'package:cloud_firestore/cloud_firestore.dart';
 import 'package:flutter/material.dart';
 import 'package:wurp/logic/chat/chat_message.dart';
 import 'package:wurp/ui/misc/avatar.dart';
@@ -6,11 +5,10 @@ import 'package:wurp/ui/screens/chat/chat_screen.dart';
 
 import '../../../base_logic.dart';
 import '../../../logic/chat/chat.dart';
-import '../../../logic/local_storage/local_seen_service.dart';
 import '../../../util/misc/time_formatting.dart';
 
 class ChatManagingScreen extends StatefulWidget {
-  final Future<({List<Chat> result, DocumentSnapshot? newCurrent})> Function(DocumentSnapshot? current) preloadMoreChats;
+  final Future<({List<Chat> result, int? newCurrent})> Function(int? current) preloadMoreChats;
 
   const ChatManagingScreen({super.key, required this.preloadMoreChats});
 
@@ -22,7 +20,7 @@ class _ChatManagingScreenState extends State<ChatManagingScreen> {
   late final ScrollController _scrollController;
   final List<Chat> chats = [];
 
-  DocumentSnapshot? currentLastIndex;
+  int? currentLastIndex;
 
   @override
   void initState() {
@@ -204,7 +202,7 @@ Widget buildMessagingScreen(Chat chat, void Function(ChatMessage) onMessageUpdat
       );
     },
     loadMoreMessages: (int limit, DateTime? lastVisibleMessage) async {
-      return localSeenService.getMessagesWith(chat.partnerId, startOffset: lastVisibleMessage, limit: limit);
+      return chatRepository.getMessagesWith(chat.partnerId, startOffset: lastVisibleMessage, limit: limit);
     },
   );
 }

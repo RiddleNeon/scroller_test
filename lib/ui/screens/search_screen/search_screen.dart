@@ -70,7 +70,7 @@ class _SearchScreenState extends State<SearchScreen> with TickerProviderStateMix
       _hasSearched = true;
       _loading = true;
     });
-    _searchBarResult = SearchBarResult.fromFirestore(val);
+    _searchBarResult = SearchBarResult(val);
     await _searchBarResult!.complete();
     _currentSearchViewModel = FeedViewModel();
     setState(() => _loading = false);

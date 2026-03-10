@@ -1,15 +1,12 @@
-import 'package:cloud_firestore/cloud_firestore.dart';
 import 'package:firebase_auth/firebase_auth.dart';
-import 'package:firebase_core/firebase_core.dart';
-import 'package:firebase_messaging/firebase_messaging.dart';
 import 'package:flutter/foundation.dart';
 import 'package:flutter/material.dart';
 import 'package:fvp/fvp.dart' as fvp;
+import 'package:supabase_flutter/supabase_flutter.dart' hide User;
 import 'package:wurp/tools/supabase_tests/supabase_login_test.dart';
 import 'package:wurp/ui/feed_view_model.dart';
 
 import 'logic/feed_recommendation/user_preference_manager.dart';
-import 'logic/firebase_options.dart';
 import 'logic/local_storage/local_seen_service.dart';
 import 'logic/models/user_model.dart';
 import 'logic/repositories/chat_repository.dart';
@@ -17,17 +14,10 @@ import 'logic/repositories/user_repository.dart';
 import 'logic/video/video_provider.dart';
 import 'messaging_base.dart';
 
-FirebaseApp? app;
 FirebaseAuth? auth;
 
 UserRepository userRepository = UserRepository();
 ChatRepository chatRepository = ChatRepository();
-
-FirebaseFirestore get firestore {
-  if (_firestore == null) throw StateError("Firestore isn't initialized yet!");
-  return _firestore!;
-}
-FirebaseFirestore? _firestore;
 
 
 UserProfile get currentUser {
@@ -50,38 +40,44 @@ RecommendationVideoProvider get videoProvider => _videoProvider ??= Recommendati
 
 
 Future<void> initLogic() async {
+  print("Initializing logic...");
   WidgetsFlutterBinding.ensureInitialized();
   fvp.registerWith();
-  app = await Firebase.initializeApp(options: DefaultFirebaseOptions.currentPlatform);
-  await FirebaseFirestore.instance.runTransaction((transaction) async {}); //somehow it fixes a crash on windows
-  auth = FirebaseAuth.instanceFor(app: app!);
-  _firestore = FirebaseFirestore.instance;
-  _firestore?.settings = const Settings(persistenceEnabled: true);
+  await ensureSupabaseInitialized();
+  print("Supabase initialized");
+  auth = FirebaseAuth.instance;
 }
 
 Future<void> onUserLogin(UserProfile user, [BuildContext? context]) async {
-  await onUserLoginSupabaseTest();
-  await onUserLogout();
   _currentUser = user;
-  if (kIsWeb) {
-    auth!.setPersistence(Persistence.LOCAL);
-  }
+  print("User logged in: ${user.id}");
+  await onUserLoginSupabaseTest();
+  print("Supabase login test completed");
+  await onUserLogout();
+  print("User logged out, now setting current user...");
+  print("Current user set: ${currentUser.id}");
   await initLocalSeenService();
-  if (!await FirebaseMessaging.instance.isSupported()) {
-    print("Messaging not supported! skipping uploading!");
-    return;
+  if (kIsWeb) {
+    print("Using Supabase persisted auth session on web.");
   }
-  final token = await messaging.getToken(vapidKey: "BMzrcPy9WqWjCd72OCbRQS2hdTXcMN2khJ3sZcUED9xRHZq6TQjVDo6y2icQtweVaFOp7kRAS085VeQgqZlFK0E");
-  await FirebaseFirestore.instance.collection('users').doc(currentUser.id).update({
-    'fcmToken': token,
-  });
 }
 
 Future<void> onUserLogout() async {
   UserPreferenceManager.reset();
   await feedViewModel.dispose();
-  
 }
 
 
 bool runningOnMobile = defaultTargetPlatform == TargetPlatform.iOS || defaultTargetPlatform == TargetPlatform.android;
+
+String currentAuthUserId() => auth?.currentUser?.uid ?? currentUser.id;
+
+String currentAuthUsername() {
+  final displayName = auth?.currentUser?.displayName;
+  if (displayName != null && displayName.trim().isNotEmpty) return displayName;
+  final email = auth?.currentUser?.email;
+  if (email != null && email.contains('@')) {
+    return email.split('@').first;
+  }
+  return auth?.currentUser?.uid ?? currentUser.id;
+}

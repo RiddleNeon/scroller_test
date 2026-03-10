@@ -25,10 +25,14 @@ class _LoginScreenState extends State<LoginScreen> {
     if(auth?.currentUser != null){
       await auth!.signOut();
     }
-    
-    UserCredential? credential;
+
     try {
-      credential = await FirebaseAuth.instance.signInWithEmailAndPassword(email: data.name, password: data.password);
+      final response = await FirebaseAuth.instance.signInWithEmailAndPassword(email: data.name, password: data.password);
+      final signedInUser = response.user;
+      if (signedInUser == null) return "Unable to sign in.";
+      user = await userRepository.getUserSupabase(signedInUser.uid) ?? await userRepository.getOrCreateCurrentUser();
+      print(user);
+      return null;
     } on FirebaseAuthException catch (e) {
       String? fullMessage = e.message;
       print("$fullMessage");
@@ -42,10 +46,6 @@ class _LoginScreenState extends State<LoginScreen> {
       print("unknown signup error! $e");
       return "an unknown error has occurred!";
     }
-
-    user = await userRepository.getUser(credential.user!.uid);
-    print(user);
-    return null; //no error message -> success
   }
 
   Future<String?> _signupUser(SignupData data) async {
@@ -55,9 +55,14 @@ class _LoginScreenState extends State<LoginScreen> {
     
     
     if (data.password == null || data.name == null) return "please enter a valid email or password!";
-    UserCredential? credential;
     try {
-      credential = await FirebaseAuth.instance.createUserWithEmailAndPassword(email: data.name!, password: data.password!);
+      final response = await FirebaseAuth.instance.createUserWithEmailAndPassword(email: data.name!, password: data.password!);
+      if (response.user == null) return "Unable to create user.";
+      user = await userRepository.createCurrentUser(
+        username: currentAuthUsername(),
+      );
+      print(user);
+      return null;
     } on FirebaseAuthException catch (e) {
       String? fullMessage = e.message;
       print("$fullMessage");
@@ -66,14 +71,10 @@ class _LoginScreenState extends State<LoginScreen> {
       print("unknown signup error! $e");
       return "an unknown error has occurred!";
     }
-
-    user = await userRepository.createUser(id: credential.user!.uid, username: credential.user?.displayName ?? credential.user!.email!.split("@").first);
-    print(user);
-    return null; //no error message -> success
   }
 
   Future<String?> _recoverPassword(String email) async {
-    try {      
+    try {
       await FirebaseAuth.instance.sendPasswordResetEmail(email: email.trim());
       return null;
     } on FirebaseAuthException catch (e) {
@@ -110,32 +111,30 @@ class _LoginScreenState extends State<LoginScreen> {
           LoginProvider(
             icon: FontAwesomeIcons.google,
             label: 'Google',
-            callback: () => signInWithProvider(GoogleAuthProvider()),
+            callback: signInWithGoogle,
           ),
       ],
     );
   }
 
-  Future<String?> signInWithProvider(AuthProvider provider) async{
+  Future<String?> signInWithGoogle() async{
     if(auth?.currentUser != null){
       await auth!.signOut();
     }
-    
+
     try {
       if (kIsWeb) {
         await FirebaseAuth.instance.signInWithPopup(GoogleAuthProvider());
       } else if (defaultTargetPlatform == TargetPlatform.android || defaultTargetPlatform == TargetPlatform.iOS) {
-        print("trying to log in with provider");
-        await FirebaseAuth.instance.signInWithProvider(provider);
+        await FirebaseAuth.instance.signInWithProvider(GoogleAuthProvider());
       } else {
-        return "Unsupported Device! Please use regular login!";
+        return 'Unsupported Device! Please use regular login!';
       }
+      user = await userRepository.getOrCreateCurrentUser();
+      return null;
     } on FirebaseAuthException catch(e) {
       return e.message;
     }
-    print("getting user");
-    user = await userRepository.getOrCreateUser(auth!.currentUser!.uid);
-    return null;
   }
 
   bool get notWindows =>

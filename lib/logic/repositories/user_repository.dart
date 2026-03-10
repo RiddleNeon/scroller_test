@@ -1,4 +1,3 @@
-import 'package:cloud_firestore/cloud_firestore.dart';
 import 'package:supabase_flutter/supabase_flutter.dart';
 import 'package:wurp/logic/repositories/video_repository.dart';
 import 'package:wurp/tools/supabase_tests/supabase_login_test.dart';
@@ -9,14 +8,7 @@ import '../models/user_model.dart';
 import '../video/video.dart';
 
 class UserRepository {
-  Future<UserProfile> getUser(String userId) async {
-    print("getting user $userId");
-    DocumentSnapshot doc = await firestore.collection('users').doc(userId).get();
-    print("got doc: ${doc.data()}");
-    UserProfile model = UserProfile.fromFirestore(doc);
-
-    return model;
-  }
+  Future<UserProfile> getUser(String userId) async => (await getUserSupabase(userId)) ?? (throw StateError('User $userId not found'));
 
   Future<UserProfile?> getUserSupabase(String userId) async {
     final supabaseResult = await supabaseClient.from('profiles').select().eq('id', userId).maybeSingle();
@@ -26,20 +18,11 @@ class UserRepository {
   }
 
   Future<UserProfile> getOrCreateUser(String userId) async {
-    print("getting user $userId");
-    DocumentSnapshot doc = await firestore.collection('users').doc(userId).get();
-    print("got doc: ${doc.data()}");
-
-    if (doc.exists) {
-      UserProfile model = UserProfile.fromFirestore(doc);
-      return model;
-    } else {
-      UserProfile model = await createUser(
-        id: userId,
-        username: auth!.currentUser!.displayName ?? auth!.currentUser!.email?.split("@").first ?? auth!.currentUser!.uid,
-      );
-      return model;
-    }
+    return (await getUserSupabase(userId)) ??
+        await createUser(
+          id: userId,
+          username: currentAuthUsername(),
+        );
   }
 
   Future<UserProfile> getOrCreateCurrentUser() async {
@@ -55,7 +38,7 @@ class UserRepository {
   }
 
   Future<UserProfile> createCurrentUser({String? username, String? profileImageUrl, String bio = ''}) async {
-    username ??= auth!.currentUser!.displayName ?? auth!.currentUser!.email?.split("@").first ?? auth!.currentUser!.uid;
+    username ??= currentAuthUsername();
     await supabaseClient.from("profiles").insert({
       "id": auth!.currentUser!.uid,
       "username": username,
@@ -74,22 +57,24 @@ class UserRepository {
     );
   }
 
-  @Deprecated("firebase is deprecated! use createCurrentUser() instead!")
-  Future<UserProfile> createUser({required String id, required String username, String? profileImageUrl, String bio = ''}) async {
-    await firestore.collection('users').doc(id).set({
-      'username': username,
-      'profileImageUrl': profileImageUrl,
-      'bio': bio,
-      'followersCount': 0,
-      'createdAt': FieldValue.serverTimestamp(),
+  Future<void> upsertCurrentUserProfile(UserProfile user) async {
+    print("Upserting user profile for ${user.id} with username ${user.username}, current id: ${auth?.currentUser?.uid}");
+    await supabaseClient.from("profiles").upsert({
+      "id": user.id,
+      "username": user.username,
+      "display_name": user.username,
+      "avatar_url": user.profileImageUrl,
+      "bio": user.bio,
     });
+  }
 
-    await supabaseClient.from("profiles").insert({
-      "id": currentUser.id,
-      "username": currentUser.username,
-      "display_name": currentUser.username,
-      "avatar_url": currentUser.profileImageUrl,
-      "bio": currentUser.bio,
+  Future<UserProfile> createUser({required String id, required String username, String? profileImageUrl, String bio = ''}) async {
+    await supabaseClient.from("profiles").upsert({
+      "id": id,
+      "username": username,
+      "display_name": username,
+      "avatar_url": profileImageUrl ?? createUserProfileImageUrl(username),
+      "bio": bio,
     });
 
     return UserProfile(
@@ -105,17 +90,7 @@ class UserRepository {
 
   ///returns if the user is followed after the operation
   Future<bool> toggleFollowUser(String currentId, String followingId) async {
-    if (currentId == followingId) throw Exception('Cannot toggle follow yourself');
-
-    bool following = await isFollowing(currentId, followingId);
-
-    if (following) {
-      _unfollowUser(currentId, followingId);
-      return false;
-    } else {
-      _followUser(currentId, followingId);
-      return true;
-    }
+    return toggleFollowUserSupabase(currentId, followingId);
   }
 
   ///returns if the user is followed after the operation
@@ -136,15 +111,7 @@ class UserRepository {
   
   /// Follow a user
   Future<void> followUser(String currentId, String followingId) async {
-    if (currentId == followingId) throw Exception('Cannot follow yourself');
-
-    bool alreadyFollowing = await isFollowing(currentId, followingId);
-    if (alreadyFollowing) {
-      print("already following! returning");
-      return;
-    }
-
-    await _followUser(currentId, followingId);
+    await followUserSupabase(currentId, followingId);
   }
 
   /// Follow a user
@@ -161,50 +128,15 @@ class UserRepository {
   }
 
   /// Follow a user
-  Future<void> _followUser(String currentId, String followingId) async {
-    firestore.runTransaction((transaction) async {
-      transaction.set(firestore.collection('users').doc(currentId).collection('following').doc(followingId), {'followedAt': FieldValue.serverTimestamp()});
-
-      transaction.set(firestore.collection('users').doc(followingId).collection('followers').doc(currentId), {'followedAt': FieldValue.serverTimestamp()});
-
-      transaction.update(firestore.collection('users').doc(currentId), {'followingCount': FieldValue.increment(1)});
-
-      transaction.update(firestore.collection('users').doc(followingId), {'followersCount': FieldValue.increment(1)});
-    });
-
-    if (currentId == currentUser.id) localSeenService.followUser(followingId);
-  }
-
   /// Unfollow a user
   void unfollowUser(String currentId, String followingId) async {
-    if (currentId == followingId) throw Exception('Cannot unfollow yourself');
-
-    bool following = await isFollowing(currentId, followingId);
-    if (!following) {
-      print("not following, cannot unfollow! returning");
-      return;
-    }
-
-    _unfollowUser(currentId, followingId);
-  }
-
-  void _unfollowUser(String currentId, String followingId) async {
-    firestore.runTransaction((transaction) async {
-      transaction.delete(firestore.collection('users').doc(currentId).collection('following').doc(followingId));
-
-      transaction.delete(firestore.collection('users').doc(followingId).collection('followers').doc(currentId));
-
-      transaction.update(firestore.collection('users').doc(currentId), {'followingCount': FieldValue.increment(-1)});
-
-      transaction.update(firestore.collection('users').doc(followingId), {'followersCount': FieldValue.increment(-1)});
-    });
-    if (currentId == currentUser.id) localSeenService.unfollowUser(followingId);
+    _unfollowUserSupabase(currentId, followingId);
   }
 
   void _unfollowUserSupabase(String currentId, String followingId) async {
     await supabaseClient.from('follows').delete().eq('follower_id', currentId).eq('following_id', followingId);
-    await supabaseClient.rpc('decrement_following_count', params: {'user_id': currentId});
-    await supabaseClient.rpc('decrement_followers_count', params: {'user_id': followingId});
+    await _adjustProfileMetric(currentId, 'following_count', -1);
+    await _adjustProfileMetric(followingId, 'followers_count', -1);
   }
 
   Future<void> _followUserSupabase(String currentId, String followingId) async {
@@ -213,25 +145,21 @@ class UserRepository {
       "following_id": followingId,
       "created_at": DateTime.now().toIso8601String()
     });
-    await supabaseClient.rpc('increment_following_count', params: {'user_id': currentId});
-    await supabaseClient.rpc('increment_followers_count', params: {'user_id': followingId});
+    await _adjustProfileMetric(currentId, 'following_count', 1);
+    await _adjustProfileMetric(followingId, 'followers_count', 1);
   }
 
-  Future<({List<UserProfile> users, DocumentSnapshot? lastDoc})> searchUsers(String query, {int limit = 20, DocumentSnapshot? startAfter}) async {
-    var queryRef = firestore.collection('users').orderBy('username').startAt([query]).endAt([query + '\uf8ff']).limit(limit);
-
-    if (startAfter != null) {
-      queryRef = queryRef.startAfterDocument(startAfter);
-    }
-
-    final snapshot = await queryRef.get();
-    final users = snapshot.docs.map((doc) => UserProfile.fromFirestore(doc)).toList();
-
-    return (users: users, lastDoc: snapshot.docs.isNotEmpty ? snapshot.docs.last : null);
+  Future<({List<UserProfile> users, int? nextOffset})> searchUsers(String query, {int limit = 20, int offset = 0}) async {
+    final users = (await searchUsersSupabase(query, limit: limit, offset: offset)).toList();
+    return (users: users, nextOffset: users.length < limit ? null : offset + users.length);
   }
 
   Future<Iterable<UserProfile>> searchUsersSupabase(String query, {int limit = 20, int offset = 0}) async {
-    final supabaseResult = await supabaseClient.from('profiles').select().textSearch('display_name', query, type: TextSearchType.websearch).range(offset, offset + limit-1);
+    final supabaseResult = await supabaseClient
+        .from('profiles')
+        .select()
+        .or('display_name.ilike.%$query%,username.ilike.%$query%')
+        .range(offset, offset + limit-1);
     return supabaseResult.map((e) => UserProfile.fromSupabase(e));
   }
   
@@ -239,20 +167,11 @@ class UserRepository {
 
   static Future<List<UserProfile>> _fetchProfilesByIds(List<String> ids) async {
     if (ids.isEmpty) return [];
-
-    final profiles = <UserProfile>[];
-    for (int i = 0; i < ids.length; i += 30) {
-      final chunk = ids.sublist(i, (i + 30).clamp(0, ids.length));
-      final snapshot = await FirebaseFirestore.instance.collection('users').where(FieldPath.documentId, whereIn: chunk).get();
-      profiles.addAll(snapshot.docs.map((doc) => UserProfile.fromFirestore(doc)));
-    }
-    return profiles;
+    final response = await supabaseClient.from('profiles').select().inFilter('id', ids);
+    return response.map<UserProfile>((profile) => UserProfile.fromSupabase(profile)).toList();
   }
 
-  Future<List<String>> getFollowingIds(String userId) async {
-    final snapshot = await FirebaseFirestore.instance.collection('users').doc(userId).collection('following').get();
-    return snapshot.docs.map((doc) => doc.id).toList();
-  }
+  Future<List<String>> getFollowingIds(String userId) async => getFollowingIdsSupabase(userId);
 
   Future<List<String>> getFollowingIdsSupabase(String userId) async {
     final response = await supabaseClient
@@ -263,18 +182,7 @@ class UserRepository {
   }
 
   Future<List<Video>> getPublishedVideos(String userId, {int limit = 20}) async {
-    try {
-      final snapshot = await FirebaseFirestore.instance
-          .collection('videos')
-          .where('authorId', isEqualTo: userId)
-          .orderBy('createdAt', descending: true)
-          .limit(limit)
-          .get();
-      return snapshot.docs.map((doc) => Video.fromFirestore(doc)).toList();
-    } catch (e) {
-      print('Error fetching published videos: $e');
-      return [];
-    }
+    return getPublishedVideosSupabase(userId, limit: limit);
   }
 
   Future<List<Video>> getPublishedVideosSupabase(String userId, {int limit = 20, int offset = 0}) async {
@@ -313,23 +221,8 @@ class UserRepository {
     }
   }
 
-  @Deprecated("firebase is deprecated, use the supabase variant instead")
   Future<List<Video>> getLikedVideos(String userId, {int limit = 20}) async {
-    try {
-      final likedSnapshot = await FirebaseFirestore.instance
-          .collection('users')
-          .doc(userId)
-          .collection('liked_videos')
-          .orderBy('likedAt', descending: true)
-          .limit(limit)
-          .get();
-
-      final videoIds = likedSnapshot.docs.map((doc) => doc.id).toList();
-      return videoRepo.fetchVideosByIds(videoIds);
-    } catch (e) {
-      print('Error fetching liked videos: $e');
-      return [];
-    }
+    return getLikedVideosSupabase(userId, limit: limit);
   }
 
   Future<List<Video>> getLikedVideosSupabase(String userId, {int limit = 20, int offset = 0}) async {
@@ -372,21 +265,7 @@ class UserRepository {
   }
 
   Future<List<Video>> getDislikedVideos(String userId, {int limit = 20}) async {
-    try {
-      final dislikedSnapshot = await FirebaseFirestore.instance
-          .collection('users')
-          .doc(userId)
-          .collection('disliked_videos')
-          .orderBy('dislikedAt', descending: true)
-          .limit(limit)
-          .get();
-
-      final videoIds = dislikedSnapshot.docs.map((doc) => doc.id).toList();
-      return videoRepo.fetchVideosByIds(videoIds);
-    } catch (e) {
-      print('Error fetching disliked videos: $e');
-      return [];
-    }
+    return getDislikedVideosSupabase(userId, limit: limit);
   }
 
   Future<List<Video>> getDislikedVideosSupabase(String userId, {int limit = 20, int offset = 0}) async {
@@ -428,17 +307,8 @@ class UserRepository {
     }
   }
 
-  @Deprecated("firebase is deprecated, use the supabase variant instead")
   Future<List<UserProfile>> getFollowers(String userId, {int limit = 50}) async {
-    try {
-      final snapshot = await FirebaseFirestore.instance.collection('users').doc(userId).collection('followers').limit(limit).get();
-
-      final followerIds = snapshot.docs.map((doc) => doc.id).toList();
-      return _fetchProfilesByIds(followerIds);
-    } catch (e) {
-      print('Error fetching followers: $e');
-      return [];
-    }
+    return getFollowersSupabase(userId, limit: limit);
   }
   Future<List<UserProfile>> getFollowersSupabase(String userId, {int limit = 50, int offset = 0}) async {
     try {
@@ -457,15 +327,7 @@ class UserRepository {
   }
 
   Future<List<UserProfile>> getFollowing(String userId, {int limit = 50}) async {
-    try {
-      final snapshot = await FirebaseFirestore.instance.collection('users').doc(userId).collection('following').limit(limit).get();
-
-      final followingIds = snapshot.docs.map((doc) => doc.id).toList();
-      return _fetchProfilesByIds(followingIds);
-    } catch (e) {
-      print('Error fetching following: $e');
-      return [];
-    }
+    return getFollowingSupabase(userId, limit: limit);
   }
 
   Future<List<UserProfile>> getFollowingSupabase(String userId, {int limit = 50, int offset = 0}) async {
@@ -485,13 +347,7 @@ class UserRepository {
   }
 
   Future<bool> isFollowedBy(String user1, String user2) async {
-    try {
-      final doc = await FirebaseFirestore.instance.collection('users').doc(user2).collection('following').doc(user1).get();
-      return doc.exists;
-    } catch (e) {
-      print('Error checking follow status: $e');
-      return false;
-    }
+    return isFollowedBySupabase(user1, user2);
   }
 
   Future<bool> isFollowedBySupabase(String user1, String user2) async {
@@ -506,13 +362,7 @@ class UserRepository {
   
 
   Future<bool> isFollowing(String user1, String user2) async {
-    try {
-      final doc = await FirebaseFirestore.instance.collection('users').doc(user2).collection('followers').doc(user1).get();
-      return doc.exists;
-    } catch (e) {
-      print('Error checking follow status: $e');
-      return false;
-    }
+    return isFollowingSupabase(user1, user2);
   }
 
   Future<bool> isFollowingSupabase(String user1, String user2) async {
@@ -520,17 +370,25 @@ class UserRepository {
   }
 
   Future<UserProfile> updateProfileImageUrl(UserProfile user, String? newUrl) async {
-    await firestore.collection('users').doc(user.id).update({'profileImageUrl': newUrl, 'usesCustomProfileImage': newUrl != null});
-
-    return user.copyWith(profileImageUrl: newUrl);
+    return updateProfileImageUrlSupabase(user, newUrl);
   }
 
   Future<UserProfile> updateProfileImageUrlSupabase(UserProfile user, String? newUrl) async {
     await supabaseClient.from('profiles').update({"avatar_url": newUrl}).eq('id', user.id);
     return user.copyWith(profileImageUrl: newUrl);
   }
-  
-  
+
+  Future<void> updateFcmTokenSupabase(String userId, String? token) async {
+    print('Skipping FCM token update for $userId because the provided profiles schema has no fcm_token column.');
+  }
+
+  Future<String?> getFcmTokenSupabase(String userId) async {
+    return null;
+  }
+
+  Future<void> _adjustProfileMetric(String userId, String column, int delta) async {
+    await supabaseClient.rpc('increment_profile_metric', params: {'p_user_id': userId, 'p_column': column, 'p_delta': delta});
+  }
 }
 
 String createUserProfileImageUrl(String? seed) => "https://api.dicebear.com/7.x/miniavs/png?seed=${seed ?? "_"}";

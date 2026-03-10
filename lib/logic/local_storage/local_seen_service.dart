@@ -1,4 +1,3 @@
-import 'package:cloud_firestore/cloud_firestore.dart';
 import 'package:hive_flutter/hive_flutter.dart';
 import 'package:wurp/logic/chat/chat.dart';
 import 'package:wurp/logic/chat/chat_message.dart';
@@ -7,6 +6,7 @@ import 'package:wurp/logic/models/user_model.dart';
 import 'package:wurp/logic/video/video.dart';
 
 import '../../base_logic.dart';
+import '../../tools/supabase_tests/supabase_login_test.dart';
 
 
 LocalSeenService get localSeenService {
@@ -45,11 +45,6 @@ class LocalSeenService {
   static const String _lastSyncConversationKey = 'lastSyncConversationTimestamp';
   static const String _lastUpdateAuthorsKey = 'lastUpdateAuthorsTimestamp';
 
-  // Firestore paths:
-  // users/{uid}/liked_videos/{videoId}
-  // users/{uid}/disliked_videos/{videoId}
-  // users/{uid}/profile/preferences  →  fields: cursor_vector, blacklisted_tags, etc.
-
   late Box<DateTime> _seenBox;
   late Box _settingsBox;
   late Box _cursorBox;
@@ -70,7 +65,7 @@ class LocalSeenService {
   static bool hiveInitialized = false;
 
   Future<void> init() async {
-    userId = auth!.currentUser!.uid;
+    userId = currentAuthUserId();
 
     if (!hiveInitialized) {
       await Hive.initFlutter();
@@ -117,7 +112,7 @@ class LocalSeenService {
       _settingsBox.put(_lastUpdateAuthorsKey, DateTime.now());
     }
 
-    await syncWithFirestore();
+    await syncWithSupabase();
     await cleanUpOldEntries();
     print(
       "initialized LocalSeenService with ${_seenBox.length} seen videos for user $userId, "
@@ -180,7 +175,7 @@ class LocalSeenService {
   // MAIN SYNC
   // ---------------------------------------------------------------------------
 
-  Future<void> syncWithFirestore({bool onlyLoad = true}) async {
+  Future<void> syncWithSupabase({bool onlyLoad = true}) async {
     final lastSyncSeen = _settingsBox.get(_lastSyncSeenKey) as DateTime? ?? DateTime.now().subtract(const Duration(days: 7));
     final lastSyncLikes = _settingsBox.get(_lastSyncLikesKey) as DateTime? ?? DateTime.now().subtract(const Duration(days: 7));
     final lastSyncDislikes = _settingsBox.get(_lastSyncDislikesKey) as DateTime? ?? DateTime.now().subtract(const Duration(days: 7));
@@ -209,87 +204,9 @@ class LocalSeenService {
 
   Future<void> _syncSeenInteractions(DateTime lastSync, {required bool onlyLoad}) async {
     if (!onlyLoad) {
-      print("Uploading local seen-changes to Firestore...");
-
-      final localEntries = Map<String, DateTime>.from(_seenBox.toMap()..removeWhere((key, value) => (value).isBefore(lastSync)));
-
-      final batch = firestore.batch();
-      int uploadCount = 0;
-
-      final docRef = firestore.collection('users').doc(userId).collection('recent_interactions');
-
-      for (final entry in localEntries.entries) {
-        final meta = _interactionBox.get(entry.key) as Map?;
-        batch.set(docRef.doc(entry.key), {
-          'videoId': entry.key,
-          'timestamp': Timestamp.fromDate(entry.value),
-          if (meta != null) 'authorId': meta['authorId'],
-          if (meta != null) 'tags': meta['tags'],
-        }, SetOptions(merge: true));
-        uploadCount++;
-      }
-
-      if (uploadCount > 0) await batch.commit();
-      print("Uploaded $uploadCount local seen entries");
+      print('Skipping remote seen sync because the provided Supabase schema has no recent_interactions table.');
     }
-
-    final snapshot = await firestore
-        .collection('users')
-        .doc(userId)
-        .collection('recent_interactions')
-        .where('timestamp', isGreaterThan: Timestamp.fromDate(lastSync))
-        .orderBy('timestamp', descending: true)
-        .get();
-
-    if (snapshot.docs.isEmpty) {
-      print("Nothing new from Firestore (seen)");
-      return;
-    } else {
-      print("seen snapshot: 🔥 Source: ${snapshot.metadata.isFromCache ? "CACHE" : "SERVER"}");
-    }
-
-    final Map<String, DateTime> newSeenEntries = {};
-    final Map<String, Map<String, dynamic>> newInteractionEntries = {};
-
-    for (final doc in snapshot.docs) {
-      final data = doc.data();
-      final videoId = data['videoId'] as String;
-      final seenAt = (data['timestamp'] as Timestamp).toDate();
-
-      final local = _seenBox.get(videoId);
-      if (local == null || seenAt.isAfter(local)) {
-        newSeenEntries[videoId] = seenAt;
-        newInteractionEntries[videoId] = {'authorId': data['authorId'] ?? '', 'tags': data['tags'] ?? []};
-      }
-    }
-
-    print("Syncing ${newSeenEntries.length} seen entries from Firestore...");
-    await _seenBox.putAll(newSeenEntries);
-    await _interactionBox.putAll(newInteractionEntries);
-
-    final Map<String, DateTime> tagOldestSeen = {};
-    for (final doc in snapshot.docs) {
-      final data = doc.data();
-      final tags = data['tags'] != null ? List<String>.from(data['tags'] as List) : <String>[];
-      final seenAt = (data['timestamp'] as Timestamp).toDate();
-
-      for (final tag in tags) {
-        if (!tagOldestSeen.containsKey(tag) || seenAt.isBefore(tagOldestSeen[tag]!)) {
-          tagOldestSeen[tag] = seenAt;
-        }
-      }
-    }
-
-    for (final entry in tagOldestSeen.entries) {
-      final existing = getTagCursor(entry.key);
-      if (existing == null || entry.value.isBefore(existing)) {
-        await saveTagCursor(entry.key, entry.value);
-      }
-    }
-    print("Updated tag cursors for ${tagOldestSeen.length} tags");
-
-    final latestTime = (snapshot.docs.first.data()['timestamp'] as Timestamp).toDate();
-    await _settingsBox.put(_lastSyncSeenKey, latestTime);
+    await _settingsBox.put(_lastSyncSeenKey, DateTime.now());
   }
 
   // ---------------------------------------------------------------------------
@@ -297,150 +214,80 @@ class LocalSeenService {
   // ---------------------------------------------------------------------------
 
   Future<void> _syncLikes(DateTime lastSync, {required bool onlyLoad}) async {
-    //todo handle removed likes / dislikes / follows locally
-    final likesRef = firestore.collection('users').doc(userId).collection('liked_videos');
-
     if (!onlyLoad) {
-      print("Uploading local likes to Firestore...");
-      final batch = firestore.batch();
-      int count = 0;
-
+      print("Uploading local likes to Supabase...");
+      final payload = <Map<String, dynamic>>[];
       for (final key in _likeValsBox.keys) {
         final videoId = key as String;
         if (_likeValsBox.get(videoId) != true) continue;
-        batch.set(likesRef.doc(videoId), {'videoId': videoId, 'likedAt': FieldValue.serverTimestamp()}, SetOptions(merge: true));
-        count++;
+        final parsedVideoId = int.tryParse(videoId);
+        if (parsedVideoId == null) continue;
+        payload.add({'user_id': userId, 'video_id': parsedVideoId});
       }
-
-      if (count > 0) await batch.commit();
-      print("Uploaded $count liked videos");
+      if (payload.isNotEmpty) {
+        await _upsertInChunks('likes', payload, onConflict: 'user_id, video_id');
+      }
+      print("Uploaded ${payload.length} liked videos");
     }
 
-    final snapshot = await likesRef.where('likedAt', isGreaterThan: Timestamp.fromDate(lastSync)).orderBy('likedAt', descending: true).get();
+    final snapshot = await supabaseClient
+        .from('likes')
+        .select('video_id, created_at')
+        .eq('user_id', userId)
+        .gt('created_at', lastSync.toIso8601String())
+        .order('created_at', ascending: false);
 
-    if (snapshot.docs.isEmpty) {
-      print("Nothing new from Firestore (likes)");
+    if (snapshot.isEmpty) {
+      print("Nothing new from Supabase (likes)");
       return;
     }
 
-    await _likeValsBox.putAll({for (final doc in snapshot.docs) doc.id: true});
-    print("Synced ${snapshot.docs.length} new liked videos from Firestore");
+    await _likeValsBox.putAll({for (final row in snapshot) row['video_id'].toString(): true});
+    print("Synced ${snapshot.length} new liked videos from Supabase");
 
-    final latestLikedAt = (snapshot.docs.first.data()['likedAt'] as Timestamp?)?.toDate();
-    if (latestLikedAt != null) {
-      await _settingsBox.put(_lastSyncLikesKey, latestLikedAt);
-    }
+    await _settingsBox.put(_lastSyncLikesKey, DateTime.parse(snapshot.first['created_at'] as String).toLocal());
   }
 
   Future<void> _syncDislikes(DateTime lastSync, {required bool onlyLoad}) async {
-    final dislikesRef = firestore.collection('users').doc(userId).collection('disliked_videos');
-
     if (!onlyLoad) {
-      print("Uploading local dislikes to Firestore...");
-      final batch = firestore.batch();
-      int count = 0;
-
+      print("Uploading local dislikes to Supabase...");
+      final payload = <Map<String, dynamic>>[];
       for (final key in _likeValsBox.keys) {
         final videoId = key as String;
         if (_likeValsBox.get(videoId) != false) continue;
-        batch.set(dislikesRef.doc(videoId), {'videoId': videoId, 'dislikedAt': FieldValue.serverTimestamp()}, SetOptions(merge: true));
-        count++;
+        final parsedVideoId = int.tryParse(videoId);
+        if (parsedVideoId == null) continue;
+        payload.add({'user_id': userId, 'video_id': parsedVideoId});
       }
-
-      if (count > 0) await batch.commit();
-      print("Uploaded $count disliked videos");
+      if (payload.isNotEmpty) {
+        await _upsertInChunks('dislikes', payload, onConflict: 'user_id, video_id');
+      }
+      print("Uploaded ${payload.length} disliked videos");
     }
 
-    final snapshot = await dislikesRef.where('dislikedAt', isGreaterThan: Timestamp.fromDate(lastSync)).orderBy('dislikedAt', descending: true).get();
+    final snapshot = await supabaseClient
+        .from('dislikes')
+        .select('video_id, created_at')
+        .eq('user_id', userId)
+        .gt('created_at', lastSync.toIso8601String())
+        .order('created_at', ascending: false);
 
-    if (snapshot.docs.isEmpty) {
-      print("Nothing new from Firestore (dislikes)");
+    if (snapshot.isEmpty) {
+      print("Nothing new from Supabase (dislikes)");
       return;
     }
 
-    await _likeValsBox.putAll({for (final doc in snapshot.docs) doc.id: false});
-    print("Synced ${snapshot.docs.length} new disliked videos from Firestore");
+    await _likeValsBox.putAll({for (final row in snapshot) row['video_id'].toString(): false});
+    print("Synced ${snapshot.length} new disliked videos from Supabase");
 
-    final latestDislikedAt = (snapshot.docs.first.data()['dislikedAt'] as Timestamp?)?.toDate();
-    if (latestDislikedAt != null) {
-      await _settingsBox.put(_lastSyncDislikesKey, latestDislikedAt);
-    }
+    await _settingsBox.put(_lastSyncDislikesKey, DateTime.parse(snapshot.first['created_at'] as String).toLocal());
   }
-
-  DocumentReference get _preferencesDoc => firestore.collection('users').doc(userId).collection('profile').doc('preferences');
 
   Future<void> _syncPreferences(DateTime lastSync, {required bool onlyLoad}) async {
     if (!onlyLoad) {
-      print("Uploading cursors & blacklisted tags to Firestore...");
-
-      final Map<String, Timestamp> changedCursors = {
-        for (final key in _cursorBox.keys)
-          if ((_cursorDirtyBox.get(key))?.isAfter(lastSync) ?? false) key as String: Timestamp.fromDate(_cursorBox.get(key) as DateTime),
-      };
-
-      final Map<String, Timestamp> changedBlacklistedTags = {
-        for (final key in _blacklistedTagsBox.keys)
-          if ((_blacklistedTagsBox.get(key) as DateTime).isAfter(lastSync)) key as String: Timestamp.fromDate(_blacklistedTagsBox.get(key) as DateTime),
-      };
-
-      if (changedCursors.isNotEmpty || changedBlacklistedTags.isNotEmpty) {
-        await _preferencesDoc.set({
-          if (changedCursors.isNotEmpty) 'cursor_vector': changedCursors,
-          if (changedBlacklistedTags.isNotEmpty) 'blacklisted_tags': changedBlacklistedTags,
-          'updatedAt': FieldValue.serverTimestamp(),
-        }, SetOptions(merge: true));
-        print("Uploaded ${changedCursors.length} cursors, ${changedBlacklistedTags.length} blacklisted tags");
-      } else {
-        print("No preference changes since last sync — skipping upload");
-      }
+      print('Skipping remote preference sync because the provided Supabase schema has no user_preferences table.');
     }
-
-    final doc = await _preferencesDoc.get();
-    if (!doc.exists) {
-      print("Nothing new from Firestore (preferences)");
-      return;
-    }
-
-    final data = doc.data() as Map<String, dynamic>?;
-
-    final remoteUpdatedAt = (data?['updatedAt'] as Timestamp?)?.toDate();
-    if (remoteUpdatedAt != null && !remoteUpdatedAt.isAfter(lastSync)) {
-      print("Preferences unchanged since last sync — skipping download");
-      return;
-    }
-
-    final remoteCursors = data?['cursor_vector'] as Map<String, dynamic>?;
-    int cursorSyncCount = 0;
-    if (remoteCursors != null) {
-      for (final entry in remoteCursors.entries) {
-        final remoteTs = (entry.value as Timestamp).toDate();
-        final local = _cursorBox.get(entry.key) as DateTime?;
-        if (local == null || remoteTs.isBefore(local)) {
-          await _cursorBox.put(entry.key, remoteTs);
-          cursorSyncCount++;
-        }
-      }
-      print("Synced $cursorSyncCount/${remoteCursors.length} cursors from Firestore");
-    }
-
-    final remoteTags = data?['blacklisted_tags'] as Map<String, dynamic>?;
-    if (remoteTags != null) {
-      final Map<String, DateTime> toWrite = {};
-      for (final entry in remoteTags.entries) {
-        final remoteTs = (entry.value as Timestamp).toDate();
-        final local = _blacklistedTagsBox.get(entry.key);
-        if (local == null || remoteTs.isBefore(local)) {
-          toWrite[entry.key] = remoteTs;
-        }
-      }
-      await _blacklistedTagsBox.putAll(toWrite);
-      print("Synced ${toWrite.length} blacklisted tags from Firestore");
-    }
-
-    if (remoteUpdatedAt != null) {
-      await _settingsBox.put(_lastSyncPreferencesKey, remoteUpdatedAt);
-      print("synced to ${remoteUpdatedAt.toLocal()}");
-    }
+    await _settingsBox.put(_lastSyncPreferencesKey, DateTime.now());
   }
 
   // ---------------------------------------------------------------------------
@@ -525,101 +372,125 @@ class LocalSeenService {
   // ---------------------------------------------------------------------------
 
   Future<void> _syncFollowing(DateTime lastSync, {required bool onlyLoad}) async {
-    final followingRef = firestore.collection('users').doc(userId).collection('following');
-
     if (!onlyLoad) {
-      print("Uploading local following to Firestore...");
-      final batch = firestore.batch();
-      int count = 0;
-
+      print("Uploading local following to Supabase...");
+      final payload = <Map<String, dynamic>>[];
       for (final key in _followingBox.keys) {
         final followedUserId = key as String;
         final followedAt = _followingBox.get(followedUserId)!;
         if (!followedAt.isAfter(lastSync)) continue;
-        batch.set(followingRef.doc(followedUserId), {'followedAt': Timestamp.fromDate(followedAt)}, SetOptions(merge: true));
-        count++;
+        payload.add({
+          'follower_id': userId,
+          'following_id': followedUserId,
+          'created_at': followedAt.toIso8601String(),
+        });
       }
-
-      if (count > 0) await batch.commit();
-      print("Uploaded $count following entries");
+      if (payload.isNotEmpty) {
+        await _upsertInChunks('follows', payload, onConflict: 'follower_id, following_id');
+      }
+      print("Uploaded ${payload.length} following entries");
     }
 
-    final snapshot = await followingRef.where('followedAt', isGreaterThan: Timestamp.fromDate(lastSync)).orderBy('followedAt', descending: true).get();
+    final snapshot = await supabaseClient
+        .from('follows')
+        .select('following_id, created_at')
+        .eq('follower_id', userId)
+        .gt('created_at', lastSync.toIso8601String())
+        .order('created_at', ascending: false);
 
-    if (snapshot.docs.isEmpty) {
-      print("Nothing new from Firestore (following)");
+    if (snapshot.isEmpty) {
+      print("Nothing new from Supabase (following)");
       return;
-    } else {
-      print("following snapshot: 🔥 Source: ${snapshot.metadata.isFromCache ? "CACHE" : "SERVER"}");
     }
     final Map<String, DateTime> toWrite = {};
-    for (final doc in snapshot.docs) {
-      final data = doc.data();
-      final followedAt = (data['followedAt'] as Timestamp).toDate();
-      final local = _followingBox.get(doc.id);
+    for (final row in snapshot) {
+      final followedAt = DateTime.parse(row['created_at'] as String).toLocal();
+      final followedUserId = row['following_id'] as String;
+      final local = _followingBox.get(followedUserId);
       if (local == null || followedAt.isAfter(local)) {
-        toWrite[doc.id] = followedAt;
+        toWrite[followedUserId] = followedAt;
       }
     }
 
     if (toWrite.isNotEmpty) {
       await _followingBox.putAll(toWrite);
-      print("Synced ${toWrite.length} new following entries from Firestore");
+      print("Synced ${toWrite.length} new following entries from Supabase");
     }
 
-    final latestFollowedAt = (snapshot.docs.first.data()['followedAt'] as Timestamp?)?.toDate();
-    if (latestFollowedAt != null) {
-      await _settingsBox.put(_lastSyncFollowingKey, latestFollowedAt);
-    }
+    await _settingsBox.put(_lastSyncFollowingKey, DateTime.parse(snapshot.first['created_at'] as String).toLocal());
   }
 
   Future<void> _syncConversations(DateTime lastSync) async {
     print("syncing conversations");
-    final conversationRef = firestore.collection('users').doc(userId).collection('contacts');
-
-    final snapshot = await conversationRef.where('lastMessageAt', isGreaterThan: Timestamp.fromDate(lastSync)).orderBy('lastMessageAt', descending: true).get();
-
-    if (snapshot.docs.isEmpty) {
+    final memberships = await supabaseClient.from('conversation_members').select('conversation_id').eq('profile_id', userId);
+    final conversationIds = memberships.map((row) => row['conversation_id'] as int).toList();
+    if (conversationIds.isEmpty) {
       await _settingsBox.put(_lastSyncConversationKey, DateTime.now());
       return;
     }
 
-    print("conversation snapshot: Source: ${snapshot.metadata.isFromCache ? "CACHE" : "SERVER"}");
+    final conversations = await supabaseClient
+        .from('conversations')
+        .select('id, created_at, updated_at')
+        .inFilter('id', conversationIds)
+        .gt('updated_at', lastSync.toIso8601String())
+        .order('updated_at', ascending: false);
+
+    if (conversations.isEmpty) {
+      await _settingsBox.put(_lastSyncConversationKey, DateTime.now());
+      return;
+    }
 
     final Map<String, Map<String, dynamic>> toWrite = {};
 
-    for (final doc in snapshot.docs) {
-      final data = doc.data();
-      final lastMessageAt = (data['lastMessageAt'] as Timestamp).toDate();
+    final memberRows = await supabaseClient
+        .from('conversation_members')
+        .select('conversation_id, profile_id, profiles!conversation_members_profile_id_fkey(id, username, display_name, avatar_url, bio, created_at)')
+        .inFilter('conversation_id', conversations.map((e) => e['id']).toList());
 
-      final local = _conversationBox.get(doc.id) as Map?;
-      final localLastMessageAt = local != null ? (local['lastMessageAt']) : null;
+    for (final conversation in conversations) {
+      final conversationId = conversation['id'] as int;
+      Map<String, dynamic>? partner;
+      for (final rawRow in memberRows) {
+        final row = Map<String, dynamic>.from(rawRow);
+        if (row['conversation_id'] == conversationId && row['profile_id'] != userId) {
+          partner = row;
+          break;
+        }
+      }
+      if (partner == null) continue;
+      final partnerId = partner['profile_id'] as String;
+      final existingLocal = _conversationBox.get(partnerId) as Map?;
+      final lastMessageAt = DateTime.parse(conversation['updated_at'] as String).toLocal();
+      final localLastMessageAt = existingLocal != null ? (existingLocal['lastMessageAt']) : null;
 
       if (localLastMessageAt == null || lastMessageAt.isAfter(localLastMessageAt)) {
-        toWrite[doc.id] = {
-          'partnerId': doc.id,
+        final partnerProfile = Map<String, dynamic>.from((partner['profiles'] as Map?)?.cast<String, dynamic>() ?? {});
+        toWrite[partnerId] = {
+          'conversationId': conversationId,
+          'partnerId': partnerId,
           'lastMessageAt': lastMessageAt,
-          'lastMessage': data['lastMessage'] ?? '',
-          'createdAt': (data['createdAt'] as Timestamp).toDate(),
+          'lastMessage': existingLocal?['lastMessage'] ?? '',
+          'createdAt': DateTime.parse(conversation['created_at'] as String).toLocal(),
           'currentUserId': userId,
-          'partnerName': data['partnerName'],
-          'partnerProfileImageUrl': data['partnerProfileImageUrl'],
+          'partnerName': partnerProfile['display_name'] ?? partnerProfile['username'] ?? partnerId,
+          'partnerProfileImageUrl': partnerProfile['avatar_url'] ?? '',
+          'lastMessageByMe': existingLocal?['lastMessageByMe'] ?? false,
         };
-        
 
-        final cursor = _chatCursorBox.get(_conversationId(doc.id));
+        final cursor = _chatCursorBox.get(_conversationId(partnerId));
         if (cursor == null || lastMessageAt.isAfter(cursor)) {
-          await _chatCursorBox.put(_conversationId(doc.id), lastMessageAt);
+          await _chatCursorBox.put(_conversationId(partnerId), lastMessageAt);
         }
       }
     }
 
     if (toWrite.isNotEmpty) {
       await _conversationBox.putAll(toWrite);
-      print("Synced ${toWrite.length} conversations from Firestore");
+      print("Synced ${toWrite.length} conversations from Supabase");
     }
 
-    final latestConversation = (snapshot.docs.first.data()['lastMessageAt'] as Timestamp).toDate();
+    final latestConversation = DateTime.parse(conversations.first['updated_at'] as String).toLocal();
     await _settingsBox.put(_lastSyncConversationKey, latestConversation);
   }
 
@@ -694,11 +565,12 @@ class LocalSeenService {
       await _chatCursorBox.put(conversationId, message.timestamp);
     }
 
-    if (!_conversationBox.containsKey(chat.partnerId)) {
-      _conversationBox.put(chat.partnerId, chat.toJson());
-    }
+    chat.lastMessage = message.text;
+    chat.lastMessageAt = message.timestamp;
+    chat.lastMessageByMe = message.isMe;
+    await _conversationBox.put(chat.partnerId, chat.toJson());
 
-    print("sendMessage: stored $key locally and written to Firestore");
+    print("sendMessage: stored $key locally");
   }
 
   ChatMessage? getMessage(String otherUserId, String messageId) {
@@ -709,9 +581,8 @@ class LocalSeenService {
     return _messageFromMap(raw, conversationId);
   }
 
-  Future<List<ChatMessage>> getMessagesWith(String otherUserId, {int limit = 30, DateTime? startOffset}) async {
+  Future<List<ChatMessage>> getMessagesWithLocal(String otherUserId, {int limit = 30, DateTime? startOffset}) async {
     final conversationId = _conversationId(otherUserId);
-    final isA = currentUser.id.compareTo(otherUserId) > 0;
 
     final localMessages =
         _chatBox
@@ -726,52 +597,56 @@ class LocalSeenService {
             .toList()
           ..sort((a, b) => a.timestamp.compareTo(b.timestamp));
     print("DONE");
+    return localMessages.length > limit ? localMessages.sublist(localMessages.length - limit) : localMessages;
+  }
 
-    DateTime? firstLocal = localMessages.firstOrNull?.timestamp;
+  Future<void> saveMessagesLocal(String otherUserId, Iterable<ChatMessage> messages) async {
+    final conversationId = _conversationId(otherUserId);
+    DateTime? latestTimestamp;
 
-    final merged = <String, ChatMessage>{for (final m in localMessages) m.id: m};
-
-    Query<Map<String, dynamic>> query = firestore.collection('chats').doc(conversationId).collection('messages').orderBy('createdAt', descending: true);
-
-    if (startOffset != null) {
-      query = query.where('createdAt', isLessThan: olderDate(startOffset, firstLocal));
-    } else if (localMessages.isNotEmpty) {
-      DateTime latestLocal = localMessages.last.timestamp;
-      query = query.where('createdAt', isGreaterThan: Timestamp.fromDate(latestLocal));
-    }
-
-    try {
-      final snapshot = await query.limit(limit).get();
-      print(
-        "getMessagesWith: Firestore returned ${snapshot.docs.length} new docs "
-        "(source: ${snapshot.metadata.isFromCache ? "CACHE" : "SERVER"}), offset: $startOffset, conversation: $conversationId, limit: $limit",
-      );
-      for (final doc in snapshot.docs) {
-        print("from firestore");
-        final message = ChatMessage.fromFirestore(doc.data(), doc.id, isA);
-
-        await _chatBox.put(_chatKey(conversationId, message.id), _messageToMap(message, conversationId));
-
-        merged[message.id] = message;
+    for (final message in messages) {
+      await _chatBox.put(_chatKey(conversationId, message.id), _messageToMap(message, conversationId));
+      if (latestTimestamp == null || message.timestamp.isAfter(latestTimestamp)) {
+        latestTimestamp = message.timestamp;
       }
-      print("for loop done");
-    } catch (e) {
-      print("getMessagesWith: Firestore sync failed, returning local cache. Error: $e");
     }
 
-    final result = merged.values.toList()..sort((a, b) => a.timestamp.compareTo(b.timestamp));
+    if (latestTimestamp != null) {
+      final existing = _chatCursorBox.get(conversationId);
+      if (existing == null || latestTimestamp.isAfter(existing)) {
+        await _chatCursorBox.put(conversationId, latestTimestamp);
+      }
+    }
+  }
 
-    return result.length > limit ? result.sublist(result.length - limit) : result;
+  Future<void> saveChatsLocal(Iterable<Chat> chats) async {
+    for (final chat in chats) {
+      final existingRaw = _conversationBox.get(chat.partnerId) as Map?;
+      final existing = existingRaw == null ? null : Chat.fromJson(Map<String, dynamic>.from(existingRaw));
+      final existingTimestamp = existing?.lastMessageAt ?? existing?.createdAt;
+      final incomingTimestamp = chat.lastMessageAt ?? chat.createdAt;
+
+      if (existingTimestamp == null || incomingTimestamp.isAfter(existingTimestamp)) {
+        await _conversationBox.put(chat.partnerId, chat.toJson());
+      }
+
+      final conversationId = _conversationId(chat.partnerId);
+      final currentCursor = _chatCursorBox.get(conversationId);
+      if (currentCursor == null || incomingTimestamp.isAfter(currentCursor)) {
+        await _chatCursorBox.put(conversationId, incomingTimestamp);
+      }
+    }
+  }
+
+  Future<List<ChatMessage>> getMessagesWith(String otherUserId, {int limit = 30, DateTime? startOffset}) async {
+    return getMessagesWithLocal(otherUserId, limit: limit, startOffset: startOffset);
   }
 
   Map<String, String> cachedFcmTokens = {};
 
   Future<String?> getFcmToken(String userId) async {
     if (cachedFcmTokens.containsKey(userId)) return cachedFcmTokens[userId]!;
-
-    final doc = await FirebaseFirestore.instance.collection('users').doc(userId).get();
-
-    final token = doc.data()?['fcmToken'];
+    final token = await userRepository.getFcmTokenSupabase(userId);
     if (token == null) return null;
     cachedFcmTokens[userId] = token;
 
@@ -786,6 +661,13 @@ class LocalSeenService {
     Map<String, dynamic>? json = _authorBox.get(id);
     if (json == null) return null;
     return UserProfile.fromJson(json);
+  }
+
+  Future<void> _upsertInChunks(String table, List<Map<String, dynamic>> payload, {required String onConflict, int chunkSize = 200}) async {
+    for (int i = 0; i < payload.length; i += chunkSize) {
+      final end = (i + chunkSize).clamp(i, payload.length);
+      await supabaseClient.from(table).upsert(payload.sublist(i, end), onConflict: onConflict);
+    }
   }
 }
 

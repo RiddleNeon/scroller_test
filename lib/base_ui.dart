@@ -1,21 +1,19 @@
 import 'package:flutter/material.dart';
 import 'package:wurp/ui/router.dart';
+import 'package:wurp/tools/supabase_tests/supabase_login_test.dart';
 
 import 'base_logic.dart';
 
-void startApp([bool onlyLogin = false]) async {
+void startApp() async {
 
   if (auth?.currentUser != null) {
-    await onUserLogin(await userRepository.getUser(auth!.currentUser!.uid));
+    await ensureSupabaseInitialized();
+    final user = await userRepository.getUserSupabase(auth!.currentUser!.uid) ?? await userRepository.getOrCreateCurrentUser();
+    await onUserLogin(user);
   }
   
-  if(onlyLogin && (auth?.currentUser == null)){
-    initLoginOnlyRouter();
-    loginOnlyRouterConfig.refresh();
-  } else if(!onlyLogin){
-    initRouter(onlyLogin);
-    routerConfig.refresh();
-  } else return;
+  initRouter();
+  routerConfig.refresh();
   
   runApp(
     MaterialApp.router(
@@ -23,7 +21,7 @@ void startApp([bool onlyLogin = false]) async {
       theme: ThemeData.from(colorScheme: getColorScheme()).copyWith(
         scaffoldBackgroundColor: const Color(0xFF0B1220),
       ),
-      routerConfig: onlyLogin ? loginOnlyRouterConfig : routerConfig,
+      routerConfig: routerConfig,
     ),
   );
 }

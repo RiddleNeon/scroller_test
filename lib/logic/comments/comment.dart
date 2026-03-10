@@ -1,6 +1,5 @@
 
 class Comment {
-  /// Unique document ID – use the Firestore doc ID here.
   String id;
   String userId;
   String username;
@@ -15,10 +14,8 @@ class Comment {
   String? parentId;
 
   /// 0 = top-level, 1 = first reply level, etc.
-  /// Stored in Firestore so you can query/order by depth if needed.
   int depth;
 
-  /// Client-only – NOT stored in Firestore.
   /// Populated by [buildCommentTree] after loading a flat list.
   List<Comment> _replies;
 
@@ -35,37 +32,6 @@ class Comment {
     List<Comment>? replies,
     required this.replyCount,
   }) : _replies = replies ?? [];
-
-  // ── Firestore helpers ────────────────────────────────────────
-
-  Map<String, dynamic> toFirestore() => {
-    'userId': userId,
-    'username': username,
-    'userProfileImageUrl': userProfileImageUrl,
-    'message': message,
-    'date': date,
-    'likeCount': likeCount,
-    'parentId': parentId,
-    'depth': depth,
-    'replyCount': replyCount,
-    // replies is client-only – never written to Firestore
-  };
-
-  factory Comment.fromFirestore(String docId, Map<String, dynamic> data) =>
-      Comment(
-        id: docId,
-        userId: data['userId'] as String,
-        username: data['username'] as String,
-        userProfileImageUrl: data['userProfileImageUrl'] as String,
-        message: data['message'] as String,
-        // Firestore Timestamps need .toDate(); cast via dynamic to avoid
-        // importing firebase_core here.
-        date: (data['date'] as dynamic).toDate() as DateTime,
-        likeCount: (data['likeCount'] as int?) ?? 0,
-        parentId: data['parentId'] as String?,
-        depth: (data['depth'] as int?) ?? 0,
-        replyCount: (data['replyCount'] as int?) ?? 0,
-      );
 
   factory Comment.fromSupabase(Map<String, dynamic> data) => Comment(
     id: data['id'].toString(),

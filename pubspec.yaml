@@ -11,14 +11,12 @@ environment:
 dependencies:
   flutter:
     sdk: flutter
-    
+
   firebase_core: ^4.4.0
   firebase_auth: ^6.1.4
   cupertino_icons: ^1.0.8
   flutter_login: ^6.0.0
   font_awesome_flutter: ^10.12.0
-  cloud_firestore: ^6.1.2
-  firebase_storage: ^13.0.6
   lottie: ^3.3.0
   path_provider: ^2.1.5
   stacked_services: ^0.8.6
@@ -39,7 +37,6 @@ dependencies:
   webview_flutter: ^4.13.1
   webview_flutter_android: ^4.10.13
   webview_flutter_wkwebview: ^3.23.8
-  firebase_messaging: ^16.1.1
   hive_flutter: ^1.1.0
   supabase_flutter: ^2.12.0
   shared_preferences: ^2.5.4

@@ -1,4 +1,3 @@
-import 'package:cloud_firestore/cloud_firestore.dart';
 import 'package:wurp/logic/models/user_model.dart';
 import 'package:wurp/logic/repositories/video_repository.dart';
 import 'package:wurp/logic/video/video.dart';
@@ -9,14 +8,14 @@ class SearchBarResult {
   String searchText;
   List<Video> videoResults = [];
   List<UserProfile> userResults = [];
-  DocumentSnapshot? _lastVideoDocument;
-  DocumentSnapshot? _lastUserDocument;
+  int _videoOffset = 0;
+  int _userOffset = 0;
   bool _hasMoreVideos = true;
   bool _hasMoreUsers = true;
   bool _isLoadingVideos = false;
   bool _isLoadingUsers = false;
 
-  SearchBarResult.fromFirestore(this.searchText);
+  SearchBarResult(this.searchText);
 
   Future<void> complete({int limit = 20}) async {
     await Future.wait([loadVideos(limit: limit), loadUsers(limit: limit)]);
@@ -29,8 +28,8 @@ class SearchBarResult {
     final videoResult = await videoRepo.searchVideosByTag(searchText, limit: limit);
     videoResults = videoResult.videos;
     print("done, results: ${videoResults}");
-    _lastVideoDocument = videoResult.lastDoc;
-    _hasMoreVideos = videoResult.videos.length >= limit;
+    _videoOffset = videoResult.nextOffset ?? _videoOffset;
+    _hasMoreVideos = videoResult.nextOffset != null;
 
     _isLoadingVideos = false;
   }
@@ -41,8 +40,8 @@ class SearchBarResult {
 
     final userResult = await userRepository.searchUsers(searchText, limit: limit);
     userResults = userResult.users;
-    _lastUserDocument = userResult.lastDoc;
-    _hasMoreUsers = userResult.users.length >= limit;
+    _userOffset = userResult.nextOffset ?? _userOffset;
+    _hasMoreUsers = userResult.nextOffset != null;
 
     _isLoadingUsers = false;
   }
@@ -53,13 +52,13 @@ class SearchBarResult {
 
     final result = await videoRepo.searchVideosByTag(
       searchText,
-      startAfter: _lastVideoDocument,
+      offset: _videoOffset,
       limit: limit
     );
 
     videoResults.addAll(result.videos);
-    _lastVideoDocument = result.lastDoc;
-    _hasMoreVideos = result.videos.length >= limit;
+    _videoOffset = result.nextOffset ?? _videoOffset;
+    _hasMoreVideos = result.nextOffset != null;
 
     _isLoadingVideos = false;
   }
@@ -70,13 +69,13 @@ class SearchBarResult {
 
     final result = await userRepository.searchUsers(
       searchText,
-      startAfter: _lastUserDocument,
+      offset: _userOffset,
       limit: limit
     );
 
     userResults.addAll(result.users);
-    _lastUserDocument = result.lastDoc;
-    _hasMoreUsers = result.users.length >= limit;
+    _userOffset = result.nextOffset ?? _userOffset;
+    _hasMoreUsers = result.nextOffset != null;
 
     _isLoadingUsers = false;
   }

@@ -1,13 +1,12 @@
 import 'dart:math' hide log;
 
-import 'package:cloud_firestore/cloud_firestore.dart';
 import 'package:wurp/logic/feed_recommendation/user_interaction.dart';
 import 'package:wurp/logic/feed_recommendation/user_preference_manager.dart';
 import 'package:wurp/logic/feed_recommendation/user_preferences.dart';
 
-import '../../base_logic.dart';
-import '../batches/batch_service.dart';
+import '../../tools/supabase_tests/supabase_login_test.dart';
 import '../local_storage/local_seen_service.dart';
+import '../repositories/video_repository.dart';
 import '../video/video.dart';
 
 abstract class VideoRecommenderBase {
@@ -17,7 +16,6 @@ abstract class VideoRecommenderBase {
     preferenceManager = UserPreferenceManager();
   }
 
-  /// Get user preferences
   Future<UserPreferences> getUserPreferences() async {
     await preferenceManager.loadCache();
     return UserPreferences(
@@ -28,39 +26,29 @@ abstract class VideoRecommenderBase {
     );
   }
 
-  /// Calculate personalization score
   double calculatePersonalizationScore(Video video, UserPreferences userPreferences) {
     final preferredTags = userPreferences.tagPreferences;
     final preferredAuthors = userPreferences.authorPreferences;
-
-    // New users or users without preferences get neutral score
-    if (preferredTags.isEmpty && preferredAuthors.isEmpty) {
-      return 0.5;
-    }
+    if (preferredTags.isEmpty && preferredAuthors.isEmpty) return 0.5;
 
     double score = 0.0;
     int factors = 0;
 
-    // Tag matching (weighted by preference strength)
     if (video.tags.isNotEmpty && preferredTags.isNotEmpty) {
       double tagScore = 0.0;
       int matchedTags = 0;
-
       for (final tag in video.tags) {
         if (preferredTags.containsKey(tag)) {
           tagScore += preferredTags[tag]!;
           matchedTags++;
         }
       }
-
       if (matchedTags > 0) {
-        // Average score of matched tags
         score += tagScore / matchedTags;
         factors++;
       }
     }
 
-    // Author matching
     if (preferredAuthors.containsKey(video.authorId)) {
       score += preferredAuthors[video.authorId]!;
       factors++;
@@ -69,79 +57,57 @@ abstract class VideoRecommenderBase {
     return factors > 0 ? (score / factors) : 0.5;
   }
 
-  ///Get videos for new users
   Future<List<Video>> getColdStartVideos({int limit = 20}) async {
-    // Get popular videos from last 3 days
-    final threeDaysAgo = DateTime.now().subtract(const Duration(days: 3));
-
-    final snapshot = await firestore
-        .collection('videos')
-        .where('createdAt', isGreaterThan: Timestamp.fromDate(threeDaysAgo))
-        .orderBy('createdAt', descending: true)
-        .limit(limit * 2) // Get more to have options
-        .get();
-
-    final videos = snapshot.docs.map((doc) => Video.fromFirestore(doc)).toList();
-
-    // Shuffle for variety
+    final videos = await videoRepo.getTrendingVideos(limit: limit * 2);
     videos.shuffle();
-
     return videos.take(limit).toList();
   }
 
   Future<List<Video>> fetchNewVideos(DateTime? newestSeen, int limit) async {
-    Query query = firestore.collection('videos').orderBy('createdAt', descending: true).limit(limit);
-
+    dynamic query = supabaseClient
+        .from('videos')
+        .select(_recommenderVideoSelect)
+        .eq('is_published', true)
+        .order('created_at', ascending: false)
+        .limit(limit);
     if (newestSeen != null) {
-      query = query.where('createdAt', isLessThan: Timestamp.fromDate(newestSeen));
+      query = query.lt('created_at', newestSeen.toIso8601String());
     }
-
-    final snapshot = await query.get();
-    return snapshot.docs.map((doc) => Video.fromFirestore(doc)).toList();
+    final snapshot = await query;
+    return snapshot.map<Video>(_mapVideo).toList();
   }
 
   Future<List<Video>> fetchOldVideos(DateTime? oldestSeen, int limit) async {
-    Query query = firestore.collection('videos').orderBy('createdAt', descending: true).limit(limit);
-
-    if (oldestSeen != null) {
-      query = query.where('createdAt', isLessThan: Timestamp.fromDate(oldestSeen));
-    }
-
-    final snapshot = await query.get();
-    return snapshot.docs.map((doc) => Video.fromFirestore(doc)).toList();
+    return fetchNewVideos(oldestSeen, limit);
   }
 
   Future<Set<Video>> fetchTrendingVideos({
     DateTime? cursor,
     required int limit,
   }) async {
-    final maxTrendingTime = DateTime.now().subtract(const Duration(days: 40));
-
-    Query query = firestore.collection('videos').where('createdAt', isGreaterThan: Timestamp.fromDate(maxTrendingTime)).orderBy('createdAt', descending: true).limit(limit * 3);
-
     cursor ??= localSeenService.getTrendingCursor();
-    print("cursor: $cursor");
+    dynamic query = supabaseClient
+        .from('videos')
+        .select(_recommenderVideoSelect)
+        .eq('is_published', true)
+        .gte('created_at', DateTime.now().subtract(const Duration(days: 40)).toIso8601String())
+        .order('created_at', ascending: false)
+        .limit(limit * 3);
 
     if (cursor != null) {
-      query = query.where('createdAt', isLessThan: Timestamp.fromDate(cursor));
+      query = query.lt('created_at', cursor.toIso8601String());
     }
 
-    final snapshot = await query.get();
-    final videos = snapshot.docs.map((doc) => Video.fromFirestore(doc)).where((v) => !localSeenService.hasSeen(v.id)).toList()..sort((a, b) => a.createdAt.compareTo(b.createdAt));
+    final snapshot = await query;
+    final videos = snapshot.map<Video>(_mapVideo).where((v) => !localSeenService.hasSeen(v.id)).toList()
+      ..sort((a, b) => a.createdAt.compareTo(b.createdAt));
 
-    if(videos.isNotEmpty) {
-      localSeenService.saveTrendingCursor(videos.first.createdAt);
+    if (videos.isNotEmpty) {
+      await localSeenService.saveTrendingCursor(videos.first.createdAt);
     }
 
     videos.sort((a, b) => calculateGlobalEngagementScore(b).compareTo(calculateGlobalEngagementScore(a)));
-
-    final filteredVideos = videos.take(limit);
-
-
-
-    print("vids length: ${videos.length}");
-
-    return filteredVideos.toSet();
+    return videos.take(limit).toSet();
   }
 
   static const _maxRetryAttempts = 5;
@@ -152,46 +118,37 @@ abstract class VideoRecommenderBase {
 
     int attempts = 0;
     while (unseen.length < limit && attempts < _maxRetryAttempts) {
-      Query query = firestore.collection('videos').where('tags', arrayContains: tag).orderBy('createdAt', descending: true);
-
-      if (cursor != null) {
-        query = query.where('createdAt', isLessThan: Timestamp.fromDate(cursor));
-      }
-
-      final snapshot = await query.limit(limit * 2).get(); //todo check costs of firebase
-      if (snapshot.docs.isEmpty) break;
-
-      final videos = snapshot.docs.map((doc) => Video.fromFirestore(doc)).toList();
+      final videos = await videoRepo.searchVideosByTagSupabase(tag, limit: limit * 2, offset: attempts * limit * 2);
+      if (videos.isEmpty) break;
 
       unseen.addAll(videos.where((v) => !localSeenService.hasSeen(v.id)));
 
-      int lastCountingIndex = min(videos.length - 1, limit);
+      final lastCountingIndex = min(videos.length - 1, limit);
       cursor = videos.elementAtOrNull(lastCountingIndex)?.createdAt;
+      attempts++;
     }
 
     if (cursor != null) {
       await localSeenService.saveTagCursor(tag, cursor);
     }
 
-    if(unseen.isEmpty){
+    if (unseen.isEmpty) {
       onTagVideosEmpty();
     }
 
     return unseen.take(limit).toList();
   }
 
-  /// Calculate global engagement score from video metrics
   double calculateGlobalEngagementScore(Video video) {
     int views = video.viewsCount ?? 1;
     final likes = video.likesCount ?? 0;
     final comments = video.commentsCount ?? 0;
-    if (views == 0) views = 1; // Avoid division by zero
+    if (views == 0) views = 1;
 
     final engagementRate = (likes + comments * 1.5 + 1) / views;
     return (engagementRate * 100).clamp(0.0, 1.0);
   }
 }
-
 
 Future<void> trackInteraction({
   required String userId,
@@ -204,24 +161,42 @@ Future<void> trackInteraction({
   bool commented = false,
   bool saved = false,
 }) async {
-  final interactionRef = firestore.collection('users').doc(userId).collection('recent_interactions').doc();
-
-  interactionRef.batchSet({
-    'videoId': video.id,
-    'watchTime': watchTime,
-    'videoDuration': videoDuration,
-    'liked': liked,
-    'disliked': disliked,
-    'shared': shared,
-    'commented': commented,
-    'saved': saved,
-    'timestamp': FieldValue.serverTimestamp(),
-    'authorId': video.authorId,
-    'tags': video.tags,
-  });
-  // 2. Update user preferences (batched)
   await UserPreferenceManager().updatePreferences(
-      video: video,
-      normalizedEngagementScore: calculateNormalizedEngagementScore(
-          calculateEngagementScore(liked: liked, disliked: disliked, shared: shared, commented: commented, saved: saved, completionRate: watchTime / videoDuration)));
+    video: video,
+    normalizedEngagementScore: calculateNormalizedEngagementScore(
+      calculateEngagementScore(
+        liked: liked,
+        disliked: disliked,
+        shared: shared,
+        commented: commented,
+        saved: saved,
+        completionRate: watchTime / videoDuration,
+      ),
+    ),
+  );
 }
+
+Video _mapVideo(Map<String, dynamic> data) {
+  final profile = (data['profiles'] as Map<String, dynamic>? ?? const {});
+  final authorName = profile['display_name'] ?? profile['username'] ?? '';
+  final tags = (data['video_tags'] as List? ?? const [])
+      .map((vt) => vt['tags']?['name'] as String?)
+      .whereType<String>()
+      .toList();
+  return Video.fromSupabase(data, authorName, tags);
+}
+
+const String _recommenderVideoSelectInner = '''
+  *,
+  profiles (
+    display_name,
+    username
+  ),
+  video_tags (
+    tags (
+      name
+    )
+  )
+''';
+
+const String _recommenderVideoSelect = _recommenderVideoSelectInner;

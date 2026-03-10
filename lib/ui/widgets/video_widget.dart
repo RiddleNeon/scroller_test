@@ -1,14 +1,13 @@
 import 'dart:async';
 
-import 'package:cloud_firestore/cloud_firestore.dart';
 import 'package:flutter/material.dart';
 import 'package:video_player/video_player.dart';
 import 'package:wurp/logic/feed_recommendation/video_recommender_base.dart';
 import 'package:wurp/logic/video/video_provider.dart';
 
 import '../../base_logic.dart';
-import '../../logic/batches/batch_service.dart';
 import '../../logic/local_storage/local_seen_service.dart';
+import '../../logic/repositories/video_repository.dart';
 import '../../logic/video/video.dart';
 import 'overlays/overlays.dart';
 
@@ -122,11 +121,7 @@ class _VideoItemState extends State<VideoItem> {
 
   /// Track view count on video document only (lightweight)
   void _trackView() {
-    final batchQueue = FirestoreBatchQueue.instance;
-
-    // Only increment view count on video
-    final videoRef = firestore.collection('videos').doc(widget.video.id);
-    batchQueue.update(videoRef, {'viewsCount': FieldValue.increment(1)});
+    videoRepo.incrementViewCount(widget.video.id);
   }
 
   bool currentlySaving = false;
@@ -160,7 +155,7 @@ class _VideoItemState extends State<VideoItem> {
         shared: _hasShared,
         commented: _hasCommented,
         saved: _hasSaved,
-        userId: auth!.currentUser!.uid,
+        userId: currentAuthUserId(),
       );
 
       // Reset for next viewing session
