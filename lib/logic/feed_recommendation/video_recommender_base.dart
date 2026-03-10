@@ -64,16 +64,14 @@ abstract class VideoRecommenderBase {
   }
 
   Future<List<Video>> fetchNewVideos(DateTime? newestSeen, int limit) async {
-    dynamic query = supabaseClient
+    var query = supabaseClient
         .from('videos')
         .select(_recommenderVideoSelect)
-        .eq('is_published', true)
-        .order('created_at', ascending: false)
-        .limit(limit);
+        .eq('is_published', true);
     if (newestSeen != null) {
       query = query.lt('created_at', newestSeen.toIso8601String());
     }
-    final snapshot = await query;
+    final snapshot = await query.order('created_at', ascending: false).limit(limit);
     return snapshot.map<Video>(_mapVideo).toList();
   }
 
@@ -86,19 +84,17 @@ abstract class VideoRecommenderBase {
     required int limit,
   }) async {
     cursor ??= localSeenService.getTrendingCursor();
-    dynamic query = supabaseClient
+    var query = supabaseClient
         .from('videos')
         .select(_recommenderVideoSelect)
         .eq('is_published', true)
-        .gte('created_at', DateTime.now().subtract(const Duration(days: 40)).toIso8601String())
-        .order('created_at', ascending: false)
-        .limit(limit * 3);
+        .gte('created_at', DateTime.now().subtract(const Duration(days: 40)).toIso8601String());
 
     if (cursor != null) {
       query = query.lt('created_at', cursor.toIso8601String());
     }
 
-    final snapshot = await query;
+    final snapshot = await query.order('created_at', ascending: false).limit(limit * 3);;
     final videos = snapshot.map<Video>(_mapVideo).where((v) => !localSeenService.hasSeen(v.id)).toList()
       ..sort((a, b) => a.createdAt.compareTo(b.createdAt));
 
@@ -188,7 +184,7 @@ Video _mapVideo(Map<String, dynamic> data) {
 
 const String _recommenderVideoSelectInner = '''
   *,
-  profiles (
+  profiles!videos_author_id_fkey (
     display_name,
     username
   ),

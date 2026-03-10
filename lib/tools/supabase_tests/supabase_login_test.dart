@@ -16,11 +16,8 @@ void main() async {
 }
 
 Future<void> onUserLoginSupabaseTest() async {
-  print("logged into supabase, auth: ${auth?.currentUser?.uid}");
   await ensureSupabaseInitialized();
-  print("supabase initialized!");
   await userRepository.upsertCurrentUserProfile(currentUser);
-  print("upserted user profile");
 }
 
 Future<void> ensureSupabaseInitialized() async {
