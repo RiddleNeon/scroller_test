@@ -38,6 +38,10 @@ class _SearchScreenState extends State<SearchScreen> with TickerProviderStateMix
 
   static const _kSearchBarHeight = 56.0;
   static const _kPadding = 16.0;
+  static const _kSearchBarSlotHeight = _kSearchBarHeight + _kPadding * 2;
+
+  double _lastScrollOffset = 0.0;
+  double _searchBarVisibility = 1.0;
 
   @override
   void initState() {
@@ -47,9 +51,27 @@ class _SearchScreenState extends State<SearchScreen> with TickerProviderStateMix
   }
 
   void _onScroll() {
-    if (_searchBarResult == null || _loading || _preloading) return;
-    if (_scrollController.position.pixels >= _scrollController.position.maxScrollExtent - 300) {
-      _preloadMore();
+    if (!mounted) return;
+
+    final current = _scrollController.position.pixels;
+    final delta = current - _lastScrollOffset;
+    _lastScrollOffset = current;
+
+    if (_searchBarResult != null && !_loading && !_preloading) {
+      if (current >= _scrollController.position.maxScrollExtent - 300) {
+        _preloadMore();
+      }
+    }
+
+    double newVisibility = _searchBarVisibility;
+    if (current <= 0) {
+      newVisibility = 1.0;
+    } else if (delta != 0) {
+      newVisibility = (_searchBarVisibility - delta / _kSearchBarSlotHeight).clamp(0.0, 1.0);
+    }
+
+    if (newVisibility != _searchBarVisibility) {
+      setState(() => _searchBarVisibility = newVisibility);
     }
   }
 
@@ -93,6 +115,8 @@ class _SearchScreenState extends State<SearchScreen> with TickerProviderStateMix
     setState(() {
       _hasSearched = true;
       _loading = true;
+      _searchBarVisibility = 1.0;
+      _lastScrollOffset = 0.0;
     });
     _searchBarResult = SearchBarResult(val);
     await _searchBarResult!.complete();
@@ -105,7 +129,10 @@ class _SearchScreenState extends State<SearchScreen> with TickerProviderStateMix
   @override
   Widget build(BuildContext context) {
     final cs = Theme.of(context).colorScheme;
-    return Scaffold(backgroundColor: cs.surface, body: _hasSearched ? _buildResultsBody(cs) : _buildLandingBody(cs));
+    return Scaffold(
+      backgroundColor: cs.surface,
+      body: _hasSearched ? _buildResultsBody(cs) : _buildLandingBody(cs),
+    );
   }
 
   Widget _buildLandingBody(ColorScheme cs) {
@@ -135,36 +162,21 @@ class _SearchScreenState extends State<SearchScreen> with TickerProviderStateMix
   Widget _buildResultsBody(ColorScheme cs) {
     return ScrollConfiguration(
       behavior: _SmoothScrollBehavior(),
-      child: Listener(
-        onPointerSignal: (event) {
-          if (event is PointerScrollEvent) {
-            final newOffset = (_scrollController.offset + event.scrollDelta.dy * 1.8)
-                .clamp(0.0, _scrollController.position.maxScrollExtent);
-            _scrollController.animateTo(
-              newOffset,
-              duration: const Duration(milliseconds: 180),
-              curve: Curves.easeOutCubic,
-            );
-          }
-        },
-        child: CustomScrollView(
-          controller: _scrollController,
-          physics: const NeverScrollableScrollPhysics(),
-          slivers: [
-            SliverAppBar(
-              backgroundColor: cs.surface,
-              pinned: true,
-              floating: true,
-              snap: true,
-              elevation: 0,
-              expandedHeight: _kSearchBarHeight + _kPadding * 2,
-              flexibleSpace: FlexibleSpaceBar(
-                background: Padding(padding: const EdgeInsets.fromLTRB(_kPadding, _kPadding + 8, _kPadding, _kPadding), child: _buildSearchField(cs)),
-              ),
+      child: Column(
+        children: [
+          _AnimatedSearchBar(
+            visibility: _searchBarVisibility,
+            slotHeight: _kSearchBarSlotHeight,
+            child: Padding(
+              padding: const EdgeInsets.fromLTRB(_kPadding, _kPadding + 8, _kPadding, _kPadding),
+              child: _buildSearchField(cs),
             ),
-            SliverPersistentHeader(
-              pinned: true,
-              delegate: _TabBarDelegate(
+          ),
+          Container(
+            color: cs.surface,
+            child: Column(
+              mainAxisSize: MainAxisSize.min,
+              children: [
                 TabBar(
                   controller: _tabController,
                   onTap: (_) => setState(() {}),
@@ -197,18 +209,30 @@ class _SearchScreenState extends State<SearchScreen> with TickerProviderStateMix
                     ),
                   ],
                 ),
-                cs: cs,
+                Divider(height: 1, thickness: 1, color: cs.outlineVariant.withValues(alpha: 0.3)),
+              ],
+            ),
+          ),
+          Expanded(
+            child: _loading
+                ? Center(child: CircularProgressIndicator(color: cs.primary))
+                : _ScrollArea(
+              scrollController: _scrollController,
+              child: Scrollbar(
+                controller: _scrollController,
+                interactive: true,
+                thumbVisibility: true,
+                child: CustomScrollView(
+                  controller: _scrollController,
+                  physics: const NeverScrollableScrollPhysics(),
+                  slivers: [
+                    if (_tabController.index == 0) _buildVideoSliver(cs) else _buildUserSliver(cs),
+                  ],
+                ),
               ),
             ),
-            if (_loading)
-              SliverFillRemaining(
-                child: Center(child: CircularProgressIndicator(color: cs.primary)),
-              )
-            else ...[
-              if (_tabController.index == 0) _buildVideoSliver(cs) else _buildUserSliver(cs),
-            ],
-          ],
-        ),
+          ),
+        ],
       ),
     );
   }
@@ -251,9 +275,7 @@ class _SearchScreenState extends State<SearchScreen> with TickerProviderStateMix
   Widget _buildVideoSliver(ColorScheme cs) {
     final videos = _searchBarResult?.videoResults ?? [];
     if (videos.isEmpty) {
-      return SliverFillRemaining(
-        child: _EmptyState(label: 'No videos found', cs: cs),
-      );
+      return SliverFillRemaining(child: _EmptyState(label: 'No videos found', cs: cs));
     }
     return SliverPadding(
       padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 8),
@@ -268,7 +290,12 @@ class _SearchScreenState extends State<SearchScreen> with TickerProviderStateMix
               )
                   : const SizedBox.shrink();
             }
-            return _VideoCard(video: videos[index], thumbnail: _thumbnailFor(videos[index]), onTap: () => _openVideoPlayer(index), cs: cs);
+            return _VideoCard(
+              video: videos[index],
+              thumbnail: _thumbnailFor(videos[index]),
+              onTap: () => _openVideoPlayer(index),
+              cs: cs,
+            );
           },
           childCount: _videoCount + 1,
         ),
@@ -279,9 +306,7 @@ class _SearchScreenState extends State<SearchScreen> with TickerProviderStateMix
   Widget _buildUserSliver(ColorScheme cs) {
     final users = _searchBarResult?.userResults ?? [];
     if (users.isEmpty) {
-      return SliverFillRemaining(
-        child: _EmptyState(label: 'No creators found', cs: cs),
-      );
+      return SliverFillRemaining(child: _EmptyState(label: 'No creators found', cs: cs));
     }
     return SliverPadding(
       padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 8),
@@ -296,7 +321,7 @@ class _SearchScreenState extends State<SearchScreen> with TickerProviderStateMix
               )
                   : const SizedBox.shrink();
             }
-            return _UserCard(initialUser: users[index], cs: cs, key: ValueKey(users[index].id),);
+            return _UserCard(initialUser: users[index], cs: cs, key: ValueKey(users[index].id));
           },
           childCount: _userCount + 1,
         ),
@@ -306,8 +331,6 @@ class _SearchScreenState extends State<SearchScreen> with TickerProviderStateMix
 
   final Map<String, Future<Uint8List?>> _cachedThumbnails = {};
 
-  // Returns the *same* Future instance for the same URL so FutureBuilder
-  // does not restart on setState (e.g. after preloading more videos).
   Future<Uint8List?> _thumbnailFor(Video video) {
     if (!(defaultTargetPlatform == TargetPlatform.android || defaultTargetPlatform == TargetPlatform.iOS)) {
       return Future.value(null);
@@ -368,6 +391,75 @@ class _SearchScreenState extends State<SearchScreen> with TickerProviderStateMix
           child: ScaleTransition(scale: Tween(begin: 0.88, end: 1.0).animate(curved), child: child),
         );
       },
+    );
+  }
+}
+
+class _ScrollArea extends StatelessWidget {
+  const _ScrollArea({required this.scrollController, required this.child});
+
+  final ScrollController scrollController;
+  final Widget child;
+
+  @override
+  Widget build(BuildContext context) {
+    return Listener(
+      onPointerSignal: (event) {
+        if (event is PointerScrollEvent) {
+          final newOffset = (scrollController.offset + event.scrollDelta.dy * 1.8)
+              .clamp(0.0, scrollController.position.maxScrollExtent);
+          scrollController.animateTo(
+            newOffset,
+            duration: const Duration(milliseconds: 180),
+            curve: Curves.easeOutCubic,
+          );
+        }
+      },
+      child: GestureDetector(
+        onVerticalDragUpdate: (details) {
+          final newOffset = (scrollController.offset - details.delta.dy)
+              .clamp(0.0, scrollController.position.maxScrollExtent);
+          scrollController.jumpTo(newOffset);
+        },
+        onVerticalDragEnd: (details) {
+          final velocity = -(details.primaryVelocity ?? 0.0);
+          if (velocity.abs() < 50) return;
+          final target = (scrollController.offset + velocity * 0.4)
+              .clamp(0.0, scrollController.position.maxScrollExtent);
+          scrollController.animateTo(
+            target,
+            duration: Duration(milliseconds: (velocity.abs() * 0.55).clamp(200, 700).toInt()),
+            curve: Curves.decelerate,
+          );
+        },
+        child: child,
+      ),
+    );
+  }
+}
+
+class _AnimatedSearchBar extends StatelessWidget {
+  const _AnimatedSearchBar({
+    required this.visibility,
+    required this.slotHeight,
+    required this.child,
+  });
+
+  final double visibility;
+  final double slotHeight;
+  final Widget child;
+
+  @override
+  Widget build(BuildContext context) {
+    return ClipRect(
+      child: Align(
+        alignment: Alignment.topCenter,
+        heightFactor: visibility,
+        child: Opacity(
+          opacity: visibility,
+          child: SizedBox(height: slotHeight, child: child),
+        ),
+      ),
     );
   }
 }
@@ -544,7 +636,11 @@ class _UserCardState extends State<_UserCard> {
               padding: const EdgeInsets.all(2),
               decoration: BoxDecoration(
                 shape: BoxShape.circle,
-                gradient: LinearGradient(colors: [widget.cs.primary, widget.cs.secondary], begin: Alignment.topLeft, end: Alignment.bottomRight),
+                gradient: LinearGradient(
+                  colors: [widget.cs.primary, widget.cs.secondary],
+                  begin: Alignment.topLeft,
+                  end: Alignment.bottomRight,
+                ),
               ),
               child: CircleAvatar(
                 radius: 26,
@@ -563,7 +659,8 @@ class _UserCardState extends State<_UserCard> {
                     user.username,
                     style: TextStyle(color: widget.cs.onSurface, fontSize: 15, fontWeight: FontWeight.w700),
                   ),
-                  ...[const SizedBox(height: 2), Text('@${user.username}', style: TextStyle(color: widget.cs.onSurfaceVariant, fontSize: 13))],
+                  const SizedBox(height: 2),
+                  Text('@${user.username}', style: TextStyle(color: widget.cs.onSurfaceVariant, fontSize: 13)),
                 ],
               ),
             ),
@@ -615,33 +712,4 @@ class _SmoothScrollBehavior extends MaterialScrollBehavior {
     PointerDeviceKind.trackpad,
     PointerDeviceKind.stylus,
   };
-}
-
-class _TabBarDelegate extends SliverPersistentHeaderDelegate {
-  _TabBarDelegate(this.tabBar, {required this.cs});
-
-  final TabBar tabBar;
-  final ColorScheme cs;
-
-  @override
-  double get minExtent => tabBar.preferredSize.height + 1;
-
-  @override
-  double get maxExtent => tabBar.preferredSize.height + 1;
-
-  @override
-  Widget build(BuildContext context, double shrinkOffset, bool overlapsContent) {
-    return Container(
-      color: cs.surface,
-      child: Column(
-        children: [
-          tabBar,
-          Divider(height: 1, thickness: 1, color: cs.outlineVariant.withValues(alpha: 0.3)),
-        ],
-      ),
-    );
-  }
-
-  @override
-  bool shouldRebuild(_TabBarDelegate oldDelegate) => tabBar != oldDelegate.tabBar;
 }
