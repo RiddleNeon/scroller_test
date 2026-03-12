@@ -20,7 +20,14 @@ class ProfileScreen extends StatefulWidget {
   final void Function(bool followed) onFollowChange;
   final bool initialFollowed;
 
-  const ProfileScreen({Key? key, required this.initialProfile, required this.ownProfile, this.hasBackButton = false, required this.onFollowChange, this.initialFollowed = false}) : super(key: key);
+  const ProfileScreen({
+    Key? key,
+    required this.initialProfile,
+    required this.ownProfile,
+    this.hasBackButton = false,
+    required this.onFollowChange,
+    this.initialFollowed = false,
+  }) : super(key: key);
 
   @override
   State<ProfileScreen> createState() => _ProfileScreenState();
@@ -60,14 +67,8 @@ class _ProfileScreenState extends State<ProfileScreen> with SingleTickerProvider
               surfaceTintColor: Colors.transparent,
               elevation: 0,
               title: _buildCollapsedTitle(cs),
-              flexibleSpace: FlexibleSpaceBar(
-                collapseMode: CollapseMode.pin,
-                background: _buildProfileHeader(cs),
-              ),
-              bottom: PreferredSize(
-                preferredSize: const Size.fromHeight(46),
-                child: _buildTabBar(cs),
-              ),
+              flexibleSpace: FlexibleSpaceBar(collapseMode: CollapseMode.pin, background: _buildProfileHeader(cs)),
+              bottom: PreferredSize(preferredSize: const Size.fromHeight(46), child: _buildTabBar(cs)),
             ),
             SliverFillRemaining(
               child: TabBarView(
@@ -99,17 +100,11 @@ class _ProfileScreenState extends State<ProfileScreen> with SingleTickerProvider
               if (widget.ownProfile) const LogoutButton() else Container(),
               Text(
                 user.username,
-                style: TextStyle(
-                  color: cs.onSurface,
-                  fontSize: 15,
-                  fontWeight: FontWeight.w700,
-                  letterSpacing: 0.2,
-                ),
+                style: TextStyle(color: cs.onSurface, fontSize: 15, fontWeight: FontWeight.w700, letterSpacing: 0.2),
               ),
               IconButton(
                 icon: Icon(Icons.settings, color: cs.onSurface),
                 onPressed: () {
-                  print("pressed!");
                   showRickDialog(context);
                 },
               ),
@@ -131,12 +126,7 @@ class _ProfileScreenState extends State<ProfileScreen> with SingleTickerProvider
           const SizedBox(height: 16),
           Text(
             '@${user.username}',
-            style: TextStyle(
-              color: cs.onSurface,
-              fontSize: 16,
-              fontWeight: FontWeight.w800,
-              letterSpacing: 0.3,
-            ),
+            style: TextStyle(color: cs.onSurface, fontSize: 16, fontWeight: FontWeight.w800, letterSpacing: 0.3),
           ),
           const SizedBox(height: 16),
           _buildStatsRow(cs),
@@ -150,9 +140,10 @@ class _ProfileScreenState extends State<ProfileScreen> with SingleTickerProvider
 
   Widget _buildAvatar(ColorScheme cs) {
     final avatar = Container(
-        width: 100,
-        height: 100,
-        child: Avatar(name: user.username, colorScheme: cs, imageUrl: user.profileImageUrl));
+      width: 100,
+      height: 100,
+      child: Avatar(name: user.username, colorScheme: cs, imageUrl: user.profileImageUrl),
+    );
 
     if (widget.ownProfile && _editingMode) {
       return Stack(
@@ -202,21 +193,12 @@ class _ProfileScreenState extends State<ProfileScreen> with SingleTickerProvider
         children: [
           Text(
             value,
-            style: TextStyle(
-              color: cs.onSurface,
-              fontSize: 20,
-              fontWeight: FontWeight.w800,
-              letterSpacing: -0.5,
-            ),
+            style: TextStyle(color: cs.onSurface, fontSize: 20, fontWeight: FontWeight.w800, letterSpacing: -0.5),
           ),
           const SizedBox(height: 3),
           Text(
             label,
-            style: TextStyle(
-              color: cs.onSurfaceVariant,
-              fontSize: 12,
-              fontWeight: FontWeight.w500,
-            ),
+            style: TextStyle(color: cs.onSurfaceVariant, fontSize: 12, fontWeight: FontWeight.w500),
           ),
         ],
       ),
@@ -224,11 +206,7 @@ class _ProfileScreenState extends State<ProfileScreen> with SingleTickerProvider
   }
 
   Widget _buildStatDivider(ColorScheme cs) {
-    return Container(
-      width: 1,
-      height: 22,
-      color: cs.outlineVariant,
-    );
+    return Container(width: 1, height: 22, color: cs.outlineVariant);
   }
 
   Widget _buildActionRow(ColorScheme cs) {
@@ -241,7 +219,17 @@ class _ProfileScreenState extends State<ProfileScreen> with SingleTickerProvider
             width: 148,
             filled: _editingMode,
             cs: cs,
-            onTap: () => setState(() => _editingMode = !_editingMode),
+            onTap: () => setState(() {
+              _editingMode = !_editingMode;
+              if(!_editingMode && newPPUrl != null) {
+                userRepository.updateProfileImageUrl(currentUser, newPPUrl).then((value) {
+                  currentUser = value;
+                  user = value;
+                  if (mounted) setState(() {});
+                });
+                newPPUrl = null;
+              }
+            }),
           ),
         if (!widget.ownProfile) ...[
           const SizedBox(width: 8),
@@ -279,8 +267,16 @@ class _ProfileScreenState extends State<ProfileScreen> with SingleTickerProvider
             child: GestureDetector(
               onTap: () {
                 Chat? chat = localSeenService.getChatWith(user.id);
-                chat ??= Chat(partnerId: user.id, partnerProfileImageUrl: user.profileImageUrl, partnerName: user.username, lastMessage: '', lastMessageAt: null, lastMessageByMe: true, createdAt: DateTime.now());
-                Navigator.of(context).push(MaterialPageRoute(builder: (context) => buildMessagingScreen(chat!, (p0){})));
+                chat ??= Chat(
+                  partnerId: user.id,
+                  partnerProfileImageUrl: user.profileImageUrl,
+                  partnerName: user.username,
+                  lastMessage: '',
+                  lastMessageAt: null,
+                  lastMessageByMe: true,
+                  createdAt: DateTime.now(),
+                );
+                Navigator.of(context).push(MaterialPageRoute(builder: (context) => buildMessagingScreen(chat!, (p0) {})));
               },
               child: Container(
                 width: 46,
@@ -332,31 +328,24 @@ class _ProfileScreenState extends State<ProfileScreen> with SingleTickerProvider
         children: [
           Icon(icon, size: 48, color: cs.onSurfaceVariant.withValues(alpha: 0.35)),
           const SizedBox(height: 12),
-          Text(label, style: TextStyle(color: cs.onSurfaceVariant, fontSize: 14, fontWeight: FontWeight.w500)),
+          Text(
+            label,
+            style: TextStyle(color: cs.onSurfaceVariant, fontSize: 14, fontWeight: FontWeight.w500),
+          ),
         ],
       ),
     );
   }
 
+  String? newPPUrl;
+
   void _showProfileImageChangeOverlay() async {
-    final newUrl = await showProfileImagePicker(context);
-    if (newUrl != null && mounted) {
-      userRepository.updateProfileImageUrl(currentUser, newUrl).then((value) {
-        currentUser = value;
-        if (mounted) setState(() {});
-      });
-    }
+    newPPUrl = await showProfileImagePicker(context);
   }
 }
 
 class _ActionButton extends StatelessWidget {
-  const _ActionButton({
-    required this.label,
-    required this.width,
-    required this.filled,
-    required this.cs,
-    required this.onTap,
-  });
+  const _ActionButton({required this.label, required this.width, required this.filled, required this.cs, required this.onTap});
 
   final String label;
   final double width;
@@ -374,21 +363,13 @@ class _ActionButton extends StatelessWidget {
         height: 38,
         decoration: BoxDecoration(
           color: filled ? cs.primary : Colors.transparent,
-          border: Border.all(
-            color: filled ? cs.primary : cs.outlineVariant,
-            width: 1.5,
-          ),
+          border: Border.all(color: filled ? cs.primary : cs.outlineVariant, width: 1.5),
           borderRadius: BorderRadius.circular(8),
         ),
         child: Center(
           child: Text(
             label,
-            style: TextStyle(
-              color: filled ? cs.onPrimary : cs.onSurface,
-              fontSize: 14,
-              fontWeight: FontWeight.w700,
-              letterSpacing: 0.2,
-            ),
+            style: TextStyle(color: filled ? cs.onPrimary : cs.onSurface, fontSize: 14, fontWeight: FontWeight.w700, letterSpacing: 0.2),
           ),
         ),
       ),
