@@ -18,7 +18,7 @@ class VideoRepository {
         .from('videos')
         .select('''
           *,
-          profiles (
+          profiles!videos_author_id_fkey (
             display_name,
             username
           ),
@@ -60,6 +60,7 @@ class VideoRepository {
     String? thumbnailUrl,
     required String authorId,
     List<String> tags = const [],
+    int commentCount = 0,
   }) async {
     final publishedVideoId = (await supabaseClient
             .from('videos')
@@ -67,9 +68,10 @@ class VideoRepository {
               'title': title,
               'description': description,
               'video_url': videoUrl,
-              'thumbnail_url': thumbnailUrl,
+              'thumbnail_url': thumbnailUrl ?? '',
               'author_id': authorId,
               'is_published': true,
+              'comment_count': commentCount,
             })
             .select('id')
             .single())['id'] as int;
@@ -87,45 +89,61 @@ class VideoRepository {
     await _adjustProfileMetric(authorId, 'total_videos_count', 1);
   }
 
-  Future<void> likeVideo(String userId, String videoId, String authorId) async {
+  Future<void> likeVideo(String videoId, String authorId) async {
     final parsedVideoId = _parseVideoId(videoId);
-    final existing = await supabaseClient.from('likes').select().eq('user_id', userId).eq('video_id', parsedVideoId).maybeSingle();
+    final existing = await supabaseClient.from('likes').select().eq('user_id', currentUser.id).eq('video_id', parsedVideoId).maybeSingle();
     if (existing != null) return;
-
-    await supabaseClient.from('dislikes').delete().eq('user_id', userId).eq('video_id', parsedVideoId).select();
-
-    await supabaseClient.from('likes').insert({'user_id': userId, 'video_id': parsedVideoId});
+    
+    await supabaseClient.from('dislikes').delete().eq('user_id', currentUser.id).eq('video_id', parsedVideoId).select();
+    
+    await supabaseClient.from('likes').insert({'user_id': currentUser.id, 'video_id': parsedVideoId});
     await _adjustVideoMetric(parsedVideoId, 'like_count', 1);
     await _adjustProfileMetric(authorId, 'total_likes_count', 1);
   }
 
-  Future<void> unlikeVideo(String userId, String videoId, String authorId) async {
+  Future<void> unlikeVideo(String videoId, String authorId) async {
     final parsedVideoId = _parseVideoId(videoId);
-    final removed = await supabaseClient.from('likes').delete().eq('user_id', userId).eq('video_id', parsedVideoId).select();
+    final removed = await supabaseClient.from('likes').delete().eq('user_id', currentUser.id).eq('video_id', parsedVideoId).select();
     if ((removed as List).isEmpty) return;
     await _adjustVideoMetric(parsedVideoId, 'like_count', -1);
     await _adjustProfileMetric(authorId, 'total_likes_count', -1);
   }
-
-  Future<void> dislikeVideo(String userId, String videoId) async {
+  
+  // Toggles like for the given video and user. Returns true if the video is now liked, false if it's now unliked. Also removes dislike if it exists.
+  Future<bool> toggleLike(String videoId) async {
+    final String result = await supabaseClient.rpc('toggle_like', params: {'p_user_id': currentUser.id, 'p_video_id': _parseVideoId(videoId)});
+    return result == 'liked';
+  }
+  
+  
+  ///returns true if the video is now undisliked, false if it was not disliked before
+  Future<bool> dislikeVideo(String videoId) async {
     final parsedVideoId = _parseVideoId(videoId);
-    final existing = await supabaseClient.from('dislikes').select().eq('user_id', userId).eq('video_id', parsedVideoId).maybeSingle();
-    if (existing != null) return;
-
-    final removedLikes = await supabaseClient.from('likes').delete().eq('user_id', userId).eq('video_id', parsedVideoId).select();
+    final existing = await supabaseClient.from('dislikes').select().eq('user_id', currentUser.id).eq('video_id', parsedVideoId).maybeSingle();
+    if (existing != null) return false;
+    
+    final removedLikes = await supabaseClient.from('likes').delete().eq('user_id', currentUser.id).eq('video_id', parsedVideoId).select();
     if ((removedLikes as List).isNotEmpty) {
       final authorRow = await supabaseClient.from('videos').select('author_id').eq('id', parsedVideoId).single();
       await _adjustVideoMetric(parsedVideoId, 'like_count', -1);
       await _adjustProfileMetric(authorRow['author_id'] as String, 'total_likes_count', -1);
     }
 
-    await supabaseClient.from('dislikes').insert({'user_id': userId, 'video_id': parsedVideoId});
+    await supabaseClient.from('dislikes').insert({'user_id': currentUser.id, 'video_id': parsedVideoId});
+    return true;
   }
 
-  Future<void> undislikeVideo(String userId, String videoId) async {
+  ///returns true if the video is now undisliked, false if it was not disliked before
+  Future<bool> undislikeVideo(String videoId) async {
     final parsedVideoId = _parseVideoId(videoId);
-    final removed = await supabaseClient.from('dislikes').delete().eq('user_id', userId).eq('video_id', parsedVideoId).select();
-    if ((removed as List).isEmpty) return;
+    final removed = await supabaseClient.from('dislikes').delete().eq('user_id', currentUser.id).eq('video_id', parsedVideoId).select();
+    return (removed as List).isNotEmpty;
+  }
+  
+  Future<bool> toggleDislike(String videoId) async {
+    print("calling with user id ${currentUser.id} [type: ${currentUser.id.runtimeType}] and video id $videoId [parsed: ${_parseVideoId(videoId)}, type: ${_parseVideoId(videoId).runtimeType}]");
+    final String result = await supabaseClient.rpc('toggle_dislike', params: {'p_user_id': currentUser.id, 'p_video_id': _parseVideoId(videoId)});
+    return result == 'disliked';
   }
 
   Future<void> incrementViewCount(String videoId) async {
@@ -284,7 +302,8 @@ class VideoRepository {
         .limit(limit);
     return result.map<Video>(_toVideo).toList();
   }
-
+  
+  /// searches all videos where title, description or tags contain the query (case-insensitive), ordered by relevance desc then creation date and popularity desc. Also contains unprecise full text search, so "funny" will match "funny videos". For more precise tag search, use [searchVideosByTag].
   Future<({List<Video> videos, int? nextOffset})> searchVideos(String query, {int limit = 20, int offset = 0}) async {
     final videos = await searchVideosSupabase(query, limit: limit, offset: offset);
     return (videos: videos, nextOffset: videos.length < limit ? null : offset + videos.length);
@@ -292,21 +311,23 @@ class VideoRepository {
 
   Future<List<Video>> searchVideosSupabase(String query, {int limit = 20, int offset = 0}) async {
     final result = await supabaseClient
-        .from('videos')
-        .select(_videoSelect)
-        .eq('is_published', true)
-        .or('title.ilike.%$query%,description.ilike.%$query%')
-        .order('created_at', ascending: false)
-        .range(offset, offset + limit - 1);
-    return result.map<Video>(_toVideo).toList();
-  }
+        .rpc('search_videos', params: {
+      'search_query': query,
+      'p_limit': limit,
+      'p_offset': offset,
+    });
 
+    return (result as List).map<Video>((e) => _toVideo(e)).toList();
+  }
+  
+  ///searches all videos with a given tag, ordered by creation date desc. Warning: only outputs videos with that exact tag, so "funny" won't match "funny videos". Use [searchVideos] for more flexible search.
   Future<({List<Video> videos, int? nextOffset})> searchVideosByTag(String tag, {int limit = 20, int offset = 0}) async {
     final videos = await searchVideosByTagSupabase(tag, limit: limit, offset: offset);
     return (videos: videos, nextOffset: videos.length < limit ? null : offset + videos.length);
   }
 
   Future<List<Video>> searchVideosByTagSupabase(String tag, {int limit = 20, int offset = 0}) async {
+    print("Searching videos by tag '$tag' with limit $limit and offset $offset");
     final result = await supabaseClient
         .from('video_tags')
         .select('''
@@ -423,7 +444,7 @@ class VideoRepository {
 
 const String _videoSelectInner = '''
   *,
-  profiles (
+  profiles!videos_author_id_fkey (
     display_name,
     username,
     avatar_url,

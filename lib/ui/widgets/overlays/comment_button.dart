@@ -3,12 +3,10 @@ import 'package:flutter/material.dart';
 
 class CommentButton extends StatefulWidget {
   final void Function()? onComment;
-  final String videoId;
 
   const CommentButton({
     super.key,
     this.onComment,
-    required this.videoId,
   });
 
   @override

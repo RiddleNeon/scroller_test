@@ -63,14 +63,15 @@ class Chat {
     required Map<String, dynamic> conversation,
     required UserProfile partner,
     required String currentUserId,
-    Map<String, dynamic>? lastMessage,
+    String? lastMessage,
+    bool lastMessageByMe = false,
   }) {
     final createdAtValue = conversation['created_at'];
     final updatedAtValue = conversation['updated_at'];
     final createdAt = _parseDateTime(createdAtValue);
-    final lastMessageAt = lastMessage != null
-        ? _parseDateTime(lastMessage['created_at'])
-        : (updatedAtValue != null ? _parseDateTime(updatedAtValue) : null);
+    final updatedAt = _parseDateTime(updatedAtValue);
+    
+    print("Creating chat from supabase data: conversationId=${conversation['id']}, partnerId=${partner.id}, createdAt=$createdAt, updatedAt=$updatedAt, lastMessage=$lastMessage, lastMessageByMe=$lastMessageByMe");
 
     return Chat(
       conversationId: conversation['id'] as int?,
@@ -78,12 +79,15 @@ class Chat {
       partnerId: partner.id,
       partnerProfileImageUrl: partner.profileImageUrl,
       partnerName: partner.username,
-      lastMessage: lastMessage?['content'] as String? ?? '',
-      lastMessageAt: lastMessageAt,
-      lastMessageByMe: lastMessage?['sender_id'] == currentUserId,
+      lastMessage: lastMessage ?? '',
+      lastMessageAt: updatedAt,
+      lastMessageByMe: lastMessageByMe,
       createdAt: createdAt,
     );
   }
+  
+  @override
+  String toString() => 'Chat(conversationId: $conversationId, currentUserId: $currentUserId, partnerId: $partnerId, partnerName: $partnerName, lastMessageAt: $lastMessageAt, lastMessage: $lastMessage, lastMessageByMe: $lastMessageByMe, createdAt: $createdAt)';
 }
 
 class ChatManager {
@@ -113,9 +117,9 @@ class ChatManager {
 ChatManager get chatManager => ChatManager();
 
 DateTime _parseDateTime(Object? value) {
-  if (value is DateTime) return value;
-  if (value is String) return DateTime.parse(value);
-  return DateTime.now();
+  if (value is DateTime) return value.toLocal();
+  if (value is String) return DateTime.parse(value).toLocal();
+  return DateTime.now().toLocal();
 }
 
 DateTime? _parseDateTimeNullable(Object? value) {

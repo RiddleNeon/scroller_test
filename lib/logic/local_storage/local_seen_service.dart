@@ -84,15 +84,15 @@ class LocalSeenService {
     _chatCursorBox = await Hive.openBox<DateTime>('${userId}_$_chatCursorBoxName');
     _conversationBox = await Hive.openBox('${userId}_$_conversationBoxName');
     _authorBox = await Hive.openBox('${userId}_$_authorBoxName');
-    /*    await _seenBox.clear();
+/*  await _seenBox.clear();
     await _settingsBox.clear();
     await _cursorBox.clear();
     await _cursorDirtyBox.clear();
     await _interactionBox.clear();
     await _blacklistedTagsBox.clear();
     await _likeValsBox.clear();
-    _settingsBox.delete(_lastSyncSeenKey);*/
-/*            await _chatBox.clear();
+    _settingsBox.delete(_lastSyncSeenKey);
+    await _chatBox.clear();
     await _chatCursorBox.clear();
     await _conversationBox.clear();*/
 
@@ -123,7 +123,7 @@ class LocalSeenService {
     _interactionBox.put(video.id, {'authorId': video.authorId, 'tags': video.tags});
   }
 
-  bool hasSeen(String videoId) => _seenBox.containsKey(videoId);
+  bool hasSeen(String videoId) => false; /*_seenBox.containsKey(videoId);*/
 
   Set<String> get allSeenIds => _seenBox.keys.cast<String>().toSet();
 
@@ -141,9 +141,8 @@ class LocalSeenService {
         videoId: videoId,
         authorId: meta?['authorId'] as String? ?? '',
         tags: meta?['tags'] != null ? List<String>.from(meta!['tags'] as List) : [],
-        watchTime: 0,
-        //dummy values bc those are not stored
-        videoDuration: 1,
+        watchTime: 0, //dummy values bc those are not stored
+        videoDuration: 1, //same here
         timestamp: seenAt,
       );
     }).toList();

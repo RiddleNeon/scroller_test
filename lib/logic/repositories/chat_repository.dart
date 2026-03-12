@@ -17,13 +17,25 @@ class ChatRepository {
 
     await supabaseClient
         .from('conversations')
-        .update({'updated_at': DateTime.now().toIso8601String()})
+        .update({'updated_at': DateTime.now().toUtc().toIso8601String(), 'last_message': "${currentUser.id}: ${message.text}"})
         .eq('id', conversationId);
+
+    await supabaseClient
+        .from('messages')
+        .insert({
+          'conversation_id': conversationId,
+          'sender_id': currentUser.id,
+          'content': message.text,
+          'type': 'text',
+          'created_at': message.timestamp.toUtc().toIso8601String(),
+          'reply_to_message_id': null,
+        });
 
     await localSeenService.sendMessageLocal(chat, message);
     chat.lastMessage = message.text;
     chat.lastMessageAt = message.timestamp;
     chat.lastMessageByMe = true;
+    print("updated timestamps");
   }
 
   Future<List<ChatMessage>> getMessagesWith(
@@ -68,7 +80,7 @@ class ChatRepository {
 
       final conversationsResponse = await supabaseClient
           .from('conversations')
-          .select('id, type, created_by, title, created_at, updated_at')
+          .select('id, type, created_by, title, created_at, updated_at, last_message')
           .inFilter('id', conversationIds);
 
       final conversations = (conversationsResponse as List)
@@ -121,13 +133,27 @@ class ChatRepository {
           'username': profileData['display_name'] ?? profileData['username'] ?? partnerMember['profile_id'],
           ...profileData,
         });
+        
+        String lastMessageRaw = conversation['last_message'] as String? ?? '';
+        String lastMessageContent = '';
+        if (lastMessageRaw.contains(': ')) {
+          lastMessageContent = lastMessageRaw.split(': ').sublist(1).join(': ');
+        }
+        String lastMessageSenderId = '';
+        if (lastMessageRaw.contains(': ')) {
+          lastMessageSenderId = lastMessageRaw.split(': ').first;
+        }
+        bool sentByMe = lastMessageSenderId == userId;
 
+        print("Fetched conversation ${conversation['id']} with partner ${partnerProfile.username}, last message: $lastMessageContent, sentByMe: $sentByMe");
+        
         chats.add(
           Chat.fromSupabase(
             conversation: conversation,
             partner: partnerProfile,
             currentUserId: userId,
-            lastMessage: null,
+            lastMessage: lastMessageContent,
+            lastMessageByMe: sentByMe
           ),
         );
       }
@@ -193,37 +219,26 @@ class ChatRepository {
   }
 
   Future<int> _getOrCreateDirectConversation(
-    String receiverId, {
-    required String partnerName,
-    required String partnerProfileImageUrl,
-  }) async {
+      String receiverId, {
+        required String partnerName,
+        required String partnerProfileImageUrl,
+      }) async {
     final existingConversationId = await _findDirectConversationId(receiverId);
     if (existingConversationId != null) {
       return existingConversationId;
     }
 
-    final conversationResponse = await supabaseClient
-        .from('conversations')
-        .insert({
-          'type': 'direct',
-          'created_by': currentUser.id,
-          'updated_at': DateTime.now().toIso8601String(),
-        })
-        .select('id, created_at, updated_at')
-        .single();
+    print("No existing conversation found with $receiverId, creating a new one. currentUser: ${currentUser.id}");
 
-    final conversationId = conversationResponse['id'] as int;
+    final conversationId = await supabaseClient.rpc(
+      'create_conversation',
+      params: {
+        'p_type': 'direct',
+        'p_receiver_id': receiverId,
+      },
+    ) as int;
 
-    await supabaseClient.from('conversation_members').insert([
-      {
-        'conversation_id': conversationId,
-        'profile_id': currentUser.id,
-      },
-      {
-        'conversation_id': conversationId,
-        'profile_id': receiverId,
-      },
-    ]);
+    final now = DateTime.now();
 
     await localSeenService.saveChatsLocal([
       Chat(
@@ -232,9 +247,9 @@ class ChatRepository {
         partnerProfileImageUrl: partnerProfileImageUrl,
         partnerName: partnerName,
         lastMessage: '',
-        lastMessageAt: _parseDateTime(conversationResponse['updated_at']),
+        lastMessageAt: now,
         lastMessageByMe: false,
-        createdAt: _parseDateTime(conversationResponse['created_at']),
+        createdAt: now,
       ),
     ]);
 

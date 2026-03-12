@@ -155,12 +155,14 @@ class UserRepository {
   }
 
   Future<Iterable<UserProfile>> searchUsersSupabase(String query, {int limit = 20, int offset = 0}) async {
-    final supabaseResult = await supabaseClient
-        .from('profiles')
-        .select()
-        .or('display_name.ilike.%$query%,username.ilike.%$query%')
-        .range(offset, offset + limit-1);
-    return supabaseResult.map((e) => UserProfile.fromSupabase(e));
+    final result = await supabaseClient
+        .rpc('search_profiles', params: {
+      'search_query': query,
+      'p_limit': limit,
+      'p_offset': offset,
+    });
+
+    return (result as List).map((e) => UserProfile.fromSupabase(e));
   }
   
   
@@ -191,7 +193,7 @@ class UserRepository {
           .from('videos')
           .select('''
           *,
-          profiles (
+          profiles!videos_author_id_fkey (
             display_name,
             username
           ),
@@ -233,7 +235,7 @@ class UserRepository {
           *,
           videos (
             *,
-            profiles (
+            profiles!videos_author_id_fkey (
               display_name,
               username
             ),
@@ -276,7 +278,7 @@ class UserRepository {
           *,
           videos (
             *,
-            profiles (
+            profiles!videos_author_id_fkey (
               display_name,
               username
             ),

@@ -1,10 +1,10 @@
 import 'package:flutter/cupertino.dart';
+import 'package:wurp/logic/local_storage/local_seen_service.dart';
 import 'package:wurp/logic/repositories/video_repository.dart';
 import 'package:wurp/logic/video/video.dart';
 import 'package:wurp/ui/screens/comment_overlay.dart';
 import 'package:wurp/ui/widgets/overlays/video_info_overlay.dart';
 
-import '../../../base_logic.dart';
 import 'comment_button.dart';
 import 'dislike_button.dart';
 import 'like_button.dart';
@@ -18,22 +18,22 @@ class PageOverlay extends StatefulWidget {
   final bool initiallyLiked;
   final bool initiallyDisliked;
 
-  final void Function(bool isDisliked) onDislikeChanged;
-  final void Function(bool isLiked) onLikeChanged;
-  final void Function(bool hasShared) onShareChanged;
-  final void Function(bool hasSaved) onSaveChanged;
-  final void Function(bool hasCommented) onCommentChanged;
+  final void Function(bool isDisliked)? onDislikeChanged;
+  final void Function(bool isLiked)? onLikeChanged;
+  final void Function(bool hasShared)? onShareChanged;
+  final void Function(bool hasSaved)? onSaveChanged;
+  final void Function(bool hasCommented)? onCommentChanged;
 
   const PageOverlay({
     super.key,
     required this.provider,
     required this.video,
     required this.index,
-    required this.onLikeChanged,
-    required this.onDislikeChanged,
-    required this.onShareChanged,
-    required this.onSaveChanged,
-    required this.onCommentChanged,
+    this.onLikeChanged,
+    this.onDislikeChanged,
+    this.onShareChanged,
+    this.onSaveChanged,
+    this.onCommentChanged,
     required this.child,
     required this.initiallyLiked,
     required this.initiallyDisliked,
@@ -60,9 +60,9 @@ class _PageOverlayState extends State<PageOverlay> {
             mainAxisAlignment: MainAxisAlignment.center,
             spacing: 8,
             children: [
-              LikeButton(provider: widget.provider, videoId: widget.video.id, initiallyLiked: liked, onLikeChanged: _onLikeChanged),
-              DislikeButton(videoId: widget.video.id, initiallyDisliked: disliked, onDislikeChanged: _onDislikeChanged),
-              CommentButton(videoId: widget.video.id, onComment: _onCommentButtonPressed),
+              LikeButton(provider: widget.provider, initiallyLiked: liked, onLikeChanged: _onLikeChanged),
+              DislikeButton(initiallyDisliked: disliked, onDislikeChanged: _onDislikeChanged),
+              CommentButton(onComment: _onCommentButtonPressed),
               const Icon(CupertinoIcons.share),
             ],
           ),
@@ -81,7 +81,7 @@ class _PageOverlayState extends State<PageOverlay> {
     );
   }
 
-  void _onLikeChanged(bool newLiked) {
+  void _onLikeChanged(bool newLiked) async {
     liked = newLiked;
     if (disliked && newLiked) {
       print("switch to undisliked");
@@ -89,11 +89,25 @@ class _PageOverlayState extends State<PageOverlay> {
         disliked = false;
       });
     }
-    _updateLikeState(newLiked);
-    widget.onLikeChanged(newLiked);
+    bool toggleResult = await videoRepo.toggleLike(widget.video.id);
+    if(toggleResult != newLiked) {
+      print("Error toggling like: expected $newLiked but got $toggleResult");
+      setState(() {
+        liked = toggleResult;
+      });
+    } else {
+      print("Successfully toggled like of ${widget.video.id} to $toggleResult");
+    }
+    widget.onLikeChanged?.call(toggleResult);
+
+    if (toggleResult) {
+      localSeenService.saveLike(widget.video.id);
+    } else {
+      localSeenService.removeLike(widget.video.id);
+    }
   }
 
-  void _onDislikeChanged(bool newDisliked) {
+  void _onDislikeChanged(bool newDisliked) async {
     disliked = newDisliked;
     if (liked && newDisliked) {
       print("switch to unliked");
@@ -101,27 +115,26 @@ class _PageOverlayState extends State<PageOverlay> {
         liked = false;
       });
     }
-    _updateDislikeState(newDisliked);
-    widget.onDislikeChanged(newDisliked);
+    bool toggleResult = await videoRepo.toggleDislike(widget.video.id);
+    
+    if(toggleResult != newDisliked) {
+      print("Error toggling dislike: expected $newDisliked but got $toggleResult");
+      setState(() {
+        disliked = toggleResult;
+      });
+    } else {
+      print("Successfully toggled dislike to $toggleResult");
+    }
+    widget.onDislikeChanged?.call(toggleResult);
+
+    if (toggleResult) {
+      localSeenService.saveDislike(widget.video.id);
+    } else {
+      localSeenService.removeDislike(widget.video.id);
+    }
   }
 
   void _onCommentButtonPressed() {
     openCommentsForVideo(widget.video, context);
-  }
-
-  void _updateDislikeState(bool isDisliked) {
-    if (isDisliked) {
-      videoRepo.dislikeVideo(currentAuthUserId(), widget.video.id);
-    } else {
-      videoRepo.undislikeVideo(currentAuthUserId(), widget.video.id);
-    }
-  }
-
-  void _updateLikeState(bool isLiked) {
-    if (isLiked) {
-      videoRepo.likeVideo(currentAuthUserId(), widget.video.id, widget.video.authorId);
-    } else {
-      videoRepo.unlikeVideo(currentAuthUserId(), widget.video.id, widget.video.authorId);
-    }
   }
 }

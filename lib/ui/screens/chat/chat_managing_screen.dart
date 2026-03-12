@@ -46,8 +46,9 @@ class _ChatManagingScreenState extends State<ChatManagingScreen> {
     final preloadedChatsResult = await widget.preloadMoreChats(currentLastIndex);
     currentLastIndex = preloadedChatsResult.newCurrent;
     final preloadedChats = preloadedChatsResult.result;
+    print("preloaded chats: $preloadedChats");
     chats.addAll(preloadedChats);
-    chats.sort((a, b) => b.lastMessageAt?.compareTo(a.lastMessageAt ?? DateTime.now()) ?? -1);
+    reSortChats();
     if (mounted) {
       setState(() {});
     }
@@ -81,7 +82,6 @@ class _ChatManagingScreenState extends State<ChatManagingScreen> {
       chat.lastMessage = message.text;
       chat.lastMessageAt = message.timestamp;
       chat.lastMessageByMe = message.isMe;
-      chats.sort((a, b) => b.lastMessageAt?.compareTo(a.lastMessageAt ?? DateTime.now()) ?? -1);
     });
   }
 
@@ -100,7 +100,7 @@ class _ChatManagingScreenState extends State<ChatManagingScreen> {
     );
   }
 
-  Widget _buildChatEntry(Chat chat, void Function(ChatMessage onMessage) onMessageUpdate) {
+  Widget _buildChatEntry(Chat chat, void Function(ChatMessage) onMessageUpdate) {
     final theme = Theme.of(context);
 
     final lastMessageTime = chat.lastMessageAt ?? chat.createdAt;
@@ -167,18 +167,27 @@ class _ChatManagingScreenState extends State<ChatManagingScreen> {
     );
   }
 
-  Widget _buildChatLabel(String name) {
-    final theme = Theme.of(context);
-
-    return Text(
-      name,
-      style: theme.textTheme.titleMedium?.copyWith(fontWeight: FontWeight.w600, color: theme.colorScheme.onSurface),
-      overflow: TextOverflow.ellipsis,
-    );
+  void reSortChats() {
+    print("re-sorting chats!! chat timestamps and last messages: \n${chats.map((c) => "lastMessage: ${c.lastMessage}, lastMessageAt: ${c.lastMessageAt}").join(" | \n")}");
+    chats.sort((a, b) {
+      final aTime = (a.lastMessageAt ?? a.createdAt).toLocal();
+      final bTime = (b.lastMessageAt ?? b.createdAt).toLocal();
+      return bTime.compareTo(aTime);
+    });
+    print("sorted timestamps: \n${chats.map((c) => "lastMessage: ${c.lastMessage}, lastMessageAt: ${c.lastMessageAt}").join(" | \n")}");
+    print("--------------");
   }
 
-  void _openChat(Chat chat, void Function(ChatMessage) onMessageUpdate) {
-    Navigator.of(context).push(MaterialPageRoute(builder: (context) => buildMessagingScreen(chat, onMessageUpdate)));
+  void _openChat(Chat chat, void Function(ChatMessage) onMessageUpdate) async {
+    await Navigator.of(context).push(
+      MaterialPageRoute(
+        builder: (context) => buildMessagingScreen(chat, onMessageUpdate),
+      ),
+    );
+
+    setState(() {
+      reSortChats();
+    });
   }
 }
 
@@ -198,7 +207,9 @@ Widget buildMessagingScreen(Chat chat, void Function(ChatMessage) onMessageUpdat
       chatManager.addChat(chat, replaceExisting: false);
       await chatRepository.sendNotification(
         chat: chat,
-        message: ChatMessage(id: "${chat.partnerId}-${DateTime.now().microsecondsSinceEpoch}", text: message, isMe: true, timestamp: DateTime.now()),
+        message: ChatMessage(id: "${chat.partnerId}-${DateTime
+            .now()
+            .microsecondsSinceEpoch}", text: message, isMe: true, timestamp: DateTime.now()),
       );
     },
     loadMoreMessages: (int limit, DateTime? lastVisibleMessage) async {
