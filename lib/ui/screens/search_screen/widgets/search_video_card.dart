@@ -24,9 +24,26 @@ class VideoCard extends StatefulWidget {
 class _VideoCardState extends State<VideoCard> {
   bool _hovered = false;
 
+  String _formatCount(int? count) {
+    if (count == null) return '—';
+    if (count >= 1000000) return '${(count / 1000000).toStringAsFixed(1)}M';
+    if (count >= 1000) return '${(count / 1000).toStringAsFixed(1)}K';
+    return count.toString();
+  }
+
+  String _formatDuration(Duration? duration) {
+    if (duration == null) return '';
+    final m = duration.inMinutes.remainder(60).toString().padLeft(2, '0');
+    final s = duration.inSeconds.remainder(60).toString().padLeft(2, '0');
+    final h = duration.inHours;
+    return h > 0 ? '$h:$m:$s' : '$m:$s';
+  }
+
   @override
   Widget build(BuildContext context) {
     final cs = widget.cs;
+    final video = widget.video;
+
     return MouseRegion(
       onEnter: (_) => setState(() => _hovered = true),
       onExit: (_) => setState(() => _hovered = false),
@@ -47,64 +64,158 @@ class _VideoCardState extends State<VideoCard> {
                 ? [BoxShadow(color: cs.primary.withValues(alpha: 0.08), blurRadius: 12, offset: const Offset(0, 4))]
                 : [],
           ),
-          child: Row(
+          child: Column(
+            crossAxisAlignment: CrossAxisAlignment.start,
             children: [
-              ClipRRect(
-                borderRadius: const BorderRadius.horizontal(left: Radius.circular(16)),
-                child: SizedBox(width: 160, height: 96, child: _buildThumbnail(cs)),
-              ),
-              Expanded(
-                child: Padding(
-                  padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 12),
-                  child: Column(
-                    crossAxisAlignment: CrossAxisAlignment.start,
-                    children: [
-                      Text(
-                        widget.video.title,
-                        maxLines: 2,
-                        overflow: TextOverflow.ellipsis,
-                        style: TextStyle(
-                            color: cs.onSurface,
-                            fontSize: 14,
-                            fontWeight: FontWeight.w600,
-                            height: 1.35),
-                      ),
-                      const SizedBox(height: 8),
-                      Row(
+              // ── Top row: thumbnail + title/meta ──────────────────────────
+              Row(
+                crossAxisAlignment: CrossAxisAlignment.start,
+                children: [
+                  // Thumbnail
+                  ClipRRect(
+                    borderRadius: const BorderRadius.only(
+                      topLeft: Radius.circular(16),
+                      bottomLeft: Radius.circular(16),
+                    ),
+                    child: SizedBox(
+                      width: 140,
+                      height: 110,
+                      child: Stack(
+                        fit: StackFit.expand,
                         children: [
-                          Container(
-                            padding: const EdgeInsets.symmetric(horizontal: 9, vertical: 3),
-                            decoration: BoxDecoration(
-                              color: cs.primary.withValues(alpha: 0.12),
-                              borderRadius: BorderRadius.circular(20),
+                          _buildThumbnail(cs),
+                          // Duration badge
+                          if (video.duration != null)
+                            Positioned(
+                              bottom: 5,
+                              right: 5,
+                              child: Container(
+                                padding: const EdgeInsets.symmetric(horizontal: 5, vertical: 2),
+                                decoration: BoxDecoration(
+                                  color: Colors.black.withValues(alpha: 0.72),
+                                  borderRadius: BorderRadius.circular(5),
+                                ),
+                                child: Text(
+                                  _formatDuration(video.duration),
+                                  style: const TextStyle(color: Colors.white, fontSize: 10, fontWeight: FontWeight.w600),
+                                ),
+                              ),
                             ),
-                            child: Row(
-                              mainAxisSize: MainAxisSize.min,
-                              children: [
-                                Icon(Icons.play_arrow_rounded, color: cs.primary, size: 13),
-                                const SizedBox(width: 3),
-                                Text('Watch',
-                                    style: TextStyle(
-                                        color: cs.primary,
-                                        fontSize: 11,
-                                        fontWeight: FontWeight.w600)),
-                              ],
+                        ],
+                      ),
+                    ),
+                  ),
+
+                  // Right: title + author + stats
+                  Expanded(
+                    child: Padding(
+                      padding: const EdgeInsets.fromLTRB(12, 10, 10, 10),
+                      child: Column(
+                        crossAxisAlignment: CrossAxisAlignment.start,
+                        children: [
+                          // Title
+                          Text(
+                            video.title,
+                            maxLines: 2,
+                            overflow: TextOverflow.ellipsis,
+                            style: TextStyle(
+                              color: cs.onSurface,
+                              fontSize: 14,
+                              fontWeight: FontWeight.w600,
+                              height: 1.35,
                             ),
+                          ),
+                          const SizedBox(height: 5),
+
+                          Row(
+                            children: [
+                              Icon(Icons.person_outline_rounded, size: 13, color: cs.onSurfaceVariant),
+                              const SizedBox(width: 3),
+                              Expanded(
+                                child: Text(
+                                  video.authorName,
+                                  maxLines: 1,
+                                  overflow: TextOverflow.ellipsis,
+                                  style: TextStyle(
+                                    color: cs.onSurfaceVariant,
+                                    fontSize: 12,
+                                    fontWeight: FontWeight.w500,
+                                  ),
+                                ),
+                              ),
+                            ],
+                          ),
+                          const SizedBox(height: 8),
+
+                          Wrap(
+                            spacing: 10,
+                            runSpacing: 4,
+                            children: [
+                              _StatChip(
+                                icon: Icons.visibility_outlined,
+                                label: _formatCount(video.viewsCount),
+                                cs: cs,
+                              ),
+                              _StatChip(
+                                icon: Icons.favorite_border_rounded,
+                                label: _formatCount(video.likesCount),
+                                cs: cs,
+                              ),
+                              _StatChip(
+                                icon: Icons.chat_bubble_outline_rounded,
+                                label: _formatCount(video.commentsCount),
+                                cs: cs,
+                              ),
+                            ],
                           ),
                         ],
                       ),
-                    ],
+                    ),
+                  ),
+
+                  // Chevron
+                  Padding(
+                    padding: const EdgeInsets.only(right: 10, top: 10),
+                    child: Icon(
+                      Icons.chevron_right_rounded,
+                      color: _hovered ? cs.primary : cs.onSurfaceVariant.withValues(alpha: 0.4),
+                      size: 20,
+                    ),
+                  ),
+                ],
+              ),
+
+              // ── Tags row ─────────────────────────────────────────────────
+              if (video.tags.isNotEmpty)
+                Padding(
+                  padding: const EdgeInsets.fromLTRB(12, 0, 12, 10),
+                  child: SingleChildScrollView(
+                    scrollDirection: Axis.horizontal,
+                    child: Row(
+                      children: video.tags
+                          .take(5)
+                          .map(
+                            (tag) => Container(
+                          margin: const EdgeInsets.only(right: 6),
+                          padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 3),
+                          decoration: BoxDecoration(
+                            color: cs.secondaryContainer.withValues(alpha: 0.6),
+                            borderRadius: BorderRadius.circular(20),
+                          ),
+                          child: Text(
+                            '#$tag',
+                            style: TextStyle(
+                              color: cs.onSecondaryContainer,
+                              fontSize: 11,
+                              fontWeight: FontWeight.w500,
+                            ),
+                          ),
+                        ),
+                      )
+                          .toList(),
+                    ),
                   ),
                 ),
-              ),
-              Padding(
-                padding: const EdgeInsets.only(right: 14),
-                child: Icon(
-                  Icons.chevron_right_rounded,
-                  color: _hovered ? cs.primary : cs.onSurfaceVariant.withValues(alpha: 0.4),
-                  size: 20,
-                ),
-              ),
             ],
           ),
         ),
@@ -129,8 +240,8 @@ class _VideoCardState extends State<VideoCard> {
                 Container(
                   color: Colors.black.withValues(alpha: 0.2),
                   child: const Center(
-                      child: Icon(Icons.play_circle_fill_rounded,
-                          color: Colors.white, size: 36)),
+                    child: Icon(Icons.play_circle_fill_rounded, color: Colors.white, size: 36),
+                  ),
                 ),
             ],
           );
@@ -142,4 +253,28 @@ class _VideoCardState extends State<VideoCard> {
 
   Widget _shimmer(ColorScheme cs) =>
       Shimmer(child: Container(color: cs.surfaceContainerHighest));
+}
+
+// ── Small reusable stat chip ────────────────────────────────────────────────
+class _StatChip extends StatelessWidget {
+  const _StatChip({required this.icon, required this.label, required this.cs});
+
+  final IconData icon;
+  final String label;
+  final ColorScheme cs;
+
+  @override
+  Widget build(BuildContext context) {
+    return Row(
+      mainAxisSize: MainAxisSize.min,
+      children: [
+        Icon(icon, size: 12, color: cs.onSurfaceVariant),
+        const SizedBox(width: 3),
+        Text(
+          label,
+          style: TextStyle(color: cs.onSurfaceVariant, fontSize: 11, fontWeight: FontWeight.w500),
+        ),
+      ],
+    );
+  }
 }

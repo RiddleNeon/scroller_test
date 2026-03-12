@@ -96,7 +96,7 @@ class Video {
   }
 
   @override
-  String toString() => 'Video{id: $id, title: $title, authorId: $authorId, tags: $tags}';
+  String toString() => 'Video{id: $id, title: $title, authorId: $authorId, author: $authorName, tags: $tags}';
 }
 
 class VideoWithAuthor {

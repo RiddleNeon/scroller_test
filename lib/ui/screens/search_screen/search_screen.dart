@@ -12,7 +12,6 @@ import 'package:wurp/ui/screens/search_screen/widgets/search_user_card.dart';
 import 'package:wurp/ui/screens/search_screen/widgets/search_video_card.dart';
 import 'package:wurp/ui/short_video_player.dart';
 
-
 class SearchScreen extends StatefulWidget {
   const SearchScreen({super.key});
 
@@ -64,8 +63,7 @@ class _SearchScreenState extends State<SearchScreen> with TickerProviderStateMix
     if (current <= 0) {
       newVisibility = 1.0;
     } else if (delta != 0) {
-      newVisibility =
-          (_searchBarVisibility - delta / _kSearchBarSlotHeight).clamp(0.0, 1.0);
+      newVisibility = (_searchBarVisibility - delta / _kSearchBarSlotHeight).clamp(0.0, 1.0);
     }
 
     if (newVisibility != _searchBarVisibility) {
@@ -131,10 +129,7 @@ class _SearchScreenState extends State<SearchScreen> with TickerProviderStateMix
   @override
   Widget build(BuildContext context) {
     final cs = Theme.of(context).colorScheme;
-    return Scaffold(
-      backgroundColor: cs.surface,
-      body: _hasSearched ? _buildResultsBody(cs) : _buildLandingBody(cs),
-    );
+    return Scaffold(backgroundColor: cs.surface, body: _hasSearched ? _buildResultsBody(cs) : _buildLandingBody(cs));
   }
 
   Widget _buildLandingBody(ColorScheme cs) {
@@ -145,20 +140,14 @@ class _SearchScreenState extends State<SearchScreen> with TickerProviderStateMix
           mainAxisSize: MainAxisSize.min,
           children: [
             ShaderMask(
-              shaderCallback: (bounds) =>
-                  LinearGradient(colors: [cs.primary, cs.secondary]).createShader(bounds),
+              shaderCallback: (bounds) => LinearGradient(colors: [cs.primary, cs.secondary]).createShader(bounds),
               child: Text(
                 'Discover',
-                style: TextStyle(
-                    fontSize: 48,
-                    fontWeight: FontWeight.w900,
-                    letterSpacing: -1,
-                    color: cs.onSurface),
+                style: TextStyle(fontSize: 48, fontWeight: FontWeight.w900, letterSpacing: -1, color: cs.onSurface),
               ),
             ),
             const SizedBox(height: 8),
-            Text('Find videos & creators',
-                style: TextStyle(color: cs.onSurfaceVariant, fontSize: 15)),
+            Text('Find videos & creators', style: TextStyle(color: cs.onSurfaceVariant, fontSize: 15)),
             const SizedBox(height: 40),
             _buildSearchField(cs),
           ],
@@ -175,11 +164,7 @@ class _SearchScreenState extends State<SearchScreen> with TickerProviderStateMix
           AnimatedSearchBar(
             visibility: _searchBarVisibility,
             slotHeight: _kSearchBarSlotHeight,
-            child: Padding(
-              padding: const EdgeInsets.fromLTRB(
-                  _kPadding, _kPadding + 8, _kPadding, _kPadding),
-              child: _buildSearchField(cs),
-            ),
+            child: Padding(padding: const EdgeInsets.fromLTRB(_kPadding, _kPadding + 8, _kPadding, _kPadding), child: _buildSearchField(cs)),
           ),
           Container(
             color: cs.surface,
@@ -194,10 +179,7 @@ class _SearchScreenState extends State<SearchScreen> with TickerProviderStateMix
                   indicatorColor: cs.primary,
                   indicatorWeight: 3,
                   indicatorSize: TabBarIndicatorSize.label,
-                  labelStyle: const TextStyle(
-                      fontWeight: FontWeight.w700,
-                      fontSize: 14,
-                      letterSpacing: 0.5),
+                  labelStyle: const TextStyle(fontWeight: FontWeight.w700, fontSize: 14, letterSpacing: 0.5),
                   tabs: [
                     Tab(
                       child: Row(
@@ -205,9 +187,7 @@ class _SearchScreenState extends State<SearchScreen> with TickerProviderStateMix
                         children: [
                           const Icon(Icons.play_circle_outline, size: 18),
                           const SizedBox(width: 6),
-                          Text(_searchBarResult != null
-                              ? 'Videos (${_searchBarResult!.videoResults.length})'
-                              : 'Videos'),
+                          Text(_searchBarResult != null ? 'Videos (${_searchBarResult!.videoResults.length})' : 'Videos'),
                         ],
                       ),
                     ),
@@ -217,18 +197,13 @@ class _SearchScreenState extends State<SearchScreen> with TickerProviderStateMix
                         children: [
                           const Icon(Icons.person_outline, size: 18),
                           const SizedBox(width: 6),
-                          Text(_searchBarResult != null
-                              ? 'Creators (${_searchBarResult!.userResults.length})'
-                              : 'Creators'),
+                          Text(_searchBarResult != null ? 'Creators (${_searchBarResult!.userResults.length})' : 'Creators'),
                         ],
                       ),
                     ),
                   ],
                 ),
-                Divider(
-                    height: 1,
-                    thickness: 1,
-                    color: cs.outlineVariant.withValues(alpha: 0.3)),
+                Divider(height: 1, thickness: 1, color: cs.outlineVariant.withValues(alpha: 0.3)),
               ],
             ),
           ),
@@ -236,23 +211,18 @@ class _SearchScreenState extends State<SearchScreen> with TickerProviderStateMix
             child: _loading
                 ? Center(child: CircularProgressIndicator(color: cs.primary))
                 : ScrollArea(
-              scrollController: _scrollController,
-              child: Scrollbar(
-                controller: _scrollController,
-                interactive: true,
-                thumbVisibility: true,
-                child: CustomScrollView(
-                  controller: _scrollController,
-                  physics: const NeverScrollableScrollPhysics(),
-                  slivers: [
-                    if (_tabController.index == 0)
-                      _buildVideoSliver(cs)
-                    else
-                      _buildUserSliver(cs),
-                  ],
-                ),
-              ),
-            ),
+                    scrollController: _scrollController,
+                    child: Scrollbar(
+                      controller: _scrollController,
+                      interactive: true,
+                      thumbVisibility: true,
+                      child: CustomScrollView(
+                        controller: _scrollController,
+                        physics: const NeverScrollableScrollPhysics(),
+                        slivers: [if (_tabController.index == 0) _buildVideoSliver(cs) else _buildUserSliver(cs)],
+                      ),
+                    ),
+                  ),
           ),
         ],
       ),
@@ -265,9 +235,7 @@ class _SearchScreenState extends State<SearchScreen> with TickerProviderStateMix
       decoration: BoxDecoration(
         color: cs.surfaceContainer,
         borderRadius: BorderRadius.circular(28),
-        boxShadow: [
-          BoxShadow(color: cs.primary.withValues(alpha: 0.15), blurRadius: 20)
-        ],
+        boxShadow: [BoxShadow(color: cs.primary.withValues(alpha: 0.15), blurRadius: 20)],
       ),
       child: TextField(
         controller: _controller,
@@ -278,23 +246,19 @@ class _SearchScreenState extends State<SearchScreen> with TickerProviderStateMix
           hintText: 'Search videos, creators, tags…',
           hintStyle: TextStyle(color: cs.onSurfaceVariant, fontSize: 15),
           border: InputBorder.none,
-          prefixIcon:
-          Icon(Icons.search_rounded, color: cs.onSurfaceVariant, size: 22),
+          prefixIcon: Icon(Icons.search_rounded, color: cs.onSurfaceVariant, size: 22),
           suffixIcon: GestureDetector(
             onTap: _search,
             child: Container(
               margin: const EdgeInsets.all(8),
               decoration: BoxDecoration(
-                gradient:
-                LinearGradient(colors: [cs.primary, cs.primaryContainer]),
+                gradient: LinearGradient(colors: [cs.primary, cs.primaryContainer]),
                 borderRadius: BorderRadius.circular(20),
               ),
-              child:
-              Icon(Icons.arrow_forward_rounded, color: cs.onPrimary, size: 20),
+              child: Icon(Icons.arrow_forward_rounded, color: cs.onPrimary, size: 20),
             ),
           ),
-          contentPadding:
-          const EdgeInsets.symmetric(vertical: 18, horizontal: 4),
+          contentPadding: const EdgeInsets.symmetric(vertical: 18, horizontal: 4),
         ),
       ),
     );
@@ -304,33 +268,25 @@ class _SearchScreenState extends State<SearchScreen> with TickerProviderStateMix
     final videos = _searchBarResult?.videoResults ?? [];
     if (videos.isEmpty) {
       return SliverFillRemaining(
-          child: EmptyState(label: 'No videos found', cs: cs));
+        child: EmptyState(label: 'No videos found', cs: cs),
+      );
     }
     return SliverPadding(
       padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 8),
       sliver: SliverList(
-        delegate: SliverChildBuilderDelegate(
-              (context, index) {
-            if (index == _videoCount) {
-              return _preloading
-                  ? Padding(
-                padding: const EdgeInsets.symmetric(vertical: 16),
-                child: Center(
-                    child: LinearProgressIndicator(
-                        color: cs.primary,
-                        backgroundColor: cs.surfaceContainerHighest)),
-              )
-                  : const SizedBox.shrink();
-            }
-            return VideoCard(
-              video: videos[index],
-              thumbnail: _thumbnailFor(videos[index]),
-              onTap: () => _openVideoPlayer(index),
-              cs: cs,
-            );
-          },
-          childCount: _videoCount + 1,
-        ),
+        delegate: SliverChildBuilderDelegate((context, index) {
+          if (index == _videoCount) {
+            return _preloading
+                ? Padding(
+                    padding: const EdgeInsets.symmetric(vertical: 16),
+                    child: Center(
+                      child: LinearProgressIndicator(color: cs.primary, backgroundColor: cs.surfaceContainerHighest),
+                    ),
+                  )
+                : const SizedBox.shrink();
+          }
+          return VideoCard(video: videos[index], thumbnail: _thumbnailFor(videos[index]), onTap: () => _openVideoPlayer(index), cs: cs);
+        }, childCount: _videoCount + 1),
       ),
     );
   }
@@ -339,31 +295,25 @@ class _SearchScreenState extends State<SearchScreen> with TickerProviderStateMix
     final users = _searchBarResult?.userResults ?? [];
     if (users.isEmpty) {
       return SliverFillRemaining(
-          child: EmptyState(label: 'No creators found', cs: cs));
+        child: EmptyState(label: 'No creators found', cs: cs),
+      );
     }
     return SliverPadding(
       padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 8),
       sliver: SliverList(
-        delegate: SliverChildBuilderDelegate(
-              (context, index) {
-            if (index == _userCount) {
-              return _preloading
-                  ? Padding(
-                padding: const EdgeInsets.symmetric(vertical: 16),
-                child: Center(
-                    child: LinearProgressIndicator(
-                        color: cs.primary,
-                        backgroundColor: cs.surfaceContainerHighest)),
-              )
-                  : const SizedBox.shrink();
-            }
-            return UserCard(
-                initialUser: users[index],
-                cs: cs,
-                key: ValueKey(users[index].id));
-          },
-          childCount: _userCount + 1,
-        ),
+        delegate: SliverChildBuilderDelegate((context, index) {
+          if (index == _userCount) {
+            return _preloading
+                ? Padding(
+                    padding: const EdgeInsets.symmetric(vertical: 16),
+                    child: Center(
+                      child: LinearProgressIndicator(color: cs.primary, backgroundColor: cs.surfaceContainerHighest),
+                    ),
+                  )
+                : const SizedBox.shrink();
+          }
+          return UserCard(initialUser: users[index], cs: cs, key: ValueKey(users[index].id));
+        }, childCount: _userCount + 1),
       ),
     );
   }
@@ -371,12 +321,10 @@ class _SearchScreenState extends State<SearchScreen> with TickerProviderStateMix
   final Map<String, Future<Uint8List?>> _cachedThumbnails = {};
 
   Future<Uint8List?> _thumbnailFor(Video video) {
-    if (!(defaultTargetPlatform == TargetPlatform.android ||
-        defaultTargetPlatform == TargetPlatform.iOS)) {
+    if (!(defaultTargetPlatform == TargetPlatform.android || defaultTargetPlatform == TargetPlatform.iOS)) {
       return Future.value(null);
     }
-    return _cachedThumbnails[video.videoUrl] ??=
-        VideoThumbnail.thumbnailData(video: video.videoUrl);
+    return _cachedThumbnails[video.videoUrl] ??= VideoThumbnail.thumbnailData(video: video.videoUrl);
   }
 
   FeedViewModel? _currentSearchViewModel;
@@ -395,16 +343,13 @@ class _SearchScreenState extends State<SearchScreen> with TickerProviderStateMix
             child: Container(
               width: MediaQuery.of(context).size.width * 0.95,
               height: MediaQuery.of(context).size.height * 0.88,
-              decoration: BoxDecoration(
-                  color: Colors.black,
-                  borderRadius: BorderRadius.circular(20)),
+              decoration: BoxDecoration(color: Colors.black, borderRadius: BorderRadius.circular(20)),
               clipBehavior: Clip.hardEdge,
               child: Stack(
                 children: [
                   feedVideos(
                     this,
-                    SearchVideoResultRecommender(
-                        listedVideos: _searchBarResult!.videoResults),
+                    SearchVideoResultRecommender(listedVideos: _searchBarResult!.videoResults),
                     context,
                     feedModel: _currentSearchViewModel,
                     itemCount: _searchBarResult!.videoResults.length,
@@ -417,10 +362,8 @@ class _SearchScreenState extends State<SearchScreen> with TickerProviderStateMix
                       onTap: () => Navigator.pop(context),
                       child: Container(
                         padding: const EdgeInsets.all(8),
-                        decoration: const BoxDecoration(
-                            color: Colors.black54, shape: BoxShape.circle),
-                        child: const Icon(Icons.close_rounded,
-                            color: Colors.white, size: 20),
+                        decoration: const BoxDecoration(color: Colors.black54, shape: BoxShape.circle),
+                        child: const Icon(Icons.close_rounded, color: Colors.white, size: 20),
                       ),
                     ),
                   ),
@@ -431,13 +374,10 @@ class _SearchScreenState extends State<SearchScreen> with TickerProviderStateMix
         ),
       ),
       transitionBuilder: (context, animation, _, child) {
-        final curved =
-        CurvedAnimation(parent: animation, curve: Curves.easeOutCubic);
+        final curved = CurvedAnimation(parent: animation, curve: Curves.easeOutCubic);
         return FadeTransition(
           opacity: curved,
-          child: ScaleTransition(
-              scale: Tween(begin: 0.88, end: 1.0).animate(curved),
-              child: child),
+          child: ScaleTransition(scale: Tween(begin: 0.88, end: 1.0).animate(curved), child: child),
         );
       },
     );

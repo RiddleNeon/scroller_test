@@ -1,9 +1,6 @@
-import 'package:supabase_flutter/supabase_flutter.dart';
-import 'package:wurp/logic/repositories/video_repository.dart';
 import 'package:wurp/tools/supabase_tests/supabase_login_test.dart';
 
 import '../../base_logic.dart';
-import '../local_storage/local_seen_service.dart';
 import '../models/user_model.dart';
 import '../video/video.dart';
 
@@ -163,14 +160,6 @@ class UserRepository {
     });
 
     return (result as List).map((e) => UserProfile.fromSupabase(e));
-  }
-  
-  
-
-  static Future<List<UserProfile>> _fetchProfilesByIds(List<String> ids) async {
-    if (ids.isEmpty) return [];
-    final response = await supabaseClient.from('profiles').select().inFilter('id', ids);
-    return response.map<UserProfile>((profile) => UserProfile.fromSupabase(profile)).toList();
   }
 
   Future<List<String>> getFollowingIds(String userId) async => getFollowingIdsSupabase(userId);

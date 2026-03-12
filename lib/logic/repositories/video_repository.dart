@@ -304,18 +304,20 @@ class VideoRepository {
   }
   
   /// searches all videos where title, description or tags contain the query (case-insensitive), ordered by relevance desc then creation date and popularity desc. Also contains unprecise full text search, so "funny" will match "funny videos". For more precise tag search, use [searchVideosByTag].
-  Future<({List<Video> videos, int? nextOffset})> searchVideos(String query, {int limit = 20, int offset = 0}) async {
-    final videos = await searchVideosSupabase(query, limit: limit, offset: offset);
+  Future<({List<Video> videos, int? nextOffset})> searchVideos(String query, {int limit = 20, int offset = 0, bool withAuthor = false}) async {
+    final videos = await searchVideosSupabase(query, limit: limit, offset: offset, withAuthor: withAuthor);
     return (videos: videos, nextOffset: videos.length < limit ? null : offset + videos.length);
   }
 
-  Future<List<Video>> searchVideosSupabase(String query, {int limit = 20, int offset = 0}) async {
+  Future<List<Video>> searchVideosSupabase(String query, {int limit = 20, int offset = 0, bool withAuthor = false}) async {
     final result = await supabaseClient
-        .rpc('search_videos', params: {
+        .rpc(withAuthor ? 'search_videos_with_author' : 'search_videos', params: {
       'search_query': query,
       'p_limit': limit,
       'p_offset': offset,
     });
+    
+    print("RESULT: $result");
 
     return (result as List).map<Video>((e) => _toVideo(e)).toList();
   }
@@ -425,7 +427,7 @@ class VideoRepository {
 
   Video _toVideo(Map<String, dynamic> data) {
     final profile = (data['profiles'] as Map<String, dynamic>? ?? <String, dynamic>{});
-    final authorName = profile['display_name'] ?? profile['username'] ?? '';
+    final authorName = profile['display_name'] ?? profile['username'] ?? data['display_name'] ?? data['username'] ?? 'Unknown';
     final tags = (data['video_tags'] as List? ?? const [])
         .map((vt) => vt['tags']?['name'] as String?)
         .whereType<String>()

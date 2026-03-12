@@ -2,7 +2,6 @@ import 'package:firebase_auth/firebase_auth.dart';
 import 'package:flutter/foundation.dart';
 import 'package:flutter/material.dart';
 import 'package:fvp/fvp.dart' as fvp;
-import 'package:supabase_flutter/supabase_flutter.dart' hide User;
 import 'package:wurp/tools/supabase_tests/supabase_login_test.dart';
 import 'package:wurp/ui/feed_view_model.dart';
 
@@ -12,7 +11,6 @@ import 'logic/models/user_model.dart';
 import 'logic/repositories/chat_repository.dart';
 import 'logic/repositories/user_repository.dart';
 import 'logic/video/video_provider.dart';
-import 'messaging_base.dart';
 
 FirebaseAuth? auth;
 

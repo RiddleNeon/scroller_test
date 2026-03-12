@@ -1,6 +1,5 @@
 import 'package:wurp/util/extensions/num_distance.dart';
 
-import '../../base_logic.dart';
 import '../video/video.dart';
 
 class UserPreferenceManager {
