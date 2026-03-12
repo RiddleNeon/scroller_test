@@ -44,18 +44,13 @@ Future<void> initLogic() async {
   WidgetsFlutterBinding.ensureInitialized();
   fvp.registerWith();
   await ensureSupabaseInitialized();
-  print("Supabase initialized");
   auth = FirebaseAuth.instance;
 }
 
 Future<void> onUserLogin(UserProfile user, [BuildContext? context]) async {
   _currentUser = user;
-  print("User logged in: ${user.id}");
   await onUserLoginSupabaseTest();
-  print("Supabase login test completed");
   await onUserLogout();
-  print("User logged out, now setting current user...");
-  print("Current user set: ${currentUser.id}");
   await initLocalSeenService();
   if (kIsWeb) {
     print("Using Supabase persisted auth session on web.");

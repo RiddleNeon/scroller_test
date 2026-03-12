@@ -84,24 +84,15 @@ class LocalSeenService {
     _chatCursorBox = await Hive.openBox<DateTime>('${userId}_$_chatCursorBoxName');
     _conversationBox = await Hive.openBox('${userId}_$_conversationBoxName');
     _authorBox = await Hive.openBox('${userId}_$_authorBoxName');
-
-    print(
-      "before initialisation: ${_seenBox.length} seen videos for user $userId, "
-      "last sync seen: ${_settingsBox.get(_lastSyncSeenKey)}, "
-      "last sync likes: ${_settingsBox.get(_lastSyncLikesKey)}, "
-      "last sync dislikes: ${_settingsBox.get(_lastSyncDislikesKey)}"
-      "last update authors: ${_settingsBox.get(_lastUpdateAuthorsKey)}",
-    );
-
-    /*    await _seenBox.clear();
+/*  await _seenBox.clear();
     await _settingsBox.clear();
     await _cursorBox.clear();
     await _cursorDirtyBox.clear();
     await _interactionBox.clear();
     await _blacklistedTagsBox.clear();
     await _likeValsBox.clear();
-    _settingsBox.delete(_lastSyncSeenKey);*/
-/*            await _chatBox.clear();
+    _settingsBox.delete(_lastSyncSeenKey);
+    await _chatBox.clear();
     await _chatCursorBox.clear();
     await _conversationBox.clear();*/
 
@@ -132,7 +123,7 @@ class LocalSeenService {
     _interactionBox.put(video.id, {'authorId': video.authorId, 'tags': video.tags});
   }
 
-  bool hasSeen(String videoId) => _seenBox.containsKey(videoId);
+  bool hasSeen(String videoId) => false; /*_seenBox.containsKey(videoId);*/
 
   Set<String> get allSeenIds => _seenBox.keys.cast<String>().toSet();
 
@@ -150,9 +141,8 @@ class LocalSeenService {
         videoId: videoId,
         authorId: meta?['authorId'] as String? ?? '',
         tags: meta?['tags'] != null ? List<String>.from(meta!['tags'] as List) : [],
-        watchTime: 0,
-        //dummy values bc those are not stored
-        videoDuration: 1,
+        watchTime: 0, //dummy values bc those are not stored
+        videoDuration: 1, //same here
         timestamp: seenAt,
       );
     }).toList();
@@ -183,10 +173,6 @@ class LocalSeenService {
     final lastSyncFollowing = _settingsBox.get(_lastSyncFollowingKey) as DateTime? ?? DateTime.now().subtract(const Duration(days: 7));
     final lastSyncConversation = _settingsBox.get(_lastSyncConversationKey) as DateTime? ?? DateTime.now().subtract(const Duration(days: 7));
 
-    print(
-      "syncing — seen: $lastSyncSeen, likes: $lastSyncLikes, dislikes: $lastSyncDislikes, preferences: $lastSyncPreferences, following: $lastSyncFollowing, conversation: $lastSyncConversation",
-    );
-
     await Future.wait([
       _syncSeenInteractions(lastSyncSeen, onlyLoad: onlyLoad),
       _syncLikes(lastSyncLikes, onlyLoad: onlyLoad),
@@ -195,7 +181,6 @@ class LocalSeenService {
       _syncFollowing(lastSyncFollowing, onlyLoad: onlyLoad),
       _syncConversations(lastSyncConversation),
     ]);
-    print("successfully synced!");
   }
 
   // ---------------------------------------------------------------------------
@@ -215,7 +200,6 @@ class LocalSeenService {
 
   Future<void> _syncLikes(DateTime lastSync, {required bool onlyLoad}) async {
     if (!onlyLoad) {
-      print("Uploading local likes to Supabase...");
       final payload = <Map<String, dynamic>>[];
       for (final key in _likeValsBox.keys) {
         final videoId = key as String;
@@ -227,7 +211,6 @@ class LocalSeenService {
       if (payload.isNotEmpty) {
         await _upsertInChunks('likes', payload, onConflict: 'user_id, video_id');
       }
-      print("Uploaded ${payload.length} liked videos");
     }
 
     final snapshot = await supabaseClient
@@ -238,19 +221,16 @@ class LocalSeenService {
         .order('created_at', ascending: false);
 
     if (snapshot.isEmpty) {
-      print("Nothing new from Supabase (likes)");
       return;
     }
 
     await _likeValsBox.putAll({for (final row in snapshot) row['video_id'].toString(): true});
-    print("Synced ${snapshot.length} new liked videos from Supabase");
 
     await _settingsBox.put(_lastSyncLikesKey, DateTime.parse(snapshot.first['created_at'] as String).toLocal());
   }
 
   Future<void> _syncDislikes(DateTime lastSync, {required bool onlyLoad}) async {
     if (!onlyLoad) {
-      print("Uploading local dislikes to Supabase...");
       final payload = <Map<String, dynamic>>[];
       for (final key in _likeValsBox.keys) {
         final videoId = key as String;
@@ -262,7 +242,6 @@ class LocalSeenService {
       if (payload.isNotEmpty) {
         await _upsertInChunks('dislikes', payload, onConflict: 'user_id, video_id');
       }
-      print("Uploaded ${payload.length} disliked videos");
     }
 
     final snapshot = await supabaseClient
@@ -273,12 +252,10 @@ class LocalSeenService {
         .order('created_at', ascending: false);
 
     if (snapshot.isEmpty) {
-      print("Nothing new from Supabase (dislikes)");
       return;
     }
 
     await _likeValsBox.putAll({for (final row in snapshot) row['video_id'].toString(): false});
-    print("Synced ${snapshot.length} new disliked videos from Supabase");
 
     await _settingsBox.put(_lastSyncDislikesKey, DateTime.parse(snapshot.first['created_at'] as String).toLocal());
   }
@@ -344,22 +321,18 @@ class LocalSeenService {
   // ---------------------------------------------------------------------------
 
   Future<void> saveLike(String videoId) async {
-    print("saved like for $videoId");
     await _likeValsBox.put(videoId, true);
   }
 
   Future<void> removeLike(String videoId) async {
-    print("removed like for $videoId");
     await _likeValsBox.delete(videoId);
   }
 
   Future<void> saveDislike(String videoId) async {
-    print("saved dislike for $videoId");
     await _likeValsBox.put(videoId, false);
   }
 
   Future<void> removeDislike(String videoId) async {
-    print("removed dislike for $videoId");
     await _likeValsBox.delete(videoId);
   }
 
@@ -373,7 +346,6 @@ class LocalSeenService {
 
   Future<void> _syncFollowing(DateTime lastSync, {required bool onlyLoad}) async {
     if (!onlyLoad) {
-      print("Uploading local following to Supabase...");
       final payload = <Map<String, dynamic>>[];
       for (final key in _followingBox.keys) {
         final followedUserId = key as String;
@@ -388,7 +360,6 @@ class LocalSeenService {
       if (payload.isNotEmpty) {
         await _upsertInChunks('follows', payload, onConflict: 'follower_id, following_id');
       }
-      print("Uploaded ${payload.length} following entries");
     }
 
     final snapshot = await supabaseClient
@@ -399,7 +370,6 @@ class LocalSeenService {
         .order('created_at', ascending: false);
 
     if (snapshot.isEmpty) {
-      print("Nothing new from Supabase (following)");
       return;
     }
     final Map<String, DateTime> toWrite = {};
@@ -414,14 +384,12 @@ class LocalSeenService {
 
     if (toWrite.isNotEmpty) {
       await _followingBox.putAll(toWrite);
-      print("Synced ${toWrite.length} new following entries from Supabase");
     }
 
     await _settingsBox.put(_lastSyncFollowingKey, DateTime.parse(snapshot.first['created_at'] as String).toLocal());
   }
 
   Future<void> _syncConversations(DateTime lastSync) async {
-    print("syncing conversations");
     final memberships = await supabaseClient.from('conversation_members').select('conversation_id').eq('profile_id', userId);
     final conversationIds = memberships.map((row) => row['conversation_id'] as int).toList();
     if (conversationIds.isEmpty) {
@@ -487,7 +455,6 @@ class LocalSeenService {
 
     if (toWrite.isNotEmpty) {
       await _conversationBox.putAll(toWrite);
-      print("Synced ${toWrite.length} conversations from Supabase");
     }
 
     final latestConversation = DateTime.parse(conversations.first['updated_at'] as String).toLocal();
@@ -569,8 +536,6 @@ class LocalSeenService {
     chat.lastMessageAt = message.timestamp;
     chat.lastMessageByMe = message.isMe;
     await _conversationBox.put(chat.partnerId, chat.toJson());
-
-    print("sendMessage: stored $key locally");
   }
 
   ChatMessage? getMessage(String otherUserId, String messageId) {
@@ -590,13 +555,11 @@ class LocalSeenService {
             .entries
             .where((e) => (e.key as String).startsWith('$conversationId:'))
             .where((element) {
-              print("created at: ${element.value['createdAt']}, type: ${element.value['createdAt'].runtimeType}");
               return ((element.value['createdAt'] ?? DateTime(0)) as DateTime).isBefore(startOffset ?? DateTime.now());
         })
             .map((e) => _messageFromMap(e.value as Map, conversationId))
             .toList()
           ..sort((a, b) => a.timestamp.compareTo(b.timestamp));
-    print("DONE");
     return localMessages.length > limit ? localMessages.sublist(localMessages.length - limit) : localMessages;
   }
 

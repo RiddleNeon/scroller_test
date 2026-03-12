@@ -6,7 +6,6 @@ class LikeButton extends StatefulWidget {
   final bool initiallyLiked;
   final bool initiallyPlayingAnimation;
   final void Function(bool)? onLikeChanged;
-  final String videoId;
 
   const LikeButton({
     super.key,
@@ -14,7 +13,6 @@ class LikeButton extends StatefulWidget {
     this.initiallyLiked = false,
     this.onLikeChanged,
     this.initiallyPlayingAnimation = false,
-    required this.videoId,
   });
 
   @override

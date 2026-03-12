@@ -3,6 +3,7 @@ import 'package:firebase_core/firebase_core.dart';
 import 'package:wurp/base_logic.dart';
 import 'package:wurp/base_ui.dart';
 import 'package:supabase_flutter/supabase_flutter.dart' hide User;
+import 'package:wurp/tools/video_generator.dart';
 
 import '../../logic/firebase_options.dart';
 
@@ -16,11 +17,13 @@ void main() async {
 }
 
 Future<void> onUserLoginSupabaseTest() async {
-  print("logged into supabase, auth: ${auth?.currentUser?.uid}");
   await ensureSupabaseInitialized();
-  print("supabase initialized!");
   await userRepository.upsertCurrentUserProfile(currentUser);
-  print("upserted user profile");
+
+  final result = await supabaseClient.rpc('get_my_jwt_sub');
+  print("jwt has 'sub': ${result}");
+  print("firebase: ${FirebaseAuth.instance.currentUser}");
+  //await publishTest();
 }
 
 Future<void> ensureSupabaseInitialized() async {

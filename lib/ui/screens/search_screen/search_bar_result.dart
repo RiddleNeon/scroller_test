@@ -24,8 +24,9 @@ class SearchBarResult {
   Future<void> loadVideos({int limit = 20}) async{
     if (_isLoadingVideos) return;
     _isLoadingVideos = true;
-
-    final videoResult = await videoRepo.searchVideosByTag(searchText, limit: limit);
+    
+    
+    final videoResult = await videoRepo.searchVideos(searchText, limit: limit);
     videoResults = videoResult.videos;
     print("done, results: ${videoResults}");
     _videoOffset = videoResult.nextOffset ?? _videoOffset;

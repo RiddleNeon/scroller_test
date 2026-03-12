@@ -4,14 +4,12 @@ class DislikeButton extends StatefulWidget {
   final bool initiallyDisliked;
   final void Function(bool)? onDislikeChanged;
   final bool initiallyPlayingAnimation;
-  final String videoId;
 
   const DislikeButton({
     super.key,
     this.initiallyDisliked = false,
     this.onDislikeChanged,
     this.initiallyPlayingAnimation = false,
-    required this.videoId,
   });
 
   @override
