@@ -20,12 +20,12 @@ class SearchBarResult {
   Future<void> complete({int limit = 20}) async {
     await Future.wait([loadVideos(limit: limit), loadUsers(limit: limit)]);
   }
-  
+
   Future<void> loadVideos({int limit = 20}) async{
     if (_isLoadingVideos) return;
     _isLoadingVideos = true;
-    
-    
+
+
     final videoResult = await videoRepo.searchVideos(searchText, limit: limit);
     videoResults = videoResult.videos;
     print("done, results: ${videoResults}");
@@ -51,10 +51,10 @@ class SearchBarResult {
     if (_isLoadingVideos || !_hasMoreVideos) return;
     _isLoadingVideos = true;
 
-    final result = await videoRepo.searchVideosByTag(
+    final result = await videoRepo.searchVideos(
       searchText,
       offset: _videoOffset,
-      limit: limit
+      limit: limit,
     );
 
     videoResults.addAll(result.videos);
@@ -63,15 +63,15 @@ class SearchBarResult {
 
     _isLoadingVideos = false;
   }
-  
+
   Future<void> preloadMoreUsers({int limit = 20}) async {
     if (_isLoadingUsers || !_hasMoreUsers) return;
     _isLoadingUsers = true;
 
     final result = await userRepository.searchUsers(
-      searchText,
-      offset: _userOffset,
-      limit: limit
+        searchText,
+        offset: _userOffset,
+        limit: limit           
     );
 
     userResults.addAll(result.users);

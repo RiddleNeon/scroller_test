@@ -1,4 +1,5 @@
 import 'package:flutter/foundation.dart';
+import 'package:flutter/gestures.dart';
 import 'package:flutter/material.dart';
 import 'package:shimmer_animation/shimmer_animation.dart';
 import 'package:video_thumbnail/video_thumbnail.dart';
@@ -28,7 +29,10 @@ class _SearchScreenState extends State<SearchScreen> with TickerProviderStateMix
   SearchBarResult? _searchBarResult;
 
   bool _loading = false;
+  bool _preloading = false;
   bool _hasSearched = false;
+  int _videoCount = 0;
+  int _userCount = 0;
 
   late TabController _tabController;
 
@@ -43,14 +47,34 @@ class _SearchScreenState extends State<SearchScreen> with TickerProviderStateMix
   }
 
   void _onScroll() {
-    if (_searchBarResult == null || _loading) return;
+    if (_searchBarResult == null || _loading || _preloading) return;
     if (_scrollController.position.pixels >= _scrollController.position.maxScrollExtent - 300) {
-      if (_tabController.index == 0) {
-        _searchBarResult!.preloadMoreVideos();
-      } else {
-        _searchBarResult!.preloadMoreUsers();
-      }
+      _preloadMore();
     }
+  }
+
+  bool _preloadingGuard = false;
+
+  Future<void> _preloadMore() async {
+    if (_preloadingGuard) return;
+    _preloadingGuard = true;
+    setState(() => _preloading = true);
+
+    if (_tabController.index == 0) {
+      await _searchBarResult!.preloadMoreVideos();
+      if (mounted) setState(() {
+        _preloading = false;
+        _videoCount = _searchBarResult!.videoResults.length;
+      });
+    } else {
+      await _searchBarResult!.preloadMoreUsers();
+      if (mounted) setState(() {
+        _preloading = false;
+        _userCount = _searchBarResult!.userResults.length;
+      });
+    }
+
+    _preloadingGuard = false;
   }
 
   @override
@@ -73,6 +97,8 @@ class _SearchScreenState extends State<SearchScreen> with TickerProviderStateMix
     _searchBarResult = SearchBarResult(val);
     await _searchBarResult!.complete();
     _currentSearchViewModel = FeedViewModel();
+    _videoCount = _searchBarResult!.videoResults.length;
+    _userCount = _searchBarResult!.userResults.length;
     setState(() => _loading = false);
   }
 
@@ -107,66 +133,83 @@ class _SearchScreenState extends State<SearchScreen> with TickerProviderStateMix
   }
 
   Widget _buildResultsBody(ColorScheme cs) {
-    return CustomScrollView(
-      controller: _scrollController,
-      slivers: [
-        SliverAppBar(
-          backgroundColor: cs.surface,
-          pinned: true,
-          floating: true,
-          snap: true,
-          elevation: 0,
-          expandedHeight: _kSearchBarHeight + _kPadding * 2,
-          flexibleSpace: FlexibleSpaceBar(
-            background: Padding(padding: const EdgeInsets.fromLTRB(_kPadding, _kPadding + 8, _kPadding, _kPadding), child: _buildSearchField(cs)),
-          ),
-        ),
-        SliverPersistentHeader(
-          pinned: true,
-          delegate: _TabBarDelegate(
-            TabBar(
-              controller: _tabController,
-              onTap: (_) => setState(() {}),
-              labelColor: cs.primary,
-              unselectedLabelColor: cs.onSurfaceVariant,
-              indicatorColor: cs.primary,
-              indicatorWeight: 3,
-              indicatorSize: TabBarIndicatorSize.label,
-              labelStyle: const TextStyle(fontWeight: FontWeight.w700, fontSize: 14, letterSpacing: 0.5),
-              tabs: [
-                Tab(
-                  child: Row(
-                    mainAxisSize: MainAxisSize.min,
-                    children: [
-                      const Icon(Icons.play_circle_outline, size: 18),
-                      const SizedBox(width: 6),
-                      Text(_searchBarResult != null ? 'Videos (${_searchBarResult!.videoResults.length})' : 'Videos'),
-                    ],
-                  ),
-                ),
-                Tab(
-                  child: Row(
-                    mainAxisSize: MainAxisSize.min,
-                    children: [
-                      const Icon(Icons.person_outline, size: 18),
-                      const SizedBox(width: 6),
-                      Text(_searchBarResult != null ? 'Creators (${_searchBarResult!.userResults.length})' : 'Creators'),
-                    ],
-                  ),
-                ),
-              ],
+    return ScrollConfiguration(
+      behavior: _SmoothScrollBehavior(),
+      child: Listener(
+        onPointerSignal: (event) {
+          if (event is PointerScrollEvent) {
+            final newOffset = (_scrollController.offset + event.scrollDelta.dy * 1.8)
+                .clamp(0.0, _scrollController.position.maxScrollExtent);
+            _scrollController.animateTo(
+              newOffset,
+              duration: const Duration(milliseconds: 180),
+              curve: Curves.easeOutCubic,
+            );
+          }
+        },
+        child: CustomScrollView(
+          controller: _scrollController,
+          physics: const NeverScrollableScrollPhysics(),
+          slivers: [
+            SliverAppBar(
+              backgroundColor: cs.surface,
+              pinned: true,
+              floating: true,
+              snap: true,
+              elevation: 0,
+              expandedHeight: _kSearchBarHeight + _kPadding * 2,
+              flexibleSpace: FlexibleSpaceBar(
+                background: Padding(padding: const EdgeInsets.fromLTRB(_kPadding, _kPadding + 8, _kPadding, _kPadding), child: _buildSearchField(cs)),
+              ),
             ),
-            cs: cs,
-          ),
+            SliverPersistentHeader(
+              pinned: true,
+              delegate: _TabBarDelegate(
+                TabBar(
+                  controller: _tabController,
+                  onTap: (_) => setState(() {}),
+                  labelColor: cs.primary,
+                  unselectedLabelColor: cs.onSurfaceVariant,
+                  indicatorColor: cs.primary,
+                  indicatorWeight: 3,
+                  indicatorSize: TabBarIndicatorSize.label,
+                  labelStyle: const TextStyle(fontWeight: FontWeight.w700, fontSize: 14, letterSpacing: 0.5),
+                  tabs: [
+                    Tab(
+                      child: Row(
+                        mainAxisSize: MainAxisSize.min,
+                        children: [
+                          const Icon(Icons.play_circle_outline, size: 18),
+                          const SizedBox(width: 6),
+                          Text(_searchBarResult != null ? 'Videos (${_searchBarResult!.videoResults.length})' : 'Videos'),
+                        ],
+                      ),
+                    ),
+                    Tab(
+                      child: Row(
+                        mainAxisSize: MainAxisSize.min,
+                        children: [
+                          const Icon(Icons.person_outline, size: 18),
+                          const SizedBox(width: 6),
+                          Text(_searchBarResult != null ? 'Creators (${_searchBarResult!.userResults.length})' : 'Creators'),
+                        ],
+                      ),
+                    ),
+                  ],
+                ),
+                cs: cs,
+              ),
+            ),
+            if (_loading)
+              SliverFillRemaining(
+                child: Center(child: CircularProgressIndicator(color: cs.primary)),
+              )
+            else ...[
+              if (_tabController.index == 0) _buildVideoSliver(cs) else _buildUserSliver(cs),
+            ],
+          ],
         ),
-        if (_loading)
-          SliverFillRemaining(
-            child: Center(child: CircularProgressIndicator(color: cs.primary)),
-          )
-        else ...[
-          if (_tabController.index == 0) _buildVideoSliver(cs) else _buildUserSliver(cs),
-        ],
-      ],
+      ),
     );
   }
 
@@ -216,8 +259,18 @@ class _SearchScreenState extends State<SearchScreen> with TickerProviderStateMix
       padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 8),
       sliver: SliverList(
         delegate: SliverChildBuilderDelegate(
-          (context, index) => _VideoCard(video: videos[index], thumbnail: _thumbnailFor(videos[index]), onTap: () => _openVideoPlayer(index), cs: cs),
-          childCount: videos.length,
+              (context, index) {
+            if (index == _videoCount) {
+              return _preloading
+                  ? Padding(
+                padding: const EdgeInsets.symmetric(vertical: 16),
+                child: Center(child: LinearProgressIndicator(color: cs.primary, backgroundColor: cs.surfaceContainerHighest)),
+              )
+                  : const SizedBox.shrink();
+            }
+            return _VideoCard(video: videos[index], thumbnail: _thumbnailFor(videos[index]), onTap: () => _openVideoPlayer(index), cs: cs);
+          },
+          childCount: _videoCount + 1,
         ),
       ),
     );
@@ -234,8 +287,18 @@ class _SearchScreenState extends State<SearchScreen> with TickerProviderStateMix
       padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 8),
       sliver: SliverList(
         delegate: SliverChildBuilderDelegate(
-          (context, index) => _UserCard(initialUser: users[index], cs: cs),
-          childCount: users.length,
+              (context, index) {
+            if (index == _userCount) {
+              return _preloading
+                  ? Padding(
+                padding: const EdgeInsets.symmetric(vertical: 16),
+                child: Center(child: LinearProgressIndicator(color: cs.primary, backgroundColor: cs.surfaceContainerHighest)),
+              )
+                  : const SizedBox.shrink();
+            }
+            return _UserCard(initialUser: users[index], cs: cs, key: ValueKey(users[index].id),);
+          },
+          childCount: _userCount + 1,
         ),
       ),
     );
@@ -243,11 +306,13 @@ class _SearchScreenState extends State<SearchScreen> with TickerProviderStateMix
 
   final Map<String, Future<Uint8List?>> _cachedThumbnails = {};
 
-  Future<Uint8List?> _thumbnailFor(Video video) async {
-    if (!(defaultTargetPlatform == TargetPlatform.android || defaultTargetPlatform == TargetPlatform.iOS)) return null;
-
-    _cachedThumbnails[video.videoUrl] ??= VideoThumbnail.thumbnailData(video: video.videoUrl);
-    return _cachedThumbnails[video.videoUrl]!;
+  // Returns the *same* Future instance for the same URL so FutureBuilder
+  // does not restart on setState (e.g. after preloading more videos).
+  Future<Uint8List?> _thumbnailFor(Video video) {
+    if (!(defaultTargetPlatform == TargetPlatform.android || defaultTargetPlatform == TargetPlatform.iOS)) {
+      return Future.value(null);
+    }
+    return _cachedThumbnails[video.videoUrl] ??= VideoThumbnail.thumbnailData(video: video.videoUrl);
   }
 
   FeedViewModel? _currentSearchViewModel;
@@ -307,7 +372,7 @@ class _SearchScreenState extends State<SearchScreen> with TickerProviderStateMix
   }
 }
 
-class _VideoCard extends StatelessWidget {
+class _VideoCard extends StatefulWidget {
   const _VideoCard({required this.video, required this.thumbnail, required this.onTap, required this.cs});
 
   final Video video;
@@ -316,80 +381,120 @@ class _VideoCard extends StatelessWidget {
   final ColorScheme cs;
 
   @override
+  State<_VideoCard> createState() => _VideoCardState();
+}
+
+class _VideoCardState extends State<_VideoCard> {
+  bool _hovered = false;
+
+  @override
   Widget build(BuildContext context) {
-    return GestureDetector(
-      onTap: onTap,
-      child: Container(
-        margin: const EdgeInsets.symmetric(vertical: 6),
-        decoration: BoxDecoration(
-          color: cs.surfaceContainer,
-          borderRadius: BorderRadius.circular(14),
-          border: Border.all(color: cs.outlineVariant.withValues(alpha: 0.4)),
-        ),
-        child: Row(
-          children: [
-            ClipRRect(
-              borderRadius: const BorderRadius.horizontal(left: Radius.circular(14)),
-              child: SizedBox(width: 140, height: 84, child: _buildThumbnail()),
+    final cs = widget.cs;
+    return MouseRegion(
+      onEnter: (_) => setState(() => _hovered = true),
+      onExit: (_) => setState(() => _hovered = false),
+      child: GestureDetector(
+        onTap: widget.onTap,
+        child: AnimatedContainer(
+          duration: const Duration(milliseconds: 150),
+          margin: const EdgeInsets.symmetric(vertical: 5),
+          decoration: BoxDecoration(
+            color: _hovered ? cs.surfaceContainerHigh : cs.surfaceContainer,
+            borderRadius: BorderRadius.circular(16),
+            border: Border.all(
+              color: _hovered ? cs.primary.withValues(alpha: 0.35) : cs.outlineVariant.withValues(alpha: 0.3),
             ),
-            Expanded(
-              child: Padding(
-                padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 12),
-                child: Column(
-                  crossAxisAlignment: CrossAxisAlignment.start,
-                  children: [
-                    Text(
-                      video.title,
-                      maxLines: 2,
-                      overflow: TextOverflow.ellipsis,
-                      style: TextStyle(color: cs.onSurface, fontSize: 14, fontWeight: FontWeight.w600, height: 1.3),
-                    ),
-                    const SizedBox(height: 6),
-                    Container(
-                      padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 2),
-                      decoration: BoxDecoration(color: cs.primary.withValues(alpha: 0.15), borderRadius: BorderRadius.circular(20)),
-                      child: Row(
-                        mainAxisSize: MainAxisSize.min,
+            boxShadow: _hovered
+                ? [BoxShadow(color: cs.primary.withValues(alpha: 0.08), blurRadius: 12, offset: const Offset(0, 4))]
+                : [],
+          ),
+          child: Row(
+            children: [
+              ClipRRect(
+                borderRadius: const BorderRadius.horizontal(left: Radius.circular(16)),
+                child: SizedBox(width: 160, height: 96, child: _buildThumbnail(cs)),
+              ),
+              Expanded(
+                child: Padding(
+                  padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 12),
+                  child: Column(
+                    crossAxisAlignment: CrossAxisAlignment.start,
+                    children: [
+                      Text(
+                        widget.video.title,
+                        maxLines: 2,
+                        overflow: TextOverflow.ellipsis,
+                        style: TextStyle(color: cs.onSurface, fontSize: 14, fontWeight: FontWeight.w600, height: 1.35),
+                      ),
+                      const SizedBox(height: 8),
+                      Row(
                         children: [
-                          Icon(Icons.play_arrow_rounded, color: cs.primary, size: 14),
-                          const SizedBox(width: 2),
-                          Text(
-                            'Watch',
-                            style: TextStyle(color: cs.primary, fontSize: 11, fontWeight: FontWeight.w600),
+                          Container(
+                            padding: const EdgeInsets.symmetric(horizontal: 9, vertical: 3),
+                            decoration: BoxDecoration(
+                              color: cs.primary.withValues(alpha: 0.12),
+                              borderRadius: BorderRadius.circular(20),
+                            ),
+                            child: Row(
+                              mainAxisSize: MainAxisSize.min,
+                              children: [
+                                Icon(Icons.play_arrow_rounded, color: cs.primary, size: 13),
+                                const SizedBox(width: 3),
+                                Text('Watch', style: TextStyle(color: cs.primary, fontSize: 11, fontWeight: FontWeight.w600)),
+                              ],
+                            ),
                           ),
                         ],
                       ),
-                    ),
-                  ],
+                    ],
+                  ),
                 ),
               ),
-            ),
-          ],
+              Padding(
+                padding: const EdgeInsets.only(right: 14),
+                child: Icon(
+                  Icons.chevron_right_rounded,
+                  color: _hovered ? cs.primary : cs.onSurfaceVariant.withValues(alpha: 0.4),
+                  size: 20,
+                ),
+              ),
+            ],
+          ),
         ),
       ),
     );
   }
 
-  Widget _buildThumbnail() {
+  Widget _buildThumbnail(ColorScheme cs) {
     if (!(defaultTargetPlatform == TargetPlatform.android || defaultTargetPlatform == TargetPlatform.iOS)) {
-      return _shimmer();
+      return _shimmer(cs);
     }
     return FutureBuilder<Uint8List?>(
-      future: thumbnail,
+      future: widget.thumbnail,
       builder: (context, snapshot) {
         if (snapshot.hasData && snapshot.data != null) {
-          return Image.memory(snapshot.data!, fit: BoxFit.cover);
+          return Stack(
+            fit: StackFit.expand,
+            children: [
+              Image.memory(snapshot.data!, fit: BoxFit.cover),
+              if (_hovered)
+                Container(
+                  color: Colors.black.withValues(alpha: 0.2),
+                  child: const Center(child: Icon(Icons.play_circle_fill_rounded, color: Colors.white, size: 36)),
+                ),
+            ],
+          );
         }
-        return _shimmer();
+        return _shimmer(cs);
       },
     );
   }
 
-  Widget _shimmer() => Shimmer(child: Container(color: cs.surfaceContainerHighest));
+  Widget _shimmer(ColorScheme cs) => Shimmer(child: Container(color: cs.surfaceContainerHighest));
 }
 
 class _UserCard extends StatefulWidget {
-  const _UserCard({required this.initialUser, required this.cs});
+  const _UserCard({required this.initialUser, required this.cs, super.key});
 
   final UserProfile initialUser;
   final ColorScheme cs;
@@ -500,6 +605,16 @@ class _EmptyState extends StatelessWidget {
       ),
     );
   }
+}
+
+class _SmoothScrollBehavior extends MaterialScrollBehavior {
+  @override
+  Set<PointerDeviceKind> get dragDevices => {
+    PointerDeviceKind.touch,
+    PointerDeviceKind.mouse,
+    PointerDeviceKind.trackpad,
+    PointerDeviceKind.stylus,
+  };
 }
 
 class _TabBarDelegate extends SliverPersistentHeaderDelegate {
