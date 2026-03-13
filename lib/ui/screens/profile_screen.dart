@@ -16,6 +16,7 @@ import '../../base_logic.dart';
 import '../../logic/local_storage/local_seen_service.dart';
 import '../feed_view_model.dart';
 import '../misc/basic_player.dart';
+import '../misc/rolling_digit_counter.dart';
 import '../widgets/profile_image_picker.dart';
 import 'chat/chat_managing_screen.dart';
 
@@ -232,23 +233,28 @@ class _ProfileScreenState extends State<ProfileScreen> with TickerProviderStateM
     return Row(
       mainAxisAlignment: MainAxisAlignment.center,
       children: [
-        _buildStatItem(cs, '${user.followersCount}', 'Followers'),
+        _buildStatItem(cs, user.followersCount, 'Followers'),
         _buildStatDivider(cs),
-        _buildStatItem(cs, '${user.followingCount ?? 0}', 'Following'),
+        _buildStatItem(cs, user.followingCount ?? 0, 'Following'),
         _buildStatDivider(cs),
-        _buildStatItem(cs, '${user.totalLikesCount ?? 0}', 'Likes'),
+        _buildStatItem(cs, user.totalLikesCount ?? 0, 'Likes'),
       ],
     );
   }
 
-  Widget _buildStatItem(ColorScheme cs, String value, String label) {
+  Widget _buildStatItem(ColorScheme cs, int value, String label) {
     return Padding(
       padding: const EdgeInsets.symmetric(horizontal: 18),
       child: Column(
         children: [
-          Text(
-            value,
-            style: TextStyle(color: cs.onSurface, fontSize: 20, fontWeight: FontWeight.w800, letterSpacing: -0.5),
+          RollingDigitCounter(
+            value: value,
+            style: TextStyle(
+                color: cs.onSurface,
+                fontSize: 20,
+                fontWeight: FontWeight.w800,
+                letterSpacing: -0.5
+            ),
           ),
           const SizedBox(height: 3),
           Text(
