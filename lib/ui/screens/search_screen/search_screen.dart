@@ -101,12 +101,13 @@ class _SearchScreenState extends State<SearchScreen> with TickerProviderStateMix
 
   @override
   void dispose() {
-    _cachedThumbnails.clear();
+    disposeThumbnailCache();
     _scrollController.dispose();
     _tabController.dispose();
     _controller.dispose();
     super.dispose();
   }
+  FeedViewModel? _currentSearchViewModel;
 
   Future<void> _search([String? val]) async {
     val ??= _controller.text;
@@ -285,7 +286,13 @@ class _SearchScreenState extends State<SearchScreen> with TickerProviderStateMix
                   )
                 : const SizedBox.shrink();
           }
-          return VideoCard(video: videos[index], thumbnail: _thumbnailFor(videos[index]), onTap: () => _openVideoPlayer(index), cs: cs);
+          return VideoCard(video: videos[index], onTap: () => openVideoPlayer(
+            videoIndex: index,
+            feedModel: _currentSearchViewModel,
+            context: context,
+            listedVideos: videos,
+            tickerProvider: this,
+          ), cs: cs);
         }, childCount: _videoCount + 1),
       ),
     );
@@ -318,68 +325,61 @@ class _SearchScreenState extends State<SearchScreen> with TickerProviderStateMix
     );
   }
 
-  final Map<String, Future<Uint8List?>> _cachedThumbnails = {};
 
-  Future<Uint8List?> _thumbnailFor(Video video) {
-    if (!(defaultTargetPlatform == TargetPlatform.android || defaultTargetPlatform == TargetPlatform.iOS)) {
-      return Future.value(null);
-    }
-    return _cachedThumbnails[video.videoUrl] ??= VideoThumbnail.thumbnailData(video: video.videoUrl);
-  }
+  
+}
 
-  FeedViewModel? _currentSearchViewModel;
 
-  void _openVideoPlayer(int videoIndex) {
-    showGeneralDialog(
-      context: context,
-      barrierDismissible: true,
-      barrierLabel: 'VideoOverlay',
-      barrierColor: Colors.black87,
-      transitionDuration: const Duration(milliseconds: 280),
-      pageBuilder: (context, _, __) => SafeArea(
-        child: Center(
-          child: Material(
-            color: Colors.transparent,
-            child: Container(
-              width: MediaQuery.of(context).size.width * 0.95,
-              height: MediaQuery.of(context).size.height * 0.88,
-              decoration: BoxDecoration(color: Colors.black, borderRadius: BorderRadius.circular(20)),
-              clipBehavior: Clip.hardEdge,
-              child: Stack(
-                children: [
-                  feedVideos(
-                    this,
-                    SearchVideoResultRecommender(listedVideos: _searchBarResult!.videoResults),
-                    context,
-                    feedModel: _currentSearchViewModel,
-                    itemCount: _searchBarResult!.videoResults.length,
-                    initialPage: videoIndex,
-                  ),
-                  Positioned(
-                    right: 12,
-                    top: 12,
-                    child: GestureDetector(
-                      onTap: () => Navigator.pop(context),
-                      child: Container(
-                        padding: const EdgeInsets.all(8),
-                        decoration: const BoxDecoration(color: Colors.black54, shape: BoxShape.circle),
-                        child: const Icon(Icons.close_rounded, color: Colors.white, size: 20),
-                      ),
+void openVideoPlayer({required BuildContext context, required List<Video> listedVideos, required int videoIndex, required FeedViewModel? feedModel, required TickerProvider tickerProvider}) {
+  showGeneralDialog(
+    context: context,
+    barrierDismissible: true,
+    barrierLabel: 'VideoOverlay',
+    barrierColor: Colors.black87,
+    transitionDuration: const Duration(milliseconds: 280),
+    pageBuilder: (context, _, __) => SafeArea(
+      child: Center(
+        child: Material(
+          color: Colors.transparent,
+          child: Container(
+            width: MediaQuery.of(context).size.width * 0.95,
+            height: MediaQuery.of(context).size.height * 0.88,
+            decoration: BoxDecoration(color: Colors.black, borderRadius: BorderRadius.circular(20)),
+            clipBehavior: Clip.hardEdge,
+            child: Stack(
+              children: [
+                feedVideos(
+                  tickerProvider,
+                  SearchVideoResultRecommender(listedVideos: listedVideos),
+                  context,
+                  feedModel: feedModel,
+                  itemCount: listedVideos.length,
+                  initialPage: videoIndex,
+                ),
+                Positioned(
+                  right: 12,
+                  top: 12,
+                  child: GestureDetector(
+                    onTap: () => Navigator.pop(context),
+                    child: Container(
+                      padding: const EdgeInsets.all(8),
+                      decoration: const BoxDecoration(color: Colors.black54, shape: BoxShape.circle),
+                      child: const Icon(Icons.close_rounded, color: Colors.white, size: 20),
                     ),
                   ),
-                ],
-              ),
+                ),
+              ],
             ),
           ),
         ),
       ),
-      transitionBuilder: (context, animation, _, child) {
-        final curved = CurvedAnimation(parent: animation, curve: Curves.easeOutCubic);
-        return FadeTransition(
-          opacity: curved,
-          child: ScaleTransition(scale: Tween(begin: 0.88, end: 1.0).animate(curved), child: child),
-        );
-      },
-    );
-  }
+    ),
+    transitionBuilder: (context, animation, _, child) {
+      final curved = CurvedAnimation(parent: animation, curve: Curves.easeOutCubic);
+      return FadeTransition(
+        opacity: curved,
+        child: ScaleTransition(scale: Tween(begin: 0.88, end: 1.0).animate(curved), child: child),
+      );
+    },
+  );
 }

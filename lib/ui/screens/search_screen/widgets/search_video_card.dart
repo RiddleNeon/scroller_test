@@ -1,19 +1,20 @@
 import 'package:flutter/foundation.dart';
 import 'package:flutter/material.dart';
 import 'package:shimmer_animation/shimmer_animation.dart';
+import 'package:video_thumbnail/video_thumbnail.dart';
 import 'package:wurp/logic/video/video.dart';
 
 class VideoCard extends StatefulWidget {
   const VideoCard({
     super.key,
+    this.thumbnail,
     required this.video,
-    required this.thumbnail,
     required this.onTap,
     required this.cs,
   });
 
   final Video video;
-  final Future<Uint8List?> thumbnail;
+  final Future<Uint8List?>? thumbnail;
   final VoidCallback onTap;
   final ColorScheme cs;
 
@@ -23,6 +24,7 @@ class VideoCard extends StatefulWidget {
 
 class _VideoCardState extends State<VideoCard> {
   bool _hovered = false;
+  late Future<Uint8List?>? thumbnail = widget.thumbnail;
 
   String _formatCount(int? count) {
     if (count == null) return '—';
@@ -228,8 +230,9 @@ class _VideoCardState extends State<VideoCard> {
         defaultTargetPlatform == TargetPlatform.iOS)) {
       return _shimmer(cs);
     }
+    thumbnail ??= thumbnailFor(widget.video);
     return FutureBuilder<Uint8List?>(
-      future: widget.thumbnail,
+      future: thumbnail,
       builder: (context, snapshot) {
         if (snapshot.hasData && snapshot.data != null) {
           return Stack(
@@ -277,4 +280,18 @@ class _StatChip extends StatelessWidget {
       ],
     );
   }
+}
+
+
+final Map<String, Future<Uint8List?>> _cachedThumbnails = {};
+
+Future<Uint8List?> thumbnailFor(Video video) {
+  if (!(defaultTargetPlatform == TargetPlatform.android || defaultTargetPlatform == TargetPlatform.iOS)) {
+    return Future.value(null);
+  }
+  return _cachedThumbnails[video.videoUrl] ??= VideoThumbnail.thumbnailData(video: video.videoUrl);
+}
+
+void disposeThumbnailCache() {
+  _cachedThumbnails.clear();
 }

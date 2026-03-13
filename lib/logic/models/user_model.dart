@@ -68,7 +68,7 @@ class UserProfile {
     };
   }
 
-  UserProfile copyWith({String? username, String? profileImageUrl, String? bio, int? followersCount}) {
+  UserProfile copyWith({String? username, String? profileImageUrl, String? bio, int? followersCount, int? followingCount, int? totalVideosCount, int? totalLikesCount}) {
     return UserProfile(
       id: id,
       username: username ?? this.username,
@@ -76,9 +76,9 @@ class UserProfile {
       bio: bio ?? this.bio,
       createdAt: createdAt,
       followersCount: followersCount ?? this.followersCount,
-      followingCount: followingCount,
-      totalVideosCount: totalVideosCount,
-      totalLikesCount: totalLikesCount,
+      followingCount: followingCount ?? this.followingCount,
+      totalVideosCount: totalVideosCount ?? this.totalVideosCount,
+      totalLikesCount: totalLikesCount ?? this.totalLikesCount,
     );
   }
 

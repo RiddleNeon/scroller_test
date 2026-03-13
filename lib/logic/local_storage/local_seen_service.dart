@@ -84,17 +84,19 @@ class LocalSeenService {
     _chatCursorBox = await Hive.openBox<DateTime>('${userId}_$_chatCursorBoxName');
     _conversationBox = await Hive.openBox('${userId}_$_conversationBoxName');
     _authorBox = await Hive.openBox('${userId}_$_authorBoxName');
-/*  await _seenBox.clear();
+  await _seenBox.clear();
     await _settingsBox.clear();
     await _cursorBox.clear();
     await _cursorDirtyBox.clear();
     await _interactionBox.clear();
     await _blacklistedTagsBox.clear();
+    await _followingBox.clear();
+    await _authorBox.clear();
+    
     await _likeValsBox.clear();
-    _settingsBox.delete(_lastSyncSeenKey);
     await _chatBox.clear();
     await _chatCursorBox.clear();
-    await _conversationBox.clear();*/
+    await _conversationBox.clear();
 
     DateTime? lastAuthorUpdate = (_settingsBox.get(_lastUpdateAuthorsKey) as DateTime?);
 

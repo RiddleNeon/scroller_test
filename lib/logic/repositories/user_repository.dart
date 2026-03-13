@@ -83,32 +83,16 @@ class UserRepository {
       followersCount: 0,
     );
   }
-
+  
 
   ///returns if the user is followed after the operation
-  Future<bool> toggleFollowUser(String currentId, String followingId) async {
-    return toggleFollowUserSupabase(currentId, followingId);
-  }
-
-  ///returns if the user is followed after the operation
-  Future<bool> toggleFollowUserSupabase(String currentId, String followingId) async {
-    if (currentId == followingId) throw Exception('Cannot toggle follow yourself');
-
-    bool following = await isFollowingSupabase(currentId, followingId);
-
-    if (following) {
-      _unfollowUserSupabase(currentId, followingId);
-      return false;
-    } else {
-      _followUserSupabase(currentId, followingId);
-      return true;
-    }
-  }
-  
-  
-  /// Follow a user
-  Future<void> followUser(String currentId, String followingId) async {
-    await followUserSupabase(currentId, followingId);
+  Future<bool> toggleFollowUser(String followingId) async {
+    if (currentUser.id == followingId) throw Exception('Cannot toggle follow yourself');
+    String result = await supabaseClient.rpc('toggle_follow', params: {'p_user_id': currentUser.id, 'p_other_id': followingId});
+    print("toggleFollowUserSupabase result: $result, user: ${currentUser.id}, other: $followingId");
+    bool followed = result == 'followed';
+    currentUser = currentUser.copyWith(followingCount: followed ? (currentUser.followingCount ?? 0) + 1 : (currentUser.followingCount ?? 1) - 1);
+    return followed;
   }
 
   /// Follow a user

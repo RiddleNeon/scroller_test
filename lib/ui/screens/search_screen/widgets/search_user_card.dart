@@ -8,8 +8,9 @@ import '../../../../base_logic.dart';
 import '../../../../logic/local_storage/local_seen_service.dart';
 
 class UserCard extends StatefulWidget {
-  const UserCard({super.key, required this.initialUser, required this.cs});
-
+  const UserCard({super.key, required this.initialUser, required this.cs, this.onFollowChange});
+  
+  final void Function(bool)? onFollowChange;
   final UserProfile initialUser;
   final ColorScheme cs;
 
@@ -19,8 +20,7 @@ class UserCard extends StatefulWidget {
 
 class _UserCardState extends State<UserCard> {
   late UserProfile user = widget.initialUser;
-  late final GlobalObjectKey<FollowButtonState> _followButtonState =
-  GlobalObjectKey('followButton${user.id}');
+  late final GlobalKey<FollowButtonState> _followButtonState = GlobalKey();
 
   @override
   Widget build(BuildContext context) {
@@ -44,10 +44,13 @@ class _UserCardState extends State<UserCard> {
                   initialFollowed: localSeenService.isFollowing(user.id),
                   onFollowChange: (bool followed) {
                     setState(() {
-                      user = user.copyWith(
-                          followersCount:
-                          user.followersCount + (followed ? 1 : -1));
+                      user = user.copyWith(followersCount: user.followersCount + (followed ? 1 : -1));
                       _followButtonState.currentState?.setFollowed(followed);
+                      if (followed)
+                        localSeenService.followUser(user.id);
+                      else
+                        localSeenService.unfollowUser(user.id);
+                      widget.onFollowChange?.call(followed);
                     });
                   },
                 );
@@ -61,11 +64,7 @@ class _UserCardState extends State<UserCard> {
               padding: const EdgeInsets.all(2),
               decoration: BoxDecoration(
                 shape: BoxShape.circle,
-                gradient: LinearGradient(
-                  colors: [widget.cs.primary, widget.cs.secondary],
-                  begin: Alignment.topLeft,
-                  end: Alignment.bottomRight,
-                ),
+                gradient: LinearGradient(colors: [widget.cs.primary, widget.cs.secondary], begin: Alignment.topLeft, end: Alignment.bottomRight),
               ),
               child: CircleAvatar(
                 radius: 26,
@@ -82,32 +81,24 @@ class _UserCardState extends State<UserCard> {
                 children: [
                   Text(
                     user.username,
-                    style: TextStyle(
-                        color: widget.cs.onSurface,
-                        fontSize: 15,
-                        fontWeight: FontWeight.w700),
+                    style: TextStyle(color: widget.cs.onSurface, fontSize: 15, fontWeight: FontWeight.w700),
                   ),
                   const SizedBox(height: 2),
-                  Text('@${user.username}',
-                      style: TextStyle(
-                          color: widget.cs.onSurfaceVariant, fontSize: 13)),
+                  Text('@${user.username}', style: TextStyle(color: widget.cs.onSurfaceVariant, fontSize: 13)),
                 ],
               ),
             ),
             if (user.id != currentUser.id)
               FollowButton(
                 key: _followButtonState,
-                onChanged: (_) async {
-                  bool followed =
-                  await userRepository.toggleFollowUser(currentUser.id, user.id);
+                onChanged: (followed) async {
                   setState(() {
-                    user = user.copyWith(
-                        followersCount:
-                        user.followersCount + (followed ? 1 : -1));
+                    user = user.copyWith(followersCount: user.followersCount + (followed ? 1 : -1));
+                    widget.onFollowChange?.call(followed);
                   });
-                  return followed;
                 },
                 initialSubscribed: localSeenService.isFollowing(user.id),
+                user: user,
               ),
           ],
         ),

@@ -2,11 +2,11 @@ import 'package:flutter/material.dart';
 import 'package:go_router/go_router.dart';
 import 'package:wurp/main.dart';
 import 'package:wurp/ui/screens/auth_screen.dart';
-import 'package:wurp/ui/widgets/bottom_navigation_bar.dart';
 import 'package:wurp/ui/screens/chat/chat_managing_screen.dart';
 import 'package:wurp/ui/screens/profile_screen.dart';
 import 'package:wurp/ui/screens/search_screen/search_screen.dart';
 import 'package:wurp/ui/short_video_player.dart';
+import 'package:wurp/ui/widgets/bottom_navigation_bar.dart';
 
 import '../base_logic.dart';
 
@@ -45,17 +45,35 @@ void initRouter() {
           ),
           GoRoute(
             path: '/chat',
-            builder: (context, state) => ChatManagingScreen(
-              preloadMoreChats: (current) => chatRepository.getChats(currentUser.id, offset: current ?? 0, limit: 15),
-            )
+            builder: (context, state) =>
+                ChatManagingScreen(preloadMoreChats: (current) => chatRepository.getChats(currentUser.id, offset: current ?? 0, limit: 15)),
           ),
+          GoRoute(
+            path: '/create',
+            builder: (context, state) => const Scaffold(
+              // appBar: AppBar(title: const Text('Not yet implemented')),
+              body: Center(
+                child: Column(
+                  mainAxisSize: MainAxisSize.min,
+                  children: [
+                    Icon(Icons.build, size: 64, color: Colors.grey),
+                    SizedBox(height: 12),
+                    Text('Not yet implemented', style: TextStyle(color: Colors.grey)),
+                  ],
+                ),
+              ),
+            ),
+          ), //indicator that this is not implemented yet,
         ],
       ),
       GoRoute(path: '/login', builder: (context, state) => const LoginScreen()),
-      GoRoute(path: '/', builder: (context, state) {
-        print("matched /");
-        return const SizedBox.shrink();
-      }),
+      GoRoute(
+        path: '/',
+        builder: (context, state) {
+          print("matched /");
+          return const SizedBox.shrink();
+        },
+      ),
     ],
   );
 }
@@ -73,13 +91,11 @@ List<({IconData icon, String label, String id})> _navigationBarItems = [
   (icon: Icons.home, label: 'Home', id: '/feed'),
   (icon: Icons.search, label: 'Discover', id: '/search_screen'),
   (icon: Icons.add_box_outlined, label: '', id: '/create'),
-  (icon: Icons.notifications_none, label: 'Inbox', id: '/notifications'),
   (icon: Icons.person_outline, label: 'Profile', id: '/profile'),
   (icon: Icons.chat, label: 'Chat', id: '/chat'),
 ];
 
-
-class RouteObserver extends NavigatorObserver {  
+class RouteObserver extends NavigatorObserver {
   @override
   void didChangeTop(Route<dynamic> topRoute, Route<dynamic>? previousTopRoute) {
     super.didChangeTop(topRoute, previousTopRoute);

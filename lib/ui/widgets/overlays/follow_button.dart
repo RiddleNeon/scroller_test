@@ -1,13 +1,17 @@
 import 'package:flutter/material.dart';
+import 'package:wurp/logic/models/user_model.dart';
+
+import '../../../base_logic.dart';
 
 enum FollowButtonDesign { floating, docked }
 
 class FollowButton extends StatefulWidget {
   final bool initialSubscribed;
-  final Future<bool> Function(bool)? onChanged;
+  final UserProfile user;
+  final Future<void> Function(bool)? onChanged;
   final FollowButtonDesign design;
 
-  const FollowButton({super.key, this.initialSubscribed = false, this.onChanged, this.design = .floating});
+  const FollowButton({super.key, this.initialSubscribed = false, this.onChanged, this.design = .floating, required this.user});
 
   @override
   State<FollowButton> createState() => FollowButtonState();
@@ -38,7 +42,8 @@ class FollowButtonState extends State<FollowButton> with SingleTickerProviderSta
     await _controller.forward();
     _controller.reverse();
 
-    _subscribed = await widget.onChanged?.call(_subscribed) ?? !_subscribed;
+    _subscribed = await userRepository.toggleFollowUser(widget.user.id);
+    await widget.onChanged?.call(_subscribed);
     setState(() {
       _isLoading = false;
     });
