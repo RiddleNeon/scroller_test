@@ -108,14 +108,19 @@ class _ProfileScreenState extends State<ProfileScreen> with TickerProviderStateM
                     .map(
                       (video) => VideoCard(
                         video: video,
-                        onTap: () {
-                          openVideoPlayer(
+                        onTap: () async {
+                          int likesChanged = await openVideoPlayer(
                             context: context,
                             listedVideos: videos,
                             videoIndex: videos.indexOf(video),
                             feedModel: _currentSearchViewModel,
                             tickerProvider: this,
                           );
+                          if(likesChanged != 0) {
+                            setState(() {
+                              user = user.copyWith(totalLikesCount: max((user.totalLikesCount ?? 0) + likesChanged, 0));
+                            });
+                          }
                         },
                         cs: cs,
                       ),

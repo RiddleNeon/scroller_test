@@ -146,6 +146,15 @@ class UserRepository {
     return (result as List).map((e) => UserProfile.fromSupabase(e));
   }
 
+  /// returns the total length of the search result of the search query, without pagination. Useful for showing total result count in the UI.
+  Future<int> countSearchUsers(String query) async {
+    final result = await supabaseClient
+        .rpc('count_search_profiles', params: {
+      'search_query': query,
+    });
+    return result as int;
+  }
+
   Future<List<String>> getFollowingIds(String userId) async => getFollowingIdsSupabase(userId);
 
   Future<List<String>> getFollowingIdsSupabase(String userId) async {

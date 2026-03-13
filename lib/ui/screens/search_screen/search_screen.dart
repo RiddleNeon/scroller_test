@@ -27,8 +27,8 @@ class _SearchScreenState extends State<SearchScreen> with TickerProviderStateMix
   bool _loading = false;
   bool _preloading = false;
   bool _hasSearched = false;
-  int _videoCount = 0;
-  int _userCount = 0;
+  int _currentLoadedVideoCount = 0;
+  int _currentLoadedUserCount = 0;
 
   late TabController _tabController;
 
@@ -83,7 +83,7 @@ class _SearchScreenState extends State<SearchScreen> with TickerProviderStateMix
       if (mounted) {
         setState(() {
           _preloading = false;
-          _videoCount = _searchBarResult!.videoResults.length;
+          _currentLoadedVideoCount = _searchBarResult!.videoResults.length;
         });
       }
     } else {
@@ -91,7 +91,7 @@ class _SearchScreenState extends State<SearchScreen> with TickerProviderStateMix
       if (mounted) {
         setState(() {
           _preloading = false;
-          _userCount = _searchBarResult!.userResults.length;
+          _currentLoadedUserCount = _searchBarResult!.userResults.length;
         });
       }
     }
@@ -122,8 +122,8 @@ class _SearchScreenState extends State<SearchScreen> with TickerProviderStateMix
     _searchBarResult = SearchBarResult(val);
     await _searchBarResult!.complete();
     _currentSearchViewModel = FeedViewModel();
-    _videoCount = _searchBarResult!.videoResults.length;
-    _userCount = _searchBarResult!.userResults.length;
+    _currentLoadedVideoCount = _searchBarResult!.videoResults.length;
+    _currentLoadedUserCount = _searchBarResult!.userResults.length;
     setState(() => _loading = false);
   }
 
@@ -188,7 +188,7 @@ class _SearchScreenState extends State<SearchScreen> with TickerProviderStateMix
                         children: [
                           const Icon(Icons.play_circle_outline, size: 18),
                           const SizedBox(width: 6),
-                          Text(_searchBarResult != null ? 'Videos (${_searchBarResult!.videoResults.length})' : 'Videos'),
+                          Text(_searchBarResult != null ? 'Videos (${_searchBarResult!.totalVideoResults})' : 'Videos'),
                         ],
                       ),
                     ),
@@ -198,7 +198,7 @@ class _SearchScreenState extends State<SearchScreen> with TickerProviderStateMix
                         children: [
                           const Icon(Icons.person_outline, size: 18),
                           const SizedBox(width: 6),
-                          Text(_searchBarResult != null ? 'Creators (${_searchBarResult!.userResults.length})' : 'Creators'),
+                          Text(_searchBarResult != null ? 'Creators (${_searchBarResult!.totalUserResults})' : 'Creators'),
                         ],
                       ),
                     ),
@@ -276,7 +276,7 @@ class _SearchScreenState extends State<SearchScreen> with TickerProviderStateMix
       padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 8),
       sliver: SliverList(
         delegate: SliverChildBuilderDelegate((context, index) {
-          if (index == _videoCount) {
+          if (index == _currentLoadedVideoCount) {
             return _preloading
                 ? Padding(
                     padding: const EdgeInsets.symmetric(vertical: 16),
@@ -293,7 +293,7 @@ class _SearchScreenState extends State<SearchScreen> with TickerProviderStateMix
             listedVideos: videos,
             tickerProvider: this,
           ), cs: cs);
-        }, childCount: _videoCount + 1),
+        }, childCount: _currentLoadedVideoCount + 1),
       ),
     );
   }
@@ -309,7 +309,7 @@ class _SearchScreenState extends State<SearchScreen> with TickerProviderStateMix
       padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 8),
       sliver: SliverList(
         delegate: SliverChildBuilderDelegate((context, index) {
-          if (index == _userCount) {
+          if (index == _currentLoadedUserCount) {
             return _preloading
                 ? Padding(
                     padding: const EdgeInsets.symmetric(vertical: 16),
@@ -320,7 +320,7 @@ class _SearchScreenState extends State<SearchScreen> with TickerProviderStateMix
                 : const SizedBox.shrink();
           }
           return UserCard(initialUser: users[index], cs: cs, key: ValueKey(users[index].id));
-        }, childCount: _userCount + 1),
+        }, childCount: _currentLoadedUserCount + 1),
       ),
     );
   }
@@ -329,9 +329,10 @@ class _SearchScreenState extends State<SearchScreen> with TickerProviderStateMix
   
 }
 
-
-void openVideoPlayer({required BuildContext context, required List<Video> listedVideos, required int videoIndex, required FeedViewModel? feedModel, required TickerProvider tickerProvider}) {
-  showGeneralDialog(
+///returns the number of likes added (can be negative if user unliked some videos)
+Future<int> openVideoPlayer({required BuildContext context, required List<Video> listedVideos, required int videoIndex, required FeedViewModel? feedModel, required TickerProvider tickerProvider}) async {
+  int likes = 0;
+  await showGeneralDialog(
     context: context,
     barrierDismissible: true,
     barrierLabel: 'VideoOverlay',
@@ -355,6 +356,9 @@ void openVideoPlayer({required BuildContext context, required List<Video> listed
                   feedModel: feedModel,
                   itemCount: listedVideos.length,
                   initialPage: videoIndex,
+                  onLikeChanged: (liked) {
+                    likes += liked ? 1 : -1;
+                  },
                 ),
                 Positioned(
                   right: 12,
@@ -382,4 +386,5 @@ void openVideoPlayer({required BuildContext context, required List<Video> listed
       );
     },
   );
+  return likes;
 }

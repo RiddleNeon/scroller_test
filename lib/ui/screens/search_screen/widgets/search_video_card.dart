@@ -69,11 +69,9 @@ class _VideoCardState extends State<VideoCard> {
           child: Column(
             crossAxisAlignment: CrossAxisAlignment.start,
             children: [
-              // ── Top row: thumbnail + title/meta ──────────────────────────
               Row(
                 crossAxisAlignment: CrossAxisAlignment.start,
                 children: [
-                  // Thumbnail
                   ClipRRect(
                     borderRadius: const BorderRadius.only(
                       topLeft: Radius.circular(16),
@@ -86,7 +84,6 @@ class _VideoCardState extends State<VideoCard> {
                         fit: StackFit.expand,
                         children: [
                           _buildThumbnail(cs),
-                          // Duration badge
                           if (video.duration != null)
                             Positioned(
                               bottom: 5,
@@ -108,14 +105,12 @@ class _VideoCardState extends State<VideoCard> {
                     ),
                   ),
 
-                  // Right: title + author + stats
                   Expanded(
                     child: Padding(
                       padding: const EdgeInsets.fromLTRB(12, 10, 10, 10),
                       child: Column(
                         crossAxisAlignment: CrossAxisAlignment.start,
                         children: [
-                          // Title
                           Text(
                             video.title,
                             maxLines: 2,
@@ -175,7 +170,6 @@ class _VideoCardState extends State<VideoCard> {
                     ),
                   ),
 
-                  // Chevron
                   Padding(
                     padding: const EdgeInsets.only(right: 10, top: 10),
                     child: Icon(
@@ -187,7 +181,6 @@ class _VideoCardState extends State<VideoCard> {
                 ],
               ),
 
-              // ── Tags row ─────────────────────────────────────────────────
               if (video.tags.isNotEmpty)
                 Padding(
                   padding: const EdgeInsets.fromLTRB(12, 0, 12, 10),
@@ -258,7 +251,6 @@ class _VideoCardState extends State<VideoCard> {
       Shimmer(child: Container(color: cs.surfaceContainerHighest));
 }
 
-// ── Small reusable stat chip ────────────────────────────────────────────────
 class _StatChip extends StatelessWidget {
   const _StatChip({required this.icon, required this.label, required this.cs});
 

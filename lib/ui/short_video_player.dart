@@ -7,7 +7,7 @@ import 'package:wurp/ui/router.dart';
 import '../base_logic.dart';
 import 'widgets/video_widget.dart';
 
-Widget feedVideos(TickerProvider tickerProvider, VideoProvider videoProvider, BuildContext context, {FeedViewModel? feedModel, int itemCount = 5000, int initialPage = 0}) {
+Widget feedVideos(TickerProvider tickerProvider, VideoProvider videoProvider, BuildContext context, {FeedViewModel? feedModel, int itemCount = 5000, int initialPage = 0, void Function(bool)? onLikeChanged}) {
   feedModel ??= feedViewModel;
   feedModel.switchToVideoAt(initialPage,
       videoSource:
@@ -94,6 +94,7 @@ Widget feedVideos(TickerProvider tickerProvider, VideoProvider videoProvider, Bu
                     videoProvider: videoProvider,
                     userId: currentAuthUserId(),
                     index: index,
+                    onLikeChanged: onLikeChanged,
                   );
                 });
           },

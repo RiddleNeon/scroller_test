@@ -2,11 +2,15 @@ import 'dart:math';
 
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
+import 'package:wurp/logic/models/user_model.dart';
 import 'package:wurp/logic/repositories/chat_repository.dart';
 import 'package:wurp/logic/repositories/user_repository.dart';
 import 'package:wurp/ui/misc/avatar.dart';
 
+import '../../../base_logic.dart';
 import '../../../logic/chat/chat_message.dart';
+import '../../../logic/local_storage/local_seen_service.dart';
+import '../profile_screen.dart';
 import 'calling_screen.dart';
 
 class MessagingScreen extends StatefulWidget {
@@ -14,20 +18,21 @@ class MessagingScreen extends StatefulWidget {
   final void Function(ChatMessage message) onMessageUpdate;
   final Future<List<ChatMessage>> Function(int limit, DateTime? lastVisibleMessage) loadMoreMessages;
 
-  final String? recipientName;
-  final String recipientId;
-  final String? recipientAvatarUrl;
+  String? get recipientName => user.username;
+  String get recipientId => user.id;
+  String? get recipientAvatarUrl => user.profileImageUrl;
+  
+  final UserProfile user;
+  
   final bool isOnline;
 
   const MessagingScreen({
     super.key,
     required this.onSend,
-    this.recipientName = 'Alex Rivera',
-    this.recipientAvatarUrl,
     this.isOnline = true,
     required this.loadMoreMessages, 
     required this.onMessageUpdate, 
-    required this.recipientId,
+    required this.user, 
   });
 
   @override
@@ -229,56 +234,80 @@ class MessagingScreenState extends State<MessagingScreen> with TickerProviderSta
   }
 
   PreferredSizeWidget _buildAppBar(ThemeData theme, ColorScheme cs) {
+    print("toolbar height: ${kToolbarHeight}");
     return AppBar(
       backgroundColor: cs.surface,
       elevation: 0,
       scrolledUnderElevation: 0,
+      toolbarHeight: kToolbarHeight,
       systemOverlayStyle: SystemUiOverlayStyle(statusBarBrightness: theme.brightness == Brightness.dark ? Brightness.dark : Brightness.light),
       leading: IconButton(
         icon: Icon(Icons.arrow_back_ios_new_rounded, size: 20, color: cs.onSurface),
-        onPressed: () => Navigator.maybePop(context),
+        onPressed: () => Navigator.maybePop(context), 
       ),
-      title: Row(
-        children: [
-          _AvatarWidget(name: widget.recipientName ?? '', imageUrl: widget.recipientAvatarUrl, isOnline: widget.isOnline, radius: 18, colorScheme: cs),
-          const SizedBox(width: 10),
-          Column(
-            crossAxisAlignment: CrossAxisAlignment.start,
-            mainAxisSize: MainAxisSize.min,
-            children: [
-              Text(
-                widget.recipientName ?? '',
-                style: theme.textTheme.titleMedium?.copyWith(fontWeight: FontWeight.w700, fontSize: 15, color: cs.onSurface),
-              ),
-              Text(
-                widget.isOnline ? 'Active now' : 'Offline',
-                style: TextStyle(fontSize: 11, color: widget.isOnline ? const Color(0xFF20D070) : cs.outline, fontWeight: FontWeight.w500),
-              ),
-            ],
+      title: InkWell(
+        onTap: () => Navigator.of(context).push(
+          MaterialPageRoute(
+            builder: (context) {
+              return ProfileScreen(
+                initialProfile: widget.user,
+                ownProfile: widget.user.id == currentUser.id,
+                hasBackButton: true,
+                initialFollowed: localSeenService.isFollowing(widget.user.id),
+                onFollowChange: (bool followed) {
+                },
+              );
+            },
           ),
-        ],
+        ),
+        borderRadius: const BorderRadius.only(bottomLeft: Radius.circular(25), bottomRight: Radius.circular(25)),
+        child: Padding(
+            padding: const EdgeInsets.symmetric(horizontal: 8.0, vertical: 8),
+            child: Row(
+              children: [
+                _AvatarWidget(name: widget.recipientName ?? '', imageUrl: widget.recipientAvatarUrl, isOnline: widget.isOnline, radius: 18, colorScheme: cs),
+                const SizedBox(width: 10),
+                Column(
+                  crossAxisAlignment: CrossAxisAlignment.start,
+                  mainAxisSize: MainAxisSize.min,
+                  children: [
+                    Text(
+                      widget.recipientName ?? '',
+                      style: theme.textTheme.titleMedium?.copyWith(fontWeight: FontWeight.w700, fontSize: 15, color: cs.onSurface),
+                    ),
+                    Text(
+                      widget.isOnline ? 'Active now' : 'Offline',
+                      style: TextStyle(fontSize: 11, color: widget.isOnline ? const Color(0xFF20D070) : cs.outline, fontWeight: FontWeight.w500),
+                    ),
+                  ],
+                ),
+              ],
+            ),
+          ),
       ),
       actions: [
-        IconButton(
-          icon: Icon(Icons.videocam_rounded, color: cs.onSurface),
-          onPressed: () {
-            Navigator.push(
-              context,
-              MaterialPageRoute(
-                builder: (context) {
-                  return CallingApp(
-                    name: widget.recipientName ?? "Unknown User",
-                    profileImageUrl: widget.recipientAvatarUrl ?? createUserProfileImageUrl(widget.recipientName ?? ""),
-                  );
-                },
-              ),
-            );
-          },
+        Center(
+          child: IconButton(
+            icon: Icon(Icons.videocam_rounded, color: cs.onSurface),
+            onPressed: () {
+              Navigator.push(
+                context,
+                MaterialPageRoute(
+                  builder: (context) {
+                    return CallingApp(
+                      name: widget.recipientName ?? "Unknown User",
+                      profileImageUrl: widget.recipientAvatarUrl ?? createUserProfileImageUrl(widget.recipientName ?? ""),
+                    );
+                  },
+                ),
+              );
+            },
+          ),
         ),
-        IconButton(
+/*        IconButton(
           icon: Icon(Icons.info_outline_rounded, color: cs.onSurface),
           onPressed: () {},
-        ),
+        ),*/
       ],
     );
   }

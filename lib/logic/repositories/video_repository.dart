@@ -302,6 +302,7 @@ class VideoRepository {
         .limit(limit);
     return result.map<Video>(_toVideo).toList();
   }
+
   
   /// searches all videos where title, description or tags contain the query (case-insensitive), ordered by relevance desc then creation date and popularity desc. Also contains unprecise full text search, so "funny" will match "funny videos". For more precise tag search, use [searchVideosByTag].
   Future<({List<Video> videos, int? nextOffset})> searchVideos(String query, {int limit = 20, int offset = 0, bool withAuthor = false}) async {
@@ -320,6 +321,15 @@ class VideoRepository {
     print("RESULT: $result");
 
     return (result as List).map<Video>((e) => _toVideo(e)).toList();
+  }
+  
+  /// returns the total length of the search result of the search query, without pagination. Useful for showing total result count in the UI.
+  Future<int> countSearchVideos(String query) async {
+    final result = await supabaseClient
+        .rpc('count_search_videos', params: {
+      'search_query': query,
+    });
+    return result as int;
   }
   
   ///searches all videos with a given tag, ordered by creation date desc. Warning: only outputs videos with that exact tag, so "funny" won't match "funny videos". Use [searchVideos] for more flexible search.

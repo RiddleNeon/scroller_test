@@ -18,6 +18,7 @@ class VideoItem extends StatefulWidget {
   final TickerProvider provider;
   final VideoProvider videoProvider;
   final int index;
+  final void Function(bool)? onLikeChanged;
 
   const VideoItem({
     super.key,
@@ -26,7 +27,7 @@ class VideoItem extends StatefulWidget {
     required this.userId,
     required this.provider,
     required this.videoProvider,
-    required this.index,
+    required this.index, this.onLikeChanged,
   });
 
   @override
@@ -178,6 +179,7 @@ class _VideoItemState extends State<VideoItem> {
       localSeenService.removeLike(widget.video.id);
     }
     // Interaction will be saved when video stops playing
+    widget.onLikeChanged?.call(isLiked);
   }
 
   void onDislikeChanged(bool isDisliked) {

@@ -197,23 +197,28 @@ GlobalObjectKey<MessagingScreenState>? currentOpenChatScreenKey;
 Widget buildMessagingScreen(Chat chat, void Function(ChatMessage) onMessageUpdate) {
   currentOpenChatScreenKey = GlobalObjectKey('chat${currentUser.id}-${chat.partnerId}');
   currentOpenChat = chat;
-  return MessagingScreen(
-    key: currentOpenChatScreenKey,
-    recipientName: chat.partnerName,
-    recipientAvatarUrl: chat.partnerProfileImageUrl,
-    recipientId: chat.partnerId,
-    onMessageUpdate: onMessageUpdate,
-    onSend: (message) async {
-      chatManager.addChat(chat, replaceExisting: false);
-      await chatRepository.sendNotification(
-        chat: chat,
-        message: ChatMessage(id: "${chat.partnerId}-${DateTime
-            .now()
-            .microsecondsSinceEpoch}", text: message, isMe: true, timestamp: DateTime.now()),
+  return FutureBuilder(
+    future: userRepository.getUser(chat.partnerId),
+    builder: (context, asyncSnapshot) {
+      if(!asyncSnapshot.hasData) return const Scaffold(body: Center(child: CircularProgressIndicator()));
+      
+      return MessagingScreen(
+        key: currentOpenChatScreenKey,
+        user: asyncSnapshot.data!,
+        onMessageUpdate: onMessageUpdate,
+        onSend: (message) async {
+          chatManager.addChat(chat, replaceExisting: false);
+          await chatRepository.sendNotification(
+            chat: chat,
+            message: ChatMessage(id: "${chat.partnerId}-${DateTime
+                .now()
+                .microsecondsSinceEpoch}", text: message, isMe: true, timestamp: DateTime.now()),
+          );
+        },
+        loadMoreMessages: (int limit, DateTime? lastVisibleMessage) async {
+          return chatRepository.getMessagesWith(chat.partnerId, startOffset: lastVisibleMessage, limit: limit);
+        },
       );
-    },
-    loadMoreMessages: (int limit, DateTime? lastVisibleMessage) async {
-      return chatRepository.getMessagesWith(chat.partnerId, startOffset: lastVisibleMessage, limit: limit);
-    },
+    }
   );
 }

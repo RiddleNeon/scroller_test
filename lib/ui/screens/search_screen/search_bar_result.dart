@@ -8,6 +8,8 @@ class SearchBarResult {
   String searchText;
   List<Video> videoResults = [];
   List<UserProfile> userResults = [];
+  int totalVideoResults = 0;
+  int totalUserResults = 0;
   int _videoOffset = 0;
   int _userOffset = 0;
   bool _hasMoreVideos = true;
@@ -31,6 +33,8 @@ class SearchBarResult {
     _videoOffset = videoResult.nextOffset ?? _videoOffset;
     _hasMoreVideos = videoResult.nextOffset != null;
 
+    totalVideoResults = await videoRepo.countSearchVideos(searchText);
+
     _isLoadingVideos = false;
   }
 
@@ -42,6 +46,8 @@ class SearchBarResult {
     userResults = userResult.users;
     _userOffset = userResult.nextOffset ?? _userOffset;
     _hasMoreUsers = userResult.nextOffset != null;
+    
+    totalUserResults = await userRepository.countSearchUsers(searchText);
 
     _isLoadingUsers = false;
   }
