@@ -46,10 +46,6 @@ class _UserCardState extends State<UserCard> {
                     setState(() {
                       user = user.copyWith(followersCount: user.followersCount + (followed ? 1 : -1));
                       _followButtonState.currentState?.setFollowed(followed);
-                      if (followed)
-                        localSeenService.followUser(user.id);
-                      else
-                        localSeenService.unfollowUser(user.id);
                       widget.onFollowChange?.call(followed);
                     });
                   },

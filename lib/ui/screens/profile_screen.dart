@@ -1,3 +1,4 @@
+import 'dart:math';
 import 'dart:ui';
 
 import 'package:flutter/material.dart';
@@ -48,7 +49,6 @@ class _ProfileScreenState extends State<ProfileScreen> with TickerProviderStateM
   List<UserProfile> followers = [];
   List<UserProfile> following = [];
 
-
   FeedViewModel? _currentSearchViewModel;
 
   @override
@@ -76,18 +76,14 @@ class _ProfileScreenState extends State<ProfileScreen> with TickerProviderStateM
     super.dispose();
   }
 
-
   @override
   Widget build(BuildContext context) {
-    final cs = Theme
-        .of(context)
-        .colorScheme;
+    final cs = Theme.of(context).colorScheme;
     return Scaffold(
       backgroundColor: cs.surface,
       body: SafeArea(
         child: NestedScrollView(
-          headerSliverBuilder: (context, innerBoxIsScrolled) =>
-          [
+          headerSliverBuilder: (context, innerBoxIsScrolled) => [
             SliverAppBar(
               pinned: true,
               floating: false,
@@ -97,43 +93,71 @@ class _ProfileScreenState extends State<ProfileScreen> with TickerProviderStateM
               surfaceTintColor: Colors.transparent,
               elevation: 0,
               title: _buildCollapsedTitle(cs),
-              flexibleSpace: FlexibleSpaceBar(
-                collapseMode: CollapseMode.pin,
-                background: _buildProfileHeader(cs),
-              ),
-              bottom: PreferredSize(
-                preferredSize: const Size.fromHeight(46),
-                child: _buildTabBar(cs),
-              ),
+              flexibleSpace: FlexibleSpaceBar(collapseMode: CollapseMode.pin, background: _buildProfileHeader(cs)),
+              bottom: PreferredSize(preferredSize: const Size.fromHeight(46), child: _buildTabBar(cs)),
             ),
           ],
           body: TabBarView(
             controller: _tabController,
             children: [
-              _buildTab(cs, Icons.grid_on_rounded, 'No videos yet', videos.map((video) =>
-                  VideoCard(video: video, onTap: () {
-                    openVideoPlayer(context: context,
-                        listedVideos: videos,
-                        videoIndex: videos.indexOf(video),
-                        feedModel: _currentSearchViewModel,
-                        tickerProvider: this);
-                  }, cs: cs)).toList()),
-              _buildTab(cs, FontAwesomeIcons.users, 'No followers', followers.map((follower) =>
-                  UserCard(initialUser: follower, cs: cs, onFollowChange: (followingVal) =>
-                      setState(() {
-                        if(!followingVal) followers.removeWhere((element) => element.id == follower.id);
-                        user = user.copyWith(followersCount: user.followersCount + (followingVal ? 1 : -1));
-                        print("rebuilding with");
-                      }))).toList()),
-              _buildTab(cs, Icons.person_add_alt_1, 'No following', following.map((follower) =>
-                  UserCard(initialUser: follower, cs: cs, onFollowChange: (followingVal) =>
-                      setState(() {
-                        if(!followingVal) {
-                          following.removeWhere((element) => element.id == follower.id);
-                          user = user.copyWith(followingCount: (user.followingCount ?? 1) - 1);
-                        }
-                        print("rebuilding");
-                      }))).toList()),
+              _buildTab(
+                cs,
+                Icons.grid_on_rounded,
+                'No videos yet',
+                videos
+                    .map(
+                      (video) => VideoCard(
+                        video: video,
+                        onTap: () {
+                          openVideoPlayer(
+                            context: context,
+                            listedVideos: videos,
+                            videoIndex: videos.indexOf(video),
+                            feedModel: _currentSearchViewModel,
+                            tickerProvider: this,
+                          );
+                        },
+                        cs: cs,
+                      ),
+                    )
+                    .toList(),
+              ),
+              _buildTab(
+                cs,
+                FontAwesomeIcons.users,
+                'No followers',
+                followers
+                    .map(
+                      (follower) => UserCard(
+                        key: ValueKey(follower.id),
+                        initialUser: follower,
+                        cs: cs,
+                        onFollowChange: (followingVal) => setState(() {
+                          if (!followingVal) following.removeWhere((element) => element.id == follower.id);
+                          user = user.copyWith(followingCount: max((user.followingCount ?? 0) + (followingVal ? 1 : -1), 0));
+                        }),
+                      ),
+                    )
+                    .toList(),
+              ),
+              _buildTab(
+                cs,
+                Icons.person_add_alt_1,
+                'No following',
+                following
+                    .map(
+                      (follower) => UserCard(
+                        key: ValueKey(follower.id),
+                        initialUser: follower,
+                        cs: cs,
+                        onFollowChange: (followingVal) => setState(() {
+                          if (!followingVal) following.removeWhere((element) => element.id == follower.id);
+                          user = user.copyWith(followingCount: max((user.followingCount ?? 0) + (followingVal ? 1 : -1), 0));
+                        }),
+                      ),
+                    )
+                    .toList(),
+              ),
             ],
           ),
         ),
@@ -152,8 +176,7 @@ class _ProfileScreenState extends State<ProfileScreen> with TickerProviderStateM
           child: Row(
             mainAxisAlignment: MainAxisAlignment.spaceBetween,
             children: [
-              if (widget.ownProfile) const LogoutButton() else
-                Container(),
+              if (widget.ownProfile) const LogoutButton() else Container(),
               Text(
                 user.username,
                 style: TextStyle(color: cs.onSurface, fontSize: 15, fontWeight: FontWeight.w700, letterSpacing: 0.2),
@@ -249,12 +272,7 @@ class _ProfileScreenState extends State<ProfileScreen> with TickerProviderStateM
         children: [
           RollingDigitCounter(
             value: value,
-            style: TextStyle(
-                color: cs.onSurface,
-                fontSize: 20,
-                fontWeight: FontWeight.w800,
-                letterSpacing: -0.5
-            ),
+            style: TextStyle(color: cs.onSurface, fontSize: 20, fontWeight: FontWeight.w800, letterSpacing: -0.5),
           ),
           const SizedBox(height: 3),
           Text(
@@ -280,18 +298,17 @@ class _ProfileScreenState extends State<ProfileScreen> with TickerProviderStateM
             width: 148,
             filled: _editingMode,
             cs: cs,
-            onTap: () =>
-                setState(() {
-                  _editingMode = !_editingMode;
-                  if (!_editingMode && newPPUrl != null) {
-                    userRepository.updateProfileImageUrl(currentUser, newPPUrl).then((value) {
-                      currentUser = value;
-                      user = value;
-                      if (mounted) setState(() {});
-                    });
-                    newPPUrl = null;
-                  }
-                }),
+            onTap: () => setState(() {
+              _editingMode = !_editingMode;
+              if (!_editingMode && newPPUrl != null) {
+                userRepository.updateProfileImageUrl(currentUser, newPPUrl).then((value) {
+                  currentUser = value;
+                  user = value;
+                  if (mounted) setState(() {});
+                });
+                newPPUrl = null;
+              }
+            }),
           ),
         if (!widget.ownProfile) ...[
           const SizedBox(width: 8),
@@ -380,9 +397,18 @@ class _ProfileScreenState extends State<ProfileScreen> with TickerProviderStateM
         labelColor: cs.onSurface,
         unselectedLabelColor: cs.onSurfaceVariant,
         tabs: [
-          const Tooltip(message: "published videos", child: Tab(icon: Icon(Icons.grid_on_rounded, size: 22))),
-          const Tooltip(message: "followers", child: Tab(icon: Icon(FontAwesomeIcons.users, size: 22))),
-          const Tooltip(message: "following", child: Tab(icon: Icon(Icons.person_add_alt_1, size: 22))),
+          const Tooltip(
+            message: "published videos",
+            child: Tab(icon: Icon(Icons.grid_on_rounded, size: 22)),
+          ),
+          const Tooltip(
+            message: "followers",
+            child: Tab(icon: Icon(FontAwesomeIcons.users, size: 22)),
+          ),
+          const Tooltip(
+            message: "following",
+            child: Tab(icon: Icon(Icons.person_add_alt_1, size: 22)),
+          ),
         ],
       ),
     );
@@ -405,9 +431,7 @@ class _ProfileScreenState extends State<ProfileScreen> with TickerProviderStateM
       );
     }
 
-    return ListView(
-      children: items,
-    );
+    return ListView(children: items);
   }
 
   String? newPPUrl;

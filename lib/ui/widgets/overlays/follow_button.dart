@@ -1,4 +1,5 @@
 import 'package:flutter/material.dart';
+import 'package:wurp/logic/local_storage/local_seen_service.dart';
 import 'package:wurp/logic/models/user_model.dart';
 
 import '../../../base_logic.dart';
@@ -43,13 +44,17 @@ class FollowButtonState extends State<FollowButton> with SingleTickerProviderSta
     _controller.reverse();
 
     _subscribed = await userRepository.toggleFollowUser(widget.user.id);
+    if (_subscribed)
+      localSeenService.followUser(widget.user.id);
+    else
+      localSeenService.unfollowUser(widget.user.id);
     await widget.onChanged?.call(_subscribed);
     setState(() {
       _isLoading = false;
     });
   }
-  
-  void setFollowed(bool followed){
+
+  void setFollowed(bool followed) {
     setState(() {
       _subscribed = followed;
     });
