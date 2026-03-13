@@ -472,7 +472,7 @@ class _MessageBubble extends StatelessWidget {
                     _BubbleBody(message: message, isMe: isMe, isFirst: isFirst, isLast: isLast, colorScheme: cs),
                     if (showTimestamp || (isMe && isLast))
                       Padding(
-                        padding: const EdgeInsets.only(top: 4, left: 4, right: 4),
+                        padding: const EdgeInsets.only(top: 4, left: 4, right: 4, bottom: 12),
                         child: Row(
                           mainAxisSize: MainAxisSize.min,
                           children: [

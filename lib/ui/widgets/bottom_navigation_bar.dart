@@ -15,11 +15,22 @@ class BottomNavBarState extends State<BottomNavBar> {
   List get items => widget.items;
   
   void switchToIndex(int index) {
-    setState(() {
-      currentSelectedIndex = index;
+    WidgetsBinding.instance.addPostFrameCallback((timeStamp) {
+      setState(() {
+        currentSelectedIndex = index;
+      });
     });
   }
   
+  void switchToId(String id) {
+    final index = items.indexWhere((item) => item.id == id);
+    if (index != -1) {
+      switchToIndex(index);
+      print("Switched nav bar to id: $id at index: $index");
+    } else {
+      print("No nav bar item found for id: $id, available ids: ${items.map((e) => e.id).join(", ")}");
+    }
+  }
   
   @override
   void initState() {

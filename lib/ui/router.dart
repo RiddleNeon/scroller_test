@@ -2,7 +2,7 @@ import 'package:flutter/material.dart';
 import 'package:go_router/go_router.dart';
 import 'package:wurp/main.dart';
 import 'package:wurp/ui/screens/auth_screen.dart';
-import 'package:wurp/ui/screens/bottom_navigation_bar.dart';
+import 'package:wurp/ui/widgets/bottom_navigation_bar.dart';
 import 'package:wurp/ui/screens/chat/chat_managing_screen.dart';
 import 'package:wurp/ui/screens/profile_screen.dart';
 import 'package:wurp/ui/screens/search_screen/search_screen.dart';
@@ -15,8 +15,8 @@ late final GoRouter routerConfig;
 void initRouter() {
   routerConfig = GoRouter(
     navigatorKey: appNavigatorKey,
+    observers: [RouteObserver()],
     redirect: (context, state) {
-      print("redirecting from ${state.matchedLocation}, logged in: $userLoggedIn");
       final navBarItem = _navigationBarItems.where((element) => element.id == state.matchedLocation).firstOrNull;
       if (navBarItem != null) {
         int navBarIndex = _navigationBarItems.indexOf(navBarItem);
@@ -77,3 +77,13 @@ List<({IconData icon, String label, String id})> _navigationBarItems = [
   (icon: Icons.person_outline, label: 'Profile', id: '/profile'),
   (icon: Icons.chat, label: 'Chat', id: '/chat'),
 ];
+
+
+class RouteObserver extends NavigatorObserver {  
+  @override
+  void didChangeTop(Route<dynamic> topRoute, Route<dynamic>? previousTopRoute) {
+    super.didChangeTop(topRoute, previousTopRoute);
+    print("new top route: ${(topRoute.settings.name?..replaceFirst("/", "")) ?? ("null: ${topRoute.toString()}")}");
+    WidgetsBinding.instance.addPostFrameCallback((timeStamp) => navBarKey.currentState?.switchToId((topRoute.settings.name?..replaceFirst("/", "")) ?? ''));
+  }
+}
