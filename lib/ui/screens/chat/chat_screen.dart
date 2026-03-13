@@ -112,13 +112,13 @@ class MessagingScreenState extends State<MessagingScreen> with TickerProviderSta
       ctrl.animateTo(1, duration: Duration.zero);
   }
 
-  void _addMessage({required String text, required bool isMe, Future<void>? sendingFuture, bool animated = true, bool appendToEnd = true, bool isNewMessage = true}) {
-    if(isNewMessage) widget.onMessageUpdate(ChatMessage(id: getChatId(receiverId: widget.recipientId), text: text, isMe: isMe, timestamp: DateTime.now()));
+  void _addMessage({required String text, required bool isMe, Future<void>? sendingFuture, bool animated = true, bool appendToEnd = true, bool isNewMessage = true, DateTime? createdAt, String? id}) {
+    if(isNewMessage) widget.onMessageUpdate(ChatMessage(id: getChatId(receiverId: widget.recipientId), text: text, isMe: isMe, timestamp: createdAt ?? DateTime.now()));
     final msg = ChatMessage(
-      id: DateTime.now().millisecondsSinceEpoch.toString(),
+      id: id ?? (createdAt ?? DateTime.now()).millisecondsSinceEpoch.toString(),
       text: text,
       isMe: isMe,
-      timestamp: DateTime.now(),
+      timestamp: createdAt ?? DateTime.now(),
       status: isMe ? MessageStatus.sending : MessageStatus.delivered,
     );
     setState(() {
@@ -146,7 +146,7 @@ class MessagingScreenState extends State<MessagingScreen> with TickerProviderSta
   }
 
   void _addMessages(List<ChatMessage> messages, {bool appendToEnd = true, bool isNewMessage = true}) {
-    messages.forEach((element) => _addMessage(text: element.text, isMe: element.isMe, animated: false, appendToEnd: appendToEnd, isNewMessage: isNewMessage));
+    messages.forEach((element) => _addMessage(text: element.text, isMe: element.isMe, animated: false, appendToEnd: appendToEnd, isNewMessage: isNewMessage, createdAt: element.timestamp, id: element.id));
   }
 
   Future<void> _sendMessage() async {
