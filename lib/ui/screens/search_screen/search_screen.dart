@@ -1,6 +1,4 @@
-import 'package:flutter/foundation.dart';
 import 'package:flutter/material.dart';
-import 'package:video_thumbnail/video_thumbnail.dart';
 import 'package:wurp/logic/feed_recommendation/search_video_result_recommender.dart';
 import 'package:wurp/logic/video/video.dart';
 import 'package:wurp/ui/feed_view_model.dart';
