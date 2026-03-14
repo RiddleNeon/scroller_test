@@ -1,11 +1,13 @@
 import 'package:flutter/material.dart';
+import 'package:wurp/base_logic.dart';
 import 'package:wurp/logic/feed_recommendation/search_video_result_recommender.dart';
+import 'package:wurp/logic/models/user_model.dart';
+import 'package:wurp/logic/repositories/video_repository.dart';
 import 'package:wurp/logic/video/video.dart';
 import 'package:wurp/ui/feed_view_model.dart';
-import 'package:wurp/ui/screens/search_screen/search_bar_result.dart';
+import 'package:wurp/ui/screens/search_screen/search_query.dart';
 import 'package:wurp/ui/screens/search_screen/widgets/animated_search_bar.dart';
-import 'package:wurp/ui/screens/search_screen/widgets/empty_search_state.dart';
-import 'package:wurp/ui/screens/search_screen/widgets/scroll_area.dart';
+import 'package:wurp/ui/screens/search_screen/widgets/preloading_list.dart';
 import 'package:wurp/ui/screens/search_screen/widgets/search_user_card.dart';
 import 'package:wurp/ui/screens/search_screen/widgets/search_video_card.dart';
 import 'package:wurp/ui/short_video_player.dart';
@@ -20,81 +22,46 @@ class SearchScreen extends StatefulWidget {
 class _SearchScreenState extends State<SearchScreen> with TickerProviderStateMixin {
   final TextEditingController _controller = TextEditingController();
   final ScrollController _scrollController = ScrollController();
-  SearchBarResult? _searchBarResult;
-
-  bool _loading = false;
-  bool _preloading = false;
-  bool _hasSearched = false;
-  int _currentLoadedVideoCount = 0;
-  int _currentLoadedUserCount = 0;
-
+  
   late TabController _tabController;
-
+  
+  bool _hasSearched = false;
+  bool _loading = false;
+  
+  SearchQuery<Video>? _videoQuery;
+  SearchQuery<UserProfile>? _userQuery;
+  
+  FeedViewModel? _currentSearchViewModel;
+  
   static const _kSearchBarHeight = 56.0;
   static const _kPadding = 16.0;
   static const _kSearchBarSlotHeight = _kSearchBarHeight + _kPadding * 2;
-
+  
   double _lastScrollOffset = 0.0;
   double _searchBarVisibility = 1.0;
-
+  
   @override
   void initState() {
     super.initState();
     _tabController = TabController(length: 2, vsync: this);
     _scrollController.addListener(_onScroll);
   }
-
+  
   void _onScroll() {
     if (!mounted) return;
-
     final current = _scrollController.position.pixels;
     final delta = current - _lastScrollOffset;
     _lastScrollOffset = current;
-
-    if (_searchBarResult != null && !_loading && !_preloading) {
-      if (current >= _scrollController.position.maxScrollExtent - 300) {
-        _preloadMore();
-      }
-    }
-
+    
     double newVisibility = _searchBarVisibility;
     if (current <= 0) {
       newVisibility = 1.0;
     } else if (delta != 0) {
       newVisibility = (_searchBarVisibility - delta / _kSearchBarSlotHeight).clamp(0.0, 1.0);
     }
-
     if (newVisibility != _searchBarVisibility) {
       setState(() => _searchBarVisibility = newVisibility);
     }
-  }
-
-  bool _preloadingGuard = false;
-
-  Future<void> _preloadMore() async {
-    if (_preloadingGuard) return;
-    _preloadingGuard = true;
-    setState(() => _preloading = true);
-
-    if (_tabController.index == 0) {
-      await _searchBarResult!.preloadMoreVideos();
-      if (mounted) {
-        setState(() {
-          _preloading = false;
-          _currentLoadedVideoCount = _searchBarResult!.videoResults.length;
-        });
-      }
-    } else {
-      await _searchBarResult!.preloadMoreUsers();
-      if (mounted) {
-        setState(() {
-          _preloading = false;
-          _currentLoadedUserCount = _searchBarResult!.userResults.length;
-        });
-      }
-    }
-
-    _preloadingGuard = false;
   }
 
   @override
@@ -105,24 +72,34 @@ class _SearchScreenState extends State<SearchScreen> with TickerProviderStateMix
     _controller.dispose();
     super.dispose();
   }
-  FeedViewModel? _currentSearchViewModel;
 
   Future<void> _search([String? val]) async {
     val ??= _controller.text;
     if (val.trim().isEmpty) return;
     FocusScope.of(context).unfocus();
+
     setState(() {
       _hasSearched = true;
       _loading = true;
       _searchBarVisibility = 1.0;
       _lastScrollOffset = 0.0;
     });
-    _searchBarResult = SearchBarResult(val);
-    await _searchBarResult!.complete();
+
+    _videoQuery = SearchQuery<Video>(val, (query, {limit = 20, offset = 0, withAuthor = false}) async {
+      final result = await videoRepo.searchVideos(query, limit: limit, offset: offset, withAuthor: withAuthor);
+      return result.videos;
+    }, (query) => videoRepo.countSearchVideos(query));
+
+    _userQuery = SearchQuery<UserProfile>(val, (query, {limit = 20, offset = 0, withAuthor = false}) async {
+      final result = await userRepository.searchUsers(query, limit: limit, offset: offset);
+      return result.users;
+    }, (query) => userRepository.countSearchUsers(query));
+
+    await Future.wait([_videoQuery!.complete(), _userQuery!.complete()]);
+
     _currentSearchViewModel = FeedViewModel();
-    _currentLoadedVideoCount = _searchBarResult!.videoResults.length;
-    _currentLoadedUserCount = _searchBarResult!.userResults.length;
-    setState(() => _loading = false);
+
+    if (mounted) setState(() => _loading = false);
   }
 
   @override
@@ -130,7 +107,7 @@ class _SearchScreenState extends State<SearchScreen> with TickerProviderStateMix
     final cs = Theme.of(context).colorScheme;
     return Scaffold(backgroundColor: cs.surface, body: _hasSearched ? _buildResultsBody(cs) : _buildLandingBody(cs));
   }
-
+  
   Widget _buildLandingBody(ColorScheme cs) {
     return Center(
       child: SingleChildScrollView(
@@ -154,80 +131,80 @@ class _SearchScreenState extends State<SearchScreen> with TickerProviderStateMix
       ),
     );
   }
-
+  
   Widget _buildResultsBody(ColorScheme cs) {
-    return ScrollConfiguration(
-      behavior: SmoothScrollBehavior(),
-      child: Column(
-        children: [
-          AnimatedSearchBar(
-            visibility: _searchBarVisibility,
-            slotHeight: _kSearchBarSlotHeight,
-            child: Padding(padding: const EdgeInsets.fromLTRB(_kPadding, _kPadding + 8, _kPadding, _kPadding), child: _buildSearchField(cs)),
-          ),
-          Container(
-            color: cs.surface,
-            child: Column(
-              mainAxisSize: MainAxisSize.min,
-              children: [
-                TabBar(
-                  controller: _tabController,
-                  onTap: (_) => setState(() {}),
-                  labelColor: cs.primary,
-                  unselectedLabelColor: cs.onSurfaceVariant,
-                  indicatorColor: cs.primary,
-                  indicatorWeight: 3,
-                  indicatorSize: TabBarIndicatorSize.label,
-                  labelStyle: const TextStyle(fontWeight: FontWeight.w700, fontSize: 14, letterSpacing: 0.5),
-                  tabs: [
-                    Tab(
-                      child: Row(
-                        mainAxisSize: MainAxisSize.min,
-                        children: [
-                          const Icon(Icons.play_circle_outline, size: 18),
-                          const SizedBox(width: 6),
-                          Text(_searchBarResult != null ? 'Videos (${_searchBarResult!.totalVideoResults})' : 'Videos'),
-                        ],
-                      ),
-                    ),
-                    Tab(
-                      child: Row(
-                        mainAxisSize: MainAxisSize.min,
-                        children: [
-                          const Icon(Icons.person_outline, size: 18),
-                          const SizedBox(width: 6),
-                          Text(_searchBarResult != null ? 'Creators (${_searchBarResult!.totalUserResults})' : 'Creators'),
-                        ],
-                      ),
-                    ),
-                  ],
-                ),
-                Divider(height: 1, thickness: 1, color: cs.outlineVariant.withValues(alpha: 0.3)),
-              ],
-            ),
-          ),
-          Expanded(
-            child: _loading
-                ? Center(child: CircularProgressIndicator(color: cs.primary))
-                : ScrollArea(
-                    scrollController: _scrollController,
-                    child: Scrollbar(
-                      controller: _scrollController,
-                      interactive: true,
-                      thumbVisibility: true,
-                      child: CustomScrollView(
-                        controller: _scrollController,
-                        physics: const NeverScrollableScrollPhysics(),
-                        slivers: [if (_tabController.index == 0) _buildVideoSliver(cs) else _buildUserSliver(cs)],
-                      ),
-                    ),
-                  ),
-          ),
+    return Column(
+      children: [
+        AnimatedSearchBar(
+          visibility: _searchBarVisibility,
+          slotHeight: _kSearchBarSlotHeight,
+          child: Padding(padding: const EdgeInsets.fromLTRB(_kPadding, _kPadding + 8, _kPadding, _kPadding), child: _buildSearchField(cs)),
+        ),
+        _buildTabBar(cs),
+        Divider(height: 1, thickness: 1, color: cs.outlineVariant.withValues(alpha: 0.3)),
+        Expanded(
+          child: _loading ? Center(child: CircularProgressIndicator(color: cs.primary)) : _buildTabContent(),
+        ),
+      ],
+    );
+  }
+
+  Widget _buildTabBar(ColorScheme cs) {
+    return Container(
+      color: cs.surface,
+      child: TabBar(
+        controller: _tabController,
+        onTap: (_) => setState(() {}),
+        labelColor: cs.primary,
+        unselectedLabelColor: cs.onSurfaceVariant,
+        indicatorColor: cs.primary,
+        indicatorWeight: 3,
+        indicatorSize: TabBarIndicatorSize.label,
+        labelStyle: const TextStyle(fontWeight: FontWeight.w700, fontSize: 14, letterSpacing: 0.5),
+        tabs: [
+          _buildTab(icon: Icons.play_circle_outline, label: 'Videos', count: _videoQuery?.totalResults),
+          _buildTab(icon: Icons.person_outline, label: 'Creators', count: _userQuery?.totalResults),
         ],
       ),
     );
   }
 
+  Tab _buildTab({required IconData icon, required String label, int? count}) {
+    return Tab(
+      child: Row(mainAxisSize: MainAxisSize.min, children: [Icon(icon, size: 18), const SizedBox(width: 6), Text(count != null ? '$label ($count)' : label)]),
+    );
+  }
+
+  Widget _buildTabContent() {
+    if (_tabController.index == 0 && _videoQuery != null) {
+      return PreloadingList<Video>(
+        key: ValueKey('videos_${_videoQuery!.content}'),
+        query: _videoQuery!,
+        emptyStateLabel: 'No videos found',
+        itemBuilder: (context, video) {
+          final videos = _videoQuery!.results;
+          final index = videos.indexOf(video);
+          return VideoCard(
+            video: video,
+            cs: Theme.of(context).colorScheme,
+            onTap: () => openVideoPlayer(context: context, listedVideos: videos, videoIndex: index, feedModel: _currentSearchViewModel, tickerProvider: this),
+          );
+        },
+      );
+    }
+
+    if (_tabController.index == 1 && _userQuery != null) {
+      return PreloadingList<UserProfile>(
+        key: ValueKey('users_${_userQuery!.content}'),
+        query: _userQuery!,
+        emptyStateLabel: 'No creators found',
+        itemBuilder: (context, user) => UserCard(initialUser: user, cs: Theme.of(context).colorScheme, key: ValueKey(user.id)),
+      );
+    }
+
+    return const SizedBox.shrink();
+  }
+  
   Widget _buildSearchField(ColorScheme cs) {
     return Container(
       height: _kSearchBarHeight,
@@ -262,73 +239,16 @@ class _SearchScreenState extends State<SearchScreen> with TickerProviderStateMix
       ),
     );
   }
-
-  Widget _buildVideoSliver(ColorScheme cs) {
-    final videos = _searchBarResult?.videoResults ?? [];
-    if (videos.isEmpty) {
-      return SliverFillRemaining(
-        child: EmptyState(label: 'No videos found', cs: cs),
-      );
-    }
-    return SliverPadding(
-      padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 8),
-      sliver: SliverList(
-        delegate: SliverChildBuilderDelegate((context, index) {
-          if (index == _currentLoadedVideoCount) {
-            return _preloading
-                ? Padding(
-                    padding: const EdgeInsets.symmetric(vertical: 16),
-                    child: Center(
-                      child: LinearProgressIndicator(color: cs.primary, backgroundColor: cs.surfaceContainerHighest),
-                    ),
-                  )
-                : const SizedBox.shrink();
-          }
-          return VideoCard(video: videos[index], onTap: () => openVideoPlayer(
-            videoIndex: index,
-            feedModel: _currentSearchViewModel,
-            context: context,
-            listedVideos: videos,
-            tickerProvider: this,
-          ), cs: cs);
-        }, childCount: _currentLoadedVideoCount + 1),
-      ),
-    );
-  }
-
-  Widget _buildUserSliver(ColorScheme cs) {
-    final users = _searchBarResult?.userResults ?? [];
-    if (users.isEmpty) {
-      return SliverFillRemaining(
-        child: EmptyState(label: 'No creators found', cs: cs),
-      );
-    }
-    return SliverPadding(
-      padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 8),
-      sliver: SliverList(
-        delegate: SliverChildBuilderDelegate((context, index) {
-          if (index == _currentLoadedUserCount) {
-            return _preloading
-                ? Padding(
-                    padding: const EdgeInsets.symmetric(vertical: 16),
-                    child: Center(
-                      child: LinearProgressIndicator(color: cs.primary, backgroundColor: cs.surfaceContainerHighest),
-                    ),
-                  )
-                : const SizedBox.shrink();
-          }
-          return UserCard(initialUser: users[index], cs: cs, key: ValueKey(users[index].id));
-        }, childCount: _currentLoadedUserCount + 1),
-      ),
-    );
-  }
-
-
-  
 }
 
-///returns the number of likes added (can be negative if user unliked some videos)
-Future<int> openVideoPlayer({required BuildContext context, required List<Video> listedVideos, required int videoIndex, required FeedViewModel? feedModel, required TickerProvider tickerProvider}) async {
+/// Returns the number of likes added (can be negative if user unliked videos)
+Future<int> openVideoPlayer({
+  required BuildContext context,
+  required List<Video> listedVideos,
+  required int videoIndex,
+  required FeedViewModel? feedModel,
+  required TickerProvider tickerProvider,
+}) async {
   int likes = 0;
   await showGeneralDialog(
     context: context,
@@ -354,9 +274,7 @@ Future<int> openVideoPlayer({required BuildContext context, required List<Video>
                   feedModel: feedModel,
                   itemCount: listedVideos.length,
                   initialPage: videoIndex,
-                  onLikeChanged: (liked) {
-                    likes += liked ? 1 : -1;
-                  },
+                  onLikeChanged: (liked) => likes += liked ? 1 : -1,
                 ),
                 Positioned(
                   right: 12,
