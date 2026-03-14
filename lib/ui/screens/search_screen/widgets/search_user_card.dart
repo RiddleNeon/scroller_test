@@ -43,11 +43,13 @@ class _UserCardState extends State<UserCard> {
                   hasBackButton: true,
                   initialFollowed: localSeenService.isFollowing(user.id),
                   onFollowChange: (bool followed) {
-                    setState(() {
-                      user = user.copyWith(followersCount: user.followersCount + (followed ? 1 : -1));
-                      _followButtonState.currentState?.setFollowed(followed);
-                      widget.onFollowChange?.call(followed);
-                    });
+                    if(mounted) {
+                      setState(() {
+                        user = user.copyWith(followersCount: user.followersCount + (followed ? 1 : -1));
+                        _followButtonState.currentState?.setFollowed(followed);
+                        widget.onFollowChange?.call(followed);
+                      });
+                    }
                   },
                 );
               },
@@ -88,10 +90,12 @@ class _UserCardState extends State<UserCard> {
               FollowButton(
                 key: _followButtonState,
                 onChanged: (followed) async {
-                  setState(() {
-                    user = user.copyWith(followersCount: user.followersCount + (followed ? 1 : -1));
-                    widget.onFollowChange?.call(followed);
-                  });
+                  if(mounted) {
+                    setState(() {
+                      user = user.copyWith(followersCount: user.followersCount + (followed ? 1 : -1));
+                      widget.onFollowChange?.call(followed);
+                    });
+                  }
                 },
                 initialSubscribed: localSeenService.isFollowing(user.id),
                 user: user,

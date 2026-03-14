@@ -1,5 +1,4 @@
 import 'dart:math';
-import 'dart:ui';
 
 import 'package:flutter/material.dart';
 import 'package:font_awesome_flutter/font_awesome_flutter.dart';
@@ -48,13 +47,13 @@ class _ProfileScreenState extends State<ProfileScreen> with TickerProviderStateM
   late final TabController _tabController;
   late UserProfile user = widget.initialProfile;
   List<Video> videos = [];
-  List<UserProfile> followers = [];
-
   FeedViewModel? _currentSearchViewModel;
 
   late final SearchQuery<UserProfile> _followingQuery;
+  late final SearchQuery<UserProfile> _followersQuery;
 
   final GlobalKey<AnimatedPreloadingListState<UserProfile>> _followingListKey = GlobalKey<AnimatedPreloadingListState<UserProfile>>();
+  final GlobalKey<AnimatedPreloadingListState<UserProfile>> _followersListKey = GlobalKey<AnimatedPreloadingListState<UserProfile>>();
 
   @override
   void initState() {
@@ -65,10 +64,6 @@ class _ProfileScreenState extends State<ProfileScreen> with TickerProviderStateM
       videos = value;
       if (mounted) setState(() {});
     });
-    userRepository.getFollowers(user.id).then((value) {
-      followers = value;
-      if (mounted) setState(() {});
-    });
 
     _followingQuery = SearchQuery(
       (limit, offset) {
@@ -76,6 +71,14 @@ class _ProfileScreenState extends State<ProfileScreen> with TickerProviderStateM
       },
       () {
         return userRepository.getFollowingCount(user.id);
+      },
+    );
+    _followersQuery = SearchQuery(
+      (limit, offset) {
+        return userRepository.getFollowers(user.id, limit: limit, offset: offset);
+      },
+      () {
+        return userRepository.getFollowersCount(user.id);
       },
     );
   }
@@ -137,43 +140,75 @@ class _ProfileScreenState extends State<ProfileScreen> with TickerProviderStateM
                     )
                     .toList(),
               ),
-              _buildTab(
-                cs,
-                FontAwesomeIcons.users,
-                'No followers',
-                followers.map((follower) => UserCard(key: ValueKey(follower.id), initialUser: follower, cs: cs)).toList(),
+              AnimatedPreloadingList<UserProfile>(
+                key: _followersListKey,
+                query: _followersQuery,
+                notFoundWidget: _buildTab(cs, FontAwesomeIcons.users, 'No followers'),
+                itemBuilder: (context, itemUser, animation, index) {
+                  return SizeTransition(
+                    sizeFactor: CurvedAnimation(parent: animation, curve: Curves.easeOutQuart),
+                    axisAlignment: -1.0,
+                    child: FadeTransition(
+                      opacity: animation,
+                      child: UserCard(
+                        initialUser: itemUser,
+                        cs: cs,
+                        key: ValueKey(itemUser.id),
+                        onFollowChange: (followed) {
+                          if (user.id != currentUser.id) return;
+                          setState(() {
+                            if (followed) {
+                              user = user.copyWith(followingCount: (user.followingCount ?? 0) + 1);
+                              _followingListKey.currentState?.addItem(itemUser);
+                            } else {
+                              user = user.copyWith(followingCount: max((user.followingCount ?? 0) - 1, 0));
+                              final currentIndex = _followingListKey.currentState?.items.indexOf(itemUser) ?? -1;
+                              if (currentIndex != -1) {
+                                _followingListKey.currentState?.removeItem(currentIndex, (context, anim) => _buildSqueezeItem(itemUser, anim, cs));
+                                print('Removed user ${itemUser.username} from following list');
+                              } else {
+                                print('Tried to remove user ${itemUser.username} from following list, but they were not found in the list');
+                              }
+                            }
+                          });
+                        },
+                      ),
+                    ),
+                  );
+                },
               ),
               AnimatedPreloadingList<UserProfile>(
                 key: _followingListKey,
                 query: _followingQuery,
+                notFoundWidget: _buildTab(cs, Icons.person_add_alt_1, 'Not following anyone yet'),
                 itemBuilder: (context, itemUser, animation, index) {
                   return SizeTransition(
-                      sizeFactor: CurvedAnimation(parent: animation, curve: Curves.easeOutQuart),
-                      axisAlignment: -1.0,
-                      child: FadeTransition(
-                        opacity: animation,
-                        child: UserCard(
-                          initialUser: itemUser,
-                          cs: cs,
-                          key: ValueKey(itemUser.id),
-                          onFollowChange: (followed) {
-                            if (!followed) {
-                              final currentIndex = _followingListKey.currentState?.items.indexOf(itemUser) ?? -1;
-                              if (currentIndex != -1) {
-                                _followingListKey.currentState?.removeItem(currentIndex, (context, anim) => _buildSqueezeItem(itemUser, anim, cs));
-                              }
+                    sizeFactor: CurvedAnimation(parent: animation, curve: Curves.easeOutQuart),
+                    axisAlignment: -1.0,
+                    child: FadeTransition(
+                      opacity: animation,
+                      child: UserCard(
+                        initialUser: itemUser,
+                        cs: cs,
+                        key: ValueKey(itemUser.id),
+                        onFollowChange: (followed) {
+                          if (!followed) {
+                            final currentIndex = _followingListKey.currentState?.items.indexOf(itemUser) ?? -1;
+                            if (currentIndex != -1) {
+                              _followingListKey.currentState?.removeItem(currentIndex, (context, anim) => _buildSqueezeItem(itemUser, anim, cs));
                             }
-                            setState(() {
-                              if (followed) {
-                                user = user.copyWith(followingCount: (user.followingCount ?? 0) + 1);
-                              } else {
-                                user = user.copyWith(followingCount: max((user.followingCount ?? 0) - 1, 0));
-                              }
-                            });
-                          },
-                        ),
+                          }
+                          setState(() {
+                            if (followed) {
+                              user = user.copyWith(followingCount: (user.followingCount ?? 0) + 1);
+                            } else {
+                              user = user.copyWith(followingCount: max((user.followingCount ?? 0) - 1, 0));
+                            }
+                          });
+                        },
                       ),
-                    );
+                    ),
+                  );
                 },
               ),
             ],
@@ -200,28 +235,27 @@ class _ProfileScreenState extends State<ProfileScreen> with TickerProviderStateM
 
   Widget _buildCollapsedTitle(ColorScheme cs) {
     return ClipRect(
-      child: BackdropFilter(
-        filter: ImageFilter.blur(sigmaX: 20, sigmaY: 20),
-        child: Container(
-          color: cs.surfaceContainer.withValues(alpha: 0.7),
-          height: kToolbarHeight,
-          padding: const EdgeInsets.symmetric(horizontal: 4),
-          child: Row(
-            mainAxisAlignment: MainAxisAlignment.spaceBetween,
-            children: [
-              if (widget.ownProfile) const LogoutButton() else Container(),
-              Text(
-                user.username,
-                style: TextStyle(color: cs.onSurface, fontSize: 15, fontWeight: FontWeight.w700, letterSpacing: 0.2),
-              ),
-              IconButton(
-                icon: Icon(Icons.settings, color: cs.onSurface),
-                onPressed: () {
-                  showRickDialog(context);
-                },
-              ),
-            ],
-          ),
+      child: Container(
+        color: cs.surfaceContainer.withValues(alpha: 0.95),
+        height: kToolbarHeight,
+        padding: const EdgeInsets.symmetric(horizontal: 4),
+        child: Row(
+          mainAxisAlignment: MainAxisAlignment.spaceBetween,
+          children: [
+            if (widget.ownProfile) const LogoutButton() else Container(),
+            Text(
+              user.username,
+              style: TextStyle(color: cs.onSurface, fontSize: 15, fontWeight: FontWeight.w700, letterSpacing: 0.2),
+            ),
+            widget.ownProfile
+                ? IconButton(
+                    icon: Icon(Icons.settings, color: cs.onSurface),
+                    onPressed: () {
+                      showRickDialog(context);
+                    },
+                  )
+                : Container(width: 48),
+          ],
         ),
       ),
     );
@@ -349,15 +383,26 @@ class _ProfileScreenState extends State<ProfileScreen> with TickerProviderStateM
             design: FollowButtonDesign.docked,
             initialSubscribed: widget.initialFollowed,
             onChanged: (followed) async {
-              setState(() {
-                user = user.copyWith(followersCount: user.followersCount + (followed ? 1 : -1));
+              WidgetsBinding.instance.addPostFrameCallback((timeStamp) {
+                if (mounted)
+                  setState(() {
+                    user = user.copyWith(followersCount: user.followersCount + (followed ? 1 : -1));
 
-                if (followed)
-                  followers.add(currentUser);
-                else
-                  followers.removeWhere((u) => u.id == currentUser.id);
+                    if (followed) {
+                      _followersListKey.currentState?.addItem(currentUser);
+                    } else {
+                      final currentIndex =
+                          _followersListKey.currentState?.items.indexOf(
+                            _followersListKey.currentState?.items.where((element) => element?.id == currentUser.id).singleOrNull ?? currentUser,
+                          ) ??
+                          -1;
+                      if (currentIndex != -1) {
+                        _followersListKey.currentState?.removeItem(currentIndex, (context, anim) => _buildSqueezeItem(currentUser, anim, cs));
+                      }
+                    }
 
-                widget.onFollowChange(followed);
+                    widget.onFollowChange(followed);
+                  });
               });
             },
             user: user,
@@ -447,8 +492,8 @@ class _ProfileScreenState extends State<ProfileScreen> with TickerProviderStateM
     );
   }
 
-  Widget _buildTab(ColorScheme cs, IconData icon, String label, List<Widget> items) {
-    if (items.isEmpty) {
+  Widget _buildTab(ColorScheme cs, IconData icon, String label, [List<Widget>? items]) {
+    if (items == null || items.isEmpty) {
       return Center(
         child: Column(
           mainAxisSize: MainAxisSize.min,

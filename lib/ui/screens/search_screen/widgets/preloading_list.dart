@@ -186,13 +186,15 @@ class AnimatedPreloadingList<T> extends StatefulWidget {
   final Widget Function(BuildContext context, T item, Animation<double> animation, int index) itemBuilder;
   final String? emptyStateLabel;
   final Duration animationDuration;
+  final Widget? notFoundWidget;
 
   const AnimatedPreloadingList({
     super.key,
     required this.query,
     required this.itemBuilder,
     this.emptyStateLabel,
-    this.animationDuration = const Duration(milliseconds: 350),
+    this.animationDuration = const Duration(milliseconds: 350), 
+    this.notFoundWidget,
   });
 
   @override
@@ -266,6 +268,12 @@ class AnimatedPreloadingListState<T> extends State<AnimatedPreloadingList<T>> wi
       duration: widget.animationDuration,
     );
   }
+  
+  void addItem(T item) {
+    items.add(item);
+    final int insertIndex = items.indexOf(item);
+    _listKey.currentState?.insertItem(insertIndex, duration: widget.animationDuration);
+  }
 
   Future<void> _preloadMore() async {
     if (_preloadingGuard || widget.query.isCompleted) return;
@@ -293,6 +301,10 @@ class AnimatedPreloadingListState<T> extends State<AnimatedPreloadingList<T>> wi
 
     if (_loading) {
       return Center(child: CircularProgressIndicator(color: cs.primary));
+    }
+    
+    if(items.isEmpty) {
+      return widget.notFoundWidget ?? Center(child: Text(widget.emptyStateLabel ?? 'Nothing found', style: Theme.of(context).textTheme.bodyMedium));
     }
 
     return ScrollConfiguration(
