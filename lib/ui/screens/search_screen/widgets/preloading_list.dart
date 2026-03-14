@@ -109,11 +109,11 @@ class _PreloadingListState<T> extends State<PreloadingList<T>> {
               if (index == _currentLoadedCount) {
                 return _preloading
                     ? Padding(
-                        padding: const EdgeInsets.symmetric(vertical: 16),
-                        child: Center(
-                          child: LinearProgressIndicator(color: cs.primary, backgroundColor: cs.surfaceContainerHighest),
-                        ),
-                      )
+                  padding: const EdgeInsets.symmetric(vertical: 16),
+                  child: Center(
+                    child: LinearProgressIndicator(color: cs.primary, backgroundColor: cs.surfaceContainerHighest),
+                  ),
+                )
                     : const SizedBox.shrink();
               }
               if (index < widget.query.results.length) {
@@ -165,11 +165,11 @@ class _SliverPreloadingListState<T> extends _PreloadingListState<T> {
           if (index == _currentLoadedCount) {
             return _preloading
                 ? Padding(
-                    padding: const EdgeInsets.symmetric(vertical: 16),
-                    child: Center(
-                      child: LinearProgressIndicator(color: cs.primary, backgroundColor: cs.surfaceContainerHighest),
-                    ),
-                  )
+              padding: const EdgeInsets.symmetric(vertical: 16),
+              child: Center(
+                child: LinearProgressIndicator(color: cs.primary, backgroundColor: cs.surfaceContainerHighest),
+              ),
+            )
                 : const SizedBox.shrink();
           }
           return widget.itemBuilder(context, items[index]);
@@ -192,7 +192,7 @@ class AnimatedPreloadingList<T> extends StatefulWidget {
     required this.query,
     required this.itemBuilder,
     this.emptyStateLabel,
-    this.animationDuration = const Duration(milliseconds: 1450),
+    this.animationDuration = const Duration(milliseconds: 350),
   });
 
   @override
@@ -204,6 +204,7 @@ class AnimatedPreloadingListState<T> extends State<AnimatedPreloadingList<T>> wi
   final List<T?> items = [];
   bool _loading = false;
   bool _preloading = false;
+  bool _preloadingGuard = false;
 
   @override
   bool get wantKeepAlive => true;
@@ -225,7 +226,8 @@ class AnimatedPreloadingListState<T> extends State<AnimatedPreloadingList<T>> wi
     }
   }
 
-  dispose() {
+  @override
+  void dispose() {
     _scrollController.removeListener(_onScroll);
     _scrollController.dispose();
     super.dispose();
@@ -254,21 +256,20 @@ class AnimatedPreloadingListState<T> extends State<AnimatedPreloadingList<T>> wi
   }
 
   void removeItem(int index, Widget Function(BuildContext, Animation<double>) removedBuilder) {
-    if (index < 0 || index >= items.whereType<T>().length) return;
+    if (index < 0 || index >= items.length) return;
+    
+    items.removeAt(index);
 
-    items[index] = null;
-
-    _listKey.currentState?.removeItem(index, (context, animation) => removedBuilder(context, animation), duration: widget.animationDuration);
-
-    Future.delayed(widget.animationDuration, () {
-      if (!mounted) return;
-      final nullIndex = items.indexOf(null);
-      if (nullIndex != -1) items.removeAt(nullIndex);
-    });
+    _listKey.currentState?.removeItem(
+      index,
+          (context, animation) => removedBuilder(context, animation),
+      duration: widget.animationDuration,
+    );
   }
 
   Future<void> _preloadMore() async {
-    if (_preloading || !widget.query.isCompleted) return;
+    if (_preloadingGuard || widget.query.isCompleted) return;
+    _preloadingGuard = true;
     setState(() => _preloading = true);
 
     final int oldLength = widget.query.results.length;
@@ -278,9 +279,11 @@ class AnimatedPreloadingListState<T> extends State<AnimatedPreloadingList<T>> wi
       final newItems = widget.query.results.sublist(oldLength);
       _addItemsWithAnimation(newItems);
       Future.delayed(const Duration(milliseconds: 20), () {
-        setState(() => _preloading = false);
+        if (mounted) setState(() => _preloading = false);
       });
     }
+
+    _preloadingGuard = false;
   }
 
   @override
@@ -300,28 +303,17 @@ class AnimatedPreloadingListState<T> extends State<AnimatedPreloadingList<T>> wi
           controller: _scrollController,
           interactive: true,
           thumbVisibility: true,
-          child: NotificationListener<ScrollNotification>(
-            onNotification: (notification) {
-              if (notification is ScrollEndNotification) {
-                final metrics = notification.metrics;
-                if (metrics.pixels >= metrics.maxScrollExtent - 400) {
-                  _preloadMore();
-                }
-              }
-              return false;
+          child: AnimatedList(
+            key: _listKey,
+            controller: _scrollController,
+            initialItemCount: items.length,
+            padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 8),
+            physics: const NeverScrollableScrollPhysics(),
+            itemBuilder: (context, index, animation) {
+              final item = items[index];
+              if (item == null) return const SizedBox.shrink();
+              return widget.itemBuilder(context, item, animation, index);
             },
-            child: AnimatedList(
-              key: _listKey,
-              controller: _scrollController,
-              initialItemCount: items.length,
-              padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 8),
-              physics: const NeverScrollableScrollPhysics(),
-              itemBuilder: (context, index, animation) {
-                final item = items[index];
-                if (item == null) return const SizedBox.shrink();
-                return widget.itemBuilder(context, item, animation, index);
-              },
-            ),
           ),
         ),
       ),
