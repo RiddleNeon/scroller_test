@@ -40,20 +40,17 @@ class _ChatManagingScreenState extends State<ChatManagingScreen> {
   }
 
   void _preload() async {
-    print("preloading more chats!");
     loading = true;
 
     final preloadedChatsResult = await widget.preloadMoreChats(currentLastIndex);
     currentLastIndex = preloadedChatsResult.newCurrent;
     final preloadedChats = preloadedChatsResult.result;
-    print("preloaded chats: $preloadedChats");
     chats.addAll(preloadedChats);
     reSortChats();
     if (mounted) {
       setState(() {});
     }
     if (preloadedChats.isEmpty || currentLastIndex == null) {
-      print("no more chats!");
       noMoreChats = true;
     }
     loading = false;

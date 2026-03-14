@@ -55,7 +55,6 @@ class UserRepository {
   }
 
   Future<void> upsertCurrentUserProfile(UserProfile user) async {
-    print("Upserting user profile for ${user.id} with username ${user.username}, current id: ${auth?.currentUser?.uid}");
     await supabaseClient.from("profiles").upsert({
       "id": user.id,
       "username": user.username,
@@ -89,7 +88,6 @@ class UserRepository {
   Future<bool> toggleFollowUser(String followingId) async {
     if (currentUser.id == followingId) throw Exception('Cannot toggle follow yourself');
     String result = await supabaseClient.rpc('toggle_follow', params: {'p_user_id': currentUser.id, 'p_other_id': followingId});
-    print("toggleFollowUserSupabase result: $result, user: ${currentUser.id}, other: $followingId");
     bool followed = result == 'followed';
     currentUser = currentUser.copyWith(followingCount: followed ? (currentUser.followingCount ?? 0) + 1 : (currentUser.followingCount ?? 1) - 1);
     return followed;
@@ -371,7 +369,7 @@ class UserRepository {
   }
 
   Future<void> updateFcmTokenSupabase(String userId, String? token) async {
-    print('Skipping FCM token update for $userId because the provided profiles schema has no fcm_token column.');
+    print('Skipping FCM token update for $userId because the provided profiles schema has no fcm_token column.'); //todo
   }
 
   Future<String?> getFcmTokenSupabase(String userId) async {

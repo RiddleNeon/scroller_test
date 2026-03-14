@@ -49,14 +49,12 @@ class _ProfileScreenState extends State<ProfileScreen> with TickerProviderStateM
   late UserProfile user = widget.initialProfile;
   List<Video> videos = [];
   List<UserProfile> followers = [];
-  List<UserProfile> following = [];
 
   FeedViewModel? _currentSearchViewModel;
 
   late final SearchQuery<UserProfile> _followingQuery;
 
-  final GlobalKey<AnimatedPreloadingListState<UserProfile>> _followingListKey =
-  GlobalKey<AnimatedPreloadingListState<UserProfile>>();
+  final GlobalKey<AnimatedPreloadingListState<UserProfile>> _followingListKey = GlobalKey<AnimatedPreloadingListState<UserProfile>>();
 
   @override
   void initState() {
@@ -69,10 +67,6 @@ class _ProfileScreenState extends State<ProfileScreen> with TickerProviderStateM
     });
     userRepository.getFollowers(user.id).then((value) {
       followers = value;
-      if (mounted) setState(() {});
-    });
-    userRepository.getFollowing(user.id).then((value) {
-      following = value;
       if (mounted) setState(() {});
     });
 
@@ -147,30 +141,15 @@ class _ProfileScreenState extends State<ProfileScreen> with TickerProviderStateM
                 cs,
                 FontAwesomeIcons.users,
                 'No followers',
-                followers
-                    .map(
-                      (follower) => UserCard(
-                        key: ValueKey(follower.id),
-                        initialUser: follower,
-                        cs: cs,
-                        onFollowChange: (followingVal) => setState(() {
-                          if (!followingVal) following.removeWhere((element) => element.id == follower.id);
-                          user = user.copyWith(followingCount: max((user.followingCount ?? 0) + (followingVal ? 1 : -1), 0));
-                        }),
-                      ),
-                    )
-                    .toList(),
+                followers.map((follower) => UserCard(key: ValueKey(follower.id), initialUser: follower, cs: cs)).toList(),
               ),
               AnimatedPreloadingList<UserProfile>(
                 key: _followingListKey,
                 query: _followingQuery,
                 itemBuilder: (context, itemUser, animation, index) {
                   return SizeTransition(
-                    sizeFactor: CurvedAnimation(parent: animation, curve: Curves.easeOutQuart),
-                    axisAlignment: -1.0,
-                    child: SizeTransition(
                       sizeFactor: CurvedAnimation(parent: animation, curve: Curves.easeOutQuart),
-                      axis: Axis.horizontal,
+                      axisAlignment: -1.0,
                       child: FadeTransition(
                         opacity: animation,
                         child: UserCard(
@@ -181,17 +160,20 @@ class _ProfileScreenState extends State<ProfileScreen> with TickerProviderStateM
                             if (!followed) {
                               final currentIndex = _followingListKey.currentState?.items.indexOf(itemUser) ?? -1;
                               if (currentIndex != -1) {
-                                _followingListKey.currentState?.removeItem(
-                                  currentIndex,
-                                      (context, anim) => _buildSqueezeItem(itemUser, anim, cs),
-                                );
+                                _followingListKey.currentState?.removeItem(currentIndex, (context, anim) => _buildSqueezeItem(itemUser, anim, cs));
                               }
                             }
+                            setState(() {
+                              if (followed) {
+                                user = user.copyWith(followingCount: (user.followingCount ?? 0) + 1);
+                              } else {
+                                user = user.copyWith(followingCount: max((user.followingCount ?? 0) - 1, 0));
+                              }
+                            });
                           },
                         ),
                       ),
-                    ),
-                  );
+                    );
                 },
               ),
             ],
@@ -483,36 +465,6 @@ class _ProfileScreenState extends State<ProfileScreen> with TickerProviderStateM
     }
 
     return ListView(children: items);
-  }
-  
-  Widget _buildAnimatedUserList(ColorScheme cs, List<UserProfile> list, GlobalKey<AnimatedListState> listKey, String emptyLabel, IconData emptyIcon) {
-    return Stack(
-      children: [
-        if (list.isEmpty)
-          Center(
-            child: Column(
-              mainAxisSize: MainAxisSize.min,
-              children: [
-                Icon(emptyIcon, size: 48, color: cs.onSurfaceVariant.withValues(alpha: 0.35)),
-                const SizedBox(height: 12),
-                Text(
-                  emptyLabel,
-                  style: TextStyle(color: cs.onSurfaceVariant, fontSize: 14, fontWeight: FontWeight.w500),
-                ),
-              ],
-            ),
-          ),
-
-        AnimatedList(
-          key: listKey,
-          initialItemCount: list.length,
-          padding: EdgeInsets.zero,
-          itemBuilder: (context, index, animation) {
-            return _buildAnimatedUserCard(list[index], animation, index, listKey, list, cs);
-          },
-        ),
-      ],
-    );
   }
 
   Widget _buildAnimatedUserCard(
