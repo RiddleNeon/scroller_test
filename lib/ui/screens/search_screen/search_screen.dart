@@ -177,7 +177,7 @@ class _SearchScreenState extends State<SearchScreen> with TickerProviderStateMix
 
   Widget _buildTabContent() {
     if (_tabController.index == 0 && _videoQuery != null) {
-      return PreloadingList<Video>(
+      return PreloadingSliverList<Video>(
         key: ValueKey('videos_${_videoQuery!.content}'),
         query: _videoQuery!,
         emptyStateLabel: 'No videos found',
@@ -194,7 +194,7 @@ class _SearchScreenState extends State<SearchScreen> with TickerProviderStateMix
     }
 
     if (_tabController.index == 1 && _userQuery != null) {
-      return PreloadingList<UserProfile>(
+      return PreloadingSliverList<UserProfile>(
         key: ValueKey('users_${_userQuery!.content}'),
         query: _userQuery!,
         emptyStateLabel: 'No creators found',

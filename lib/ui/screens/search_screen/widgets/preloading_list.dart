@@ -19,6 +19,18 @@ class PreloadingList<T> extends StatefulWidget {
   State<PreloadingList<T>> createState() => _PreloadingListState<T>();
 }
 
+class PreloadingSliverList<T> extends PreloadingList<T> {
+  const PreloadingSliverList({
+    super.key,
+    required super.query,
+    required super.itemBuilder,
+    super.emptyStateLabel,
+  });
+
+  @override
+  State<PreloadingList<T>> createState() => _SliverPreloadingListState<T>();
+}
+
 class _PreloadingListState<T> extends State<PreloadingList<T>> {
   final ScrollController _scrollController = ScrollController();
 
@@ -100,6 +112,55 @@ class _PreloadingListState<T> extends State<PreloadingList<T>> {
           controller: _scrollController,
           interactive: true,
           thumbVisibility: true,
+          child: ListView.builder(
+            controller: _scrollController,
+            physics: const NeverScrollableScrollPhysics(),
+            itemCount: widget.query.results.length,
+            itemBuilder: (context, index) {
+            if(widget.query.results.isEmpty) return EmptyState(label: widget.emptyStateLabel ?? 'Nothing found', cs: cs);
+            if (index == _currentLoadedCount) {
+              return _preloading
+                  ? Padding(
+                padding: const EdgeInsets.symmetric(vertical: 16),
+                child: Center(
+                  child: LinearProgressIndicator(
+                    color: cs.primary,
+                    backgroundColor: cs.surfaceContainerHighest,
+                  ),
+                ),
+              )
+                  : const SizedBox.shrink();
+            }
+            if(index < widget.query.results.length) {
+              return widget.itemBuilder(context, widget.query.results[index]);
+            }
+            return null;
+          },)
+        ),
+      ),
+    );
+  }
+
+  
+}
+
+class _SliverPreloadingListState<T> extends _PreloadingListState<T> {
+  @override
+  Widget build(BuildContext context) {
+    final cs = Theme.of(context).colorScheme;
+
+    if (_loading) {
+      return Center(child: CircularProgressIndicator(color: cs.primary));
+    }
+    
+    return ScrollConfiguration(
+      behavior: SmoothScrollBehavior(),
+      child: ScrollArea(
+        scrollController: _scrollController,
+        child: Scrollbar(
+          controller: _scrollController,
+          interactive: true,
+          thumbVisibility: true,
           child: CustomScrollView(
             controller: _scrollController,
             physics: const NeverScrollableScrollPhysics(),
@@ -135,7 +196,7 @@ class _PreloadingListState<T> extends State<PreloadingList<T>> {
               )
                   : const SizedBox.shrink();
             }
-            return widget.itemBuilder(context, items[index] as T);
+            return widget.itemBuilder(context, items[index]);
           },
           childCount: _currentLoadedCount + 1,
         ),

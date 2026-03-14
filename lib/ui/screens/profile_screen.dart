@@ -145,7 +145,8 @@ class _ProfileScreenState extends State<ProfileScreen> with TickerProviderStateM
                     )
                     .toList(),
               ),
-              _buildTab(
+              _buildAnimatedUserList(cs, following, _followingListKey, 'No following', Icons.person_add_alt_1),
+              /*_buildTab(
                 cs,
                 Icons.person_add_alt_1,
                 'No following',
@@ -162,7 +163,7 @@ class _ProfileScreenState extends State<ProfileScreen> with TickerProviderStateM
                       ),
                     )
                     .toList(),
-              ),
+              ),*/
             ],
           ),
         ),
@@ -438,6 +439,88 @@ class _ProfileScreenState extends State<ProfileScreen> with TickerProviderStateM
 
     return ListView(children: items);
   }
+
+  final GlobalKey<AnimatedListState> _followingListKey = GlobalKey<AnimatedListState>();
+
+  Widget _buildAnimatedUserList(ColorScheme cs, List<UserProfile> list, GlobalKey<AnimatedListState> listKey, String emptyLabel, IconData emptyIcon) {
+    return Stack(
+      children: [
+        if (list.isEmpty)
+          Center(
+            child: Column(
+              mainAxisSize: MainAxisSize.min,
+              children: [
+                Icon(emptyIcon, size: 48, color: cs.onSurfaceVariant.withValues(alpha: 0.35)),
+                const SizedBox(height: 12),
+                Text(
+                  emptyLabel,
+                  style: TextStyle(color: cs.onSurfaceVariant, fontSize: 14, fontWeight: FontWeight.w500),
+                ),
+              ],
+            ),
+          ),
+
+        AnimatedList(
+          key: listKey,
+          initialItemCount: list.length,
+          padding: EdgeInsets.zero,
+          itemBuilder: (context, index, animation) {
+            return _buildAnimatedUserCard(list[index], animation, index, listKey, list, cs);
+          },
+        ),
+      ],
+    );
+  }
+
+  Widget _buildAnimatedUserCard(UserProfile item, Animation<double> animation, int index, GlobalKey<AnimatedListState> listKey, List<UserProfile> currentList, ColorScheme cs) {
+    final curvedAnimation = CurvedAnimation(
+      parent: animation,
+      curve: Curves.easeInOutQuart,
+    );
+
+    return SizeTransition(
+      sizeFactor: curvedAnimation,
+      axis: Axis.vertical,
+      axisAlignment: -1.0, 
+      child: SizeTransition(
+        sizeFactor: curvedAnimation,
+        axis: Axis.horizontal,
+        axisAlignment: 0.0,
+        child: FadeTransition(
+          opacity: curvedAnimation,
+          child: UserCard(
+            key: ValueKey(item.id),
+            initialUser: item,
+            cs: cs,
+            onFollowChange: (followed) {
+              if (!followed) {
+                _removeItemWithAnimation(index, listKey, currentList, cs);
+              }
+            },
+          ),
+        ),
+      ),
+    );
+  }
+
+  void _removeItemWithAnimation(int index, GlobalKey<AnimatedListState> listKey, List<UserProfile> currentList, ColorScheme cs) {
+    if (index < 0 || index >= currentList.length) return;
+
+    final removedItem = currentList[index];
+
+    listKey.currentState?.removeItem(
+      index,
+          (context, animation) => _buildAnimatedUserCard(removedItem, animation, index, listKey, currentList, cs),
+      duration: const Duration(milliseconds: 450), 
+    );
+
+    currentList.removeAt(index);
+
+    setState(() {
+      user = user.copyWith(followingCount: max((user.followingCount ?? 0) - 1, 0));
+    });
+  }
+  
 
   String? newPPUrl;
 
