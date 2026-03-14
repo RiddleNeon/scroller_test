@@ -310,11 +310,7 @@ class UserRepository {
     }
   }
 
-  Future<List<UserProfile>> getFollowing(String userId, {int limit = 50}) async {
-    return getFollowingSupabase(userId, limit: limit);
-  }
-
-  Future<List<UserProfile>> getFollowingSupabase(String userId, {int limit = 50, int offset = 0}) async {
+  Future<List<UserProfile>> getFollowing(String userId, {int limit = 50, int offset = 0}) async {
     try {
       final response = await supabaseClient
           .from('follows')
@@ -327,6 +323,18 @@ class UserRepository {
     } catch (e) {
       print('Error fetching following: $e');
       return [];
+    }
+  }
+
+  Future<int> getFollowingCount(String userId) async {
+    try {
+      final response = await supabaseClient
+          .rpc('get_following_count', params: {'user_id': userId});
+
+      return response as int;
+    } catch (e) {
+      print('Error fetching following: $e');
+      return 0;
     }
   }
 

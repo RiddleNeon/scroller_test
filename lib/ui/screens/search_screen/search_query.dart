@@ -1,8 +1,6 @@
 class SearchQuery<T> {
-  String content;
-
-  Future<List<T>> Function(String query, {int limit, int offset, bool withAuthor}) executeQuery;
-  Future<int> Function(String searchText) countQuery;
+  Future<List<T>> Function(int limit, int offset) executeQuery;
+  Future<int> Function() countQuery;
 
   List<T> results = [];
   int totalResults = 0;
@@ -11,18 +9,18 @@ class SearchQuery<T> {
   bool _isLoading = false;
   bool isCompleted = false;
 
-  SearchQuery(this.content, this.executeQuery, this.countQuery);
+  SearchQuery(this.executeQuery, this.countQuery);
 
   Future<void> complete({int limit = 20}) async {
     if (_isLoading) return;
     _isLoading = true;
 
-    final queryResult = await executeQuery(content, limit: limit, withAuthor: true, offset: _offset);
+    final queryResult = await executeQuery(limit, _offset);
     results = queryResult;
     _offset += queryResult.length;
     _hasMoreContent = queryResult.length == limit;
 
-    totalResults = await countQuery(content);
+    totalResults = await countQuery();
 
     _isLoading = false;
     isCompleted = true;
@@ -32,7 +30,7 @@ class SearchQuery<T> {
     if (_isLoading || !_hasMoreContent) return;
     _isLoading = true;
 
-    final queryResult = await executeQuery(content, limit: limit, withAuthor: true, offset: _offset);
+    final queryResult = await executeQuery(limit, _offset);
 
     results.addAll(queryResult);
     _offset += queryResult.length;

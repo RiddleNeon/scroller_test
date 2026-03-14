@@ -85,15 +85,15 @@ class _SearchScreenState extends State<SearchScreen> with TickerProviderStateMix
       _lastScrollOffset = 0.0;
     });
 
-    _videoQuery = SearchQuery<Video>(val, (query, {limit = 20, offset = 0, withAuthor = false}) async {
-      final result = await videoRepo.searchVideos(query, limit: limit, offset: offset, withAuthor: withAuthor);
+    _videoQuery = SearchQuery<Video>((limit, offset) async {
+      final result = await videoRepo.searchVideos(val!, limit: limit, offset: offset);
       return result.videos;
-    }, (query) => videoRepo.countSearchVideos(query));
+    }, () => videoRepo.countSearchVideos(val!));
 
-    _userQuery = SearchQuery<UserProfile>(val, (query, {limit = 20, offset = 0, withAuthor = false}) async {
-      final result = await userRepository.searchUsers(query, limit: limit, offset: offset);
+    _userQuery = SearchQuery<UserProfile>((limit, offset) async {
+      final result = await userRepository.searchUsers(val!, limit: limit, offset: offset);
       return result.users;
-    }, (query) => userRepository.countSearchUsers(query));
+    }, () => userRepository.countSearchUsers(val!));
 
     await Future.wait([_videoQuery!.complete(), _userQuery!.complete()]);
 
@@ -178,7 +178,7 @@ class _SearchScreenState extends State<SearchScreen> with TickerProviderStateMix
   Widget _buildTabContent() {
     if (_tabController.index == 0 && _videoQuery != null) {
       return PreloadingSliverList<Video>(
-        key: ValueKey('videos_${_videoQuery!.content}'),
+        key: ValueKey('videos_${_videoQuery!.toString()}'),
         query: _videoQuery!,
         emptyStateLabel: 'No videos found',
         itemBuilder: (context, video) {
@@ -195,7 +195,7 @@ class _SearchScreenState extends State<SearchScreen> with TickerProviderStateMix
 
     if (_tabController.index == 1 && _userQuery != null) {
       return PreloadingSliverList<UserProfile>(
-        key: ValueKey('users_${_userQuery!.content}'),
+        key: ValueKey('users_${_userQuery!.toString()}'),
         query: _userQuery!,
         emptyStateLabel: 'No creators found',
         itemBuilder: (context, user) => UserCard(initialUser: user, cs: Theme.of(context).colorScheme, key: ValueKey(user.id)),

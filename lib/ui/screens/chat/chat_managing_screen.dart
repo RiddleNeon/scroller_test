@@ -31,7 +31,7 @@ class _ChatManagingScreenState extends State<ChatManagingScreen> {
   }
 
   bool noMoreChats = false;
-  bool loading = false;
+  bool loading = true;
 
   void _onScroll() async {
     if (_scrollController.offset >= _scrollController.position.maxScrollExtent - 60 && !loading && !noMoreChats) {
@@ -86,6 +86,10 @@ class _ChatManagingScreenState extends State<ChatManagingScreen> {
   }
 
   Widget _buildChatList(List<Chat> chats) {
+    if(loading && chats.isEmpty) {
+      return const Center(child: CircularProgressIndicator());
+    }
+    
     if (chats.isEmpty) {
       return const Center(child: Text("No Chats yet!"));
     }
