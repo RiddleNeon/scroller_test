@@ -46,25 +46,30 @@ class _ProfileScreenState extends State<ProfileScreen> with TickerProviderStateM
   bool _editingMode = false;
   late final TabController _tabController;
   late UserProfile user = widget.initialProfile;
-  List<Video> videos = [];
   FeedViewModel? _currentSearchViewModel;
 
   late final SearchQuery<UserProfile> _followingQuery;
   late final SearchQuery<UserProfile> _followersQuery;
+  late final SearchQuery<Video> _videoQuery;
 
   final GlobalKey<AnimatedPreloadingListState<UserProfile>> _followingListKey = GlobalKey<AnimatedPreloadingListState<UserProfile>>();
   final GlobalKey<AnimatedPreloadingListState<UserProfile>> _followersListKey = GlobalKey<AnimatedPreloadingListState<UserProfile>>();
+  final GlobalKey<AnimatedPreloadingListState<UserProfile>> _videoListKey = GlobalKey<AnimatedPreloadingListState<UserProfile>>();
 
   @override
   void initState() {
     super.initState();
     _tabController = TabController(length: 3, vsync: this);
     _currentSearchViewModel = FeedViewModel();
-    userRepository.getPublishedVideos(user.id).then((value) {
-      videos = value;
-      if (mounted) setState(() {});
-    });
 
+    _videoQuery = SearchQuery(
+      (limit, offset) {
+        return userRepository.getPublishedVideos(user.id, limit: limit, offset: offset);
+      },
+      () {
+        return userRepository.getPublishedVideosCount(user.id);
+      },
+    );
     _followingQuery = SearchQuery(
       (limit, offset) {
         return userRepository.getFollowing(user.id, limit: limit, offset: offset);
@@ -113,19 +118,23 @@ class _ProfileScreenState extends State<ProfileScreen> with TickerProviderStateM
           body: TabBarView(
             controller: _tabController,
             children: [
-              _buildTab(
-                cs,
-                Icons.grid_on_rounded,
-                'No videos yet',
-                videos
-                    .map(
-                      (video) => VideoCard(
+              AnimatedPreloadingList<Video>(
+                key: _videoListKey,
+                query: _videoQuery,
+                notFoundWidget: _buildTab(cs, Icons.grid_on_rounded, 'No published videos'),
+                itemBuilder: (context, video, animation, index, videos) {
+                  return SizeTransition(
+                    sizeFactor: CurvedAnimation(parent: animation, curve: Curves.easeOutQuart),
+                    axisAlignment: -1.0,
+                    child: FadeTransition(
+                      opacity: animation,
+                      child: VideoCard(
                         video: video,
                         onTap: () async {
                           int likesChanged = await openVideoPlayer(
                             context: context,
-                            listedVideos: videos,
-                            videoIndex: videos.indexOf(video),
+                            listedVideos: videos.whereType<Video>().toList(),
+                            videoIndex: index,
                             feedModel: _currentSearchViewModel,
                             tickerProvider: this,
                           );
@@ -137,14 +146,15 @@ class _ProfileScreenState extends State<ProfileScreen> with TickerProviderStateM
                         },
                         cs: cs,
                       ),
-                    )
-                    .toList(),
+                    ),
+                  );
+                },
               ),
               AnimatedPreloadingList<UserProfile>(
                 key: _followersListKey,
                 query: _followersQuery,
                 notFoundWidget: _buildTab(cs, FontAwesomeIcons.users, 'No followers'),
-                itemBuilder: (context, itemUser, animation, index) {
+                itemBuilder: (context, itemUser, animation, index, users) {
                   return SizeTransition(
                     sizeFactor: CurvedAnimation(parent: animation, curve: Curves.easeOutQuart),
                     axisAlignment: -1.0,
@@ -181,7 +191,7 @@ class _ProfileScreenState extends State<ProfileScreen> with TickerProviderStateM
                 key: _followingListKey,
                 query: _followingQuery,
                 notFoundWidget: _buildTab(cs, Icons.person_add_alt_1, 'Not following anyone yet'),
-                itemBuilder: (context, itemUser, animation, index) {
+                itemBuilder: (context, itemUser, animation, index, users) {
                   return SizeTransition(
                     sizeFactor: CurvedAnimation(parent: animation, curve: Curves.easeOutQuart),
                     axisAlignment: -1.0,

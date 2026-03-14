@@ -163,11 +163,7 @@ class UserRepository {
     return response.map<String>((e) => e['following_id'] as String).toList();
   }
 
-  Future<List<Video>> getPublishedVideos(String userId, {int limit = 20}) async {
-    return getPublishedVideosSupabase(userId, limit: limit);
-  }
-
-  Future<List<Video>> getPublishedVideosSupabase(String userId, {int limit = 20, int offset = 0}) async {
+  Future<List<Video>> getPublishedVideos(String userId, {int limit = 20, int offset = 0}) async {
     try {
       final response = await supabaseClient
           .from('videos')
@@ -203,6 +199,21 @@ class UserRepository {
     }
   }
 
+  Future<int> getPublishedVideosCount(String userId) async {
+    try {
+      final response = await supabaseClient
+          .from('profiles')
+          .select('total_videos_count')
+          .eq('id', userId)
+          .maybeSingle();
+
+      return (response ?? 0) as int;
+    } catch (e) {
+      print('Error fetching published videos count: $e');
+      return 0;
+    }
+  }
+  
   Future<List<Video>> getLikedVideos(String userId, {int limit = 20}) async {
     return getLikedVideosSupabase(userId, limit: limit);
   }

@@ -183,7 +183,7 @@ typedef AnimatedItemBuilder<T> = Widget Function(BuildContext context, T item, A
 
 class AnimatedPreloadingList<T> extends StatefulWidget {
   final SearchQuery<T> query;
-  final Widget Function(BuildContext context, T item, Animation<double> animation, int index) itemBuilder;
+  final Widget Function(BuildContext context, T item, Animation<double> animation, int index, List<T?> allKnownValues) itemBuilder;
   final String? emptyStateLabel;
   final Duration animationDuration;
   final Widget? notFoundWidget;
@@ -324,7 +324,7 @@ class AnimatedPreloadingListState<T> extends State<AnimatedPreloadingList<T>> wi
             itemBuilder: (context, index, animation) {
               final item = items[index];
               if (item == null) return const SizedBox.shrink();
-              return widget.itemBuilder(context, item, animation, index);
+              return widget.itemBuilder(context, item, animation, index, items);
             },
           ),
         ),
