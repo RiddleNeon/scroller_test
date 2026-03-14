@@ -15,9 +15,7 @@ class _CommentVM {
   final Comment comment;
   bool likedByMe;
   int likeCount;
-
-  // ── Reply lazy-load state ────────────────
-  /// true while [onLoadReplies] is in flight
+  
   bool isLoadingReplies;
 
   /// true once replies have been fetched at least once
@@ -54,8 +52,8 @@ Future<void> openCommentsForVideo(Video video, BuildContext context) async {
     currentUsername: currentUser.username,
     currentUserProfileImageUrl: currentUser.profileImageUrl,
     initialCommentsCount: video.commentsCount,
-    onCommentAdded: (p0) {
-      videoRepo.addComment(videoId, p0);
+    onCommentAdded: (p0) async {
+      return videoRepo.addComment(videoId, p0);
     },
     onLoadMore: () async {
       if (lastCommentOffset == null) return [];
@@ -82,7 +80,7 @@ void showCommentsOverlay({
   required String currentUserId,
   required String currentUsername,
   required String currentUserProfileImageUrl,
-  required void Function(Comment) onCommentAdded,
+  required Future<Comment> Function(Comment) onCommentAdded,
   Future<List<Comment>> Function()? onLoadMore,
   Future<List<Comment>> Function(Comment parent)? onLoadReplies,
   int? initialCommentsCount
@@ -110,7 +108,7 @@ class CommentsOverlay extends StatefulWidget {
   final String currentUserId;
   final String currentUsername;
   final String currentUserProfileImageUrl;
-  final void Function(Comment) onCommentAdded;
+  final Future<Comment> Function(Comment) onCommentAdded;
   final int? initialCommentCount;
 
   /// Called when the user scrolls near the end of the top-level list.
@@ -238,6 +236,7 @@ class _CommentsOverlayState extends State<CommentsOverlay> {
   Future<void> _sendComment() async {
     final text = _textController.text.trim();
     if (text.isEmpty) return;
+    if (_isSending) return;
     
     newOwnComments++;
 
@@ -248,7 +247,7 @@ class _CommentsOverlayState extends State<CommentsOverlay> {
     final target = _replyTarget;
 
     
-    final newId = '${DateTime.now().millisecondsSinceEpoch}}';
+    final newId = '${DateTime.now().millisecondsSinceEpoch}';
 
     final newComment = Comment(
       id: newId,
@@ -263,22 +262,23 @@ class _CommentsOverlayState extends State<CommentsOverlay> {
       replyCount: 0,
     );
 
+    final savedComment = await widget.onCommentAdded(newComment);
+    
+    newComment.id = savedComment.id;
+
     final newVm = _toVM(newComment);
+    newVm.repliesLoaded = true;
 
     setState(() {
       if (target != null) {
-        // Insert into the VM tree for immediate rendering
+        print("Adding reply to ${target.comment.id}: ${newComment.message}");
         target.replies.insert(0, newVm);
-        // Keep Comment model in sync
         target.comment.addReply(newComment);
-        // Mark as loaded so a subsequent toggle won't overwrite with a stale fetch
         target.repliesLoaded = true;
         target.showReplies = true;
       } else {
         _vms.insert(0, newVm);
       }
-      // Single callback – caller persists the comment
-      widget.onCommentAdded(newComment);
       _replyTarget = null;
       _isSending = false;
     });
@@ -372,9 +372,9 @@ class _CommentsOverlayState extends State<CommentsOverlay> {
                     ),
                   ),
                 ),
-                Text(
-                  '${widget.initialCommentCount == null ? _vms.length : (widget.initialCommentCount!+newOwnComments)} Comments',
-                  style: const TextStyle(
+                const Text(
+                  'Comments',
+                  style: TextStyle(
                     color: Colors.white,
                     fontSize: 17,
                     fontWeight: FontWeight.w700,

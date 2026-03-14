@@ -162,8 +162,8 @@ class VideoRepository {
     print('Skipping share count update for $videoId because the provided videos schema has no share_count column.');
   }
 
-  Future<void> addComment(String videoId, Comment comment) async {
-    await postCommentSupabase(
+  Future<Comment> addComment(String videoId, Comment comment) async {
+    return postCommentSupabase(
       userId: comment.userId,
       videoId: _parseVideoId(videoId),
       content: comment.message,
@@ -215,6 +215,7 @@ class VideoRepository {
       limit: limit,
       offset: offset,
     );
+    print('Fetched ${comments.length} comments for video $videoId with parentCommentId $commentId, offset $offset, limit $limit');
     return (comments: comments, nextOffset: comments.length < limit ? null : offset + comments.length);
   }
 
@@ -232,8 +233,10 @@ class VideoRepository {
 
     if (parentCommentId == null) {
       baseQuery = baseQuery.isFilter('parent_id', null);
+      print("top-level comments for video $videoId");
     } else {
       baseQuery = baseQuery.eq('parent_id', parentCommentId);
+      print("parent comment $parentCommentId");
     }
 
     final result = await baseQuery.order('created_at', ascending: false).range(offset, offset + limit - 1);

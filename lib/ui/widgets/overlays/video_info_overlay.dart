@@ -1,6 +1,10 @@
 import 'package:flutter/material.dart';
+import 'package:wurp/logic/models/user_model.dart';
 
+import '../../../base_logic.dart';
+import '../../../logic/local_storage/local_seen_service.dart';
 import '../../../logic/video/video.dart';
+import '../../screens/profile_screen.dart';
 
 class VideoInfoOverlay extends StatelessWidget {
   final Video video;
@@ -18,13 +22,31 @@ class VideoInfoOverlay extends StatelessWidget {
         crossAxisAlignment: CrossAxisAlignment.start,
         mainAxisSize: MainAxisSize.min,
         children: [
-          Text(
-            '@${video.authorName}',
-            style: const TextStyle(
-              color: Colors.white,
-              fontWeight: FontWeight.bold,
-              fontSize: 16,
-              shadows: [Shadow(blurRadius: 4, color: Colors.black54)],
+          InkWell(
+            onTap: () async {
+              UserProfile user = await userRepository.getUser(video.authorId);
+              Navigator.of(context).push(
+                MaterialPageRoute(
+                  builder: (context) {
+                    return ProfileScreen(
+                      initialProfile: user,
+                      ownProfile: user.id == currentUser.id,
+                      hasBackButton: true,
+                      initialFollowed: localSeenService.isFollowing(user.id),
+                      onFollowChange: (bool followed) {},
+                    );
+                  },
+                ),
+              );
+            },
+            child: Text(
+              '@${video.authorName}',
+              style: const TextStyle(
+                color: Colors.white,
+                fontWeight: FontWeight.bold,
+                fontSize: 16,
+                shadows: [Shadow(blurRadius: 4, color: Colors.black54)],
+              ),
             ),
           ),
           if (video.title.isNotEmpty) ...[
