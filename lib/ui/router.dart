@@ -1,9 +1,11 @@
+import 'package:flutter/cupertino.dart';
 import 'package:flutter/material.dart';
 import 'package:go_router/go_router.dart';
 import 'package:wurp/main.dart';
 import 'package:wurp/ui/screens/auth_screen.dart';
 import 'package:wurp/ui/screens/chat/chat_managing_screen.dart';
 import 'package:wurp/ui/screens/profile_screen.dart';
+import 'package:wurp/ui/screens/quests/test_quest_screen.dart';
 import 'package:wurp/ui/screens/search_screen/search_screen.dart';
 import 'package:wurp/ui/short_video_player.dart';
 import 'package:wurp/ui/widgets/bottom_navigation_bar.dart';
@@ -64,6 +66,10 @@ void initRouter() {
               ),
             ),
           ), //indicator that this is not implemented yet,
+          GoRoute(
+            path: '/quests',
+            builder: (context, state) => const TestQuestScreen()
+          ),
         ],
       ),
       GoRoute(path: '/login', builder: (context, state) => const LoginScreen()),
@@ -93,6 +99,7 @@ List<({IconData icon, String label, String id})> _navigationBarItems = [
   (icon: Icons.add_box_outlined, label: '', id: '/create'),
   (icon: Icons.person_outline, label: 'Profile', id: '/profile'),
   (icon: Icons.chat, label: 'Chat', id: '/chat'),
+  (icon: CupertinoIcons.map, label: 'Quests', id: '/quests'),
 ];
 
 class RouteObserver extends NavigatorObserver {

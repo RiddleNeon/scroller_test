@@ -2,6 +2,7 @@ import 'package:firebase_auth/firebase_auth.dart';
 import 'package:flutter/foundation.dart';
 import 'package:flutter/material.dart';
 import 'package:fvp/fvp.dart' as fvp;
+import 'package:wurp/logic/quests/quest_system.dart';
 import 'package:wurp/tools/supabase_tests/supabase_login_test.dart';
 import 'package:wurp/ui/feed_view_model.dart';
 
@@ -38,10 +39,11 @@ RecommendationVideoProvider get videoProvider => _videoProvider ??= Recommendati
 
 
 Future<void> initLogic() async {
-  print("Initializing logic...");
+  debugPrint("Initializing logic...");
   WidgetsFlutterBinding.ensureInitialized();
   fvp.registerWith();
   await ensureSupabaseInitialized();
+  await QuestSystem.load();
   auth = FirebaseAuth.instance;
 }
 

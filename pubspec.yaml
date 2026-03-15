@@ -40,6 +40,7 @@ dependencies:
   hive_flutter: ^1.1.0
   supabase_flutter: ^2.12.0
   shared_preferences: ^2.5.4
+  ninepatch_image: ^0.0.4
   
   
 
@@ -62,4 +63,7 @@ flutter:
   assets:
     - assets/like.json
     - assets/pixabay_videos.json
+    - assets/quests.json
     - assets/
+  shaders:
+    - shaders/dotted_background.frag
