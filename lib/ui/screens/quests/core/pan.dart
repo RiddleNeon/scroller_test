@@ -7,14 +7,9 @@ import '../../../../logic/quests/quest.dart';
 import 'pan_background.dart';
 
 class PanWidget extends StatefulWidget {
-  final Widget child;
-  final TransformationController? controller;
+  const PanWidget({super.key, this.controller});
 
-  const PanWidget({
-    super.key,
-    required this.child,
-    this.controller,
-  });
+  final TransformationController? controller;
 
   @override
   State<PanWidget> createState() => _PanWidgetState();
@@ -24,14 +19,20 @@ class _PanWidgetState extends State<PanWidget> {
   late final TransformationController _controller =
       widget.controller ?? TransformationController();
   final _overlayKey = GlobalKey<QuestBubblesOverlayState>();
+
   Quest? _draggingQuest;
-  double _lastScale = 1.0;
+
+  Offset _dragStartQuestPos = Offset.zero;
+
   Offset _focalDelta = Offset.zero;
+
+  double _lastScale = 1.0;
+
+  double get _currentScale => _controller.value.getMaxScaleOnAxis();
 
   Quest? _findQuestAt(Offset scenePos) {
     for (final quest in QuestSystem.quests.values) {
-      final rect = Rect.fromLTWH(quest.posX, quest.posY, quest.sizeX, quest.sizeY);
-      if (rect.contains(scenePos)) return quest;
+      if (quest.rect.contains(scenePos)) return quest;
     }
     return null;
   }
@@ -39,41 +40,39 @@ class _PanWidgetState extends State<PanWidget> {
   void _onScaleStart(ScaleStartDetails details) {
     _lastScale = 1.0;
     _focalDelta = Offset.zero;
+
     final scenePos = _controller.toScene(details.localFocalPoint);
     _draggingQuest = _findQuestAt(scenePos);
+    _dragStartQuestPos = _draggingQuest?.position ?? Offset.zero;
 
-    _overlayKey.currentState
-      ?..connectionPainter.currentDraggedQuestId = _draggingQuest?.id
-      ..connectionPainter.currentDraggedQuestPos = _draggingQuest?.position
-      ..currentlyDraggedQuestId = _draggingQuest?.id
-      ..currentlyDraggedQuestPos =
-          (_draggingQuest?.position ?? Offset.zero) / _lastScale;
+    _overlayKey.currentState?.setDragState(
+      questId: _draggingQuest?.id,
+      position: _draggingQuest != null ? _dragStartQuestPos : null,
+    );
   }
 
   void _onScaleUpdate(ScaleUpdateDetails details) {
     _focalDelta += details.focalPointDelta;
 
-    _overlayKey.currentState
-      ?..currentlyDraggedQuestPos =
-          (_draggingQuest?.position ?? Offset.zero) / _lastScale + _focalDelta
-      ..connectionPainter.currentDraggedQuestPos =
-          (_draggingQuest?.position ?? Offset.zero) / _lastScale + _focalDelta;
-
     if (_draggingQuest != null) {
-      _draggingQuest = QuestSystem.quests[_draggingQuest!.id];
-      _overlayKey.currentState?.refresh();
+      final newPos = _dragStartQuestPos + _focalDelta / _currentScale;
+      _overlayKey.currentState?.setDragState(
+        questId: _draggingQuest!.id,
+        position: newPos,
+      );
       return;
     }
 
-    final matrix = _controller.value.clone();
-    matrix.translate(details.focalPointDelta.dx, details.focalPointDelta.dy);
+    final matrix = _controller.value.clone()
+      ..translate(details.focalPointDelta.dx, details.focalPointDelta.dy);
 
     if (details.scale != 1.0) {
       final scaleChange = details.scale / _lastScale;
       final fp = details.localFocalPoint;
-      matrix.translate(fp.dx, fp.dy);
-      matrix.scale(scaleChange);
-      matrix.translate(-fp.dx, -fp.dy);
+      matrix
+        ..translate(fp.dx, fp.dy)
+        ..scale(scaleChange)
+        ..translate(-fp.dx, -fp.dy);
       _lastScale = details.scale;
     }
 
@@ -81,21 +80,15 @@ class _PanWidgetState extends State<PanWidget> {
   }
 
   void _onScaleEnd(ScaleEndDetails details) {
-    _overlayKey.currentState
-      ?..connectionPainter.currentDraggedQuestId = null
-      ..connectionPainter.currentDraggedQuestPos = null
-      ..currentlyDraggedQuestId = null
-      ..currentlyDraggedQuestPos = null;
-
     if (_draggingQuest != null) {
-      final currentScale = _controller.value.getMaxScaleOnAxis();
       QuestSystem.moveQuest(
         _draggingQuest!.id,
-        _draggingQuest!.posX + _focalDelta.dx / currentScale,
-        _draggingQuest!.posY + _focalDelta.dy / currentScale,
+        _draggingQuest!.posX + _focalDelta.dx / _currentScale,
+        _draggingQuest!.posY + _focalDelta.dy / _currentScale,
       );
     }
 
+    _overlayKey.currentState?.setDragState(questId: null, position: null);
     setState(() => _draggingQuest = null);
   }
 
@@ -110,7 +103,6 @@ class _PanWidgetState extends State<PanWidget> {
             Positioned.fill(
               child: InfiniteDotsBackground(controller: _controller),
             ),
-
             Positioned.fill(
               child: IgnorePointer(
                 child: DecoratedBox(
@@ -127,7 +119,6 @@ class _PanWidgetState extends State<PanWidget> {
                 ),
               ),
             ),
-
             InteractiveViewer(
               transformationController: _controller,
               panEnabled: false,
@@ -137,7 +128,6 @@ class _PanWidgetState extends State<PanWidget> {
               boundaryMargin: const EdgeInsets.all(1800),
               child: QuestBubblesOverlay(key: _overlayKey),
             ),
-
             Positioned.fill(
               child: GestureDetector(
                 behavior: HitTestBehavior.translucent,
@@ -146,7 +136,6 @@ class _PanWidgetState extends State<PanWidget> {
                 onScaleEnd: _onScaleEnd,
               ),
             ),
-
             const Positioned.fill(
               child: IgnorePointer(
                 child: Column(
@@ -165,12 +154,11 @@ class _PanWidgetState extends State<PanWidget> {
   }
 }
 
-
 class _EdgeFade extends StatelessWidget {
+  const _EdgeFade({required this.fromColor, this.flip = false});
+
   final Color fromColor;
   final bool flip;
-
-  const _EdgeFade({required this.fromColor, this.flip = false});
 
   @override
   Widget build(BuildContext context) {

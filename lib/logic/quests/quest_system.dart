@@ -3,52 +3,54 @@ import 'dart:convert';
 import 'package:flutter/services.dart';
 import 'package:wurp/logic/quests/quest.dart';
 
-///a class containing all quests and relationships between them, as well as functions to add/remove quests and check for quest completion
+/// Contains all quests and exposes operations to add, remove, move, and
+/// serialize them.
 class QuestSystem {
   static final Map<int, Quest> quests = {};
+
+  static void addQuest(Quest quest) => quests[quest.id] = quest;
+
+  static void removeQuest(int id) => quests.remove(id);
   
-  static void addQuest(Quest quest) {
-    quests[quest.id] = quest;
-  }
-  static void removeQuest(int id) {
-    quests.remove(id);
-  }
   static void moveQuest(int id, double newX, double newY) {
     final quest = quests[id];
-    if (quest != null) {
-      quests[id] = quest.copyWith(posX: newX, posY: newY);
-    }
-    quests.values.where((q) => q.prerequisites.any((p) => p.id == id)).forEach((q) {
-      q.updateMappedPrerequisites();
-    });
+    if (quest == null) return;
+    quest.posX = newX;
+    quest.posY = newY;
   }
-  
+
   static Future<void> load() async {
-    final json = jsonDecode(await rootBundle.loadString('assets/quests.json')) as List;
-    
-    for (var questJson in json) {
-      addQuest(Quest.fromJson(questJson));
+    final rawJson =
+    jsonDecode(await rootBundle.loadString('assets/quests.json')) as List;
+    final json = rawJson.cast<Map<String, dynamic>>();
+
+    for (final data in json) {
+      addQuest(Quest.fromJson(data));
     }
-    for(var questJson in json) {
-      var quest = quests[questJson['id']]!;
-      if (questJson['prerequisites'] != null) {
-        assert(questJson['prerequisites'] is List, 'Prerequisites must be a list of quest IDs');
-        assert((questJson['prerequisites'] as List).every((id) => quests.containsKey(id)), 'All prerequisite quest IDs must exist in the quest system');
-        quest.prerequisites = (questJson['prerequisites'] as List).map((id) => quests[id]!).toList();
-      }
+
+    for (final data in json) {
+      final prereqIds = (data['prerequisites'] as List?)?.cast<int>();
+      if (prereqIds == null || prereqIds.isEmpty) continue;
+
+      assert(
+      prereqIds.every(quests.containsKey),
+      'All prerequisite IDs must reference existing quests.',
+      );
+      quests[data['id'] as int]!.prerequisites =
+          prereqIds.map((id) => quests[id]!).toList();
     }
   }
-  
+
   static String toJson() {
-    return jsonEncode(quests.values.map((quest) => {
-      'id': quest.id,
-      'name': quest.name,
-      'description': quest.description,
-      'subject': quest.subject,
-      'posX': quest.posX,
-      'posY': quest.posY,
-      'difficulty': quest.difficulty,
-      'prerequisites': quest.prerequisites.map((q) => q.id).toList(),
+    return jsonEncode(quests.values.map((q) => {
+      'id': q.id,
+      'name': q.name,
+      'description': q.description,
+      'subject': q.subject,
+      'posX': q.posX,
+      'posY': q.posY,
+      'difficulty': q.difficulty,
+      'prerequisites': q.prerequisites.map((p) => p.id).toList(),
     }).toList());
   }
 }

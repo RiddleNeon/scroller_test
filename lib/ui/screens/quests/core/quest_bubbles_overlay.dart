@@ -13,22 +13,30 @@ class QuestBubblesOverlay extends StatefulWidget {
 }
 
 class QuestBubblesOverlayState extends State<QuestBubblesOverlay> {
-  late final QuestLineConnectionPainter connectionPainter;
+  late final QuestLineConnectionPainter _connectionPainter;
   late Size _worldBounds;
 
-  bool editMode = false;
-
-  Offset? currentlyDraggedQuestPos;
-  int? currentlyDraggedQuestId;
-
-  void refresh() => setState(() {});
+  int? _draggedQuestId;
+  Offset? _draggedQuestPos;
 
   @override
   void initState() {
     super.initState();
-    connectionPainter = QuestLineConnectionPainter();
+    _connectionPainter = QuestLineConnectionPainter();
     _worldBounds = _computeWorldBounds();
   }
+
+  void setDragState({required int? questId, required Offset? position}) {
+    setState(() {
+      _draggedQuestId = questId;
+      _draggedQuestPos = position;
+      _connectionPainter
+        ..currentDraggedQuestId = questId
+        ..currentDraggedQuestPos = position;
+    });
+  }
+
+  void refresh() => setState(() {});
 
   @override
   Widget build(BuildContext context) {
@@ -42,9 +50,8 @@ class QuestBubblesOverlayState extends State<QuestBubblesOverlay> {
         children: [
           CustomPaint(
             size: _worldBounds,
-            painter: connectionPainter,
+            painter: _connectionPainter,
           ),
-
           for (final quest in QuestSystem.quests.values)
             _positionedBubble(quest),
         ],
@@ -53,15 +60,11 @@ class QuestBubblesOverlayState extends State<QuestBubblesOverlay> {
   }
 
   Widget _positionedBubble(Quest quest) {
-    final isDragged = quest.id == currentlyDraggedQuestId &&
-        currentlyDraggedQuestPos != null;
-
-    final left = isDragged ? currentlyDraggedQuestPos!.dx : quest.posX;
-    final top  = isDragged ? currentlyDraggedQuestPos!.dy : quest.posY;
+    final isDragged = quest.id == _draggedQuestId && _draggedQuestPos != null;
 
     return Positioned(
-      left: left,
-      top: top,
+      left: isDragged ? _draggedQuestPos!.dx : quest.posX,
+      top: isDragged ? _draggedQuestPos!.dy : quest.posY,
       child: QuestBubble(quest: quest),
     );
   }
@@ -69,8 +72,8 @@ class QuestBubblesOverlayState extends State<QuestBubblesOverlay> {
   Size _computeWorldBounds() {
     double maxX = 0, maxY = 0;
     for (final quest in QuestSystem.quests.values) {
-      if (quest.posX > maxX) maxX = quest.posX;
-      if (quest.posY > maxY) maxY = quest.posY;
+      if (quest.posX + quest.sizeX > maxX) maxX = quest.posX + quest.sizeX;
+      if (quest.posY + quest.sizeY > maxY) maxY = quest.posY + quest.sizeY;
     }
     return Size(maxX, maxY);
   }

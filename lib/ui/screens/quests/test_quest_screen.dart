@@ -10,7 +10,7 @@ class TestQuestScreen extends StatelessWidget {
   Widget build(BuildContext context) {
     return Scaffold(
       appBar: AppBar(title: const Text('Test Quest Screen')),
-      body: PanWidget(child: Container(),)
+      body: const PanWidget()
     );
   }
 }

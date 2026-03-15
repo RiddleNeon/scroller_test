@@ -12,50 +12,56 @@ class QuestLineConnectionPainter extends CustomPainter {
     for (final quest in QuestSystem.quests.values) {
       if (quest.prerequisites.isEmpty) continue;
 
-      final startPos = quest.id == currentDraggedQuestId
-          ? currentDraggedQuestPos!
-          : Offset(quest.posX, quest.posY);
-      final startCenter = startPos + Offset(quest.sizeX, quest.sizeY) / 2;
-
+      final startCenter = _centerOf(quest.id);
       final questColor = _glowColor(quest.id);
 
       for (final prereq in quest.prerequisites) {
-        final endPos = prereq.id == currentDraggedQuestId
-            ? currentDraggedQuestPos!
-            : Offset(prereq.posX, prereq.posY);
-        final endCenter = endPos + Offset(prereq.sizeX, prereq.sizeY) / 2;
-
+        final endCenter = _centerOf(prereq.id);
         final prereqColor = _glowColor(prereq.id);
 
-        final controlPoint = _curveControl(startCenter, endCenter);
-
+        final curveControl = _curveControl(startCenter, endCenter);
+        
         final path = Path()
           ..moveTo(startCenter.dx, startCenter.dy)
           ..quadraticBezierTo(
-              controlPoint.dx, controlPoint.dy, endCenter.dx, endCenter.dy);
+            curveControl.dx,
+            curveControl.dy,
+            endCenter.dx,
+            endCenter.dy,
+          );
 
-        final linePaint = Paint()
-          ..shader = ui.Gradient.linear(
-            startCenter,
-            endCenter,
-            [
-              questColor.withValues(alpha: 0.65),
-              prereqColor.withValues(alpha: 0.65),
-            ],
-          )
-          ..strokeWidth = 1.5
-          ..style = PaintingStyle.stroke;
-        canvas.drawPath(path, linePaint);
-      }
+    canvas.drawPath(
+    path,
+    Paint()
+    ..shader = ui.Gradient.linear(
+    startCenter,
+    endCenter,
+    [
+    questColor.withValues(alpha: 0.65),
+    prereqColor.withValues(alpha: 0.65),
+    ],
+    )
+    ..strokeWidth = 1.5
+    ..style = PaintingStyle.stroke,
+    );
+  }
+  }
+  }
+
+  Offset _centerOf(int id) {
+    if (id == currentDraggedQuestId && currentDraggedQuestPos != null) {
+      final quest = QuestSystem.quests[id]!;
+      return currentDraggedQuestPos! + Offset(quest.sizeX, quest.sizeY) / 2;
     }
+    final quest = QuestSystem.quests[id]!;
+    return quest.position + Offset(quest.sizeX, quest.sizeY) / 2;
   }
 
   Color _glowColor(int id) {
-    final base = getColorFromSeed(id);
-    final hsl = HSLColor.fromColor(base);
+    final hsl = HSLColor.fromColor(getColorFromSeed(id));
     return hsl.withLightness(0.65).withSaturation(0.75).toColor();
   }
-
+  
   Offset _curveControl(Offset a, Offset b) {
     final mid = (a + b) / 2;
     final delta = b - a;
@@ -67,4 +73,8 @@ class QuestLineConnectionPainter extends CustomPainter {
 
   @override
   bool shouldRepaint(covariant CustomPainter oldDelegate) => true;
+}
+
+extension on Offset {
+  List<double> toList() => [dx, dy];
 }
