@@ -15,11 +15,14 @@ class Quest {
 
   List<Quest> prerequisites = [];
 
-  bool _isCompleted = false;
+  final bool _isCompleted = false;
+
   bool get isCompleted => _isCompleted;
 
   Offset get position => Offset(posX, posY);
+
   Size get size => Size(sizeX, sizeY);
+
   Rect get rect => Rect.fromLTWH(posX, posY, sizeX, sizeY);
 
   Quest({
@@ -35,13 +38,13 @@ class Quest {
   });
 
   Quest.fromJson(Map<String, dynamic> json)
-      : id = json['id'] as int,
-        name = json['name'] as String,
-        description = json['description'] as String,
-        subject = json['subject'] as String,
-        posX = (json['posX'] as num?)?.toDouble() ?? 0,
-        posY = (json['posY'] as num?)?.toDouble() ?? 0,
-        difficulty = (json['difficulty'] as num?)?.toDouble() ?? 0.5,
-        sizeX = (json['sizeX'] as num?)?.toDouble() ?? 100,
-        sizeY = (json['sizeY'] as num?)?.toDouble() ?? 100;
+    : id = json['id'] as int,
+      name = json['name'] as String,
+      description = json['description'] as String,
+      subject = json['subject'] as String,
+      posX = (json['posX'] as num?)?.toDouble() ?? 0,
+      posY = (json['posY'] as num?)?.toDouble() ?? 0,
+      difficulty = (json['difficulty'] as num?)?.toDouble() ?? 0.5,
+      sizeX = (json['sizeX'] as num?)?.toDouble() ?? 100,
+      sizeY = (json['sizeY'] as num?)?.toDouble() ?? 100;
 }

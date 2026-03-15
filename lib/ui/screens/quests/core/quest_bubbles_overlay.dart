@@ -48,12 +48,8 @@ class QuestBubblesOverlayState extends State<QuestBubblesOverlay> {
       child: Stack(
         clipBehavior: Clip.none,
         children: [
-          CustomPaint(
-            size: _worldBounds,
-            painter: _connectionPainter,
-          ),
-          for (final quest in QuestSystem.quests.values)
-            _positionedBubble(quest),
+          CustomPaint(size: _worldBounds, painter: _connectionPainter),
+          for (final quest in QuestSystem.quests.values) _positionedBubble(quest),
         ],
       ),
     );

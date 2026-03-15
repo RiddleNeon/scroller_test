@@ -1,6 +1,8 @@
 import 'dart:ui' as ui;
+
 import 'package:flutter/material.dart';
 import 'package:wurp/logic/quests/quest_system.dart';
+
 import 'quest_bubble.dart';
 
 class QuestLineConnectionPainter extends CustomPainter {
@@ -20,32 +22,20 @@ class QuestLineConnectionPainter extends CustomPainter {
         final prereqColor = _glowColor(prereq.id);
 
         final curveControl = _curveControl(startCenter, endCenter);
-        
+
         final path = Path()
           ..moveTo(startCenter.dx, startCenter.dy)
-          ..quadraticBezierTo(
-            curveControl.dx,
-            curveControl.dy,
-            endCenter.dx,
-            endCenter.dy,
-          );
+          ..quadraticBezierTo(curveControl.dx, curveControl.dy, endCenter.dx, endCenter.dy);
 
-    canvas.drawPath(
-    path,
-    Paint()
-    ..shader = ui.Gradient.linear(
-    startCenter,
-    endCenter,
-    [
-    questColor.withValues(alpha: 0.65),
-    prereqColor.withValues(alpha: 0.65),
-    ],
-    )
-    ..strokeWidth = 1.5
-    ..style = PaintingStyle.stroke,
-    );
-  }
-  }
+        canvas.drawPath(
+          path,
+          Paint()
+            ..shader = ui.Gradient.linear(startCenter, endCenter, [questColor.withValues(alpha: 0.65), prereqColor.withValues(alpha: 0.65)])
+            ..strokeWidth = 1.5
+            ..style = PaintingStyle.stroke,
+        );
+      }
+    }
   }
 
   Offset _centerOf(int id) {
@@ -61,7 +51,7 @@ class QuestLineConnectionPainter extends CustomPainter {
     final hsl = HSLColor.fromColor(getColorFromSeed(id));
     return hsl.withLightness(0.65).withSaturation(0.75).toColor();
   }
-  
+
   Offset _curveControl(Offset a, Offset b) {
     final mid = (a + b) / 2;
     final delta = b - a;
@@ -73,8 +63,4 @@ class QuestLineConnectionPainter extends CustomPainter {
 
   @override
   bool shouldRepaint(covariant CustomPainter oldDelegate) => true;
-}
-
-extension on Offset {
-  List<double> toList() => [dx, dy];
 }

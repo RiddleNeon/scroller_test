@@ -31,7 +31,7 @@ class BasicMemePlayer extends StatelessWidget {
 }
 
 enum MemeVid {
-  rick(const String.fromEnvironment("RICK_URL")), hamster(const String.fromEnvironment("HAMSTER_URL"));
+  rick(String.fromEnvironment("RICK_URL")), hamster(String.fromEnvironment("HAMSTER_URL"));
   final String url;
   const MemeVid(this.url);
 }

@@ -45,6 +45,7 @@ Future<void> openCommentsForVideo(Video video, BuildContext context) async {
   print("comments: $comments}");
   int? lastCommentOffset = commentQueryResult.nextOffset;
   final Map<String, int> replyOffsets = {};
+  if(!context.mounted) return;
   showCommentsOverlay(
     context: context,
     comments: comments,
@@ -615,7 +616,7 @@ class _CommentsOverlayState extends State<CommentsOverlay> {
           const SizedBox(width: 8),
           AnimatedBuilder(
             animation: _textController,
-            builder: (_, __) {
+            builder: (_, _) {
               final hasText = _textController.text.trim().isNotEmpty;
               return GestureDetector(
                 onTap: hasText && !_isSending ? _sendComment : null,

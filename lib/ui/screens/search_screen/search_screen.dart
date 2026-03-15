@@ -256,7 +256,7 @@ Future<int> openVideoPlayer({
     barrierLabel: 'VideoOverlay',
     barrierColor: Colors.black87,
     transitionDuration: const Duration(milliseconds: 280),
-    pageBuilder: (context, _, __) => SafeArea(
+    pageBuilder: (context, _, _) => SafeArea(
       child: Center(
         child: Material(
           color: Colors.transparent,

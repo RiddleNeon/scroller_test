@@ -33,7 +33,7 @@ class VideoRecommender extends VideoRecommenderBase {
       final userPreferences = await getUserPreferences();
 
       // Get recent interactions for diversity (limited to last N)
-      final recentInteractions = await localSeenService.getRecentInteractionsLocal();
+      final recentInteractions = localSeenService.getRecentInteractionsLocal();
 
       final candidateVideos = await _getCandidateVideos(userPreferences: userPreferences, limit: _candidatePoolSize);
 
@@ -45,7 +45,9 @@ class VideoRecommender extends VideoRecommenderBase {
         print("no more videos!");
         return fetchTrendingVideos(limit: limit);
       } else {
-        diversifiedVideos.forEach((element) => localSeenService.markAsSeen(element.video));
+        for (var element in diversifiedVideos) {
+          localSeenService.markAsSeen(element.video);
+        }
       }
 
       return (diversifiedVideos.take(limit).map((vs) => vs.video).toList()..shuffle()).toSet();
@@ -63,8 +65,8 @@ class VideoRecommender extends VideoRecommenderBase {
     final Set<Video> candidates = {};
 
     final topTags = _getTopTags(userPreferences, 3);
-    print("top tags for user: ${topTags}");
-    for (final tag in await topTags) {
+    print("top tags for user: $topTags");
+    for (final tag in topTags) {
       final tagVideos = await fetchVideosByTag(
         tag,
         limit: limit ~/ 3,

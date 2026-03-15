@@ -93,7 +93,7 @@ class _ChatManagingScreenState extends State<ChatManagingScreen> {
 
     return ListView.separated(
       itemCount: chats.length,
-      separatorBuilder: (_, __) => const SizedBox(height: 12),
+      separatorBuilder: (_, _) => const SizedBox(height: 12),
       itemBuilder: (context, index) {
         return _buildChatEntry(chats[index], (message) => onMessageUpdate(chats[index], message));
       },

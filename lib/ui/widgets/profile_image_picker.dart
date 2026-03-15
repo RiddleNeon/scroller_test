@@ -326,10 +326,10 @@ class _ProfileImagePickerSheetState extends State<_ProfileImagePickerSheet>
               ? CachedNetworkImage(
             imageUrl: _seedPreviewUrl,
             fit: BoxFit.cover,
-            placeholder: (_, __) => Center(
+            placeholder: (_, _) => Center(
                 child: CircularProgressIndicator(
                     strokeWidth: 2, color: cs.primary)),
-            errorWidget: (_, __, ___) => Icon(Icons.error_outline,
+            errorWidget: (_, _, _) => Icon(Icons.error_outline,
                 color: cs.onSurfaceVariant),
           )
               : null,

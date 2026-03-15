@@ -5,7 +5,7 @@ import 'package:wurp/ui/widgets/camera/web_camera.dart';
 class WebCameraDialog extends StatefulWidget {
   final bool preferFrontCamera;
   final bool showControls;
-  const WebCameraDialog({this.preferFrontCamera = false, this.showControls = true});
+  const WebCameraDialog({super.key, this.preferFrontCamera = false, this.showControls = true});
 
   @override
   State createState() => _WebCameraDialogState();
@@ -13,7 +13,7 @@ class WebCameraDialog extends StatefulWidget {
 
 class _WebCameraDialogState extends State<WebCameraDialog> {
   bool _takingPhoto = false;
-  GlobalObjectKey<WebCameraState> _webCameraState = const GlobalObjectKey('WebCamera'); 
+  final GlobalObjectKey<WebCameraState> _webCameraState = const GlobalObjectKey('WebCamera'); 
   
   CameraController? get _controller => _webCameraState.currentState?.controller;
   List<CameraDescription> get _cameras => _webCameraState.currentState?.cameras ?? [];
@@ -31,9 +31,11 @@ class _WebCameraDialogState extends State<WebCameraDialog> {
       if (mounted) Navigator.of(context).pop(bytes);
     } catch (e) {
       setState(() => _takingPhoto = false);
-      ScaffoldMessenger.of(context).showSnackBar(
-        SnackBar(content: Text('Error: $e')),
-      );
+      if(mounted) {
+        ScaffoldMessenger.of(context).showSnackBar(
+          SnackBar(content: Text('Error: $e')),
+        );
+      }
     }
   }
 

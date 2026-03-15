@@ -64,7 +64,9 @@ class MessagingScreenState extends State<MessagingScreen> with TickerProviderSta
 
     _typingDotController = AnimationController(vsync: this, duration: const Duration(milliseconds: 1200))..repeat();
 
-    _messages.forEach((element) => _createBubbleController(animate: true));
+    for (var element in _messages) {
+      _createBubbleController(animate: true);
+    }
     _preloadMore();
     WidgetsBinding.instance.addPostFrameCallback((timeStamp) {
       _scrollController.animateTo(_scrollController.position.maxScrollExtent, duration: Duration.zero, curve: Curves.linear);
@@ -111,10 +113,11 @@ class MessagingScreenState extends State<MessagingScreen> with TickerProviderSta
   void _createBubbleController({bool animate = true}) {
     final ctrl = AnimationController(vsync: this, duration: const Duration(milliseconds: 350));
     _bubbleControllers.add(ctrl);
-    if (animate)
+    if (animate) {
       ctrl.forward();
-    else
+    } else {
       ctrl.animateTo(1, duration: Duration.zero);
+    }
   }
 
   void _addMessage({required String text, required bool isMe, Future<void>? sendingFuture, bool animated = true, bool appendToEnd = true, bool isNewMessage = true, DateTime? createdAt, String? id}) {
@@ -127,10 +130,11 @@ class MessagingScreenState extends State<MessagingScreen> with TickerProviderSta
       status: isMe ? MessageStatus.sending : MessageStatus.delivered,
     );
     setState(() {
-      if (appendToEnd)
+      if (appendToEnd) {
         _messages.add(msg);
-      else
+      } else {
         _messages.insert(0, msg);
+      }
     });
     _createBubbleController(animate: animated);
     _scrollToBottom();
@@ -151,7 +155,9 @@ class MessagingScreenState extends State<MessagingScreen> with TickerProviderSta
   }
 
   void _addMessages(List<ChatMessage> messages, {bool appendToEnd = true, bool isNewMessage = true}) {
-    messages.forEach((element) => _addMessage(text: element.text, isMe: element.isMe, animated: false, appendToEnd: appendToEnd, isNewMessage: isNewMessage, createdAt: element.timestamp, id: element.id));
+    for (var element in messages) {
+      _addMessage(text: element.text, isMe: element.isMe, animated: false, appendToEnd: appendToEnd, isNewMessage: isNewMessage, createdAt: element.timestamp, id: element.id);
+    }
   }
 
   Future<void> _sendMessage() async {
@@ -234,7 +240,7 @@ class MessagingScreenState extends State<MessagingScreen> with TickerProviderSta
   }
 
   PreferredSizeWidget _buildAppBar(ThemeData theme, ColorScheme cs) {
-    print("toolbar height: ${kToolbarHeight}");
+    print("toolbar height: $kToolbarHeight");
     return AppBar(
       backgroundColor: cs.surface,
       elevation: 0,
@@ -615,7 +621,7 @@ class _TypingBubble extends StatelessWidget {
         children: List.generate(3, (i) {
           return AnimatedBuilder(
             animation: controller,
-            builder: (_, __) {
+            builder: (_, _) {
               final phase = (controller.value - i * 0.15).clamp(0.0, 1.0);
               final offset = sin(phase * 2 * pi) * 3.0;
               return Transform.translate(

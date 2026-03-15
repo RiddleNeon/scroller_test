@@ -8,11 +8,11 @@ class RollingDigitCounter extends StatelessWidget {
   final int visibleNumbers;
 
   const RollingDigitCounter({
-    Key? key,
+    super.key,
     required this.value,
     required this.style,
     this.visibleNumbers = 1,
-  }) : super(key: key);
+  });
 
   @override
   Widget build(BuildContext context) {

@@ -28,10 +28,8 @@ Widget feedVideos(TickerProvider tickerProvider, VideoProvider videoProvider, Bu
                 future: feedModel!.getVideoAt(index, videoSource: videoProvider),
                 builder: (context, snapshot) {
                   if (snapshot.connectionState != ConnectionState.done) {
-                    return Container(
-                      child: const Center(
-                        child: CircularProgressIndicator(),
-                      ),
+                    return const Center(
+                      child: CircularProgressIndicator(),
                     );
                   }
 

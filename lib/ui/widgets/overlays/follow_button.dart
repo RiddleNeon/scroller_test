@@ -44,10 +44,11 @@ class FollowButtonState extends State<FollowButton> with SingleTickerProviderSta
     _controller.reverse();
 
     _subscribed = await userRepository.toggleFollowUser(widget.user.id);
-    if (_subscribed)
+    if (_subscribed) {
       localSeenService.followUser(widget.user.id);
-    else
+    } else {
       localSeenService.unfollowUser(widget.user.id);
+    }
     await widget.onChanged?.call(_subscribed);
     setState(() {
       _isLoading = false;

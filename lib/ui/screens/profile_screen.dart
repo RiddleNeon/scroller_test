@@ -30,13 +30,13 @@ class ProfileScreen extends StatefulWidget {
   final bool initialFollowed;
 
   const ProfileScreen({
-    Key? key,
+    super.key,
     required this.initialProfile,
     required this.ownProfile,
     this.hasBackButton = false,
     required this.onFollowChange,
     this.initialFollowed = false,
-  }) : super(key: key);
+  });
 
   @override
   State<ProfileScreen> createState() => _ProfileScreenState();
@@ -295,7 +295,7 @@ class _ProfileScreenState extends State<ProfileScreen> with TickerProviderStateM
   }
 
   Widget _buildAvatar(ColorScheme cs) {
-    final avatar = Container(
+    final avatar = SizedBox(
       width: 100,
       height: 100,
       child: Avatar(name: user.username, colorScheme: cs, imageUrl: user.profileImageUrl),
@@ -394,7 +394,7 @@ class _ProfileScreenState extends State<ProfileScreen> with TickerProviderStateM
             initialSubscribed: widget.initialFollowed,
             onChanged: (followed) async {
               WidgetsBinding.instance.addPostFrameCallback((timeStamp) {
-                if (mounted)
+                if (mounted) {
                   setState(() {
                     user = user.copyWith(followersCount: user.followersCount + (followed ? 1 : -1));
 
@@ -413,6 +413,7 @@ class _ProfileScreenState extends State<ProfileScreen> with TickerProviderStateM
 
                     widget.onFollowChange(followed);
                   });
+                }
               });
             },
             user: user,

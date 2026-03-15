@@ -229,7 +229,7 @@ class BulkVideoImporter {
   }
 
   /// Creates a stable UUID-shaped string from the external author id.
-  /// Format: 00000000-0000-4000-8000-<author_id_padded>
+  /// Format: 00000000-0000-4000-8000-author_id_padded
   /// Simple, JS-safe, and deterministic across runs.
   String _deterministicUuid(int seed) {
     final paddedId = seed.toRadixString(16).padLeft(12, '0');

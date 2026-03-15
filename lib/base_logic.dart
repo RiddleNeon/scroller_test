@@ -18,25 +18,25 @@ FirebaseAuth? auth;
 UserRepository userRepository = UserRepository();
 ChatRepository chatRepository = ChatRepository();
 
-
 UserProfile get currentUser {
   assert(_currentUser != null, "No user is currently logged in!");
   return _currentUser!;
 }
+
 set currentUser(UserProfile newUser) {
   _currentUser = newUser;
 }
-UserProfile? _currentUser;
-bool get userLoggedIn => _currentUser != null;
 
+UserProfile? _currentUser;
+
+bool get userLoggedIn => _currentUser != null;
 
 FeedViewModel get feedViewModel => _feedViewModel ??= FeedViewModel(videoProvider);
 FeedViewModel? _feedViewModel;
 
 RecommendationVideoProvider? _videoProvider;
+
 RecommendationVideoProvider get videoProvider => _videoProvider ??= RecommendationVideoProvider();
-
-
 
 Future<void> initLogic() async {
   debugPrint("Initializing logic...");
@@ -61,7 +61,6 @@ Future<void> onUserLogout() async {
   UserPreferenceManager.reset();
   await feedViewModel.dispose();
 }
-
 
 bool runningOnMobile = defaultTargetPlatform == TargetPlatform.iOS || defaultTargetPlatform == TargetPlatform.android;
 

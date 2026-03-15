@@ -25,6 +25,7 @@ class VideoInfoOverlay extends StatelessWidget {
           InkWell(
             onTap: () async {
               UserProfile user = await userRepository.getUser(video.authorId);
+              if(!context.mounted) return;
               Navigator.of(context).push(
                 MaterialPageRoute(
                   builder: (context) {

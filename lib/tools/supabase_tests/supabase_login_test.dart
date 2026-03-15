@@ -20,7 +20,7 @@ Future<void> onUserLoginSupabaseTest() async {
   await userRepository.upsertCurrentUserProfile(currentUser);
 
   final result = await supabaseClient.rpc('get_my_jwt_sub');
-  print("jwt has 'sub': ${result}");
+  print("jwt has 'sub': $result");
   print("firebase: ${FirebaseAuth.instance.currentUser}");
   //await publishTest();
 }

@@ -94,7 +94,7 @@ abstract class VideoRecommenderBase {
       query = query.lt('created_at', cursor.toIso8601String());
     }
 
-    final snapshot = await query.order('created_at', ascending: false).limit(limit * 3);;
+    final snapshot = await query.order('created_at', ascending: false).limit(limit * 3);
     final videos = snapshot.map<Video>(_mapVideo).where((v) => !localSeenService.hasSeen(v.id)).toList()
       ..sort((a, b) => a.createdAt.compareTo(b.createdAt));
 
