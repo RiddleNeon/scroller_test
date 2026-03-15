@@ -18,7 +18,7 @@ class _TestQuestScreenState extends State<TestQuestScreen> {
   Widget build(BuildContext context) {
     return Scaffold(
       appBar: AppBar(title: const Text('Test Quest Screen')),
-      body: PanWidget(key: _panKey),
+      body: SizedBox.expand(child: PanWidget(key: _panKey)),
       floatingActionButton: FloatingActionButton(
         child: const Text("copy json", textAlign: TextAlign.center, style: TextStyle(fontSize: 12)),
         onPressed: () {
