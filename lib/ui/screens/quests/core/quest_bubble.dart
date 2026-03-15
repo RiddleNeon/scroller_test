@@ -39,24 +39,26 @@ class QuestBubble extends StatelessWidget {
         borderRadius: BorderRadius.circular(quest.sizeY / 2),
         child: Stack(
           children: [
-            Padding(
-              padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 8),
-              child: Column(
-                mainAxisAlignment: MainAxisAlignment.center,
-                children: [
-                  Text(
-                    quest.name,
-                    textAlign: TextAlign.center,
-                    style: const TextStyle(
-                      color: Colors.white,
-                      fontSize: 11.5,
-                      fontWeight: FontWeight.w600,
-                      letterSpacing: 0.4,
-                      height: 1.35,
+            Positioned.fill(
+              child: Padding(
+                padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 8),
+                child: Column(
+                  mainAxisAlignment: MainAxisAlignment.center,
+                  children: [
+                    Text(
+                      quest.name,
+                      textAlign: TextAlign.center,
+                      style: const TextStyle(
+                        color: Colors.white,
+                        fontSize: 20,
+                        fontWeight: FontWeight.w600,
+                        letterSpacing: 0.4,
+                        height: 1.35,
+                      ),
                     ),
-                  ),
-                  const SizedBox(height: 5),
-                ],
+                    const SizedBox(height: 5),
+                  ],
+                ),
               ),
             ),
           ],

@@ -64,7 +64,7 @@ class MessagingScreenState extends State<MessagingScreen> with TickerProviderSta
 
     _typingDotController = AnimationController(vsync: this, duration: const Duration(milliseconds: 1200))..repeat();
 
-    for (var element in _messages) {
+    for (var _ in _messages) {
       _createBubbleController(animate: true);
     }
     _preloadMore();

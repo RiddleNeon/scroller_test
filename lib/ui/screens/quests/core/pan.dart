@@ -12,10 +12,10 @@ class PanWidget extends StatefulWidget {
   final TransformationController? controller;
 
   @override
-  State<PanWidget> createState() => _PanWidgetState();
+  State<PanWidget> createState() => PanWidgetState();
 }
 
-class _PanWidgetState extends State<PanWidget> {
+class PanWidgetState extends State<PanWidget> {
   late final TransformationController _controller =
       widget.controller ?? TransformationController();
   final _overlayKey = GlobalKey<QuestBubblesOverlayState>();
@@ -25,10 +25,12 @@ class _PanWidgetState extends State<PanWidget> {
   Offset _dragStartQuestPos = Offset.zero;
 
   Offset _focalDelta = Offset.zero;
-
-  double _lastScale = 1.0;
-
+  
   double get _currentScale => _controller.value.getMaxScaleOnAxis();
+  
+  String toJson() {
+    return QuestSystem.toJson();
+  }
 
   Quest? _findQuestAt(Offset scenePos) {
     for (final quest in QuestSystem.quests.values) {
@@ -38,8 +40,8 @@ class _PanWidgetState extends State<PanWidget> {
   }
 
   void _onScaleStart(ScaleStartDetails details) {
-    _lastScale = 1.0;
     _focalDelta = Offset.zero;
+    print("scale start at ${details.localFocalPoint}");
 
     final scenePos = _controller.toScene(details.localFocalPoint);
     _draggingQuest = _findQuestAt(scenePos);
@@ -53,9 +55,10 @@ class _PanWidgetState extends State<PanWidget> {
 
   void _onScaleUpdate(ScaleUpdateDetails details) {
     _focalDelta += details.focalPointDelta;
-
+    final currentScale = _currentScale;
+    
     if (_draggingQuest != null) {
-      final newPos = _dragStartQuestPos + _focalDelta / _currentScale;
+      final newPos = _dragStartQuestPos + (_focalDelta / currentScale);
       _overlayKey.currentState?.setDragState(
         questId: _draggingQuest!.id,
         position: newPos,
@@ -64,27 +67,19 @@ class _PanWidgetState extends State<PanWidget> {
     }
 
     final matrix = _controller.value.clone()
-      ..translate(details.focalPointDelta.dx, details.focalPointDelta.dy);
-
-    if (details.scale != 1.0) {
-      final scaleChange = details.scale / _lastScale;
-      final fp = details.localFocalPoint;
-      matrix
-        ..translate(fp.dx, fp.dy)
-        ..scale(scaleChange)
-        ..translate(-fp.dx, -fp.dy);
-      _lastScale = details.scale;
-    }
+      ..translate(details.focalPointDelta.dx / currentScale, details.focalPointDelta.dy / currentScale);
 
     _controller.value = matrix;
   }
 
   void _onScaleEnd(ScaleEndDetails details) {
     if (_draggingQuest != null) {
+      final currentScale = _currentScale;
+
       QuestSystem.moveQuest(
         _draggingQuest!.id,
-        _draggingQuest!.posX + _focalDelta.dx / _currentScale,
-        _draggingQuest!.posY + _focalDelta.dy / _currentScale,
+        _draggingQuest!.posX + (_focalDelta.dx / currentScale),
+        _draggingQuest!.posY + (_focalDelta.dy / currentScale),
       );
     }
 
@@ -122,7 +117,7 @@ class _PanWidgetState extends State<PanWidget> {
             InteractiveViewer(
               transformationController: _controller,
               panEnabled: false,
-              scaleEnabled: false,
+              scaleEnabled: true,
               minScale: 0.1,
               maxScale: 30.0,
               boundaryMargin: const EdgeInsets.all(1800),

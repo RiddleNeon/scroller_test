@@ -49,6 +49,8 @@ class QuestSystem {
       'subject': q.subject,
       'posX': q.posX,
       'posY': q.posY,
+      'sizeX': q.sizeX,
+      'sizeY': q.sizeY,
       'difficulty': q.difficulty,
       'prerequisites': q.prerequisites.map((p) => p.id).toList(),
     }).toList());
