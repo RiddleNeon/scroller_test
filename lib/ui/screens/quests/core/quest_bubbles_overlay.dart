@@ -26,17 +26,17 @@ class QuestBubblesOverlayState extends State<QuestBubblesOverlay> {
     _worldBounds = _computeWorldBounds();
   }
 
+
   void setDragState({required int? questId, required Offset? position}) {
-    setState(() {
-      _draggedQuestId = questId;
-      _draggedQuestPos = position;
-      _connectionPainter
-        ..currentDraggedQuestId = questId
-        ..currentDraggedQuestPos = position;
-    });
+    _dragNotifier.value = (id: questId, pos: position);
+    _connectionPainter
+      ..currentDraggedQuestId = questId
+      ..currentDraggedQuestPos = position;
   }
 
-  void refresh() => setState(() {});
+  void refresh()  {
+    setState(() {});
+  }
 
   @override
   Widget build(BuildContext context) {
@@ -55,12 +55,20 @@ class QuestBubblesOverlayState extends State<QuestBubblesOverlay> {
     );
   }
 
+  final _dragNotifier = ValueNotifier<({int? id, Offset? pos})>(
+    (id: null, pos: null),
+  );
   Widget _positionedBubble(Quest quest) {
-    final isDragged = quest.id == _draggedQuestId && _draggedQuestPos != null;
-
-    return Positioned(
-      left: isDragged ? _draggedQuestPos!.dx : quest.posX,
-      top: isDragged ? _draggedQuestPos!.dy : quest.posY,
+    return ValueListenableBuilder(
+      valueListenable: _dragNotifier,
+      builder: (context, drag, child) {
+        final isDragged = quest.id == drag.id && drag.pos != null;
+        return Positioned(
+          left: isDragged ? drag.pos!.dx : quest.posX,
+          top:  isDragged ? drag.pos!.dy : quest.posY,
+          child: child!,
+        );
+      },
       child: QuestBubble(quest: quest),
     );
   }
@@ -72,5 +80,11 @@ class QuestBubblesOverlayState extends State<QuestBubblesOverlay> {
       if (quest.posY + quest.sizeY > maxY) maxY = quest.posY + quest.sizeY;
     }
     return Size(maxX, maxY);
+  }
+
+  @override
+  void dispose() {
+    _dragNotifier.dispose();
+    super.dispose();
   }
 }

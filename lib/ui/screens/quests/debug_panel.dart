@@ -54,14 +54,15 @@ class QuestDebugPanelState extends State<QuestDebugPanel>
   }
   
   void inspectQuest(int questId) {
+    Future.delayed(const Duration(milliseconds: 100), () {
+      _scrollToQuest(questId);
+      print("scrolling to quest $questId");
+      setState(() => _expandedQuestId = questId);
+    },);
     if (!_isOpen) {
       setState(() => _isOpen = true);
       _slideCtrl.forward();
     }
-    WidgetsBinding.instance.addPostFrameCallback((_) {
-      setState(() => _expandedQuestId = questId);
-      _scrollToQuest(questId);
-    });
   }
 
   void _scrollToQuest(int questId) {
@@ -764,7 +765,7 @@ class _PrerequisiteEditorState extends State<_PrerequisiteEditor> {
   void initState() {
     super.initState();
     _focusNode.addListener(() {
-      setState(() => _showList = _focusNode.hasFocus);
+      setState(() => _showList = true);
     });
   }
 
@@ -790,6 +791,7 @@ class _PrerequisiteEditorState extends State<_PrerequisiteEditor> {
   }
 
   void _add(Quest prereq) {
+    print("Adding prerequisite #${prereq.id} to quest #${widget.quest.id}");
     setState(() {
       widget.quest.prerequisites.add(prereq);
       _searchCtrl.clear();

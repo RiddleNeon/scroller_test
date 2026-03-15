@@ -8,18 +8,19 @@ import 'quest_bubble.dart';
 class QuestLineConnectionPainter extends CustomPainter {
   int? currentDraggedQuestId;
   Offset? currentDraggedQuestPos;
-
+  
+  
   @override
   void paint(Canvas canvas, Size size) {
     for (final quest in QuestSystem.quests.values) {
       if (quest.prerequisites.isEmpty) continue;
 
       final startCenter = _centerOf(quest.id);
-      final questColor = _glowColor(quest.id);
+      final questColor = glowColorOfQuest(quest.id);
 
       for (final prereq in quest.prerequisites) {
         final endCenter = _centerOf(prereq.id);
-        final prereqColor = _glowColor(prereq.id);
+        final prereqColor = glowColorOfQuest(prereq.id);
 
         final curveControl = _curveControl(startCenter, endCenter);
 
@@ -47,10 +48,7 @@ class QuestLineConnectionPainter extends CustomPainter {
     return quest.position + Offset(quest.sizeX, quest.sizeY) / 2;
   }
 
-  Color _glowColor(int id) {
-    final hsl = HSLColor.fromColor(getColorFromSeed(id));
-    return hsl.withLightness(0.65).withSaturation(0.75).toColor();
-  }
+
 
   Offset _curveControl(Offset a, Offset b) {
     final mid = (a + b) / 2;
@@ -62,5 +60,17 @@ class QuestLineConnectionPainter extends CustomPainter {
   }
 
   @override
-  bool shouldRepaint(covariant CustomPainter oldDelegate) => true;
+  bool shouldRepaint(covariant QuestLineConnectionPainter old) =>
+      old.currentDraggedQuestId != currentDraggedQuestId ||
+          old.currentDraggedQuestPos != currentDraggedQuestPos;
 }
+
+Color glowColorOfQuest(int id) {
+  if(glowColors.containsKey(id)) return glowColors[id]!;
+
+  final hsl = HSLColor.fromColor(getColorFromSeed(id));
+  final color = hsl.withLightness(0.65).withSaturation(0.75).toColor();
+  return glowColors[id] = color;
+}
+
+Map<int, Color> glowColors = {};
