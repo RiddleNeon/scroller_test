@@ -1,6 +1,8 @@
 import 'dart:ui' as ui;
 
 import 'package:flutter/material.dart';
+import 'package:flutter/services.dart';
+import 'package:http/http.dart' as http;
 
 class InfiniteDotsBackground extends StatefulWidget {
   final TransformationController controller;
@@ -20,16 +22,35 @@ class _InfiniteDotsBackgroundState extends State<InfiniteDotsBackground> {
     _loadShader();
   }
 
+  Future<ui.Image> _loadUiImageFromNetwork(String url) async {
+    final response = await http.get(Uri.parse(url));
+    if (response.statusCode != 200) throw Exception('Failed to load image');
+    final bytes = response.bodyBytes;
+    final codec = await ui.instantiateImageCodec(bytes);
+    final frame = await codec.getNextFrame();
+    return frame.image;
+  }
+
+  Future<ui.Image> _loadUiImageFromAsset(String assetPath) async {
+    final data = await rootBundle.load(assetPath);
+    final bytes = data.buffer.asUint8List();
+    final codec = await ui.instantiateImageCodec(bytes);
+    final frame = await codec.getNextFrame();
+    return frame.image;
+  }
+  late ui.Image img;
   Future<void> _loadShader() async {
     try {
       final program = await ui.FragmentProgram.fromAsset('shaders/dotted_background.frag');
-      if (mounted) {
-        setState(() => _shader = program.fragmentShader());
-      }
+      if (!mounted) return;
+      final shader = program.fragmentShader();
+      img = await _loadUiImageFromNetwork('https://res.cloudinary.com/dvw3vksqx/image/upload/v1773681710/smurf_ri5kfd.jpg');
+      setState(() => _shader = shader);
     } catch (e) {
       debugPrint('dotted_background.frag failed to load – falling back to CPU painter: $e');
     }
   }
+
 
   @override
   Widget build(BuildContext context) {
@@ -43,7 +64,7 @@ class _InfiniteDotsBackgroundState extends State<InfiniteDotsBackground> {
 
         return CustomPaint(
           painter: _shader != null
-              ? _ShaderDotsPainter(shader: _shader!, offsetX: offsetX, offsetY: offsetY, scale: scale)
+              ? _ShaderDotsPainter(shader: _shader!, offsetX: offsetX, offsetY: offsetY, scale: scale, img: img)
               : _CpuDotsPainter(offsetX: offsetX, offsetY: offsetY, scale: scale),
           child: const SizedBox.expand(),
         );
@@ -54,11 +75,12 @@ class _InfiniteDotsBackgroundState extends State<InfiniteDotsBackground> {
 
 class _ShaderDotsPainter extends CustomPainter {
   final ui.FragmentShader shader;
+  final ui.Image img;
   final double offsetX;
   final double offsetY;
   final double scale;
 
-  const _ShaderDotsPainter({required this.shader, required this.offsetX, required this.offsetY, required this.scale});
+  const _ShaderDotsPainter({required this.shader, required this.offsetX, required this.offsetY, required this.scale, required this.img});
 
   @override
   void paint(Canvas canvas, Size size) {
@@ -68,6 +90,7 @@ class _ShaderDotsPainter extends CustomPainter {
       ..setFloat(2, offsetX)
       ..setFloat(3, offsetY)
       ..setFloat(4, scale);
+    shader.setImageSampler(0, img);
 
     canvas.drawRect(Offset.zero & size, Paint()..shader = shader);
   }

@@ -1,6 +1,7 @@
 // ignore_for_file: deprecated_member_use
 
 import 'package:flutter/gestures.dart';
+import 'package:flutter/rendering.dart';
 import 'package:vector_math/vector_math_64.dart' hide Matrix4, Colors;
 import 'package:flutter/material.dart';
 import 'package:wurp/logic/quests/quest_system.dart';
@@ -22,6 +23,8 @@ class PanWidget extends StatefulWidget {
 class PanWidgetState extends State<PanWidget> {
   late final TransformationController _controller = widget.controller ?? TransformationController();
 
+  bool debugMode = false;
+  
   final _overlayKey = GlobalKey<QuestBubblesOverlayState>();
   final _debugPanelKey = GlobalKey<QuestDebugPanelState>();
 
@@ -33,7 +36,7 @@ class PanWidgetState extends State<PanWidget> {
   double _txAtGestureStart = 0.0;
   double _tyAtGestureStart = 0.0;
   Offset _focalAtGestureStart = Offset.zero;
-  
+
   Offset _lastPointerScenePos = Offset.zero;
 
   double get _currentScale => _controller.value.getMaxScaleOnAxis();
@@ -108,10 +111,10 @@ class PanWidgetState extends State<PanWidget> {
     return rb?.size ?? const Size(400, 400);
   }
 
-  static const double _padding = 800.0;
-  static const minScale = 0.00001;
+  static const double _padding = 2400.0;
+  static const minScale = 0.000000001;
   static const maxScale = 3000.0;
-  
+
   (double, double) _clampTranslation(double tx, double ty, double s) {
     final v = _viewSize;
     final txMin = v.width - _padding - _boundaryMax.dx * s;
@@ -133,7 +136,7 @@ class PanWidgetState extends State<PanWidget> {
       _overlayKey.currentState?.setDragState(questId: _draggingQuest!.id, position: newPos);
       return;
     }
-    
+
     final s = (_scaleAtGestureStart * details.scale).clamp(minScale, maxScale);
 
     var tx = details.localFocalPoint.dx -
@@ -209,66 +212,75 @@ class PanWidgetState extends State<PanWidget> {
   @override
   Widget build(BuildContext context) {
     return Listener(
-      onPointerSignal: (e) { if (e is PointerScrollEvent) _onPointerScroll(e); },
-      child: ClipRRect(
-        borderRadius: BorderRadius.circular(20),
-        child: DecoratedBox(
-          decoration: const BoxDecoration(color: Color(0xFF0A1218)),
-          child: Stack(
-            children: [
-              Positioned.fill(child: InfiniteDotsBackground(controller: _controller)),
-              Positioned.fill(
-                child: IgnorePointer(
-                  child: DecoratedBox(
-                    decoration: BoxDecoration(
-                      gradient: RadialGradient(
-                        center: Alignment.center,
-                        radius: 1.15,
-                        colors: [Colors.transparent, const Color(0xFF0A1218).withValues(alpha: 0.72)],
-                      ),
+      onPointerSignal: (e) {
+        if (e is PointerScrollEvent) {
+          final panelBox = _debugPanelKey.currentContext?.findRenderObject() as RenderBox?;
+          if (panelBox != null && panelBox.attached) {
+            final result = BoxHitTestResult();
+            final localPos = panelBox.globalToLocal(e.position);
+            if (panelBox.hitTest(result, position: localPos)) return;
+          }
+          _onPointerScroll(e);
+        }
+      },      child: ClipRRect(
+      borderRadius: BorderRadius.circular(20),
+      child: DecoratedBox(
+        decoration: const BoxDecoration(color: Color(0xFF0A1218)),
+        child: Stack(
+          children: [
+            Positioned.fill(child: InfiniteDotsBackground(controller: _controller)),
+            Positioned.fill(
+              child: IgnorePointer(
+                child: DecoratedBox(
+                  decoration: BoxDecoration(
+                    gradient: RadialGradient(
+                      center: Alignment.center,
+                      radius: 1.15,
+                      colors: [Colors.transparent, const Color(0xFF0A1218).withValues(alpha: 0.72)],
                     ),
                   ),
                 ),
               ),
-              Positioned.fill(
-                child: IgnorePointer(
-                  child: AnimatedBuilder(
-                    animation: _controller,
-                    builder: (context, child) => Transform(
-                      transform: _controller.value,
-                      alignment: Alignment.topLeft,
-                      child: child,
-                    ),
-                    child: QuestBubblesOverlay(key: _overlayKey),
+            ),
+            Positioned.fill(
+              child: IgnorePointer(
+                child: AnimatedBuilder(
+                  animation: _controller,
+                  builder: (context, child) => Transform(
+                    transform: _controller.value,
+                    alignment: Alignment.topLeft,
+                    child: child,
                   ),
+                  child: QuestBubblesOverlay(key: _overlayKey),
                 ),
               ),
-              Positioned.fill(
-                child: GestureDetector(
-                  behavior: HitTestBehavior.opaque,
-                  onScaleStart: _onScaleStart,
-                  onScaleUpdate: _onScaleUpdate,
-                  onScaleEnd: _onScaleEnd,
-                  onDoubleTapDown: _onDoubleTapDown,
-                  onDoubleTap: _onDoubleTap,
+            ),
+            Positioned.fill(
+              child: GestureDetector(
+                behavior: HitTestBehavior.opaque,
+                onScaleStart: _onScaleStart,
+                onScaleUpdate: _onScaleUpdate,
+                onScaleEnd: _onScaleEnd,
+                onDoubleTapDown: _onDoubleTapDown,
+                onDoubleTap: _onDoubleTap,
+              ),
+            ),
+            const Positioned.fill(
+              child: IgnorePointer(
+                child: Column(
+                  children: [
+                    _EdgeFade(fromColor: Color(0xFF0A1218)),
+                    Spacer(),
+                    _EdgeFade(fromColor: Color(0xFF0A1218), flip: true),
+                  ],
                 ),
               ),
-              const Positioned.fill(
-                child: IgnorePointer(
-                  child: Column(
-                    children: [
-                      _EdgeFade(fromColor: Color(0xFF0A1218)),
-                      Spacer(),
-                      _EdgeFade(fromColor: Color(0xFF0A1218), flip: true),
-                    ],
-                  ),
-                ),
-              ),
-              QuestDebugPanel(key: _debugPanelKey, onChanged: () => _overlayKey.currentState?.refresh(), onFocusQuest: _focusOnQuest),
-            ],
-          ),
+            ),
+            if(debugMode) QuestDebugPanel(key: _debugPanelKey, onChanged: () => _overlayKey.currentState?.refresh(), onFocusQuest: _focusOnQuest),
+          ],
         ),
       ),
+    ),
     );
   }
 }

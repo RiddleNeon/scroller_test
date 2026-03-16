@@ -24,6 +24,8 @@ class QuestDebugPanelState extends State<QuestDebugPanel>
   late final AnimationController _slideCtrl;
   late final Animation<double> _slideAnim;
 
+  bool get isOpen => _isOpen;
+
   String _searchQuery = '';
   int? _expandedQuestId;
   final _listScrollCtrl = ScrollController();
@@ -52,7 +54,7 @@ class QuestDebugPanelState extends State<QuestDebugPanel>
     _listScrollCtrl.dispose();
     super.dispose();
   }
-  
+
   void inspectQuest(int questId) {
     Future.delayed(const Duration(milliseconds: 100), () {
       _scrollToQuest(questId);
@@ -188,7 +190,7 @@ class QuestDebugPanelState extends State<QuestDebugPanel>
               ),
             ),
           ),
-          
+
           AnimatedBuilder(
             animation: _slideAnim,
             builder: (_, child) => ClipRect(

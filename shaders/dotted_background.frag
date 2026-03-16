@@ -2,16 +2,15 @@
 precision mediump float;
 #endif
 
-// Flutter injiziert diese Funktion auf Native via runtime_effect.glsl —
-// auf Web definieren wir sie selbst über gl_FragCoord.
 vec4 FlutterFragCoord() {
     return vec4(gl_FragCoord.xy, 0.0, 0.0);
 }
 
-uniform vec2  uSize;
-uniform float uOffsetX;
-uniform float uOffsetY;
-uniform float uScale;
+uniform vec2      uSize;
+uniform float     uOffsetX;
+uniform float     uOffsetY;
+uniform float     uScale;
+uniform sampler2D uTexture;
 
 out vec4 fragColor;
 
@@ -23,11 +22,13 @@ const float kBaseDotR    =  2.0;
 const float kAccentMult  =  1.8;
 const float kAccentEvery =  4.0;
 
-float dotSDF(vec2 uv, float baseSpacing) {
-    vec2 cell = mod(uv, baseSpacing) - baseSpacing * 0.5;
-    return length(cell);
-}
 
+const float kImageWorldRadius = kBaseSpacing * 0.001;
+const float kRevealStartPx    = 4.0;
+const float kRevealFullPx     = 30.0;
+
+
+const float kEdgeSoftStart = 0.70;
 
 void main() {
     vec2 fragCoord = FlutterFragCoord().xy;
@@ -41,18 +42,41 @@ void main() {
     float spacing       = kBaseSpacing;
     float accentSpacing = kBaseSpacing * kAccentEvery;
 
-    float primDist  = dotSDF(world, spacing);
+    vec2 primCell = mod(world, spacing)       - spacing       * 0.5;
+    vec2 accCell  = mod(world, accentSpacing) - accentSpacing * 0.5;
+
+    float primDist  = length(primCell);
     float primAlpha = 1.0 - smoothstep(primaryR - feather, primaryR + feather, primDist);
 
-    float accDist   = dotSDF(world, accentSpacing);
-    float accAlpha  = 1.0 - smoothstep(accentR - feather, accentR + feather, accDist);
+    float accDist  = length(accCell);
+    float accAlpha = 1.0 - smoothstep(accentR - feather, accentR + feather, accDist);
 
     float scaleVis    = clamp(uScale * 1.2, 0.15, 1.0);
     float primOpacity = 0.38 * scaleVis;
     float accOpacity  = 0.60;
 
-    float alpha = max(primAlpha * primOpacity, accAlpha * accOpacity);
-    vec3  color = mix(kPrimary, kAccent, accAlpha);
+    float dotAlpha = max(primAlpha * primOpacity, accAlpha * accOpacity);
+    vec3  dotColor = mix(kPrimary, kAccent, accAlpha);
+    
+    float imageScreenRadius = kImageWorldRadius * uScale;
 
-    fragColor = vec4(color * alpha, alpha);
+    float zoomReveal = smoothstep(kRevealStartPx, kRevealFullPx, imageScreenRadius);
+
+
+    vec2 texUV = primCell / (kImageWorldRadius * 2.0) + 0.5;
+
+    float normDist  = length(primCell) / kImageWorldRadius;
+    float edgeMask  = 1.0 - smoothstep(kEdgeSoftStart, 1.0, normDist);
+
+    texUV = clamp(texUV, 0.0, 1.0);
+    vec4 texColor = texture(uTexture, texUV);
+
+    float imgAlpha = zoomReveal * edgeMask * texColor.a;
+    
+    vec3  finalColor = mix(dotColor * dotAlpha, texColor.rgb, imgAlpha);
+    float finalAlpha = dotAlpha + imgAlpha * (1.0 - dotAlpha);
+
+    fragColor = finalAlpha > 0.0
+    ? vec4(finalColor / finalAlpha * finalAlpha, finalAlpha)
+    : vec4(0.0);
 }
