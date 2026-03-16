@@ -1,25 +1,27 @@
 import 'dart:convert';
 
+import 'package:flutter/cupertino.dart';
 import 'package:flutter/services.dart';
 import 'package:wurp/logic/quests/quest.dart';
 
 /// Contains all quests and exposes operations to add, remove, move, and
 /// serialize them.
-class QuestSystem {
-  static final Map<int, Quest> quests = {};
+class QuestSystem with ChangeNotifier {
+  final Map<int, Quest> quests = {};
 
-  static void addQuest(Quest quest) => quests[quest.id] = quest;
+  void addQuest(Quest quest) => quests[quest.id] = quest;
 
-  static void removeQuest(int id) => quests.remove(id);
+  void removeQuest(int id) => quests.remove(id);
   
-  static void moveQuest(int id, double newX, double newY) {
+  void moveQuest(int id, double newX, double newY) {
     final quest = quests[id];
     if (quest == null) return;
     quest.posX = newX;
     quest.posY = newY;
+    notifyListeners();
   }
 
-  static Future<void> load() async {
+  Future<void> load() async {
     final rawJson =
     jsonDecode(await rootBundle.loadString('assets/quests.json')) as List;
     final json = rawJson.cast<Map<String, dynamic>>();
@@ -41,7 +43,7 @@ class QuestSystem {
     }
   }
 
-  static String toJson() {
+  String toJson() {
     return jsonEncode(quests.values.map((q) => {
       'id': q.id,
       'name': q.name,
@@ -56,3 +58,5 @@ class QuestSystem {
     }).toList());
   }
 }
+
+QuestSystem questSystem = QuestSystem();

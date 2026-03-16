@@ -12,7 +12,7 @@ class QuestLineConnectionPainter extends CustomPainter {
   
   @override
   void paint(Canvas canvas, Size size) {
-    for (final quest in QuestSystem.quests.values) {
+    for (final quest in questSystem.quests.values) {
       if (quest.prerequisites.isEmpty) continue;
 
       final startCenter = _centerOf(quest.id);
@@ -41,10 +41,10 @@ class QuestLineConnectionPainter extends CustomPainter {
 
   Offset _centerOf(int id) {
     if (id == currentDraggedQuestId && currentDraggedQuestPos != null) {
-      final quest = QuestSystem.quests[id]!;
+      final quest = questSystem.quests[id]!;
       return currentDraggedQuestPos! + Offset(quest.sizeX, quest.sizeY) / 2;
     }
-    final quest = QuestSystem.quests[id]!;
+    final quest = questSystem.quests[id]!;
     return quest.position + Offset(quest.sizeX, quest.sizeY) / 2;
   }
 

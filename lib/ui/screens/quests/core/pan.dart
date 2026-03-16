@@ -1,5 +1,7 @@
 // ignore_for_file: deprecated_member_use
 
+import 'package:flutter/gestures.dart';
+import 'package:vector_math/vector_math_64.dart' hide Matrix4, Colors;
 import 'package:flutter/material.dart';
 import 'package:wurp/logic/quests/quest_system.dart';
 import 'package:wurp/ui/screens/quests/core/quest_bubbles_overlay.dart';
@@ -27,23 +29,71 @@ class PanWidgetState extends State<PanWidget> {
   Offset _dragStartQuestPos = Offset.zero;
   Offset _focalDelta = Offset.zero;
 
-  // Track last pointer-down position so the double-tap handler can resolve it
-  // to a scene coordinate (GestureDetector.onDoubleTap doesn't give a position).
+  double _scaleAtGestureStart = 1.0;
+  double _txAtGestureStart = 0.0;
+  double _tyAtGestureStart = 0.0;
+  Offset _focalAtGestureStart = Offset.zero;
+  
   Offset _lastPointerScenePos = Offset.zero;
 
   double get _currentScale => _controller.value.getMaxScaleOnAxis();
 
-  String toJson() => QuestSystem.toJson();
+  String toJson() => questSystem.toJson();
 
   Quest? _findQuestAt(Offset scenePos) {
-    for (final quest in QuestSystem.quests.values) {
+    for (final quest in questSystem.quests.values) {
       if (quest.rect.contains(scenePos)) return quest;
     }
     return null;
   }
 
+  @override
+  void initState() {
+    questSystem.addListener(() => revalidateBoundaries());
+    revalidateBoundaries();
+    super.initState();
+  }
+
+
+  Offset _boundaryMax = Offset.zero;
+  Offset _boundaryMin = Offset.zero;
+  static const double _boundaryPadding = 20.0;
+
+  void revalidateBoundaries() {
+    if (!mounted) return;
+
+    if (questSystem.quests.isEmpty) {
+      setState(() {
+        _boundaryMax = const Offset(_boundaryPadding, _boundaryPadding);
+        _boundaryMin = const Offset(-_boundaryPadding, -_boundaryPadding);
+      });
+      return;
+    }
+
+    double maxX = double.negativeInfinity;
+    double maxY = double.negativeInfinity;
+    double minX = double.infinity;
+    double minY = double.infinity;
+    for (final quest in questSystem.quests.values) {
+      if (quest.posX > maxX) maxX = quest.posX;
+      if (quest.posY > maxY) maxY = quest.posY;
+      if (quest.posX < minX) minX = quest.posX;
+      if (quest.posY < minY) minY = quest.posY;
+    }
+
+    setState(() {
+      _boundaryMax = Offset(maxX + _boundaryPadding, maxY + _boundaryPadding);
+      _boundaryMin = Offset(minX - _boundaryPadding, minY - _boundaryPadding);
+    });
+  }
+
   void _onScaleStart(ScaleStartDetails details) {
     _focalDelta = Offset.zero;
+    _scaleAtGestureStart = _currentScale;
+    _txAtGestureStart = _controller.value.entry(0, 3);
+    _tyAtGestureStart = _controller.value.entry(1, 3);
+    _focalAtGestureStart = details.localFocalPoint;
+
     final scenePos = _controller.toScene(details.localFocalPoint);
     _lastPointerScenePos = scenePos;
 
@@ -53,24 +103,79 @@ class PanWidgetState extends State<PanWidget> {
     _overlayKey.currentState?.setDragState(questId: _draggingQuest?.id, position: _draggingQuest != null ? _dragStartQuestPos : null);
   }
 
+  Size get _viewSize {
+    final rb = context.findRenderObject() as RenderBox?;
+    return rb?.size ?? const Size(400, 400);
+  }
+
+  static const double _padding = 800.0;
+  static const minScale = 0.00001;
+  static const maxScale = 3000.0;
+  
+  (double, double) _clampTranslation(double tx, double ty, double s) {
+    final v = _viewSize;
+    final txMin = v.width - _padding - _boundaryMax.dx * s;
+    final txMax = -_boundaryMin.dx * s + _padding;
+    final tyMin = v.height - _padding - _boundaryMax.dy * s;
+    final tyMax = -_boundaryMin.dy * s + _padding;
+
+    final clampedTx = txMin > txMax ? (txMin + txMax) / 2 : tx.clamp(txMin, txMax);
+    final clampedTy = tyMin > tyMax ? (tyMin + tyMax) / 2 : ty.clamp(tyMin, tyMax);
+    return (clampedTx, clampedTy);
+  }
+
   void _onScaleUpdate(ScaleUpdateDetails details) {
     _focalDelta += details.focalPointDelta;
-    final currentScale = _currentScale;
 
     if (_draggingQuest != null) {
+      final currentScale = _currentScale;
       final newPos = _dragStartQuestPos + (_focalDelta / currentScale);
       _overlayKey.currentState?.setDragState(questId: _draggingQuest!.id, position: newPos);
       return;
     }
+    
+    final s = (_scaleAtGestureStart * details.scale).clamp(minScale, maxScale);
 
-    final matrix = _controller.value.clone()..translate(details.focalPointDelta.dx / currentScale, details.focalPointDelta.dy / currentScale);
-    _controller.value = matrix;
+    var tx = details.localFocalPoint.dx -
+        s * (_focalAtGestureStart.dx - _txAtGestureStart) / _scaleAtGestureStart;
+    var ty = details.localFocalPoint.dy -
+        s * (_focalAtGestureStart.dy - _tyAtGestureStart) / _scaleAtGestureStart;
+
+    (tx, ty) = _clampTranslation(tx, ty, s);
+
+    _controller.value = Matrix4.identity()
+      ..scale(s)
+      ..setTranslation(Vector3(tx, ty, 0));
+  }
+
+  void _onPointerScroll(PointerScrollEvent event) {
+    if (_draggingQuest != null) return;
+
+    const zoomSensitivity = 0.0010;
+
+
+    final currentScale = _currentScale;
+    final newScale = (currentScale * (1.0 - event.scrollDelta.dy * zoomSensitivity))
+        .clamp(minScale, maxScale);
+
+    final currentTx = _controller.value.entry(0, 3);
+    final currentTy = _controller.value.entry(1, 3);
+    final focal = event.localPosition;
+
+    var tx = focal.dx - newScale * (focal.dx - currentTx) / currentScale;
+    var ty = focal.dy - newScale * (focal.dy - currentTy) / currentScale;
+
+    (tx, ty) = _clampTranslation(tx, ty, newScale);
+
+    _controller.value = Matrix4.identity()
+      ..scale(newScale)
+      ..setTranslation(Vector3(tx, ty, 0));
   }
 
   void _onScaleEnd(ScaleEndDetails details) {
     if (_draggingQuest != null) {
       final currentScale = _currentScale;
-      QuestSystem.moveQuest(_draggingQuest!.id, _draggingQuest!.posX + (_focalDelta.dx / currentScale), _draggingQuest!.posY + (_focalDelta.dy / currentScale));
+      questSystem.moveQuest(_draggingQuest!.id, _draggingQuest!.posX + (_focalDelta.dx / currentScale), _draggingQuest!.posY + (_focalDelta.dy / currentScale));
     }
     _overlayKey.currentState?.setDragState(questId: null, position: null);
     setState(() => _draggingQuest = null);
@@ -100,62 +205,68 @@ class PanWidgetState extends State<PanWidget> {
       ..translate(targetX / scale, targetY / scale);
   }
 
+
   @override
   Widget build(BuildContext context) {
-    return ClipRRect(
-      borderRadius: BorderRadius.circular(20),
-      child: DecoratedBox(
-        decoration: const BoxDecoration(color: Color(0xFF0A1218)),
-        child: Stack(
-          children: [
-            Positioned.fill(child: InfiniteDotsBackground(controller: _controller)),
-            Positioned.fill(
-              child: IgnorePointer(
-                child: DecoratedBox(
-                  decoration: BoxDecoration(
-                    gradient: RadialGradient(
-                      center: Alignment.center,
-                      radius: 1.15,
-                      colors: [Colors.transparent, const Color(0xFF0A1218).withValues(alpha: 0.72)],
+    return Listener(
+      onPointerSignal: (e) { if (e is PointerScrollEvent) _onPointerScroll(e); },
+      child: ClipRRect(
+        borderRadius: BorderRadius.circular(20),
+        child: DecoratedBox(
+          decoration: const BoxDecoration(color: Color(0xFF0A1218)),
+          child: Stack(
+            children: [
+              Positioned.fill(child: InfiniteDotsBackground(controller: _controller)),
+              Positioned.fill(
+                child: IgnorePointer(
+                  child: DecoratedBox(
+                    decoration: BoxDecoration(
+                      gradient: RadialGradient(
+                        center: Alignment.center,
+                        radius: 1.15,
+                        colors: [Colors.transparent, const Color(0xFF0A1218).withValues(alpha: 0.72)],
+                      ),
                     ),
                   ),
                 ),
               ),
-            ),
-            Positioned.fill(
-              child: InteractiveViewer(
-                transformationController: _controller,
-                panEnabled: false,
-                scaleEnabled: true,
-                minScale: 0.1,
-                maxScale: 30.0,
-                boundaryMargin: const EdgeInsets.all(1800),
-                child: QuestBubblesOverlay(key: _overlayKey),
-              ),
-            ),
-            Positioned.fill(
-              child: GestureDetector(
-                behavior: HitTestBehavior.translucent,
-                onScaleStart: _onScaleStart,
-                onScaleUpdate: _onScaleUpdate,
-                onScaleEnd: _onScaleEnd,
-                onDoubleTapDown: _onDoubleTapDown,
-                onDoubleTap: _onDoubleTap,
-              ),
-            ),
-            const Positioned.fill(
-              child: IgnorePointer(
-                child: Column(
-                  children: [
-                    _EdgeFade(fromColor: Color(0xFF0A1218)),
-                    Spacer(),
-                    _EdgeFade(fromColor: Color(0xFF0A1218), flip: true),
-                  ],
+              Positioned.fill(
+                child: IgnorePointer(
+                  child: AnimatedBuilder(
+                    animation: _controller,
+                    builder: (context, child) => Transform(
+                      transform: _controller.value,
+                      alignment: Alignment.topLeft,
+                      child: child,
+                    ),
+                    child: QuestBubblesOverlay(key: _overlayKey),
+                  ),
                 ),
               ),
-            ),
-            QuestDebugPanel(key: _debugPanelKey, onChanged: () => _overlayKey.currentState?.refresh(), onFocusQuest: _focusOnQuest),
-          ],
+              Positioned.fill(
+                child: GestureDetector(
+                  behavior: HitTestBehavior.opaque,
+                  onScaleStart: _onScaleStart,
+                  onScaleUpdate: _onScaleUpdate,
+                  onScaleEnd: _onScaleEnd,
+                  onDoubleTapDown: _onDoubleTapDown,
+                  onDoubleTap: _onDoubleTap,
+                ),
+              ),
+              const Positioned.fill(
+                child: IgnorePointer(
+                  child: Column(
+                    children: [
+                      _EdgeFade(fromColor: Color(0xFF0A1218)),
+                      Spacer(),
+                      _EdgeFade(fromColor: Color(0xFF0A1218), flip: true),
+                    ],
+                  ),
+                ),
+              ),
+              QuestDebugPanel(key: _debugPanelKey, onChanged: () => _overlayKey.currentState?.refresh(), onFocusQuest: _focusOnQuest),
+            ],
+          ),
         ),
       ),
     );

@@ -28,9 +28,9 @@ class QuestDebugPanelState extends State<QuestDebugPanel>
   int? _expandedQuestId;
   final _listScrollCtrl = ScrollController();
 
-  int get _nextId => QuestSystem.quests.isEmpty
+  int get _nextId => questSystem.quests.isEmpty
       ? 1
-      : QuestSystem.quests.keys.reduce((a, b) => a > b ? a : b) + 1;
+      : questSystem.quests.keys.reduce((a, b) => a > b ? a : b) + 1;
 
   @override
   void initState() {
@@ -88,12 +88,13 @@ class QuestDebugPanelState extends State<QuestDebugPanel>
 
 
   void _deleteQuest(int id) {
-    for (final q in QuestSystem.quests.values) {
+    for (final q in questSystem.quests.values) {
       q.prerequisites.removeWhere((p) => p.id == id);
     }
-    QuestSystem.removeQuest(id);
+    questSystem.removeQuest(id);
     if (_expandedQuestId == id) _expandedQuestId = null;
     setState(() {});
+    print("Deleted quest $id");
     widget.onChanged();
   }
 
@@ -102,9 +103,9 @@ class QuestDebugPanelState extends State<QuestDebugPanel>
       context: context,
       builder: (_) => _CreateQuestDialog(
         nextId: _nextId,
-        existingQuests: QuestSystem.quests,
+        existingQuests: questSystem.quests,
         onCreated: (quest) {
-          QuestSystem.addQuest(quest);
+          questSystem.addQuest(quest);
           setState(() => _expandedQuestId = quest.id);
           widget.onChanged();
         },
@@ -115,7 +116,7 @@ class QuestDebugPanelState extends State<QuestDebugPanel>
 
   List<Quest> get _filteredQuests {
     final q = _searchQuery.toLowerCase();
-    return QuestSystem.quests.values
+    return questSystem.quests.values
         .where((quest) =>
     q.isEmpty ||
         quest.name.toLowerCase().contains(q) ||
@@ -249,7 +250,7 @@ class QuestDebugPanelState extends State<QuestDebugPanel>
           key: ValueKey(quest.id),
           quest: quest,
           isExpanded: isExpanded,
-          allQuests: QuestSystem.quests,
+          allQuests: questSystem.quests,
           onToggle: () =>
               setState(() => _expandedQuestId = isExpanded ? null : quest.id),
           onDelete: () => _deleteQuest(quest.id),
@@ -296,7 +297,7 @@ class _PanelHeader extends StatelessWidget {
           ),
           const Spacer(),
           Text(
-            '${QuestSystem.quests.length} quests',
+            '${questSystem.quests.length} quests',
             style: const TextStyle(color: Colors.white38, fontSize: 11),
           ),
           const SizedBox(width: 8),
@@ -626,7 +627,7 @@ class _QuestListTileState extends State<_QuestListTile>
   void _confirmDelete(BuildContext context) {
     showDialog(
       context: context,
-      builder: (_) => AlertDialog(
+      builder: (context) => AlertDialog(
         backgroundColor: const Color(0xFF152232),
         title: Text(
           'Delete "${widget.quest.name}"?',
@@ -646,6 +647,7 @@ class _QuestListTileState extends State<_QuestListTile>
             onPressed: () {
               Navigator.pop(context);
               widget.onDelete();
+              print("Deleted quest ${widget.quest.id}");
             },
             child: const Text('Delete',
                 style: TextStyle(color: Colors.redAccent)),

@@ -46,7 +46,7 @@ class QuestBubblesOverlayState extends State<QuestBubblesOverlay> {
         clipBehavior: Clip.none,
         children: [
           CustomPaint(size: _worldBounds, painter: _connectionPainter),
-          for (final quest in QuestSystem.quests.values) _positionedBubble(quest),
+          for (final quest in questSystem.quests.values) _positionedBubble(quest),
         ],
       ),
     );
@@ -72,7 +72,7 @@ class QuestBubblesOverlayState extends State<QuestBubblesOverlay> {
 
   Size _computeWorldBounds() {
     double maxX = 0, maxY = 0;
-    for (final quest in QuestSystem.quests.values) {
+    for (final quest in questSystem.quests.values) {
       if (quest.posX + quest.sizeX > maxX) maxX = quest.posX + quest.sizeX;
       if (quest.posY + quest.sizeY > maxY) maxY = quest.posY + quest.sizeY;
     }
