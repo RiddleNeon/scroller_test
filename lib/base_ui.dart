@@ -5,16 +5,22 @@ import 'package:wurp/tools/supabase_tests/supabase_login_test.dart';
 import 'base_logic.dart';
 
 void startApp() async {
-
+  print("starting app");
   if (auth?.currentUser != null) {
+    print("user logged in, ensuring supabase is initialized");
     await ensureSupabaseInitialized();
+    print("initialized supabase");
     final user = await userRepository.getUserSupabase(auth!.currentUser!.uid) ?? await userRepository.getOrCreateCurrentUser();
+    print("got user");
     await onUserLogin(user);
+    print("user logged in");
   }
   
   initRouter();
+  print("initialized router");
   routerConfig.refresh();
-  
+
+  print("running");
   runApp(
     MaterialApp.router(
       debugShowCheckedModeBanner: false,
