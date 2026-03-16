@@ -16,9 +16,6 @@ class QuestBubblesOverlayState extends State<QuestBubblesOverlay> {
   late final QuestLineConnectionPainter _connectionPainter;
   late Size _worldBounds;
 
-  int? _draggedQuestId;
-  Offset? _draggedQuestPos;
-
   @override
   void initState() {
     super.initState();

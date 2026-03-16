@@ -1,2 +1,234 @@
 [
+  {
+    "id": 0,
+    "name": "fraction basics",
+    "description": "Learn the basics of fractions, including how to add and subtract them.",
+    "subject": "mathematics",
+    "posX": -28.410175431430815,
+    "posY": -231.2406579189211,
+    "sizeX": 200,
+    "sizeY": 100,
+    "difficulty": 0.8,
+    "prerequisites": [
+      1,
+      2
+    ]
+  },
+  {
+    "id": 1,
+    "name": "addition",
+    "description": "Learn how to add numbers.",
+    "subject": "mathematics",
+    "posX": -351.75659650770916,
+    "posY": -228.625078954355,
+    "sizeX": 200,
+    "sizeY": 100,
+    "difficulty": 0.2,
+    "prerequisites": []
+  },
+  {
+    "id": 2,
+    "name": "subtraction",
+    "description": "Learn how to subtract numbers.",
+    "subject": "mathematics",
+    "posX": 337.11864035535575,
+    "posY": -245.62507895435496,
+    "sizeX": 200,
+    "sizeY": 100,
+    "difficulty": 0.2,
+    "prerequisites": []
+  },
+  {
+    "id": 3,
+    "name": "multiplication",
+    "description": "Learn how to multiply numbers.",
+    "subject": "mathematics",
+    "posX": 87.93674285001495,
+    "posY": 736.3636726717644,
+    "sizeX": 200,
+    "sizeY": 100,
+    "difficulty": 0.4,
+    "prerequisites": []
+  },
+  {
+    "id": 4,
+    "name": "division",
+    "description": "Learn how to divide numbers.",
+    "subject": "mathematics",
+    "posX": 70.44154302784555,
+    "posY": 110.65619610536044,
+    "sizeX": 200,
+    "sizeY": 100,
+    "difficulty": 0.4,
+    "prerequisites": []
+  },
+  {
+    "id": 5,
+    "name": "algebra basics",
+    "description": "Learn the basics of algebra, including how to solve equations.",
+    "subject": "mathematics",
+    "posX": -103.2499440593504,
+    "posY": 417.9303500062369,
+    "sizeX": 200,
+    "sizeY": 100,
+    "difficulty": 0.6,
+    "prerequisites": [
+      1,
+      2,
+      3,
+      4
+    ]
+  },
+  {
+    "id": 6,
+    "name": "geometry basics",
+    "description": "Learn the basics of geometry, including how to calculate area and perimeter.",
+    "subject": "mathematics",
+    "posX": 249.99052261563216,
+    "posY": 397.7531404812394,
+    "sizeX": 200,
+    "sizeY": 100,
+    "difficulty": 0.6,
+    "prerequisites": [
+      1,
+      2,
+      3,
+      4
+    ]
+  },
+  {
+    "id": 7,
+    "name": "calculus basics",
+    "description": "Learn the basics of calculus, including how to calculate derivatives and integrals.",
+    "subject": "mathematics",
+    "posX": 496,
+    "posY": 566,
+    "sizeX": 200,
+    "sizeY": 100,
+    "difficulty": 0.8,
+    "prerequisites": [
+      5,
+      6
+    ]
+  },
+  {
+    "id": 8,
+    "name": "physics basics",
+    "description": "Learn the basics of physics, including how to calculate force and energy.",
+    "subject": "physics",
+    "posX": 647,
+    "posY": 442,
+    "sizeX": 200,
+    "sizeY": 100,
+    "difficulty": 0.6,
+    "prerequisites": [
+      5,
+      6
+    ]
+  },
+  {
+    "id": 9,
+    "name": "chemistry basics",
+    "description": "Learn the basics of chemistry, including how to balance chemical equations.",
+    "subject": "chemistry",
+    "posX": 644,
+    "posY": -22,
+    "sizeX": 200,
+    "sizeY": 100,
+    "difficulty": 0.6,
+    "prerequisites": [
+      5,
+      6
+    ]
+  },
+  {
+    "id": 10,
+    "name": "biology basics",
+    "description": "Learn the basics of biology, including how to classify living organisms.",
+    "subject": "biology",
+    "posX": 692,
+    "posY": 159,
+    "sizeX": 200,
+    "sizeY": 100,
+    "difficulty": 0.6,
+    "prerequisites": [
+      5,
+      6
+    ]
+  },
+  {
+    "id": 11,
+    "name": "computer science basics",
+    "description": "Learn the basics of computer science, including how to write simple programs.",
+    "subject": "computer science",
+    "posX": 695,
+    "posY": 318,
+    "sizeX": 200,
+    "sizeY": 100,
+    "difficulty": 0.6,
+    "prerequisites": [
+      5,
+      6
+    ]
+  },
+  {
+    "id": 12,
+    "name": "history basics",
+    "description": "Learn the basics of history, including how to analyze historical events.",
+    "subject": "history",
+    "posX": 593.4230526294292,
+    "posY": -183.85898245685692,
+    "sizeX": 200,
+    "sizeY": 100,
+    "difficulty": 0.6,
+    "prerequisites": [
+      5,
+      6
+    ]
+  },
+  {
+    "id": 13,
+    "name": "literature basics",
+    "description": "Learn the basics of literature, including how to analyze literary works.",
+    "subject": "literature",
+    "posX": 357.3639368685407,
+    "posY": 706.5596617262478,
+    "sizeX": 200,
+    "sizeY": 100,
+    "difficulty": 0.6,
+    "prerequisites": [
+      5,
+      6
+    ]
+  },
+  {
+    "id": 14,
+    "name": "art basics",
+    "description": "Learn the basics of art, including how to analyze and create art.",
+    "subject": "art",
+    "posX": -424.4584547384966,
+    "posY": 704.571751183063,
+    "sizeX": 200,
+    "sizeY": 100,
+    "difficulty": 0.6,
+    "prerequisites": [
+      5,
+      6
+    ]
+  },
+  {
+    "id": 15,
+    "name": "music basics",
+    "description": "Learn the basics of music, including how to analyze and create music.",
+    "subject": "music",
+    "posX": -151.96474561421422,
+    "posY": 750.3267894618608,
+    "sizeX": 200,
+    "sizeY": 100,
+    "difficulty": 0.6,
+    "prerequisites": [
+      5,
+      6
+    ]
+  }
 ]

@@ -18,7 +18,7 @@ class _LogoutButtonState extends State<LogoutButton> {
       child: InkWell(onTap: () async {
         await onUserLogout();
         await auth!.signOut();
-        if(mounted) {
+        if(context.mounted) {
           Navigator.of(context).push(MaterialPageRoute(builder: (context) {
             return const LoginScreen();
           },));
