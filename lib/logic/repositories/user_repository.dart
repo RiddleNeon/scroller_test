@@ -8,9 +8,11 @@ class UserRepository {
   Future<UserProfile> getUser(String userId) async => (await getUserSupabase(userId)) ?? (throw StateError('User $userId not found'));
 
   Future<UserProfile?> getUserSupabase(String userId) async {
+    print("getting user $userId");
     final supabaseResult = await supabaseClient.from('profiles').select().eq('id', userId).maybeSingle();
     if(supabaseResult == null) return null;
-    
+
+    print("got result $supabaseResult");
     return UserProfile.fromSupabase(supabaseResult);
   }
 
@@ -36,6 +38,7 @@ class UserRepository {
 
   Future<UserProfile> createCurrentUser({String? username, String? profileImageUrl, String bio = ''}) async {
     username ??= currentAuthUsername();
+    print("creating current user");
     await supabaseClient.from("profiles").insert({
       "id": auth!.currentUser!.uid,
       "username": username,
@@ -65,13 +68,16 @@ class UserRepository {
   }
 
   Future<UserProfile> createUser({required String id, required String username, String? profileImageUrl, String bio = ''}) async {
-    await supabaseClient.from("profiles").upsert({
+    print("creating user $id");
+    final supabaseRes = await supabaseClient.from("profiles").upsert({
       "id": id,
       "username": username,
       "display_name": username,
       "avatar_url": profileImageUrl ?? createUserProfileImageUrl(username),
       "bio": bio,
-    });
+    }).select();
+
+    print("supabaseRes: $supabaseRes");
 
     return UserProfile(
       id: id,
