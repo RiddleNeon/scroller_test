@@ -8,12 +8,9 @@ class UserRepository {
   Future<UserProfile> getUser(String userId) async => (await getUserSupabase(userId)) ?? (throw StateError('User $userId not found'));
 
   Future<UserProfile?> getUserSupabase(String userId) async {
-    print("getting user $userId");
     final supabaseResult = await supabaseClient.from('profiles').select().eq('id', userId).maybeSingle();
-    print("from supabase: $supabaseResult");
     if(supabaseResult == null) return null;
 
-    print("got result $supabaseResult");
     return UserProfile.fromSupabase(supabaseResult);
   }
 
@@ -26,24 +23,18 @@ class UserRepository {
   }
 
   Future<UserProfile> getOrCreateCurrentUser() async {
-    print("creating");
     final supabaseResult = await supabaseClient.from('profiles').select().eq('id', auth!.currentUser!.uid).maybeSingle();
-    print("got result: $supabaseResult");
     if (supabaseResult != null) {
-      print("not null");
       UserProfile model = UserProfile.fromSupabase(supabaseResult);
-      print("prfile mapped $model");
       return model;
     } else {
       UserProfile model = await createCurrentUser();
-      print("current user model created");
       return model;
     }
   }
 
   Future<UserProfile> createCurrentUser({String? username, String? profileImageUrl, String bio = ''}) async {
     username ??= currentAuthUsername();
-    print("creating current user");
     await supabaseClient.from("profiles").insert({
       "id": auth!.currentUser!.uid,
       "username": username,
@@ -73,7 +64,6 @@ class UserRepository {
   }
 
   Future<UserProfile> createUser({required String id, required String username, String? profileImageUrl, String bio = ''}) async {
-    print("creating user $id");
     final supabaseRes = await supabaseClient.from("profiles").upsert({
       "id": id,
       "username": username,
@@ -81,9 +71,7 @@ class UserRepository {
       "avatar_url": profileImageUrl ?? createUserProfileImageUrl(username),
       "bio": bio,
     }).select();
-
-    print("supabaseRes: $supabaseRes");
-
+    
     return UserProfile(
       id: id,
       username: username,
