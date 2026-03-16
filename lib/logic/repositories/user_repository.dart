@@ -25,13 +25,17 @@ class UserRepository {
   }
 
   Future<UserProfile> getOrCreateCurrentUser() async {
+    print("creating");
     final supabaseResult = await supabaseClient.from('profiles').select().eq('id', auth!.currentUser!.uid).maybeSingle();
-
+    print("got result: $supabaseResult");
     if (supabaseResult != null) {
+      print("not null")
       UserProfile model = UserProfile.fromSupabase(supabaseResult);
+      print("prfile mapped $model");
       return model;
     } else {
       UserProfile model = await createCurrentUser();
+      print("current user model created");
       return model;
     }
   }
