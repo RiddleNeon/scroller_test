@@ -1,7 +1,6 @@
 import 'dart:ui' as ui;
 
 import 'package:flutter/material.dart';
-import 'package:flutter/services.dart';
 import 'package:http/http.dart' as http;
 
 class InfiniteDotsBackground extends StatefulWidget {
@@ -30,14 +29,7 @@ class _InfiniteDotsBackgroundState extends State<InfiniteDotsBackground> {
     final frame = await codec.getNextFrame();
     return frame.image;
   }
-
-  Future<ui.Image> _loadUiImageFromAsset(String assetPath) async {
-    final data = await rootBundle.load(assetPath);
-    final bytes = data.buffer.asUint8List();
-    final codec = await ui.instantiateImageCodec(bytes);
-    final frame = await codec.getNextFrame();
-    return frame.image;
-  }
+  
   late ui.Image img;
   Future<void> _loadShader() async {
     try {
@@ -84,11 +76,16 @@ class _ShaderDotsPainter extends CustomPainter {
 
   @override
   void paint(Canvas canvas, Size size) {
+
+    const double spacing = 28.0;
+    const double accentSpacing = spacing * 4.0;
+    final double period = accentSpacing * scale;
+
     shader
       ..setFloat(0, size.width)
       ..setFloat(1, size.height)
-      ..setFloat(2, offsetX)
-      ..setFloat(3, offsetY)
+      ..setFloat(2, offsetX % period)
+      ..setFloat(3, offsetY % period)
       ..setFloat(4, scale);
     shader.setImageSampler(0, img);
 

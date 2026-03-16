@@ -116,6 +116,9 @@ class PanWidgetState extends State<PanWidget> {
   static const maxScale = 3000.0;
 
   (double, double) _clampTranslation(double tx, double ty, double s) {
+
+    if(debugMode) return (tx, ty);
+    
     final v = _viewSize;
     final txMin = v.width - _padding - _boundaryMax.dx * s;
     final txMax = -_boundaryMin.dx * s + _padding;
@@ -222,7 +225,8 @@ class PanWidgetState extends State<PanWidget> {
           }
           _onPointerScroll(e);
         }
-      },      child: ClipRRect(
+      },
+      child: ClipRRect(
       borderRadius: BorderRadius.circular(20),
       child: DecoratedBox(
         decoration: const BoxDecoration(color: Color(0xFF0A1218)),

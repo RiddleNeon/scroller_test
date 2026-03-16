@@ -64,13 +64,13 @@ class UserRepository {
   }
 
   Future<UserProfile> createUser({required String id, required String username, String? profileImageUrl, String bio = ''}) async {
-    final supabaseRes = await supabaseClient.from("profiles").upsert({
+    await supabaseClient.from("profiles").upsert({
       "id": id,
       "username": username,
       "display_name": username,
       "avatar_url": profileImageUrl ?? createUserProfileImageUrl(username),
       "bio": bio,
-    }).select();
+    });
     
     return UserProfile(
       id: id,
