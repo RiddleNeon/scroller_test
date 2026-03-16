@@ -10,6 +10,7 @@ class UserRepository {
   Future<UserProfile?> getUserSupabase(String userId) async {
     print("getting user $userId");
     final supabaseResult = await supabaseClient.from('profiles').select().eq('id', userId).maybeSingle();
+    print("from supabase: $supabaseResult");
     if(supabaseResult == null) return null;
 
     print("got result $supabaseResult");
