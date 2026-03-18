@@ -3,6 +3,7 @@ import 'dart:async';
 import 'package:flutter/material.dart';
 import 'package:wurp/logic/quests/quest.dart';
 import 'package:wurp/logic/quests/quest_system.dart';
+import 'package:wurp/logic/repositories/quest_repository.dart';
 
 class QuestDebugPanel extends StatefulWidget {
   const QuestDebugPanel({
@@ -29,10 +30,6 @@ class QuestDebugPanelState extends State<QuestDebugPanel>
   String _searchQuery = '';
   int? _expandedQuestId;
   final _listScrollCtrl = ScrollController();
-
-  int get _nextId => questSystem.quests.isEmpty
-      ? 1
-      : questSystem.quests.keys.reduce((a, b) => a > b ? a : b) + 1;
 
   @override
   void initState() {
@@ -104,7 +101,6 @@ class QuestDebugPanelState extends State<QuestDebugPanel>
     showDialog(
       context: context,
       builder: (_) => _CreateQuestDialog(
-        nextId: _nextId,
         existingQuests: questSystem.quests,
         onCreated: (quest) {
           questSystem.addQuest(quest);
@@ -950,12 +946,10 @@ class _PrerequisiteEditorState extends State<_PrerequisiteEditor> {
 
 class _CreateQuestDialog extends StatefulWidget {
   const _CreateQuestDialog({
-    required this.nextId,
     required this.existingQuests,
     required this.onCreated,
   });
 
-  final int nextId;
   final Map<int, Quest> existingQuests;
   final void Function(Quest) onCreated;
 
@@ -986,9 +980,9 @@ class _CreateQuestDialogState extends State<_CreateQuestDialog> {
 
   void _create() {
     final quest = Quest(
-      id: widget.nextId,
+      id: DateTime.now().millisecondsSinceEpoch,
       name: _nameCtrl.text.trim().isEmpty
-          ? 'Quest ${widget.nextId}'
+          ? 'Quest ${DateTime.now().millisecondsSinceEpoch}'
           : _nameCtrl.text.trim(),
       description: _descCtrl.text,
       subject: _subjectCtrl.text.trim().isEmpty
@@ -1000,6 +994,7 @@ class _CreateQuestDialogState extends State<_CreateQuestDialog> {
       sizeY: double.tryParse(_sizeYCtrl.text) ?? 100,
       difficulty: _difficulty,
     );
+    questRepo.addQuest(quest);
     Navigator.pop(context);
     widget.onCreated(quest);
   }
@@ -1008,13 +1003,13 @@ class _CreateQuestDialogState extends State<_CreateQuestDialog> {
   Widget build(BuildContext context) {
     return AlertDialog(
       backgroundColor: const Color(0xFF0D1B2A),
-      title: Row(
+      title: const Row(
         children: [
-          const Icon(Icons.add_circle, color: Colors.greenAccent, size: 18),
-          const SizedBox(width: 8),
+          Icon(Icons.add_circle, color: Colors.greenAccent, size: 18),
+          SizedBox(width: 8),
           Text(
-            'New Quest  #${widget.nextId}',
-            style: const TextStyle(color: Colors.white, fontSize: 14),
+            'New Quest',
+            style: TextStyle(color: Colors.white, fontSize: 14),
           ),
         ],
       ),

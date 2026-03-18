@@ -106,7 +106,6 @@ class RouteObserver extends NavigatorObserver {
   @override
   void didChangeTop(Route<dynamic> topRoute, Route<dynamic>? previousTopRoute) {
     super.didChangeTop(topRoute, previousTopRoute);
-    print("new top route: ${(topRoute.settings.name?..replaceFirst("/", "")) ?? ("null: ${topRoute.toString()}")}");
     WidgetsBinding.instance.addPostFrameCallback((timeStamp) => navBarKey.currentState?.switchToId((topRoute.settings.name?..replaceFirst("/", "")) ?? ''));
   }
 }
