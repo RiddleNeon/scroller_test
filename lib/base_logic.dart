@@ -43,7 +43,7 @@ Future<void> initLogic() async {
   WidgetsFlutterBinding.ensureInitialized();
   fvp.registerWith();
   await ensureSupabaseInitialized();
-  await questSystem.load();
+  await questSystem.loadFromServer('General');
   auth = FirebaseAuth.instance;
 }
 

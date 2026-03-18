@@ -790,10 +790,11 @@ class _PrerequisiteEditorState extends State<_PrerequisiteEditor> {
       ..sort((a, b) => a.id.compareTo(b.id));
   }
 
-  void _add(Quest prereq) {
+  void _add(Quest prereq) async {
     print("Adding prerequisite #${prereq.id} to quest #${widget.quest.id}");
+    await questRepo.addConnection(widget.quest.id, prereq.id);
+    if(!mounted) return;
     setState(() {
-      widget.quest.prerequisites.add(prereq);
       _searchCtrl.clear();
       _query = '';
       _focusNode.unfocus();
@@ -826,9 +827,9 @@ class _PrerequisiteEditorState extends State<_PrerequisiteEditor> {
                 side: BorderSide(color: Colors.cyan.withValues(alpha: 0.3)),
                 deleteIcon:
                 const Icon(Icons.close, size: 12, color: Colors.redAccent),
-                onDeleted: () {
-                  setState(() => widget.quest.prerequisites
-                      .removeWhere((p) => p.id == prereq.id));
+                onDeleted: () async {
+                  await questRepo.removeConnection(widget.quest.id, prereq.id);
+                  setState(() {});
                   widget.onChanged();
                 },
                 padding: EdgeInsets.zero,
