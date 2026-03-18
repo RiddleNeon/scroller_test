@@ -35,6 +35,7 @@ class QuestRepository {
     sizeY: (row['size_y'] as num).toDouble(),
   );
 
+  
   // ── Fetch ──────────────────────────────────────────────────────────────────
 
   /// Loads all non-deleted quests for [subject] and wires up their
@@ -108,16 +109,28 @@ class QuestRepository {
   /// Creates a prerequisite connection: [toId] must be completed before [fromId].
   Future<void> addConnection(int fromId, int toId) async {
     print("Adding connection from $fromId to $toId");
-    // Upsert the parent row (idempotent).
-    await supabaseClient.from('quest_connections').upsert({'from_id': fromId, 'to_id': toId, 'created_by': currentUser.id});
-
-    // Append a version marking the connection as active.
+    
+    String message;
+    bool exists = await supabaseClient
+        .from('quest_connections')
+        .select('from_id, to_id')
+        .eq('from_id', fromId)
+        .eq('to_id', toId)
+        .maybeSingle() != null;
+    if(!exists) {
+      await supabaseClient.from('quest_connections').insert({'from_id': fromId, 'to_id': toId, 'created_by': currentUser.id});
+      message = 'connection added';
+      // Append a version marking the connection as active.
+    } else {
+      message = 'connection updated';
+    }
+    
     await supabaseClient.from('quest_connection_versions').insert({
       'from_id': fromId,
       'to_id': toId,
       'type': 'prerequisite',
       'is_deleted': false,
-      'update_message': 'connection added',
+      'update_message': message,
       'created_by': currentUser.id,
     });
     
