@@ -15,6 +15,8 @@ the database uses **postgreSQL**. it provides a lot of features like rls policie
 
 ### why not just use firestore?
 firestore is a db provider in firebase. although it is a lot easier to connect to other firebase services, it has a lot of limitations. <br>
+> skip to [pricing](#pricing) if your not interested in the code aspects
+
 firestore uses **noSql**. noSql is a sql dialect like postgreSql, that stores its data a bit differently. ther are no tables you can access and connect, but instead there are collections, documents, subcollections and more. so if you want to access a users following for example, you would do something like this (pseudo code):
 
     users/{userId}/following/
@@ -41,8 +43,10 @@ firestore bills differently. there you pay per read / write. a read counts as a 
 - the only filtering statements are complete basics like **equals, not equals, array in, in array**
 - array in, in array are limited to only 10 elements
 
-what that means is, that for example if you wanted to search videos containign a specific tag or want to do a text search you would actually need to pull every single element to the users device and filter it there. and every single returned element counts as one read. so if you had 100 million videos, every search would count as 100 million reads. while there are some third party services that allow text search, they are often relatively expensive and thats not the point. so what i want to say is that a good reccomendation algorithm is not really possible without high costs (trust me, ive done my research XD).<br>
+what that means is, that for example if you wanted to search videos containign a specific tag or want to do a text search you would actually need to pull every single element to the users device and filter it there. and every single returned element counts as one read. so if you had 100 million videos, every search would count as 100 million reads. <br>
+while there are some third party services that allow text search, they are often relatively expensive and thats not the point. so what i want to say is that a good reccomendation algorithm is not really possible without high costs (trust me, ive done my research).<br>
 additionally these reads are pretty expensive. Here is the pricing of reads, writes and deletes per 100k documents:
 - reads: 0.03$
 - writes: 0.09$
 - deletes: 0.01$
+
