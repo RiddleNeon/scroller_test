@@ -33,13 +33,14 @@ when using supabase, you only pay for some of the servers resources. (in the pro
 - monthly active users: 100,000 MAU, then 0.00325$ / MAU
 - egress (data transfer): 250 gb included, after that 0.09$ / gb
 - base pro plan cost: 25$
-<br>
-while this seems expensive, you have to compare this to the size of the data thats actually stored. since we dont store the actual image / video data but just the urls, the file size of one video is about 200 bytes at max. so you would be able to store about 40 million videos without exceeding the included database size. 
-as for the egress fees, the users would need to watch over 41 million videos every day to exceed the included egress.<br><br>
-lets compare this to firestore.<br>
-firestore bills differently. there you pay per read / write. a read counts as a returned entry by a query, a write counts for every updated entry. this is problematic, since you need *a lot* of reads for an infinite scroller app. its not just the fact that the users scroll multiple times per minute and every scroll is one read, but the main problem is the recommendation algorithm, especially combined with the query limitations I sated above. so what does that mean? while you do have *some* possibilities of filtering the results before they count as a read, those are very limited. those limits include:
+while this seems expensive, you have to compare this to the size of the data thats actually stored. since we dont store the actual image or video data but just the urls, the file size of one video is about 200 bytes at max. so you would be able to store about 40 million videos without exceeding the included database size. <br>
+as for the egress fees, the users would need to watch over 41 million videos every day to exceed the included egress.
+#### lets compare this to firestore.
+firestore bills differently. there you pay per read / write. a read counts as a returned entry by a query, a write counts for every updated entry. this is problematic, since you need **a lot** of reads for an infinite scroller app. its not just the fact that the users scroll multiple times per minute and every scroll is one read, but the main problem is the recommendation algorithm, especially combined with the query limitations I sated above. so what does that mean? while you do have **some** possibilities of filtering the results before they count as a read, those are very limited. those limits include:
+
 - the only filtering statements are complete basics like **equals, not equals, array in, in array**
 - array in, in array are limited to only 10 elements
+
 what that means is, that for example if you wanted to search videos containign a specific tag or want to do a text search you would actually need to pull every single element to the users device and filter it there. and every single returned element counts as one read. so if you had 100 million videos, every search would count as 100 million reads. while there are some third party services that allow text search, they are often relatively expensive and thats not the point. so what i want to say is that a good reccomendation algorithm is not really possible without high costs (trust me, ive done my research XD).<br>
 additionally these reads are pretty expensive. Here is the pricing of reads, writes and deletes per 100k documents:
 - reads: 0.03$
