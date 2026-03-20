@@ -1,31 +1,14 @@
-import 'dart:collection';
-
 import 'package:flutter/foundation.dart';
 import 'package:wurp/logic/quests/quest.dart';
 import 'package:wurp/logic/quests/quest_system.dart';
 import 'package:wurp/logic/repositories/quest_repository.dart';
 
-// ── Manager ────────────────────────────────────────────────────────────────
 
 /// Tracks quest changes locally with full undo/redo support.
-///
 /// Changes are applied to [QuestSystem] immediately when recorded.
 /// Call [push] to sync all pending changes to the server as a single "commit",
 /// collapsing redundant operations (e.g. multiple moves of the same quest)
 /// before sending.
-///
-/// Usage:
-/// ```dart
-/// // record + apply locally
-/// changeManager.record(UpdateQuestChange(before: old, after: updated));
-///
-/// // undo / redo
-/// changeManager.undo();
-/// changeManager.redo();
-///
-/// // push everything to server
-/// await changeManager.push();
-/// ```
 class QuestChangeManager with ChangeNotifier {
   final QuestSystem questSystem;
   final QuestRepository repo;
@@ -46,7 +29,6 @@ class QuestChangeManager with ChangeNotifier {
 
   QuestChangeManager({required this.questSystem, required this.repo});
 
-  // ── Recording ──────────────────────────────────────────────────────────────
 
   /// Applies [change] locally and adds it to the pending queue.
   /// Clears the redo stack (new change invalidates undone history).
@@ -58,7 +40,6 @@ class QuestChangeManager with ChangeNotifier {
     notifyListeners();
   }
 
-  // ── Undo / Redo ────────────────────────────────────────────────────────────
 
   void undo() {
     if (!canUndo) return;
@@ -78,7 +59,6 @@ class QuestChangeManager with ChangeNotifier {
     notifyListeners();
   }
 
-  // ── Server sync ────────────────────────────────────────────────────────────
 
   /// Collapses and pushes all pending changes to the server.
   ///
@@ -120,7 +100,6 @@ class QuestChangeManager with ChangeNotifier {
     return map.values.toList();
   }
 
-  // ── Conflict helpers ───────────────────────────────────────────────────────
 
   /// Drops any pending changes that reference a quest which has since been
   /// deleted (e.g. after a remote sync overwrote local state).
@@ -237,7 +216,6 @@ class UpdateQuestChange extends _QuestTargetedChange {
   @override
   QuestChange? mergeWith(QuestChange newer) {
     if (newer is UpdateQuestChange) {
-      // Keep original `before` for correct undo, use newest `after`.
       return UpdateQuestChange(
         before: before,
         after: newer.after,
@@ -249,7 +227,6 @@ class UpdateQuestChange extends _QuestTargetedChange {
   }
 }
 
-/// Records the deletion of a quest, preserving the snapshot for undo.
 class DeleteQuestChange extends _QuestTargetedChange {
   final Quest quest;
 
@@ -274,9 +251,7 @@ class DeleteQuestChange extends _QuestTargetedChange {
   Future<void> push(QuestRepository repo) => repo.deleteQuest(quest);
 }
 
-// ── Connection changes ─────────────────────────────────────────────────────
 
-/// Records adding a prerequisite connection from→to.
 class AddConnectionChange extends QuestChange {
   final int fromId;
   final int toId;
@@ -301,13 +276,17 @@ class AddConnectionChange extends QuestChange {
 
   @override
   QuestChange? mergeWith(QuestChange newer) {
-    // Add + Remove of the same connection → cancel out.
     if (newer is RemoveConnectionChange &&
         newer.fromId == fromId &&
-        newer.toId == toId) return null;
+        newer.toId == toId) {
+      return null;
+    }
     return newer;
   }
 }
+
+
+late QuestChangeManager changeManager;
 
 /// Records removing a prerequisite connection from→to.
 class RemoveConnectionChange extends QuestChange {
@@ -334,10 +313,11 @@ class RemoveConnectionChange extends QuestChange {
 
   @override
   QuestChange? mergeWith(QuestChange newer) {
-    // Remove + Add of the same connection → cancel out (back to original state).
     if (newer is AddConnectionChange &&
         newer.fromId == fromId &&
-        newer.toId == toId) return null;
+        newer.toId == toId) {
+      return null;
+    }
     return newer;
   }
 }

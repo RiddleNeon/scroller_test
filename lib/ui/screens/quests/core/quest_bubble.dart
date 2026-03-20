@@ -1,75 +1,123 @@
 import 'dart:math';
 import 'package:flutter/material.dart';
 import 'package:wurp/logic/quests/quest.dart';
-import 'package:wurp/ui/screens/quests/core/quest_bubbles_overlay.dart';
+const double kConnectionHandleRadius = 12.0;
 
 class QuestBubble extends StatelessWidget {
   final Quest quest;
+  final bool isConnectionSource;
+  final bool isConnectionTarget;
 
   const QuestBubble({
     super.key,
     required this.quest,
+    this.isConnectionSource = false,
+    this.isConnectionTarget = false,
   });
 
   @override
   Widget build(BuildContext context) {
-    final baseColor = getColorFromSeed(quest.id);
-    final darkColor = _adjustColor(baseColor, lightness: 0.28, saturation: 0.60);
-    final midColor = _adjustColor(baseColor, lightness: 0.28, saturation: 0.60);
-    final glowColor = _adjustColor(baseColor, lightness: 0.60, saturation: 0.75);
+    final baseColor  = getColorFromSeed(quest.id);
+    final darkColor  = _adjustColor(baseColor, lightness: 0.28, saturation: 0.60);
+    final midColor   = _adjustColor(baseColor, lightness: 0.28, saturation: 0.60);
+    final glowColor  = _adjustColor(baseColor, lightness: 0.60, saturation: 0.75);
 
-    return Container(
-      width: quest.sizeX,
-      height: quest.sizeY,
-      decoration: BoxDecoration(
-        borderRadius: BorderRadius.circular(quest.sizeY / 2),
-        gradient: LinearGradient(
-          begin: Alignment.topLeft,
-          end: Alignment.bottomRight,
-          colors: [
-            midColor,
-            darkColor,
-          ],
-        ),
-        border: Border.all(
-          color: glowColor.withValues(alpha: 0.45),
-          width: 1.5,
-        ),
-      ),
-      child: ClipRRect(
-        borderRadius: BorderRadius.circular(quest.sizeY / 2),
-        child: Stack(
-          children: [
-            Positioned.fill(
-              child: InkWell(
-                onTap: () {
-                  print("Tapped quest ${quest.name} (ID: ${quest.id})");
-                  Navigator.push(context, MaterialPageRoute(builder: (context) => const QuestBubblesOverlay()));
-                },
-                child: Padding(
-                  padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 8),
-                  child: Column(
-                    mainAxisAlignment: MainAxisAlignment.center,
-                    children: [
-                      Text(
-                        quest.name,
-                        textAlign: TextAlign.center,
-                        style: const TextStyle(
-                          color: Colors.white,
-                          fontSize: 20,
-                          fontWeight: FontWeight.w600,
-                          letterSpacing: 0.4,
-                          height: 1.35,
-                        ),
-                      ),
-                      const SizedBox(height: 5),
-                    ],
+    final borderColor = isConnectionSource
+        ? glowColor
+        : isConnectionTarget
+        ? Colors.white.withValues(alpha: 0.85)
+        : glowColor.withValues(alpha: 0.45);
+
+    final borderWidth = (isConnectionSource || isConnectionTarget) ? 2.5 : 1.5;
+
+    return Stack(
+      clipBehavior: Clip.none,
+      children: [
+        AnimatedContainer(
+          duration: const Duration(milliseconds: 150),
+          width: quest.sizeX,
+          height: quest.sizeY,
+          decoration: BoxDecoration(
+            borderRadius: BorderRadius.circular(quest.sizeY / 2),
+            gradient: LinearGradient(
+              begin: Alignment.topLeft,
+              end: Alignment.bottomRight,
+              colors: [midColor, darkColor],
+            ),
+            border: Border.all(color: borderColor, width: borderWidth),
+            boxShadow: isConnectionTarget
+                ? [BoxShadow(color: glowColor.withValues(alpha: 0.55), blurRadius: 18, spreadRadius: 3)]
+                : isConnectionSource
+                ? [BoxShadow(color: glowColor.withValues(alpha: 0.4), blurRadius: 12)]
+                : null,
+          ),
+          child: ClipRRect(
+            borderRadius: BorderRadius.circular(quest.sizeY / 2),
+            child: Padding(
+              padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 8),
+              child: Column(
+                mainAxisAlignment: MainAxisAlignment.center,
+                children: [
+                  Text(
+                    quest.name,
+                    textAlign: TextAlign.center,
+                    style: const TextStyle(
+                      color: Colors.white,
+                      fontSize: 20,
+                      fontWeight: FontWeight.w600,
+                      letterSpacing: 0.4,
+                      height: 1.35,
+                    ),
                   ),
-                ),
+                  const SizedBox(height: 5),
+                ],
               ),
             ),
-          ],
+          ),
         ),
+
+        Positioned(
+          right: -kConnectionHandleRadius,
+          top: quest.sizeY / 2 - kConnectionHandleRadius,
+          child: _ConnectionHandle(color: glowColor, active: isConnectionSource),
+        ),
+      ],
+    );
+  }
+}
+
+
+class _ConnectionHandle extends StatelessWidget {
+  const _ConnectionHandle({required this.color, required this.active});
+
+  final Color color;
+  final bool active;
+
+  @override
+  Widget build(BuildContext context) {
+    const size = kConnectionHandleRadius * 2;
+    return AnimatedContainer(
+      duration: const Duration(milliseconds: 150),
+      width: size,
+      height: size,
+      decoration: BoxDecoration(
+        shape: BoxShape.circle,
+        color: active ? color : color.withValues(alpha: 0.70),
+        border: Border.all(
+          color: Colors.white.withValues(alpha: active ? 0.85 : 0.40),
+          width: 1.5,
+        ),
+        boxShadow: [
+          BoxShadow(
+            color: color.withValues(alpha: active ? 0.75 : 0.35),
+            blurRadius: active ? 12 : 6,
+          ),
+        ],
+      ),
+      child: Icon(
+        Icons.add,
+        size: 13,
+        color: Colors.white.withValues(alpha: active ? 1.0 : 0.75),
       ),
     );
   }

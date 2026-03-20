@@ -16,32 +16,55 @@ class QuestBubblesOverlayState extends State<QuestBubblesOverlay> {
   late final QuestLineConnectionPainter _connectionPainter;
   late Size _worldBounds;
 
+  final _dragNotifier = ValueNotifier<({int? id, Offset? pos})>(
+    (id: null, pos: null),
+  );
+
+  final _connectionNotifier =
+  ValueNotifier<({int? sourceId, int? targetId, Offset? previewPos})>(
+    (sourceId: null, targetId: null, previewPos: null),
+  );
+
   @override
   void initState() {
     super.initState();
     _connectionPainter = QuestLineConnectionPainter();
     _worldBounds = _computeWorldBounds();
-    questSystem.addListener(() => _worldBounds = _computeWorldBounds());
+    questSystem.addListener(() {
+      if (mounted) setState(() => _worldBounds = _computeWorldBounds());
+    });
   }
 
 
   void setDragState({required int? questId, required Offset? position}) {
     _dragNotifier.value = (id: questId, pos: position);
     _connectionPainter
-      ..currentDraggedQuestId = questId
+      ..currentDraggedQuestId  = questId
       ..currentDraggedQuestPos = position;
+    _connectionPainter.triggerRepaint();
+  }
+  
+  void setConnectionState({
+    required int?    sourceId,
+    required int?    targetId,
+    required Offset? previewPos,
+  }) {
+    _connectionNotifier.value =
+    (sourceId: sourceId, targetId: targetId, previewPos: previewPos);
+    _connectionPainter
+      ..connectionSourceId   = sourceId
+      ..connectionPreviewEnd = previewPos;
+    _connectionPainter.triggerRepaint();
   }
 
-  void refresh()  {
-    setState(() {});
-  }
+  void refresh() => setState(() {});
 
   @override
   Widget build(BuildContext context) {
     const padding = 500.0;
 
     return SizedBox(
-      width: _worldBounds.width + padding,
+      width:  _worldBounds.width  + padding,
       height: _worldBounds.height + padding,
       child: Stack(
         clipBehavior: Clip.none,
@@ -53,21 +76,28 @@ class QuestBubblesOverlayState extends State<QuestBubblesOverlay> {
     );
   }
 
-  final _dragNotifier = ValueNotifier<({int? id, Offset? pos})>(
-    (id: null, pos: null),
-  );
+
   Widget _positionedBubble(Quest quest) {
     return ValueListenableBuilder(
       valueListenable: _dragNotifier,
-      builder: (context, drag, child) {
+      builder: (context, drag, _) {
         final isDragged = quest.id == drag.id && drag.pos != null;
-        return Positioned(
-          left: isDragged ? drag.pos!.dx : quest.posX,
-          top:  isDragged ? drag.pos!.dy : quest.posY,
-          child: child!,
+
+        return ValueListenableBuilder(
+          valueListenable: _connectionNotifier,
+          builder: (context, conn, _) {
+            return Positioned(
+              left: isDragged ? drag.pos!.dx : quest.posX,
+              top:  isDragged ? drag.pos!.dy : quest.posY,
+              child: QuestBubble(
+                quest: quest,
+                isConnectionSource: conn.sourceId == quest.id,
+                isConnectionTarget: conn.targetId == quest.id,
+              ),
+            );
+          },
         );
       },
-      child: QuestBubble(quest: quest),
     );
   }
 
@@ -83,6 +113,7 @@ class QuestBubblesOverlayState extends State<QuestBubblesOverlay> {
   @override
   void dispose() {
     _dragNotifier.dispose();
+    _connectionNotifier.dispose();
     super.dispose();
   }
 }
