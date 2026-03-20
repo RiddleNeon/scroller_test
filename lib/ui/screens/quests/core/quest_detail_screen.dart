@@ -1,52 +1,214 @@
 import 'package:flutter/material.dart';
 import 'package:wurp/logic/quests/quest.dart';
 
-class QuestDetailScreen extends StatelessWidget {
+// ── Main Screen ───────────────────────────────────────────────────────────────
+
+class QuestDetailScreen extends StatefulWidget {
   final Quest quest;
   final bool debugMode;
   final bool editMode;
-  final void Function(Quest updatedQuest)? onDoneEditing;
+  final void Function(Quest updatedQuest, [String? changeMessage])? onDoneEditing;
+  final String? recommendedChangeMessage;
 
-  const QuestDetailScreen({super.key, required this.quest, required this.debugMode, required this.editMode, this.onDoneEditing});
+  const QuestDetailScreen({
+    super.key,
+    required this.quest,
+    required this.debugMode,
+    required this.editMode,
+    this.onDoneEditing, this.recommendedChangeMessage,
+  });
+
+  @override
+  State<QuestDetailScreen> createState() => _QuestDetailScreenState();
+}
+
+class _QuestDetailScreenState extends State<QuestDetailScreen> {
+  late bool _editMode;
+  late Quest _editedQuest;
+  
+  
+  late final TextEditingController _nameCtrl;
+  late final TextEditingController _descriptionCtrl;
+  late final TextEditingController _subjectCtrl;
+  late final TextEditingController _posXCtrl;
+  late final TextEditingController _posYCtrl;
+  late final TextEditingController _sizeXCtrl;
+  late final TextEditingController _sizeYCtrl;
+  late double _difficulty;
+  late bool _isDeleted;
+
+  @override
+  void initState() {
+    super.initState();
+    _editMode = widget.editMode;
+    _editedQuest = widget.quest;
+    _nameCtrl = TextEditingController(text: widget.quest.name);
+    _descriptionCtrl = TextEditingController(text: widget.quest.description);
+    _subjectCtrl = TextEditingController(text: widget.quest.subject);
+    _posXCtrl = TextEditingController(text: widget.quest.posX.toStringAsFixed(0));
+    _posYCtrl = TextEditingController(text: widget.quest.posY.toStringAsFixed(0));
+    _sizeXCtrl = TextEditingController(text: widget.quest.sizeX.toStringAsFixed(0));
+    _sizeYCtrl = TextEditingController(text: widget.quest.sizeY.toStringAsFixed(0));
+    _difficulty = widget.quest.difficulty.clamp(0.0, 1.0);
+    _isDeleted = widget.quest.isDeleted;
+  }
+
+  @override
+  void dispose() {
+    _nameCtrl.dispose();
+    _descriptionCtrl.dispose();
+    _subjectCtrl.dispose();
+    _posXCtrl.dispose();
+    _posYCtrl.dispose();
+    _sizeXCtrl.dispose();
+    _sizeYCtrl.dispose();
+    super.dispose();
+  }
+  
+  /// Reads all controllers and builds an updated [Quest].
+  /// Requires Quest to have a copyWith method.
+  Quest _buildUpdatedQuest() => _editedQuest.copyWith(
+    name: _nameCtrl.text.trim().isEmpty ? _editedQuest.name : _nameCtrl.text.trim(),
+    description: _descriptionCtrl.text,
+    subject: _subjectCtrl.text.trim().isEmpty ? _editedQuest.subject : _subjectCtrl.text.trim(),
+    posX: double.tryParse(_posXCtrl.text) ?? _editedQuest.posX,
+    posY: double.tryParse(_posYCtrl.text) ?? _editedQuest.posY,
+    sizeX: double.tryParse(_sizeXCtrl.text) ?? _editedQuest.sizeX,
+    sizeY: double.tryParse(_sizeYCtrl.text) ?? _editedQuest.sizeY,
+    difficulty: _difficulty,
+    isDeleted: _isDeleted,
+  );
+
+  void _saveAndExit() {
+    final updated = _buildUpdatedQuest();
+    setState(() {
+      _editedQuest = updated;
+      _editMode = false;
+    });
+    showChangeMessageDialog(widget.recommendedChangeMessage).then((message) {
+      widget.onDoneEditing?.call(updated, message.isEmpty ? null : message);
+    });
+  }
+  ///asks the user what he changed and returns the message, or null if the user cancels
+  Future<String> showChangeMessageDialog(String? recommendedChangeMessage) async {
+    String? message;
+    await showDialog(
+      context: context,
+      builder: (context) {
+        final controller = TextEditingController();
+        return AlertDialog(
+          title: const Text('Describe your changes'),
+          content: TextField(
+            controller: controller,
+            decoration: InputDecoration(hintText: recommendedChangeMessage ?? 'What did you change?'),
+            autofocus: true,
+          ),
+          actions: [
+            TextButton(onPressed: () => Navigator.pop(context), child: const Text('Cancel')),
+            ElevatedButton(onPressed: () {
+              message = controller.text.trim();
+              Navigator.pop(context);
+            }, child: const Text('Save')),
+          ],
+        );
+      },
+    );
+    return message ?? '';
+  }
+
+  void _toggleEditMode() => setState(() => _editMode = !_editMode);
+  
+  void onDelete() {
+    showDialog(
+      context: context,
+      builder: (context) => AlertDialog(
+        title: const Text('Delete Quest'),
+        content: const Text('Are you sure you want to delete this quest? This action cannot be undone.'),
+        actions: [
+          TextButton(onPressed: () => Navigator.pop(context), child: const Text('Cancel')),
+          ElevatedButton(onPressed: () {
+            widget.onDoneEditing?.call(_buildUpdatedQuest());
+            Navigator.pop(context);
+          }, style: ElevatedButton.styleFrom(backgroundColor: Colors.red), child: const Text('Delete')),
+        ],
+      ),
+    );
+  }
 
   @override
   Widget build(BuildContext context) {
-    final theme = Theme.of(context);
-    final colorScheme = theme.colorScheme;
+    final colorScheme = Theme.of(context).colorScheme;
 
     return Scaffold(
       backgroundColor: colorScheme.surface,
       body: CustomScrollView(
         slivers: [
-          _QuestSliverAppBar(quest: quest, colorScheme: colorScheme, debugMode: debugMode),
+          _QuestSliverAppBar(
+            quest: _editedQuest,
+            colorScheme: colorScheme,
+            debugMode: widget.debugMode,
+            editMode: _editMode,
+            nameController: _nameCtrl,
+            onToggleEditMode: widget.debugMode ? _toggleEditMode : null,
+          ),
           SliverPadding(
             padding: const EdgeInsets.fromLTRB(20, 24, 20, 40),
             sliver: SliverList(
               delegate: SliverChildListDelegate([
-                _StatusRow(quest: quest, colorScheme: colorScheme),
+                _StatusRow(quest: _editedQuest, colorScheme: colorScheme),
                 const SizedBox(height: 24),
                 _SectionCard(
                   colorScheme: colorScheme,
-                  child: _DescriptionSection(quest: quest, colorScheme: colorScheme, editMode: editMode),
+                  child: _DescriptionSection(
+                    colorScheme: colorScheme,
+                    editMode: _editMode,
+                    controller: _descriptionCtrl,
+                    description: _editedQuest.description,
+                  ),
                 ),
                 const SizedBox(height: 16),
                 _SectionCard(
                   colorScheme: colorScheme,
-                  child: _DifficultySection(quest: quest, colorScheme: colorScheme, editMode: editMode),
+                  child: _DifficultySection(
+                    colorScheme: colorScheme,
+                    editMode: _editMode,
+                    difficulty: _difficulty,
+                    onDifficultyChanged: (v) => setState(() => _difficulty = v),
+                  ),
                 ),
-                if (quest.prerequisites.isNotEmpty) ...[
+                if (_editedQuest.prerequisites.isNotEmpty) ...[
                   const SizedBox(height: 16),
                   _SectionCard(
                     colorScheme: colorScheme,
-                    child: _PrerequisitesSection(quest: quest, colorScheme: colorScheme, debugMode: debugMode, editMode: editMode),
+                    child: _PrerequisitesSection(
+                      quest: _editedQuest,
+                      colorScheme: colorScheme,
+                      debugMode: widget.debugMode,
+                      editMode: _editMode,
+                    ),
                   ),
                 ],
-                const SizedBox(height: 16),
-                if (debugMode)
+                if (widget.debugMode) ...[
+                  const SizedBox(height: 16),
                   _SectionCard(
                     colorScheme: colorScheme,
-                    child: _MetaSection(quest: quest, colorScheme: colorScheme, editMode: editMode),
+                    child: _MetaSection(
+                      quest: _editedQuest,
+                      colorScheme: colorScheme,
+                      editMode: _editMode,
+                      subjectCtrl: _subjectCtrl,
+                      posXCtrl: _posXCtrl,
+                      posYCtrl: _posYCtrl,
+                      sizeXCtrl: _sizeXCtrl,
+                      sizeYCtrl: _sizeYCtrl,
+                    ),
                   ),
+                ],
+                if (_editMode) ...[
+                  const SizedBox(height: 28),
+                  _SaveButton(colorScheme: colorScheme, onSave: _saveAndExit),
+                  _DeleteButton(colorScheme: colorScheme, onDelete: onDelete)
+                ],
               ]),
             ),
           ),
@@ -56,12 +218,24 @@ class QuestDetailScreen extends StatelessWidget {
   }
 }
 
+// ── App Bar ───────────────────────────────────────────────────────────────────
+
 class _QuestSliverAppBar extends StatelessWidget {
   final Quest quest;
   final ColorScheme colorScheme;
   final bool debugMode;
+  final bool editMode;
+  final TextEditingController nameController;
+  final VoidCallback? onToggleEditMode;
 
-  const _QuestSliverAppBar({required this.quest, required this.colorScheme, required this.debugMode});
+  const _QuestSliverAppBar({
+    required this.quest,
+    required this.colorScheme,
+    required this.debugMode,
+    required this.editMode,
+    required this.nameController,
+    this.onToggleEditMode,
+  });
 
   @override
   Widget build(BuildContext context) {
@@ -71,12 +245,60 @@ class _QuestSliverAppBar extends StatelessWidget {
       stretch: true,
       backgroundColor: colorScheme.primaryContainer,
       foregroundColor: colorScheme.onPrimaryContainer,
+      actions: [
+        if (debugMode && onToggleEditMode != null)
+          Padding(
+            padding: const EdgeInsets.only(right: 8),
+            child: AnimatedSwitcher(
+              duration: const Duration(milliseconds: 200),
+              child: IconButton(
+                key: ValueKey(editMode),
+                icon: Icon(editMode ? Icons.edit_off_rounded : Icons.edit_rounded),
+                tooltip: editMode ? 'Exit Edit Mode' : 'Edit Mode',
+                onPressed: onToggleEditMode,
+                style: IconButton.styleFrom(
+                  backgroundColor: editMode
+                      ? colorScheme.onPrimaryContainer.withValues(alpha: 0.18)
+                      : Colors.transparent,
+                ),
+              ),
+            ),
+          ),
+      ],
       flexibleSpace: FlexibleSpaceBar(
         stretchModes: const [StretchMode.zoomBackground, StretchMode.fadeTitle],
-        titlePadding: const EdgeInsets.fromLTRB(60, 0, 20, 16),
-        title: Text(
+        // Extra right padding in debug mode to avoid overlap with the action icon.
+        titlePadding: EdgeInsets.fromLTRB(60, 0, debugMode ? 56 : 20, 16),
+        title: editMode
+            ? TextField(
+          controller: nameController,
+          style: TextStyle(
+            color: colorScheme.onPrimaryContainer,
+            fontWeight: FontWeight.w700,
+            fontSize: 20,
+            height: 1.2,
+          ),
+          maxLines: 2,
+          cursorColor: colorScheme.onPrimaryContainer,
+          decoration: InputDecoration(
+            border: InputBorder.none,
+            isDense: true,
+            contentPadding: EdgeInsets.zero,
+            hintText: 'Quest-Name…',
+            hintStyle: TextStyle(
+              color: colorScheme.onPrimaryContainer.withValues(alpha: 0.35),
+              fontSize: 20,
+            ),
+          ),
+        )
+            : Text(
           quest.name,
-          style: TextStyle(color: colorScheme.onPrimaryContainer, fontWeight: FontWeight.w700, fontSize: 20, height: 1.2),
+          style: TextStyle(
+            color: colorScheme.onPrimaryContainer,
+            fontWeight: FontWeight.w700,
+            fontSize: 20,
+            height: 1.2,
+          ),
           maxLines: 2,
           overflow: TextOverflow.ellipsis,
         ),
@@ -119,7 +341,12 @@ class _QuestSliverAppBar extends StatelessWidget {
                 left: 20,
                 child: Text(
                   '#${quest.id}',
-                  style: TextStyle(color: colorScheme.onPrimaryContainer.withValues(alpha: 0.5), fontSize: 12, fontWeight: FontWeight.w600, letterSpacing: 1.5),
+                  style: TextStyle(
+                    color: colorScheme.onPrimaryContainer.withValues(alpha: 0.5),
+                    fontSize: 12,
+                    fontWeight: FontWeight.w600,
+                    letterSpacing: 1.5,
+                  ),
                 ),
               ),
           ],
@@ -175,6 +402,8 @@ class _SubjectBadge extends StatelessWidget {
   }
 }
 
+// ── Status Row ────────────────────────────────────────────────────────────────
+
 class _StatusRow extends StatelessWidget {
   final Quest quest;
   final ColorScheme colorScheme;
@@ -193,7 +422,10 @@ class _StatusRow extends StatelessWidget {
           decoration: BoxDecoration(
             color: isCompleted ? colorScheme.tertiaryContainer : colorScheme.surfaceContainerHighest,
             borderRadius: BorderRadius.circular(24),
-            border: Border.all(color: isCompleted ? colorScheme.tertiary : colorScheme.outline.withValues(alpha: 0.4), width: 1.5),
+            border: Border.all(
+              color: isCompleted ? colorScheme.tertiary : colorScheme.outline.withValues(alpha: 0.4),
+              width: 1.5,
+            ),
           ),
           child: Row(
             mainAxisSize: MainAxisSize.min,
@@ -230,7 +462,7 @@ class _StatusRow extends StatelessWidget {
                 Icon(Icons.lock_outline_rounded, size: 15, color: colorScheme.onSurfaceVariant),
                 const SizedBox(width: 6),
                 Text(
-                  '${quest.prerequisites.length} Prerequisites${quest.prerequisites.length > 1 ? 'en' : ''}',
+                  '${quest.prerequisites.length} Prerequisite${quest.prerequisites.length > 1 ? 's' : ''}',
                   style: TextStyle(color: colorScheme.onSurfaceVariant, fontSize: 13, fontWeight: FontWeight.w500),
                 ),
               ],
@@ -240,6 +472,8 @@ class _StatusRow extends StatelessWidget {
     );
   }
 }
+
+// ── Section Card ──────────────────────────────────────────────────────────────
 
 class _SectionCard extends StatelessWidget {
   final Widget child;
@@ -261,12 +495,20 @@ class _SectionCard extends StatelessWidget {
   }
 }
 
+// ── Description ───────────────────────────────────────────────────────────────
+
 class _DescriptionSection extends StatelessWidget {
-  final Quest quest;
   final ColorScheme colorScheme;
   final bool editMode;
+  final TextEditingController controller;
+  final String description;
 
-  const _DescriptionSection({required this.quest, required this.colorScheme, required this.editMode});
+  const _DescriptionSection({
+    required this.colorScheme,
+    required this.editMode,
+    required this.controller,
+    required this.description,
+  });
 
   @override
   Widget build(BuildContext context) {
@@ -277,25 +519,40 @@ class _DescriptionSection extends StatelessWidget {
         children: [
           _SectionLabel(label: 'Description', colorScheme: colorScheme),
           const SizedBox(height: 10),
-          _buildText(quest.description, editMode, TextStyle(color: colorScheme.onSurface, fontSize: 15, height: 1.6)),
+          if (editMode)
+            TextField(
+              controller: controller,
+              style: TextStyle(color: colorScheme.onSurface, fontSize: 15, height: 1.6),
+              maxLines: null,
+              minLines: 3,
+              decoration: _editInputDecoration(colorScheme, hint: 'Quest description…'),
+            )
+          else
+            Text(description, style: TextStyle(color: colorScheme.onSurface, fontSize: 15, height: 1.6)),
         ],
       ),
     );
   }
 }
 
-// ── Difficulty ─────────────────────────────────────────────────────────────────
+// ── Difficulty ────────────────────────────────────────────────────────────────
 
 class _DifficultySection extends StatelessWidget {
-  final Quest quest;
   final ColorScheme colorScheme;
   final bool editMode;
+  final double difficulty;
+  final ValueChanged<double> onDifficultyChanged;
 
-  const _DifficultySection({required this.quest, required this.colorScheme, required this.editMode});
+  const _DifficultySection({
+    required this.colorScheme,
+    required this.editMode,
+    required this.difficulty,
+    required this.onDifficultyChanged,
+  });
 
   String _difficultyLabel(double d) {
     if (d < 0.2) return 'Beginner';
-    if (d < 0.4) return 'novice';
+    if (d < 0.4) return 'Novice';
     if (d < 0.6) return 'Intermediate';
     if (d < 0.8) return 'Advanced';
     return 'Expert';
@@ -309,7 +566,7 @@ class _DifficultySection extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    final d = quest.difficulty.clamp(0.0, 1.0);
+    final d = difficulty.clamp(0.0, 1.0);
     final color = _difficultyColor(d, colorScheme);
     const segments = 10;
 
@@ -320,35 +577,69 @@ class _DifficultySection extends StatelessWidget {
         children: [
           Row(
             children: [
-              Expanded(
-                child: _SectionLabel(label: 'Difficulty', colorScheme: colorScheme),
+              Expanded(child: _SectionLabel(label: 'Difficulty', colorScheme: colorScheme)),
+              // Label + percentage animate as the slider moves.
+              AnimatedSwitcher(
+                duration: const Duration(milliseconds: 120),
+                child: Text(
+                  key: ValueKey('${_difficultyLabel(d)}-${(d * 100).round()}'),
+                  '${_difficultyLabel(d)}  ·  ${(d * 100).round()}%',
+                  style: TextStyle(color: color, fontSize: 13, fontWeight: FontWeight.w700),
+                ),
               ),
-              Text(
-                _difficultyLabel(d),
-                style: TextStyle(color: color, fontSize: 13, fontWeight: FontWeight.w700),
-              ),
-              const SizedBox(width: 6),
-              Text('${(d * 100).round()}%', style: TextStyle(color: colorScheme.onSurfaceVariant, fontSize: 13)),
             ],
           ),
           const SizedBox(height: 14),
-          Row(
-            children: List.generate(segments, (i) {
-              final filled = i < (d * segments).round();
-              return Expanded(
-                child: Container(
-                  height: 8,
-                  margin: EdgeInsets.only(right: i < segments - 1 ? 4 : 0),
-                  decoration: BoxDecoration(color: filled ? color : colorScheme.surfaceContainerHighest, borderRadius: BorderRadius.circular(4)),
-                ),
-              );
-            }),
-          ),
+          if (editMode)
+            SliderTheme(
+              data: SliderTheme.of(context).copyWith(
+                activeTrackColor: color,
+                thumbColor: color,
+                overlayColor: color.withValues(alpha: 0.15),
+                inactiveTrackColor: colorScheme.surfaceContainerHighest,
+                valueIndicatorColor: color,
+                trackHeight: 8,
+                thumbShape: const RoundSliderThumbShape(enabledThumbRadius: 10),
+              ),
+              child: Slider(
+                value: d,
+                onChanged: onDifficultyChanged,
+                divisions: 20,
+                label: '${(d * 100).round()}%',
+              ),
+            )
+          else ...[
+            Row(
+              children: [
+                Icon(Icons.bar_chart_rounded, size: 16, color: colorScheme.onSurfaceVariant),
+                const SizedBox(width: 6),
+                Text('${(d * 100).round()}%', style: TextStyle(color: colorScheme.onSurfaceVariant, fontSize: 13)),
+              ],
+            ),
+            const SizedBox(height: 14),
+            Row(
+              children: List.generate(segments, (i) {
+                final filled = i < (d * segments).round();
+                return Expanded(
+                  child: Container(
+                    height: 8,
+                    margin: EdgeInsets.only(right: i < segments - 1 ? 4 : 0),
+                    decoration: BoxDecoration(
+                      color: filled ? color : colorScheme.surfaceContainerHighest,
+                      borderRadius: BorderRadius.circular(4),
+                    ),
+                  ),
+                );
+              }),
+            ),
+          ],
         ],
       ),
     );
   }
 }
+
+// ── Prerequisites ─────────────────────────────────────────────────────────────
 
 class _PrerequisitesSection extends StatelessWidget {
   final Quest quest;
@@ -356,7 +647,12 @@ class _PrerequisitesSection extends StatelessWidget {
   final bool debugMode;
   final bool editMode;
 
-  const _PrerequisitesSection({required this.quest, required this.colorScheme, required this.debugMode, required this.editMode});
+  const _PrerequisitesSection({
+    required this.quest,
+    required this.colorScheme,
+    required this.debugMode,
+    required this.editMode,
+  });
 
   @override
   Widget build(BuildContext context) {
@@ -392,23 +688,20 @@ class _PrerequisitesSection extends StatelessWidget {
                     child: Column(
                       crossAxisAlignment: CrossAxisAlignment.start,
                       children: [
-                        Text(
-                          prereq.name,
-                          style: TextStyle(color: colorScheme.onSurface, fontSize: 14, fontWeight: FontWeight.w600),
-                        ),
+                        Text(prereq.name, style: TextStyle(color: colorScheme.onSurface, fontSize: 14, fontWeight: FontWeight.w600)),
                         Text(prereq.subject, style: TextStyle(color: colorScheme.onSurfaceVariant, fontSize: 12)),
                       ],
                     ),
                   ),
-                  if(debugMode) 
-                  Container(
-                    padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 3),
-                    decoration: BoxDecoration(color: colorScheme.surfaceContainerHighest, borderRadius: BorderRadius.circular(8)),
-                    child: Text(
-                      '#${prereq.id}',
-                      style: TextStyle(color: colorScheme.onSurfaceVariant, fontSize: 11, fontWeight: FontWeight.w600),
+                  if (debugMode)
+                    Container(
+                      padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 3),
+                      decoration: BoxDecoration(color: colorScheme.surfaceContainerHighest, borderRadius: BorderRadius.circular(8)),
+                      child: Text(
+                        '#${prereq.id}',
+                        style: TextStyle(color: colorScheme.onSurfaceVariant, fontSize: 11, fontWeight: FontWeight.w600),
+                      ),
                     ),
-                  ),
                 ],
               ),
             );
@@ -419,11 +712,28 @@ class _PrerequisitesSection extends StatelessWidget {
   }
 }
 
+// ── Meta / Details ────────────────────────────────────────────────────────────
+
 class _MetaSection extends StatelessWidget {
   final Quest quest;
   final ColorScheme colorScheme;
   final bool editMode;
-  const _MetaSection({required this.quest, required this.colorScheme, required this.editMode});
+  final TextEditingController subjectCtrl;
+  final TextEditingController posXCtrl;
+  final TextEditingController posYCtrl;
+  final TextEditingController sizeXCtrl;
+  final TextEditingController sizeYCtrl;
+
+  const _MetaSection({
+    required this.quest,
+    required this.colorScheme,
+    required this.editMode,
+    required this.subjectCtrl,
+    required this.posXCtrl,
+    required this.posYCtrl,
+    required this.sizeXCtrl,
+    required this.sizeYCtrl,
+  });
 
   @override
   Widget build(BuildContext context) {
@@ -434,17 +744,263 @@ class _MetaSection extends StatelessWidget {
         children: [
           _SectionLabel(label: 'Details', colorScheme: colorScheme),
           const SizedBox(height: 14),
-          _MetaGrid(
-            items: [
-              _MetaItem(icon: Icons.tag_rounded, label: 'Quest ID', value: '#${quest.id}'),
-              _MetaItem(icon: Icons.place_outlined, label: 'Position', value: '(${quest.posX.toStringAsFixed(0)}, ${quest.posY.toStringAsFixed(0)})'),
-              _MetaItem(icon: Icons.aspect_ratio_rounded, label: 'Size', value: '${quest.sizeX.toStringAsFixed(0)} × ${quest.sizeY.toStringAsFixed(0)}'),
-              _MetaItem(icon: Icons.subject_rounded, label: 'Subject', value: quest.subject),
-            ],
-            colorScheme: colorScheme,
-            editMode: editMode,
-          ),
+          if (editMode) _buildEditLayout() else _buildViewLayout(),
         ],
+      ),
+    );
+  }
+
+  Widget _buildViewLayout() {
+    return _MetaGrid(
+      colorScheme: colorScheme,
+      items: [
+        _MetaItem(icon: Icons.tag_rounded, label: 'Quest ID', value: '#${quest.id}'),
+        _MetaItem(icon: Icons.place_outlined, label: 'Position', value: '(${quest.posX.toStringAsFixed(0)}, ${quest.posY.toStringAsFixed(0)})'),
+        _MetaItem(icon: Icons.aspect_ratio_rounded, label: 'Size', value: '${quest.sizeX.toStringAsFixed(0)} × ${quest.sizeY.toStringAsFixed(0)}'),
+        _MetaItem(icon: Icons.subject_rounded, label: 'Subject', value: quest.subject),
+      ],
+    );
+  }
+
+  Widget _buildEditLayout() {
+    return Column(
+      children: [
+        _MetaReadOnlyRow(
+          icon: Icons.tag_rounded,
+          label: 'Quest ID',
+          value: '#${quest.id}',
+          colorScheme: colorScheme,
+        ),
+        const SizedBox(height: 12),
+        _MetaEditField(
+          icon: Icons.subject_rounded,
+          label: 'Subject',
+          controller: subjectCtrl,
+          colorScheme: colorScheme,
+        ),
+        const SizedBox(height: 12),
+        _MetaCoordRow(
+          icon: Icons.place_outlined,
+          label: 'Position',
+          firstLabel: 'X',
+          secondLabel: 'Y',
+          firstCtrl: posXCtrl,
+          secondCtrl: posYCtrl,
+          colorScheme: colorScheme,
+        ),
+        const SizedBox(height: 12),
+        _MetaCoordRow(
+          icon: Icons.aspect_ratio_rounded,
+          label: 'Size',
+          firstLabel: 'W',
+          secondLabel: 'H',
+          firstCtrl: sizeXCtrl,
+          secondCtrl: sizeYCtrl,
+          colorScheme: colorScheme,
+        ),
+      ],
+    );
+  }
+}
+
+class _MetaReadOnlyRow extends StatelessWidget {
+  final IconData icon;
+  final String label;
+  final String value;
+  final ColorScheme colorScheme;
+
+  const _MetaReadOnlyRow({
+    required this.icon,
+    required this.label,
+    required this.value,
+    required this.colorScheme,
+  });
+
+  @override
+  Widget build(BuildContext context) {
+    return Container(
+      padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 10),
+      decoration: BoxDecoration(
+        color: colorScheme.surfaceContainerHighest.withValues(alpha: 0.5),
+        borderRadius: BorderRadius.circular(10),
+        border: Border.all(color: colorScheme.outlineVariant.withValues(alpha: 0.3)),
+      ),
+      child: Row(
+        children: [
+          Icon(icon, size: 18, color: colorScheme.onSurfaceVariant.withValues(alpha: 0.5)),
+          const SizedBox(width: 10),
+          Expanded(
+            child: Column(
+              crossAxisAlignment: CrossAxisAlignment.start,
+              children: [
+                Text(
+                  label,
+                  style: TextStyle(
+                    color: colorScheme.onSurfaceVariant.withValues(alpha: 0.6),
+                    fontSize: 10,
+                    fontWeight: FontWeight.w500,
+                    letterSpacing: 0.5,
+                  ),
+                ),
+                Text(
+                  value,
+                  style: TextStyle(
+                    color: colorScheme.onSurface.withValues(alpha: 0.45),
+                    fontSize: 13,
+                    fontWeight: FontWeight.w700,
+                  ),
+                ),
+              ],
+            ),
+          ),
+          Icon(Icons.lock_outline_rounded, size: 14, color: colorScheme.onSurfaceVariant.withValues(alpha: 0.4)),
+        ],
+      ),
+    );
+  }
+}
+
+class _MetaEditField extends StatelessWidget {
+  final IconData icon;
+  final String label;
+  final TextEditingController controller;
+  final ColorScheme colorScheme;
+
+  const _MetaEditField({
+    required this.icon,
+    required this.label,
+    required this.controller,
+    required this.colorScheme,
+  });
+
+  @override
+  Widget build(BuildContext context) {
+    return Row(
+      crossAxisAlignment: CrossAxisAlignment.center,
+      children: [
+        Icon(icon, size: 18, color: colorScheme.primary),
+        const SizedBox(width: 10),
+        Expanded(
+          child: Column(
+            crossAxisAlignment: CrossAxisAlignment.start,
+            children: [
+              Text(
+                label,
+                style: TextStyle(
+                  color: colorScheme.onSurfaceVariant,
+                  fontSize: 10,
+                  fontWeight: FontWeight.w500,
+                  letterSpacing: 0.5,
+                ),
+              ),
+              const SizedBox(height: 4),
+              TextField(
+                controller: controller,
+                style: TextStyle(color: colorScheme.onSurface, fontSize: 13, fontWeight: FontWeight.w700),
+                decoration: _editInputDecoration(colorScheme),
+              ),
+            ],
+          ),
+        ),
+      ],
+    );
+  }
+}
+
+class _MetaCoordRow extends StatelessWidget {
+  final IconData icon;
+  final String label;
+  final String firstLabel;
+  final String secondLabel;
+  final TextEditingController firstCtrl;
+  final TextEditingController secondCtrl;
+  final ColorScheme colorScheme;
+
+  const _MetaCoordRow({
+    required this.icon,
+    required this.label,
+    required this.firstLabel,
+    required this.secondLabel,
+    required this.firstCtrl,
+    required this.secondCtrl,
+    required this.colorScheme,
+  });
+
+  @override
+  Widget build(BuildContext context) {
+    return Row(
+      crossAxisAlignment: CrossAxisAlignment.start,
+      children: [
+        Padding(
+          padding: const EdgeInsets.only(top: 22),
+          child: Icon(icon, size: 18, color: colorScheme.primary),
+        ),
+        const SizedBox(width: 10),
+        Expanded(
+          child: Column(
+            crossAxisAlignment: CrossAxisAlignment.start,
+            children: [
+              Text(
+                label,
+                style: TextStyle(
+                  color: colorScheme.onSurfaceVariant,
+                  fontSize: 10,
+                  fontWeight: FontWeight.w500,
+                  letterSpacing: 0.5,
+                ),
+              ),
+              const SizedBox(height: 4),
+              Row(
+                children: [
+                  Expanded(
+                    child: _NumericField(
+                      prefixLabel: firstLabel,
+                      controller: firstCtrl,
+                      colorScheme: colorScheme,
+                    ),
+                  ),
+                  const SizedBox(width: 8),
+                  Expanded(
+                    child: _NumericField(
+                      prefixLabel: secondLabel,
+                      controller: secondCtrl,
+                      colorScheme: colorScheme,
+                    ),
+                  ),
+                ],
+              ),
+            ],
+          ),
+        ),
+      ],
+    );
+  }
+}
+
+class _NumericField extends StatelessWidget {
+  final String prefixLabel;
+  final TextEditingController controller;
+  final ColorScheme colorScheme;
+
+  const _NumericField({
+    required this.prefixLabel,
+    required this.controller,
+    required this.colorScheme,
+  });
+
+  @override
+  Widget build(BuildContext context) {
+    return TextField(
+      controller: controller,
+      keyboardType: const TextInputType.numberWithOptions(decimal: true, signed: true),
+      style: TextStyle(color: colorScheme.onSurface, fontSize: 13, fontWeight: FontWeight.w700),
+      decoration: _editInputDecoration(colorScheme).copyWith(
+        prefixText: '$prefixLabel  ',
+        prefixStyle: TextStyle(
+          color: colorScheme.onSurfaceVariant,
+          fontSize: 12,
+          fontWeight: FontWeight.w600,
+        ),
       ),
     );
   }
@@ -453,9 +1009,8 @@ class _MetaSection extends StatelessWidget {
 class _MetaGrid extends StatelessWidget {
   final List<_MetaItem> items;
   final ColorScheme colorScheme;
-  final bool editMode;
 
-  const _MetaGrid({required this.items, required this.colorScheme, required this.editMode});
+  const _MetaGrid({required this.items, required this.colorScheme});
 
   @override
   Widget build(BuildContext context) {
@@ -466,7 +1021,7 @@ class _MetaGrid extends StatelessWidget {
       mainAxisSpacing: 10,
       crossAxisSpacing: 10,
       childAspectRatio: 2.6,
-      children: items.map((item) => _MetaCell(item: item, colorScheme: colorScheme, editMode: editMode,)).toList(),
+      children: items.map((item) => _MetaCell(item: item, colorScheme: colorScheme)).toList(),
     );
   }
 }
@@ -482,9 +1037,8 @@ class _MetaItem {
 class _MetaCell extends StatelessWidget {
   final _MetaItem item;
   final ColorScheme colorScheme;
-  final bool editMode;
 
-  const _MetaCell({required this.item, required this.colorScheme, required this.editMode});
+  const _MetaCell({required this.item, required this.colorScheme});
 
   @override
   Widget build(BuildContext context) {
@@ -505,11 +1059,10 @@ class _MetaCell extends StatelessWidget {
                   style: TextStyle(color: colorScheme.onSurfaceVariant, fontSize: 10, fontWeight: FontWeight.w500, letterSpacing: 0.5),
                   overflow: TextOverflow.ellipsis,
                 ),
-                _buildText(
+                Text(
                   item.value,
-                  editMode,
-                  TextStyle(color: colorScheme.onSurface, fontSize: 13, fontWeight: FontWeight.w700),
-                  TextOverflow.ellipsis,
+                  style: TextStyle(color: colorScheme.onSurface, fontSize: 13, fontWeight: FontWeight.w700),
+                  overflow: TextOverflow.ellipsis,
                 ),
               ],
             ),
@@ -520,7 +1073,56 @@ class _MetaCell extends StatelessWidget {
   }
 }
 
-// ── Shared Label ───────────────────────────────────────────────────────────────
+
+class _SaveButton extends StatelessWidget {
+  final ColorScheme colorScheme;
+  final VoidCallback onSave;
+
+  const _SaveButton({required this.colorScheme, required this.onSave});
+
+  @override
+  Widget build(BuildContext context) {
+    return SizedBox(
+      width: double.infinity,
+      child: FilledButton.icon(
+        onPressed: onSave,
+        icon: const Icon(Icons.save_rounded),
+        label: const Text('Save Changes'),
+        style: FilledButton.styleFrom(
+          padding: const EdgeInsets.symmetric(vertical: 16),
+          shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(14)),
+        ),
+      ),
+    );
+  }
+}
+
+///delete quest button
+class _DeleteButton extends StatelessWidget {
+  final ColorScheme colorScheme;
+  final VoidCallback onDelete;
+
+  const _DeleteButton({required this.colorScheme, required this.onDelete});
+
+  @override
+  Widget build(BuildContext context) {
+    return SizedBox(
+      width: double.infinity,
+      child: OutlinedButton.icon(
+        onPressed: onDelete,
+        icon: const Icon(Icons.delete_outline_rounded),
+        label: const Text('Delete Quest'),
+        style: OutlinedButton.styleFrom(
+          padding: const EdgeInsets.symmetric(vertical: 16),
+          shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(14)),
+          side: BorderSide(color: colorScheme.error, width: 1.5),
+          foregroundColor: colorScheme.error,
+        ),
+      ),
+    );
+  }
+}
+
 
 class _SectionLabel extends StatelessWidget {
   final String label;
@@ -530,20 +1132,37 @@ class _SectionLabel extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    return _buildText(label.toUpperCase(), false, TextStyle(color: colorScheme.primary, fontSize: 11, fontWeight: FontWeight.w700, letterSpacing: 1.4));
+    return Text(
+      label.toUpperCase(),
+      style: TextStyle(
+        color: colorScheme.primary,
+        fontSize: 11,
+        fontWeight: FontWeight.w700,
+        letterSpacing: 1.4,
+      ),
+    );
   }
 }
 
-
-Widget _buildText(String text, bool editMode, TextStyle style, [TextOverflow? overflow]) {
-  if (editMode) {
-    return TextField(
-      controller: TextEditingController(text: text),
-      style: style,
-      maxLines: null,
-      decoration: const InputDecoration(border: InputBorder.none, isDense: true, contentPadding: EdgeInsets.zero),
-    );
-  } else {
-    return Text(text, style: style, overflow: overflow,);
-  }
+InputDecoration _editInputDecoration(ColorScheme cs, {String? hint}) {
+  return InputDecoration(
+    hintText: hint,
+    hintStyle: TextStyle(color: cs.onSurfaceVariant.withValues(alpha: 0.45)),
+    isDense: true,
+    contentPadding: const EdgeInsets.symmetric(horizontal: 10, vertical: 9),
+    filled: true,
+    fillColor: cs.surfaceContainerHighest,
+    border: OutlineInputBorder(
+      borderRadius: BorderRadius.circular(8),
+      borderSide: BorderSide(color: cs.outlineVariant),
+    ),
+    enabledBorder: OutlineInputBorder(
+      borderRadius: BorderRadius.circular(8),
+      borderSide: BorderSide(color: cs.outlineVariant),
+    ),
+    focusedBorder: OutlineInputBorder(
+      borderRadius: BorderRadius.circular(8),
+      borderSide: BorderSide(color: cs.primary, width: 1.5),
+    ),
+  );
 }

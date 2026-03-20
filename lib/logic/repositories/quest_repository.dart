@@ -68,16 +68,26 @@ class QuestRepository {
   // ── Write ──────────────────────────────────────────────────────────────────
 
   /// Inserts a new quest row and its first version.
-  Future<void> addQuest(Quest quest) async {
+  Future<void> addQuest(Quest quest, [String? message]) async {
     print("Adding new quest ${quest.id}");
     await supabaseClient.from('quests').insert({'id': quest.id, 'created_by': currentUser.id});
-    await updateQuest(quest, 'initial version');
+    await updateQuest(quest, message ?? 'initial version');
   }
 
   /// Appends a new version snapshot for an existing quest.
   Future<void> updateQuest(Quest quest, String message) async {
     print("Updating quest ${quest.id}: $message");
     await supabaseClient.from('quest_versions').insert(_questToMap(quest, message)).select().single();
+  }
+  
+  Future<void> upsertQuest(Quest quest, String message) async {
+    print("Upserting quest ${quest.id}: $message");
+    final existing = await supabaseClient.from('quests').select('id').eq('id', quest.id).maybeSingle();
+    if (existing == null) {
+      await addQuest(quest);
+    } else {
+      await updateQuest(quest, message);
+    }
   }
 
   /// Soft-deletes a quest by inserting a version with is_deleted = true.
@@ -134,7 +144,7 @@ class QuestRepository {
       'created_by': currentUser.id,
     });
     
-    questSystem.quests[fromId]?.prerequisites.add(questSystem.quests[toId]!);
+    questSystem.quests[fromId].prerequisites.add(questSystem.quests[toId]);
   }
 
   /// Soft-deletes a prerequisite connection.
@@ -148,6 +158,6 @@ class QuestRepository {
       'update_message': 'connection removed',
       'created_by': currentUser.id,
     });
-    questSystem.quests[fromId]?.prerequisites.removeWhere((q) => q.id == toId);
+    questSystem.quests[fromId].prerequisites.removeWhere((q) => q.id == toId);
   }
 }

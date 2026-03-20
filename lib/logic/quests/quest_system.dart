@@ -6,19 +6,37 @@ import 'package:wurp/logic/quests/quest.dart';
 import 'package:wurp/logic/repositories/quest_repository.dart';
 
 class QuestSystem with ChangeNotifier {
-  final Map<int, Quest> quests = {};
+  final Map<int, Quest> _allQuests = {};
 
-  void addQuest(Quest quest) => quests[quest.id] = quest;
+  Map<int, Quest> _quests = {};
+  List<Quest> get quests => _quests.values.toList();
+  
+  void revalidateQuests() {
+    _quests = Map.fromEntries(_allQuests.entries.where((e) => !e.value.isDeleted));
+  }
 
-  void removeQuest(int id) => quests.remove(id);
+  void upsertQuest(Quest quest) {
+    if(_allQuests[quest.id]?.isDeleted != quest.isDeleted) { 
+      revalidateQuests();
+    }
+    _allQuests[quest.id] = quest;
+    notifyListeners();
+  }
+
+  void removeQuest(int id) {
+    _allQuests[id]?.isDeleted = true;
+    notifyListeners();
+  }
 
   void moveQuest(int id, double newX, double newY) {
-    final quest = quests[id];
-    if (quest == null) return;
+    final quest = _quests[id];
+    if (quest == null || quest.isDeleted) return;
     quest.posX = newX;
     quest.posY = newY;
     notifyListeners();
   }
+  
+  Quest getQuestById(int id) => _quests[id]!;
 
   /// Loads quests from the bundled [assets/quests.json] file (offline / dev).
   Future<void> loadFromAssets() async {
@@ -26,7 +44,7 @@ class QuestSystem with ChangeNotifier {
     final json = rawJson.cast<Map<String, dynamic>>();
 
     for (final data in json) {
-      addQuest(Quest.fromJson(data));
+      upsertQuest(Quest.fromJson(data));
     }
 
     // Wire up prerequisites in a second pass so all quests are already in the
@@ -35,8 +53,8 @@ class QuestSystem with ChangeNotifier {
       final prereqIds = (data['prerequisites'] as List?)?.cast<int>();
       if (prereqIds == null || prereqIds.isEmpty) continue;
 
-      assert(prereqIds.every(quests.containsKey), 'All prerequisite IDs must reference existing quests.');
-      quests[data['id'] as int]!.prerequisites = prereqIds.map((id) => quests[id]!).toList();
+      assert(prereqIds.every(_quests.containsKey), 'All prerequisite IDs must reference existing quests.');
+      _quests[data['id'] as int]!.prerequisites = prereqIds.map((id) => _quests[id]!).toList();
     }
 
     notifyListeners();
@@ -48,7 +66,7 @@ class QuestSystem with ChangeNotifier {
     final fetched = await questRepo.fetchQuestsBySubject(subject);
 
     for (final quest in fetched) {
-      quests[quest.id] = quest;
+      upsertQuest(quest);
     }
 
     notifyListeners();
@@ -57,7 +75,7 @@ class QuestSystem with ChangeNotifier {
   String? toJson() {
     try {
       return jsonEncode(
-        quests.values
+        _quests.values
             .map(
               (q) => {
                 'id': q.id,
@@ -71,7 +89,8 @@ class QuestSystem with ChangeNotifier {
                 'difficulty': q.difficulty,
                 'prerequisites': q.prerequisites.map((p) => p.id).toList(),
               },
-            ).toList(),
+            )
+            .toList(),
       );
     } on Exception {
       return null;

@@ -7,11 +7,7 @@ import 'package:wurp/logic/quests/quest_system.dart';
 import 'package:wurp/logic/repositories/quest_repository.dart';
 
 class QuestDebugPanel extends StatefulWidget {
-  const QuestDebugPanel({
-    super.key,
-    required this.onChanged,
-    this.onFocusQuest,
-  });
+  const QuestDebugPanel({super.key, required this.onChanged, this.onFocusQuest});
 
   final VoidCallback onChanged;
   final void Function(Quest quest)? onFocusQuest;
@@ -20,8 +16,7 @@ class QuestDebugPanel extends StatefulWidget {
   State<QuestDebugPanel> createState() => QuestDebugPanelState();
 }
 
-class QuestDebugPanelState extends State<QuestDebugPanel>
-    with TickerProviderStateMixin {
+class QuestDebugPanelState extends State<QuestDebugPanel> with TickerProviderStateMixin {
   bool _isOpen = false;
   late final AnimationController _slideCtrl;
   late final Animation<double> _slideAnim;
@@ -35,15 +30,8 @@ class QuestDebugPanelState extends State<QuestDebugPanel>
   @override
   void initState() {
     super.initState();
-    _slideCtrl = AnimationController(
-      vsync: this,
-      duration: const Duration(milliseconds: 320),
-    );
-    _slideAnim = CurvedAnimation(
-      parent: _slideCtrl,
-      curve: Curves.easeOutCubic,
-      reverseCurve: Curves.easeInCubic,
-    );
+    _slideCtrl = AnimationController(vsync: this, duration: const Duration(milliseconds: 320));
+    _slideAnim = CurvedAnimation(parent: _slideCtrl, curve: Curves.easeOutCubic, reverseCurve: Curves.easeInCubic);
   }
 
   @override
@@ -58,7 +46,7 @@ class QuestDebugPanelState extends State<QuestDebugPanel>
       _scrollToQuest(questId);
       print("scrolling to quest $questId");
       setState(() => _expandedQuestId = questId);
-    },);
+    });
     if (!_isOpen) {
       setState(() => _isOpen = true);
       _slideCtrl.forward();
@@ -71,24 +59,17 @@ class QuestDebugPanelState extends State<QuestDebugPanel>
     if (index < 0 || !_listScrollCtrl.hasClients) return;
     // Approximate header height per tile
     const headerH = 42.0;
-    final target = (index * headerH)
-        .clamp(0.0, _listScrollCtrl.position.maxScrollExtent);
-    _listScrollCtrl.animateTo(
-      target,
-      duration: const Duration(milliseconds: 350),
-      curve: Curves.easeOutCubic,
-    );
+    final target = (index * headerH).clamp(0.0, _listScrollCtrl.position.maxScrollExtent);
+    _listScrollCtrl.animateTo(target, duration: const Duration(milliseconds: 350), curve: Curves.easeOutCubic);
   }
-
 
   void _toggle() {
     setState(() => _isOpen = !_isOpen);
     _isOpen ? _slideCtrl.forward() : _slideCtrl.reverse();
   }
 
-
   void _deleteQuest(int id) {
-    for (final q in questSystem.quests.values) {
+    for (final q in questSystem.quests) {
       q.prerequisites.removeWhere((p) => p.id == id);
     }
     questSystem.removeQuest(id);
@@ -102,9 +83,8 @@ class QuestDebugPanelState extends State<QuestDebugPanel>
     showDialog(
       context: context,
       builder: (_) => _CreateQuestDialog(
-        existingQuests: questSystem.quests,
         onCreated: (quest) {
-          questSystem.addQuest(quest);
+          questSystem.upsertQuest(quest);
           setState(() => _expandedQuestId = quest.id);
           widget.onChanged();
         },
@@ -112,19 +92,13 @@ class QuestDebugPanelState extends State<QuestDebugPanel>
     );
   }
 
-
   List<Quest> get _filteredQuests {
     final q = _searchQuery.toLowerCase();
-    return questSystem.quests.values
-        .where((quest) =>
-    q.isEmpty ||
-        quest.name.toLowerCase().contains(q) ||
-        quest.id.toString().contains(q) ||
-        quest.subject.toLowerCase().contains(q))
+    return questSystem.quests
+        .where((quest) => q.isEmpty || quest.name.toLowerCase().contains(q) || quest.id.toString().contains(q) || quest.subject.toLowerCase().contains(q))
         .toList()
       ..sort((a, b) => a.id.compareTo(b.id));
   }
-
 
   @override
   Widget build(BuildContext context) {
@@ -146,27 +120,10 @@ class QuestDebugPanelState extends State<QuestDebugPanel>
                   width: 28,
                   height: 72,
                   decoration: BoxDecoration(
-                    color: Color.lerp(
-                      const Color(0xFF1E2D3D),
-                      const Color(0xFF0D2235),
-                      _slideAnim.value,
-                    ),
-                    borderRadius: const BorderRadius.only(
-                      topLeft: Radius.circular(10),
-                      bottomLeft: Radius.circular(10),
-                    ),
-                    border: Border.all(
-                      color: Colors.cyan
-                          .withValues(alpha: 0.3 + 0.25 * _slideAnim.value),
-                    ),
-                    boxShadow: [
-                      BoxShadow(
-                        color: Colors.cyan
-                            .withValues(alpha: 0.08 + 0.18 * _slideAnim.value),
-                        blurRadius: 12,
-                        spreadRadius: 1,
-                      ),
-                    ],
+                    color: Color.lerp(const Color(0xFF1E2D3D), const Color(0xFF0D2235), _slideAnim.value),
+                    borderRadius: const BorderRadius.only(topLeft: Radius.circular(10), bottomLeft: Radius.circular(10)),
+                    border: Border.all(color: Colors.cyan.withValues(alpha: 0.3 + 0.25 * _slideAnim.value)),
+                    boxShadow: [BoxShadow(color: Colors.cyan.withValues(alpha: 0.08 + 0.18 * _slideAnim.value), blurRadius: 12, spreadRadius: 1)],
                   ),
                   child: Center(
                     child: RotatedBox(
@@ -174,8 +131,7 @@ class QuestDebugPanelState extends State<QuestDebugPanel>
                       child: Text(
                         'DEBUG',
                         style: TextStyle(
-                          color: Colors.cyan
-                              .withValues(alpha: 0.65 + 0.3 * _slideAnim.value),
+                          color: Colors.cyan.withValues(alpha: 0.65 + 0.3 * _slideAnim.value),
                           fontSize: 9,
                           fontWeight: FontWeight.bold,
                           letterSpacing: 1.2,
@@ -191,33 +147,19 @@ class QuestDebugPanelState extends State<QuestDebugPanel>
           AnimatedBuilder(
             animation: _slideAnim,
             builder: (_, child) => ClipRect(
-              child: Align(
-                alignment: Alignment.centerRight,
-                widthFactor: _slideAnim.value,
-                child: child,
-              ),
+              child: Align(alignment: Alignment.centerRight, widthFactor: _slideAnim.value, child: child),
             ),
             child: Container(
               width: 340,
               decoration: BoxDecoration(
                 color: const Color(0xFF0D1B2A),
-                border: Border(
-                  left: BorderSide(color: Colors.cyan.withValues(alpha: 0.3)),
-                ),
-                boxShadow: [
-                  BoxShadow(
-                    color: Colors.black.withValues(alpha: 0.4),
-                    blurRadius: 24,
-                    offset: const Offset(-4, 0),
-                  ),
-                ],
+                border: Border(left: BorderSide(color: Colors.cyan.withValues(alpha: 0.3))),
+                boxShadow: [BoxShadow(color: Colors.black.withValues(alpha: 0.4), blurRadius: 24, offset: const Offset(-4, 0))],
               ),
               child: Column(
                 children: [
                   _PanelHeader(onAddQuest: _showCreateDialog),
-                  _SearchBar(
-                    onChanged: (v) => setState(() => _searchQuery = v),
-                  ),
+                  _SearchBar(onChanged: (v) => setState(() => _searchQuery = v)),
                   Expanded(child: _buildQuestList()),
                 ],
               ),
@@ -232,10 +174,7 @@ class QuestDebugPanelState extends State<QuestDebugPanel>
     final quests = _filteredQuests;
     if (quests.isEmpty) {
       return const Center(
-        child: Text(
-          'No quests found',
-          style: TextStyle(color: Colors.white38, fontSize: 12),
-        ),
+        child: Text('No quests found', style: TextStyle(color: Colors.white38, fontSize: 12)),
       );
     }
     return ListView.builder(
@@ -250,12 +189,9 @@ class QuestDebugPanelState extends State<QuestDebugPanel>
           quest: quest,
           isExpanded: isExpanded,
           allQuests: questSystem.quests,
-          onToggle: () =>
-              setState(() => _expandedQuestId = isExpanded ? null : quest.id),
+          onToggle: () => setState(() => _expandedQuestId = isExpanded ? null : quest.id),
           onDelete: () => _deleteQuest(quest.id),
-          onFocus: widget.onFocusQuest != null
-              ? () => widget.onFocusQuest!(quest)
-              : null,
+          onFocus: widget.onFocusQuest != null ? () => widget.onFocusQuest!(quest) : null,
           onChanged: () {
             setState(() {});
             widget.onChanged();
@@ -266,9 +202,9 @@ class QuestDebugPanelState extends State<QuestDebugPanel>
   }
 }
 
-
 class _PanelHeader extends StatelessWidget {
   const _PanelHeader({required this.onAddQuest});
+
   final VoidCallback onAddQuest;
 
   @override
@@ -277,9 +213,7 @@ class _PanelHeader extends StatelessWidget {
       padding: const EdgeInsets.fromLTRB(14, 12, 8, 10),
       decoration: BoxDecoration(
         color: const Color(0xFF152232),
-        border: Border(
-          bottom: BorderSide(color: Colors.cyan.withValues(alpha: 0.2)),
-        ),
+        border: Border(bottom: BorderSide(color: Colors.cyan.withValues(alpha: 0.2))),
       ),
       child: Row(
         children: [
@@ -287,18 +221,10 @@ class _PanelHeader extends StatelessWidget {
           const SizedBox(width: 8),
           const Text(
             'Quest Debug',
-            style: TextStyle(
-              color: Colors.cyan,
-              fontWeight: FontWeight.bold,
-              fontSize: 13,
-              letterSpacing: 0.5,
-            ),
+            style: TextStyle(color: Colors.cyan, fontWeight: FontWeight.bold, fontSize: 13, letterSpacing: 0.5),
           ),
           const Spacer(),
-          Text(
-            '${questSystem.quests.length} quests',
-            style: const TextStyle(color: Colors.white38, fontSize: 11),
-          ),
+          Text('${questSystem.quests.length} quests', style: const TextStyle(color: Colors.white38, fontSize: 11)),
           const SizedBox(width: 8),
           _DebugIconButton(
             icon: Icons.download,
@@ -306,26 +232,21 @@ class _PanelHeader extends StatelessWidget {
             color: Colors.orangeAccent,
             onTap: () {
               String? result = questSystem.toJson();
-              if(result != null) Clipboard.setData(ClipboardData(text: result));
+              if (result != null) Clipboard.setData(ClipboardData(text: result));
               print(result ?? "error generating json");
             },
           ),
           const SizedBox(width: 8),
-          _DebugIconButton(
-            icon: Icons.add_circle_outline,
-            tooltip: 'New quest',
-            color: Colors.greenAccent,
-            onTap: onAddQuest,
-          ),
+          _DebugIconButton(icon: Icons.add_circle_outline, tooltip: 'New quest', color: Colors.greenAccent, onTap: onAddQuest),
         ],
       ),
     );
   }
 }
 
-
 class _SearchBar extends StatelessWidget {
   const _SearchBar({required this.onChanged});
+
   final ValueChanged<String> onChanged;
 
   @override
@@ -342,16 +263,12 @@ class _SearchBar extends StatelessWidget {
           filled: true,
           fillColor: const Color(0xFF1A2B3C),
           contentPadding: const EdgeInsets.symmetric(vertical: 8),
-          border: OutlineInputBorder(
-            borderRadius: BorderRadius.circular(8),
-            borderSide: BorderSide.none,
-          ),
+          border: OutlineInputBorder(borderRadius: BorderRadius.circular(8), borderSide: BorderSide.none),
         ),
       ),
     );
   }
 }
-
 
 class _QuestListTile extends StatefulWidget {
   const _QuestListTile({
@@ -367,7 +284,7 @@ class _QuestListTile extends StatefulWidget {
 
   final Quest quest;
   final bool isExpanded;
-  final Map<int, Quest> allQuests;
+  final List<Quest> allQuests;
   final VoidCallback onToggle;
   final VoidCallback onDelete;
   final VoidCallback onChanged;
@@ -379,19 +296,14 @@ class _QuestListTile extends StatefulWidget {
 
 enum _SaveState { idle, saved }
 
-class _QuestListTileState extends State<_QuestListTile>
-    with SingleTickerProviderStateMixin {
+class _QuestListTileState extends State<_QuestListTile> with SingleTickerProviderStateMixin {
   late final _nameCtrl = TextEditingController(text: widget.quest.name);
   late final _descCtrl = TextEditingController(text: widget.quest.description);
   late final _subjectCtrl = TextEditingController(text: widget.quest.subject);
-  late final _posXCtrl =
-  TextEditingController(text: widget.quest.posX.toStringAsFixed(1));
-  late final _posYCtrl =
-  TextEditingController(text: widget.quest.posY.toStringAsFixed(1));
-  late final _sizeXCtrl =
-  TextEditingController(text: widget.quest.sizeX.toStringAsFixed(1));
-  late final _sizeYCtrl =
-  TextEditingController(text: widget.quest.sizeY.toStringAsFixed(1));
+  late final _posXCtrl = TextEditingController(text: widget.quest.posX.toStringAsFixed(1));
+  late final _posYCtrl = TextEditingController(text: widget.quest.posY.toStringAsFixed(1));
+  late final _sizeXCtrl = TextEditingController(text: widget.quest.sizeX.toStringAsFixed(1));
+  late final _sizeYCtrl = TextEditingController(text: widget.quest.sizeY.toStringAsFixed(1));
   late double _difficulty = widget.quest.difficulty;
 
   _SaveState _saveState = _SaveState.idle;
@@ -403,13 +315,8 @@ class _QuestListTileState extends State<_QuestListTile>
   @override
   void initState() {
     super.initState();
-    _chevronCtrl = AnimationController(
-      vsync: this,
-      duration: const Duration(milliseconds: 200),
-      value: widget.isExpanded ? 1.0 : 0.0,
-    );
-    _chevronAnim =
-        CurvedAnimation(parent: _chevronCtrl, curve: Curves.easeOut);
+    _chevronCtrl = AnimationController(vsync: this, duration: const Duration(milliseconds: 200), value: widget.isExpanded ? 1.0 : 0.0);
+    _chevronAnim = CurvedAnimation(parent: _chevronCtrl, curve: Curves.easeOut);
   }
 
   @override
@@ -426,10 +333,7 @@ class _QuestListTileState extends State<_QuestListTile>
   void dispose() {
     _saveTimer?.cancel();
     _chevronCtrl.dispose();
-    for (final c in [
-      _nameCtrl, _descCtrl, _subjectCtrl,
-      _posXCtrl, _posYCtrl, _sizeXCtrl, _sizeYCtrl,
-    ]) {
+    for (final c in [_nameCtrl, _descCtrl, _subjectCtrl, _posXCtrl, _posYCtrl, _sizeXCtrl, _sizeYCtrl]) {
       c.dispose();
     }
     super.dispose();
@@ -437,9 +341,7 @@ class _QuestListTileState extends State<_QuestListTile>
 
   void _applyChanges() {
     widget.quest
-      ..name = _nameCtrl.text.trim().isEmpty
-          ? widget.quest.name
-          : _nameCtrl.text.trim()
+      ..name = _nameCtrl.text.trim().isEmpty ? widget.quest.name : _nameCtrl.text.trim()
       ..description = _descCtrl.text
       ..subject = _subjectCtrl.text
       ..posX = double.tryParse(_posXCtrl.text) ?? widget.quest.posX
@@ -458,10 +360,7 @@ class _QuestListTileState extends State<_QuestListTile>
   }
 
   Color get _subjectColor {
-    const palette = [
-      Colors.cyan, Colors.purple, Colors.orange, Colors.green,
-      Colors.pink, Colors.teal, Colors.amber,
-    ];
+    const palette = [Colors.cyan, Colors.purple, Colors.orange, Colors.green, Colors.pink, Colors.teal, Colors.amber];
     return palette[widget.quest.subject.hashCode.abs() % palette.length];
   }
 
@@ -478,13 +377,8 @@ class _QuestListTileState extends State<_QuestListTile>
             curve: Curves.easeOut,
             padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 8),
             decoration: BoxDecoration(
-              color: widget.isExpanded
-                  ? const Color(0xFF1A2F44)
-                  : Colors.transparent,
-              border: Border(
-                bottom: BorderSide(
-                    color: Colors.white.withValues(alpha: 0.05)),
-              ),
+              color: widget.isExpanded ? const Color(0xFF1A2F44) : Colors.transparent,
+              border: Border(bottom: BorderSide(color: Colors.white.withValues(alpha: 0.05))),
             ),
             child: Row(
               children: [
@@ -494,17 +388,12 @@ class _QuestListTileState extends State<_QuestListTile>
                   decoration: BoxDecoration(
                     color: _subjectColor.withValues(alpha: 0.2),
                     borderRadius: BorderRadius.circular(4),
-                    border: Border.all(
-                        color: _subjectColor.withValues(alpha: 0.5)),
+                    border: Border.all(color: _subjectColor.withValues(alpha: 0.5)),
                   ),
                   child: Center(
                     child: Text(
                       '#${quest.id}',
-                      style: TextStyle(
-                        color: _subjectColor,
-                        fontSize: 9,
-                        fontWeight: FontWeight.bold,
-                      ),
+                      style: TextStyle(color: _subjectColor, fontSize: 9, fontWeight: FontWeight.bold),
                     ),
                   ),
                 ),
@@ -515,46 +404,25 @@ class _QuestListTileState extends State<_QuestListTile>
                     children: [
                       Text(
                         quest.name,
-                        style: const TextStyle(
-                          color: Colors.white,
-                          fontSize: 12,
-                          fontWeight: FontWeight.w600,
-                        ),
+                        style: const TextStyle(color: Colors.white, fontSize: 12, fontWeight: FontWeight.w600),
                         maxLines: 1,
                         overflow: TextOverflow.ellipsis,
                       ),
                       Text(
                         '${quest.subject}  •  '
-                            '${quest.posX.toStringAsFixed(0)}, ${quest.posY.toStringAsFixed(0)}  •  '
-                            '${(quest.difficulty * 100).round()}%',
-                        style: const TextStyle(
-                            color: Colors.white38, fontSize: 10),
+                        '${quest.posX.toStringAsFixed(0)}, ${quest.posY.toStringAsFixed(0)}  •  '
+                        '${(quest.difficulty * 100).round()}%',
+                        style: const TextStyle(color: Colors.white38, fontSize: 10),
                       ),
                     ],
                   ),
                 ),
                 if (widget.onFocus != null)
-                  _DebugIconButton(
-                    icon: Icons.my_location,
-                    tooltip: 'Focus camera',
-                    color: Colors.lightBlueAccent,
-                    onTap: widget.onFocus!,
-                    size: 15,
-                  ),
-                _DebugIconButton(
-                  icon: Icons.delete_outline,
-                  tooltip: 'Delete quest',
-                  color: Colors.redAccent,
-                  onTap: () => _confirmDelete(context),
-                  size: 15,
-                ),
+                  _DebugIconButton(icon: Icons.my_location, tooltip: 'Focus camera', color: Colors.lightBlueAccent, onTap: widget.onFocus!, size: 15),
+                _DebugIconButton(icon: Icons.delete_outline, tooltip: 'Delete quest', color: Colors.redAccent, onTap: () => _confirmDelete(context), size: 15),
                 RotationTransition(
                   turns: Tween(begin: 0.0, end: 0.5).animate(_chevronAnim),
-                  child: const Icon(
-                    Icons.keyboard_arrow_down,
-                    color: Colors.white30,
-                    size: 16,
-                  ),
+                  child: const Icon(Icons.keyboard_arrow_down, color: Colors.white30, size: 16),
                 ),
               ],
             ),
@@ -583,24 +451,28 @@ class _QuestListTileState extends State<_QuestListTile>
           _FieldRow(label: 'Description', controller: _descCtrl, maxLines: 3),
           const SizedBox(height: 8),
           const _SectionLabel('Position & Size'),
-          Row(children: [
-            Expanded(
-                child: _FieldRow(
-                    label: 'posX', controller: _posXCtrl, numeric: true)),
-            const SizedBox(width: 8),
-            Expanded(
-                child: _FieldRow(
-                    label: 'posY', controller: _posYCtrl, numeric: true)),
-          ]),
-          Row(children: [
-            Expanded(
-                child: _FieldRow(
-                    label: 'sizeX', controller: _sizeXCtrl, numeric: true)),
-            const SizedBox(width: 8),
-            Expanded(
-                child: _FieldRow(
-                    label: 'sizeY', controller: _sizeYCtrl, numeric: true)),
-          ]),
+          Row(
+            children: [
+              Expanded(
+                child: _FieldRow(label: 'posX', controller: _posXCtrl, numeric: true),
+              ),
+              const SizedBox(width: 8),
+              Expanded(
+                child: _FieldRow(label: 'posY', controller: _posYCtrl, numeric: true),
+              ),
+            ],
+          ),
+          Row(
+            children: [
+              Expanded(
+                child: _FieldRow(label: 'sizeX', controller: _sizeXCtrl, numeric: true),
+              ),
+              const SizedBox(width: 8),
+              Expanded(
+                child: _FieldRow(label: 'sizeY', controller: _sizeYCtrl, numeric: true),
+              ),
+            ],
+          ),
           const SizedBox(height: 8),
           _SectionLabel('Difficulty  ${(_difficulty * 100).round()}%'),
           SliderTheme(
@@ -612,21 +484,11 @@ class _QuestListTileState extends State<_QuestListTile>
               trackHeight: 3,
               thumbShape: const RoundSliderThumbShape(enabledThumbRadius: 7),
             ),
-            child: Slider(
-              value: _difficulty,
-              min: 0,
-              max: 1,
-              divisions: 20,
-              onChanged: (v) => setState(() => _difficulty = v),
-            ),
+            child: Slider(value: _difficulty, min: 0, max: 1, divisions: 20, onChanged: (v) => setState(() => _difficulty = v)),
           ),
           const SizedBox(height: 8),
           const _SectionLabel('Prerequisites'),
-          _PrerequisiteEditor(
-            quest: widget.quest,
-            allQuests: widget.allQuests,
-            onChanged: widget.onChanged,
-          ),
+          _PrerequisiteEditor(quest: widget.quest, allQuests: widget.allQuests, onChanged: widget.onChanged),
           const SizedBox(height: 12),
           _ApplyButton(saveState: _saveState, onPressed: _applyChanges),
         ],
@@ -639,19 +501,12 @@ class _QuestListTileState extends State<_QuestListTile>
       context: context,
       builder: (context) => AlertDialog(
         backgroundColor: const Color(0xFF152232),
-        title: Text(
-          'Delete "${widget.quest.name}"?',
-          style: const TextStyle(color: Colors.white, fontSize: 14),
-        ),
-        content: Text(
-          'Quest #${widget.quest.id} will be permanently removed.',
-          style: const TextStyle(color: Colors.white54, fontSize: 12),
-        ),
+        title: Text('Delete "${widget.quest.name}"?', style: const TextStyle(color: Colors.white, fontSize: 14)),
+        content: Text('Quest #${widget.quest.id} will be permanently removed.', style: const TextStyle(color: Colors.white54, fontSize: 12)),
         actions: [
           TextButton(
             onPressed: () => Navigator.pop(context),
-            child: const Text('Cancel',
-                style: TextStyle(color: Colors.white38)),
+            child: const Text('Cancel', style: TextStyle(color: Colors.white38)),
           ),
           TextButton(
             onPressed: () {
@@ -659,15 +514,13 @@ class _QuestListTileState extends State<_QuestListTile>
               widget.onDelete();
               print("Deleted quest ${widget.quest.id}");
             },
-            child: const Text('Delete',
-                style: TextStyle(color: Colors.redAccent)),
+            child: const Text('Delete', style: TextStyle(color: Colors.redAccent)),
           ),
         ],
       ),
     );
   }
 }
-
 
 class _ApplyButton extends StatelessWidget {
   const _ApplyButton({required this.saveState, required this.onPressed});
@@ -683,14 +536,8 @@ class _ApplyButton extends StatelessWidget {
       curve: Curves.easeOutCubic,
       decoration: BoxDecoration(
         borderRadius: BorderRadius.circular(8),
-        border: Border.all(
-          color: isSaved
-              ? Colors.greenAccent.withValues(alpha: 0.7)
-              : Colors.cyan.withValues(alpha: 0.5),
-        ),
-        color: isSaved
-            ? Colors.greenAccent.withValues(alpha: 0.15)
-            : Colors.cyan.withValues(alpha: 0.12),
+        border: Border.all(color: isSaved ? Colors.greenAccent.withValues(alpha: 0.7) : Colors.cyan.withValues(alpha: 0.5)),
+        color: isSaved ? Colors.greenAccent.withValues(alpha: 0.15) : Colors.cyan.withValues(alpha: 0.12),
       ),
       child: InkWell(
         onTap: isSaved ? null : onPressed,
@@ -702,48 +549,32 @@ class _ApplyButton extends StatelessWidget {
             transitionBuilder: (child, anim) => FadeTransition(
               opacity: anim,
               child: SlideTransition(
-                position: Tween<Offset>(
-                  begin: const Offset(0, 0.35),
-                  end: Offset.zero,
-                ).animate(anim),
+                position: Tween<Offset>(begin: const Offset(0, 0.35), end: Offset.zero).animate(anim),
                 child: child,
               ),
             ),
             child: isSaved
                 ? const Row(
-              key: ValueKey('saved'),
-              mainAxisAlignment: MainAxisAlignment.center,
-              children: [
-                Icon(Icons.check_circle,
-                    size: 14, color: Colors.greenAccent),
-                SizedBox(width: 6),
-                Text(
-                  'Saved!',
-                  style: TextStyle(
-                    fontSize: 12,
-                    color: Colors.greenAccent,
-                    fontWeight: FontWeight.w600,
-                  ),
-                ),
-              ],
-            )
+                    key: ValueKey('saved'),
+                    mainAxisAlignment: MainAxisAlignment.center,
+                    children: [
+                      Icon(Icons.check_circle, size: 14, color: Colors.greenAccent),
+                      SizedBox(width: 6),
+                      Text(
+                        'Saved!',
+                        style: TextStyle(fontSize: 12, color: Colors.greenAccent, fontWeight: FontWeight.w600),
+                      ),
+                    ],
+                  )
                 : Row(
-              key: const ValueKey('apply'),
-              mainAxisAlignment: MainAxisAlignment.center,
-              children: [
-                Icon(Icons.check,
-                    size: 14,
-                    color: Colors.cyan.withValues(alpha: 0.9)),
-                const SizedBox(width: 6),
-                Text(
-                  'Apply Changes',
-                  style: TextStyle(
-                    fontSize: 12,
-                    color: Colors.cyan.withValues(alpha: 0.9),
+                    key: const ValueKey('apply'),
+                    mainAxisAlignment: MainAxisAlignment.center,
+                    children: [
+                      Icon(Icons.check, size: 14, color: Colors.cyan.withValues(alpha: 0.9)),
+                      const SizedBox(width: 6),
+                      Text('Apply Changes', style: TextStyle(fontSize: 12, color: Colors.cyan.withValues(alpha: 0.9))),
+                    ],
                   ),
-                ),
-              ],
-            ),
           ),
         ),
       ),
@@ -751,16 +582,11 @@ class _ApplyButton extends StatelessWidget {
   }
 }
 
-
 class _PrerequisiteEditor extends StatefulWidget {
-  const _PrerequisiteEditor({
-    required this.quest,
-    required this.allQuests,
-    required this.onChanged,
-  });
+  const _PrerequisiteEditor({required this.quest, required this.allQuests, required this.onChanged});
 
   final Quest quest;
-  final Map<int, Quest> allQuests;
+  final List<Quest> allQuests;
   final VoidCallback onChanged;
 
   @override
@@ -790,14 +616,13 @@ class _PrerequisiteEditorState extends State<_PrerequisiteEditor> {
 
   List<Quest> get _availableFiltered {
     final q = _query.toLowerCase();
-    return widget.allQuests.values
-        .where((quest) =>
-    quest.id != widget.quest.id &&
-        !widget.quest.prerequisites.any((p) => p.id == quest.id) &&
-        (q.isEmpty ||
-            quest.name.toLowerCase().contains(q) ||
-            quest.id.toString().contains(q) ||
-            quest.subject.toLowerCase().contains(q)))
+    return widget.allQuests
+        .where(
+          (quest) =>
+              quest.id != widget.quest.id &&
+              !widget.quest.prerequisites.any((p) => p.id == quest.id) &&
+              (q.isEmpty || quest.name.toLowerCase().contains(q) || quest.id.toString().contains(q) || quest.subject.toLowerCase().contains(q)),
+        )
         .toList()
       ..sort((a, b) => a.id.compareTo(b.id));
   }
@@ -805,7 +630,7 @@ class _PrerequisiteEditorState extends State<_PrerequisiteEditor> {
   void _add(Quest prereq) async {
     print("Adding prerequisite #${prereq.id} to quest #${widget.quest.id}");
     await questRepo.addConnection(widget.quest.id, prereq.id);
-    if(!mounted) return;
+    if (!mounted) return;
     setState(() {
       _searchCtrl.clear();
       _query = '';
@@ -823,22 +648,17 @@ class _PrerequisiteEditorState extends State<_PrerequisiteEditor> {
       crossAxisAlignment: CrossAxisAlignment.start,
       children: [
         if (widget.quest.prerequisites.isEmpty)
-          const Text('None',
-              style: TextStyle(color: Colors.white30, fontSize: 11))
+          const Text('None', style: TextStyle(color: Colors.white30, fontSize: 11))
         else
           Wrap(
             spacing: 6,
             runSpacing: 4,
             children: widget.quest.prerequisites.map((prereq) {
               return Chip(
-                label: Text(
-                  '#${prereq.id} ${prereq.name}',
-                  style: const TextStyle(fontSize: 10, color: Colors.white),
-                ),
+                label: Text('#${prereq.id} ${prereq.name}', style: const TextStyle(fontSize: 10, color: Colors.white)),
                 backgroundColor: const Color(0xFF1E3344),
                 side: BorderSide(color: Colors.cyan.withValues(alpha: 0.3)),
-                deleteIcon:
-                const Icon(Icons.close, size: 12, color: Colors.redAccent),
+                deleteIcon: const Icon(Icons.close, size: 12, color: Colors.redAccent),
                 onDeleted: () async {
                   await questRepo.removeConnection(widget.quest.id, prereq.id);
                   setState(() {});
@@ -859,20 +679,14 @@ class _PrerequisiteEditorState extends State<_PrerequisiteEditor> {
           decoration: InputDecoration(
             hintText: 'Search to add prerequisite…',
             hintStyle: const TextStyle(color: Colors.white30, fontSize: 11),
-            prefixIcon:
-            const Icon(Icons.add_link, color: Colors.white30, size: 14),
+            prefixIcon: const Icon(Icons.add_link, color: Colors.white30, size: 14),
             filled: true,
             fillColor: const Color(0xFF1A2B3C),
-            contentPadding:
-            const EdgeInsets.symmetric(horizontal: 10, vertical: 7),
-            border: OutlineInputBorder(
-              borderRadius: BorderRadius.circular(6),
-              borderSide: BorderSide.none,
-            ),
+            contentPadding: const EdgeInsets.symmetric(horizontal: 10, vertical: 7),
+            border: OutlineInputBorder(borderRadius: BorderRadius.circular(6), borderSide: BorderSide.none),
             focusedBorder: OutlineInputBorder(
               borderRadius: BorderRadius.circular(6),
-              borderSide:
-              BorderSide(color: Colors.cyan.withValues(alpha: 0.5)),
+              borderSide: BorderSide(color: Colors.cyan.withValues(alpha: 0.5)),
             ),
           ),
         ),
@@ -883,73 +697,55 @@ class _PrerequisiteEditorState extends State<_PrerequisiteEditor> {
           alignment: Alignment.topCenter,
           child: _showList
               ? available.isNotEmpty
-              ? Container(
-            margin: const EdgeInsets.only(top: 2),
-            constraints: const BoxConstraints(maxHeight: 160),
-            decoration: BoxDecoration(
-              color: const Color(0xFF152232),
-              borderRadius: BorderRadius.circular(6),
-              border: Border.all(
-                  color: Colors.cyan.withValues(alpha: 0.2)),
-            ),
-            child: ListView.builder(
-              padding: EdgeInsets.zero,
-              shrinkWrap: true,
-              itemCount: available.length,
-              itemBuilder: (_, i) {
-                final q = available[i];
-                return InkWell(
-                  onTap: () => _add(q),
-                  child: Padding(
-                    padding: const EdgeInsets.symmetric(
-                        horizontal: 10, vertical: 7),
-                    child: Row(
-                      children: [
-                        Container(
-                          padding: const EdgeInsets.symmetric(
-                              horizontal: 5, vertical: 1),
-                          decoration: BoxDecoration(
-                            color: Colors.cyan.withValues(alpha: 0.15),
-                            borderRadius: BorderRadius.circular(3),
-                          ),
-                          child: Text(
-                            '#${q.id}',
-                            style: const TextStyle(
-                                color: Colors.cyan,
-                                fontSize: 9,
-                                fontWeight: FontWeight.bold),
-                          ),
+                    ? Container(
+                        margin: const EdgeInsets.only(top: 2),
+                        constraints: const BoxConstraints(maxHeight: 160),
+                        decoration: BoxDecoration(
+                          color: const Color(0xFF152232),
+                          borderRadius: BorderRadius.circular(6),
+                          border: Border.all(color: Colors.cyan.withValues(alpha: 0.2)),
                         ),
-                        const SizedBox(width: 8),
-                        Expanded(
-                          child: Text(
-                            q.name,
-                            style: const TextStyle(
-                                color: Colors.white70, fontSize: 11),
-                            maxLines: 1,
-                            overflow: TextOverflow.ellipsis,
-                          ),
+                        child: ListView.builder(
+                          padding: EdgeInsets.zero,
+                          shrinkWrap: true,
+                          itemCount: available.length,
+                          itemBuilder: (_, i) {
+                            final q = available[i];
+                            return InkWell(
+                              onTap: () => _add(q),
+                              child: Padding(
+                                padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 7),
+                                child: Row(
+                                  children: [
+                                    Container(
+                                      padding: const EdgeInsets.symmetric(horizontal: 5, vertical: 1),
+                                      decoration: BoxDecoration(color: Colors.cyan.withValues(alpha: 0.15), borderRadius: BorderRadius.circular(3)),
+                                      child: Text(
+                                        '#${q.id}',
+                                        style: const TextStyle(color: Colors.cyan, fontSize: 9, fontWeight: FontWeight.bold),
+                                      ),
+                                    ),
+                                    const SizedBox(width: 8),
+                                    Expanded(
+                                      child: Text(
+                                        q.name,
+                                        style: const TextStyle(color: Colors.white70, fontSize: 11),
+                                        maxLines: 1,
+                                        overflow: TextOverflow.ellipsis,
+                                      ),
+                                    ),
+                                    Text(q.subject, style: const TextStyle(color: Colors.white30, fontSize: 10)),
+                                  ],
+                                ),
+                              ),
+                            );
+                          },
                         ),
-                        Text(
-                          q.subject,
-                          style: const TextStyle(
-                              color: Colors.white30, fontSize: 10),
-                        ),
-                      ],
-                    ),
-                  ),
-                );
-              },
-            ),
-          )
-              : const Padding(
-            padding: EdgeInsets.only(top: 6),
-            child: Text(
-              'No matches',
-              style: TextStyle(
-                  color: Colors.white30, fontSize: 11),
-            ),
-          )
+                      )
+                    : const Padding(
+                        padding: EdgeInsets.only(top: 6),
+                        child: Text('No matches', style: TextStyle(color: Colors.white30, fontSize: 11)),
+                      )
               : const SizedBox.shrink(),
         ),
       ],
@@ -958,12 +754,8 @@ class _PrerequisiteEditorState extends State<_PrerequisiteEditor> {
 }
 
 class _CreateQuestDialog extends StatefulWidget {
-  const _CreateQuestDialog({
-    required this.existingQuests,
-    required this.onCreated,
-  });
+  const _CreateQuestDialog({required this.onCreated});
 
-  final Map<int, Quest> existingQuests;
   final void Function(Quest) onCreated;
 
   @override
@@ -982,10 +774,7 @@ class _CreateQuestDialogState extends State<_CreateQuestDialog> {
 
   @override
   void dispose() {
-    for (final c in [
-      _nameCtrl, _descCtrl, _subjectCtrl,
-      _posXCtrl, _posYCtrl, _sizeXCtrl, _sizeYCtrl,
-    ]) {
+    for (final c in [_nameCtrl, _descCtrl, _subjectCtrl, _posXCtrl, _posYCtrl, _sizeXCtrl, _sizeYCtrl]) {
       c.dispose();
     }
     super.dispose();
@@ -994,13 +783,9 @@ class _CreateQuestDialogState extends State<_CreateQuestDialog> {
   void _create() {
     final quest = Quest(
       id: DateTime.now().millisecondsSinceEpoch,
-      name: _nameCtrl.text.trim().isEmpty
-          ? 'Quest ${DateTime.now().millisecondsSinceEpoch}'
-          : _nameCtrl.text.trim(),
+      name: _nameCtrl.text.trim().isEmpty ? 'Quest ${DateTime.now().millisecondsSinceEpoch}' : _nameCtrl.text.trim(),
       description: _descCtrl.text,
-      subject: _subjectCtrl.text.trim().isEmpty
-          ? 'General'
-          : _subjectCtrl.text.trim(),
+      subject: _subjectCtrl.text.trim().isEmpty ? 'General' : _subjectCtrl.text.trim(),
       posX: double.tryParse(_posXCtrl.text) ?? 200,
       posY: double.tryParse(_posYCtrl.text) ?? 200,
       sizeX: double.tryParse(_sizeXCtrl.text) ?? 100,
@@ -1020,10 +805,7 @@ class _CreateQuestDialogState extends State<_CreateQuestDialog> {
         children: [
           Icon(Icons.add_circle, color: Colors.greenAccent, size: 18),
           SizedBox(width: 8),
-          Text(
-            'New Quest',
-            style: TextStyle(color: Colors.white, fontSize: 14),
-          ),
+          Text('New Quest', style: TextStyle(color: Colors.white, fontSize: 14)),
         ],
       ),
       content: SizedBox(
@@ -1034,47 +816,37 @@ class _CreateQuestDialogState extends State<_CreateQuestDialog> {
             children: [
               _FieldRow(label: 'Name', controller: _nameCtrl),
               _FieldRow(label: 'Subject', controller: _subjectCtrl),
-              _FieldRow(
-                  label: 'Description', controller: _descCtrl, maxLines: 3),
+              _FieldRow(label: 'Description', controller: _descCtrl, maxLines: 3),
               const SizedBox(height: 4),
-              Row(children: [
-                Expanded(
-                    child: _FieldRow(
-                        label: 'posX', controller: _posXCtrl, numeric: true)),
-                const SizedBox(width: 8),
-                Expanded(
-                    child: _FieldRow(
-                        label: 'posY', controller: _posYCtrl, numeric: true)),
-              ]),
-              Row(children: [
-                Expanded(
-                    child: _FieldRow(
-                        label: 'sizeX',
-                        controller: _sizeXCtrl,
-                        numeric: true)),
-                const SizedBox(width: 8),
-                Expanded(
-                    child: _FieldRow(
-                        label: 'sizeY',
-                        controller: _sizeYCtrl,
-                        numeric: true)),
-              ]),
+              Row(
+                children: [
+                  Expanded(
+                    child: _FieldRow(label: 'posX', controller: _posXCtrl, numeric: true),
+                  ),
+                  const SizedBox(width: 8),
+                  Expanded(
+                    child: _FieldRow(label: 'posY', controller: _posYCtrl, numeric: true),
+                  ),
+                ],
+              ),
+              Row(
+                children: [
+                  Expanded(
+                    child: _FieldRow(label: 'sizeX', controller: _sizeXCtrl, numeric: true),
+                  ),
+                  const SizedBox(width: 8),
+                  Expanded(
+                    child: _FieldRow(label: 'sizeY', controller: _sizeYCtrl, numeric: true),
+                  ),
+                ],
+              ),
               const SizedBox(height: 8),
               _SectionLabel('Difficulty  ${(_difficulty * 100).round()}%'),
               SliderTheme(
-                data: SliderTheme.of(context).copyWith(
-                  activeTrackColor: Colors.cyan,
-                  inactiveTrackColor: Colors.white12,
-                  thumbColor: Colors.cyan,
-                  trackHeight: 3,
-                ),
-                child: Slider(
-                  value: _difficulty,
-                  min: 0,
-                  max: 1,
-                  divisions: 20,
-                  onChanged: (v) => setState(() => _difficulty = v),
-                ),
+                data: SliderTheme.of(
+                  context,
+                ).copyWith(activeTrackColor: Colors.cyan, inactiveTrackColor: Colors.white12, thumbColor: Colors.cyan, trackHeight: 3),
+                child: Slider(value: _difficulty, min: 0, max: 1, divisions: 20, onChanged: (v) => setState(() => _difficulty = v)),
               ),
             ],
           ),
@@ -1087,10 +859,7 @@ class _CreateQuestDialogState extends State<_CreateQuestDialog> {
         ),
         ElevatedButton(
           onPressed: _create,
-          style: ElevatedButton.styleFrom(
-            backgroundColor: Colors.greenAccent.withValues(alpha: 0.2),
-            foregroundColor: Colors.greenAccent,
-          ),
+          style: ElevatedButton.styleFrom(backgroundColor: Colors.greenAccent.withValues(alpha: 0.2), foregroundColor: Colors.greenAccent),
           child: const Text('Create', style: TextStyle(fontSize: 12)),
         ),
       ],
@@ -1099,12 +868,7 @@ class _CreateQuestDialogState extends State<_CreateQuestDialog> {
 }
 
 class _FieldRow extends StatelessWidget {
-  const _FieldRow({
-    required this.label,
-    required this.controller,
-    this.maxLines = 1,
-    this.numeric = false,
-  });
+  const _FieldRow({required this.label, required this.controller, this.maxLines = 1, this.numeric = false});
 
   final String label;
   final TextEditingController controller;
@@ -1118,28 +882,21 @@ class _FieldRow extends StatelessWidget {
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.start,
         children: [
-          Text(label,
-              style: const TextStyle(color: Colors.white38, fontSize: 10)),
+          Text(label, style: const TextStyle(color: Colors.white38, fontSize: 10)),
           const SizedBox(height: 2),
           TextField(
             controller: controller,
             maxLines: maxLines,
-            keyboardType:
-            numeric ? TextInputType.number : TextInputType.text,
+            keyboardType: numeric ? TextInputType.number : TextInputType.text,
             style: const TextStyle(color: Colors.white, fontSize: 12),
             decoration: InputDecoration(
               filled: true,
               fillColor: const Color(0xFF1A2B3C),
-              contentPadding:
-              const EdgeInsets.symmetric(horizontal: 10, vertical: 8),
-              border: OutlineInputBorder(
-                borderRadius: BorderRadius.circular(6),
-                borderSide: BorderSide.none,
-              ),
+              contentPadding: const EdgeInsets.symmetric(horizontal: 10, vertical: 8),
+              border: OutlineInputBorder(borderRadius: BorderRadius.circular(6), borderSide: BorderSide.none),
               focusedBorder: OutlineInputBorder(
                 borderRadius: BorderRadius.circular(6),
-                borderSide:
-                BorderSide(color: Colors.cyan.withValues(alpha: 0.5)),
+                borderSide: BorderSide(color: Colors.cyan.withValues(alpha: 0.5)),
               ),
             ),
           ),
@@ -1151,6 +908,7 @@ class _FieldRow extends StatelessWidget {
 
 class _SectionLabel extends StatelessWidget {
   const _SectionLabel(this.text);
+
   final String text;
 
   @override
@@ -1159,25 +917,14 @@ class _SectionLabel extends StatelessWidget {
       padding: const EdgeInsets.only(bottom: 4),
       child: Text(
         text,
-        style: TextStyle(
-          color: Colors.cyan.withValues(alpha: 0.7),
-          fontSize: 10,
-          fontWeight: FontWeight.bold,
-          letterSpacing: 0.5,
-        ),
+        style: TextStyle(color: Colors.cyan.withValues(alpha: 0.7), fontSize: 10, fontWeight: FontWeight.bold, letterSpacing: 0.5),
       ),
     );
   }
 }
 
 class _DebugIconButton extends StatelessWidget {
-  const _DebugIconButton({
-    required this.icon,
-    required this.tooltip,
-    required this.color,
-    required this.onTap,
-    this.size = 17,
-  });
+  const _DebugIconButton({required this.icon, required this.tooltip, required this.color, required this.onTap, this.size = 17});
 
   final IconData icon;
   final String tooltip;

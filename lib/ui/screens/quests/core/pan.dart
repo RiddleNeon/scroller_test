@@ -5,6 +5,7 @@ import 'package:flutter/material.dart';
 import 'package:flutter/rendering.dart';
 import 'package:vector_math/vector_math_64.dart' hide Matrix4, Colors;
 import 'package:wurp/logic/quests/quest_system.dart';
+import 'package:wurp/logic/repositories/quest_repository.dart';
 import 'package:wurp/ui/screens/quests/core/quest_bubbles_overlay.dart';
 import 'package:wurp/ui/screens/quests/core/quest_detail_screen.dart';
 
@@ -43,7 +44,7 @@ class PanWidgetState extends State<PanWidget> {
   double get _currentScale => _controller.value.getMaxScaleOnAxis();
 
   Quest? _findQuestAt(Offset scenePos) {
-    for (final quest in questSystem.quests.values) {
+    for (final quest in questSystem.quests) {
       if (quest.rect.contains(scenePos)) return quest;
     }
     return null;
@@ -75,7 +76,9 @@ class PanWidgetState extends State<PanWidget> {
     double maxY = double.negativeInfinity;
     double minX = double.infinity;
     double minY = double.infinity;
-    for (final quest in questSystem.quests.values) {
+    for (final quest in questSystem.quests) {
+      if(quest.isDeleted) continue;
+      
       if (quest.posX > maxX) maxX = quest.posX;
       if (quest.posY > maxY) maxY = quest.posY;
       if (quest.posX < minX) minX = quest.posX;
@@ -209,6 +212,12 @@ class PanWidgetState extends State<PanWidget> {
                 quest: Quest(id: DateTime.now().millisecondsSinceEpoch, name: 'No name provided', description: 'No description provided', subject: 'General'),
                 debugMode: debugMode,
                 editMode: true,
+                recommendedChangeMessage: 'Initial version',
+                onDoneEditing: (Quest updatedQuest, [String? changeMessage]) async {
+                  questSystem.upsertQuest(updatedQuest);
+                  await questRepo.upsertQuest(updatedQuest, changeMessage ?? 'no message provided');
+                  if (context.mounted) Navigator.of(context).pop();
+                },
               ),
             ),
           ),
@@ -230,7 +239,11 @@ class PanWidgetState extends State<PanWidget> {
         child: Card(
           clipBehavior: Clip.antiAlias,
           shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(20)),
-          child: QuestDetailScreen(quest: quest, debugMode: debugMode, editMode: false),
+          child: QuestDetailScreen(quest: quest, debugMode: debugMode, editMode: false, onDoneEditing: (updatedQuest, [changeMessage]) async {
+            await questRepo.upsertQuest(updatedQuest, changeMessage ?? 'no message provided');
+            questSystem.upsertQuest(updatedQuest);
+            if (context.mounted) Navigator.of(context).pop();
+          },),
         ),
       ),
     );
