@@ -1,6 +1,7 @@
 import 'dart:math';
 import 'package:flutter/material.dart';
 import 'package:wurp/logic/quests/quest.dart';
+import 'package:wurp/ui/screens/quests/core/quest_bubbles_overlay.dart';
 
 class QuestBubble extends StatelessWidget {
   final Quest quest;
@@ -40,24 +41,30 @@ class QuestBubble extends StatelessWidget {
         child: Stack(
           children: [
             Positioned.fill(
-              child: Padding(
-                padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 8),
-                child: Column(
-                  mainAxisAlignment: MainAxisAlignment.center,
-                  children: [
-                    Text(
-                      quest.name,
-                      textAlign: TextAlign.center,
-                      style: const TextStyle(
-                        color: Colors.white,
-                        fontSize: 20,
-                        fontWeight: FontWeight.w600,
-                        letterSpacing: 0.4,
-                        height: 1.35,
+              child: InkWell(
+                onTap: () {
+                  print("Tapped quest ${quest.name} (ID: ${quest.id})");
+                  Navigator.push(context, MaterialPageRoute(builder: (context) => const QuestBubblesOverlay()));
+                },
+                child: Padding(
+                  padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 8),
+                  child: Column(
+                    mainAxisAlignment: MainAxisAlignment.center,
+                    children: [
+                      Text(
+                        quest.name,
+                        textAlign: TextAlign.center,
+                        style: const TextStyle(
+                          color: Colors.white,
+                          fontSize: 20,
+                          fontWeight: FontWeight.w600,
+                          letterSpacing: 0.4,
+                          height: 1.35,
+                        ),
                       ),
-                    ),
-                    const SizedBox(height: 5),
-                  ],
+                      const SizedBox(height: 5),
+                    ],
+                  ),
                 ),
               ),
             ),

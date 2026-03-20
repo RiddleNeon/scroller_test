@@ -6,6 +6,7 @@ import 'package:vector_math/vector_math_64.dart' hide Matrix4, Colors;
 import 'package:flutter/material.dart';
 import 'package:wurp/logic/quests/quest_system.dart';
 import 'package:wurp/ui/screens/quests/core/quest_bubbles_overlay.dart';
+import 'package:wurp/ui/screens/quests/core/quest_detail_screen.dart';
 
 import '../../../../logic/quests/quest.dart';
 import '../debug_panel.dart';
@@ -40,9 +41,7 @@ class PanWidgetState extends State<PanWidget> {
   Offset _lastPointerScenePos = Offset.zero;
 
   double get _currentScale => _controller.value.getMaxScaleOnAxis();
-
-  String toJson() => questSystem.toJson();
-
+  
   Quest? _findQuestAt(Offset scenePos) {
     for (final quest in questSystem.quests.values) {
       if (quest.rect.contains(scenePos)) return quest;
@@ -197,6 +196,24 @@ class PanWidgetState extends State<PanWidget> {
     _debugPanelKey.currentState?.inspectQuest(quest.id);
   }
 
+  void _onTap() {
+    print("tap at scene pos $_lastPointerScenePos");
+    final quest = _findQuestAt(_lastPointerScenePos);
+    if (quest == null) return;
+    print("Tapped quest ${quest.name} (ID: ${quest.id})");
+    showDialog(context: context, builder: (context) => FractionallySizedBox(
+      widthFactor: 0.8,
+      heightFactor: 0.8,
+      child: Card(
+        clipBehavior: Clip.antiAlias,
+        shape: RoundedRectangleBorder(
+          borderRadius: BorderRadius.circular(20),
+        ),
+        child: QuestDetailScreen(quest: quest, debugMode: debugMode,),
+      ),
+    ));
+  }
+
   void _focusOnQuest(Quest quest) {
     final renderBox = context.findRenderObject() as RenderBox?;
     if (renderBox == null) return;
@@ -247,16 +264,14 @@ class PanWidgetState extends State<PanWidget> {
               ),
             ),
             Positioned.fill(
-              child: IgnorePointer(
-                child: AnimatedBuilder(
-                  animation: _controller,
-                  builder: (context, child) => Transform(
-                    transform: _controller.value,
-                    alignment: Alignment.topLeft,
-                    child: child,
-                  ),
-                  child: QuestBubblesOverlay(key: _overlayKey),
+              child: AnimatedBuilder(
+                animation: _controller,
+                builder: (context, child) => Transform(
+                  transform: _controller.value,
+                  alignment: Alignment.topLeft,
+                  child: child,
                 ),
+                child: QuestBubblesOverlay(key: _overlayKey),
               ),
             ),
             Positioned.fill(
@@ -267,6 +282,8 @@ class PanWidgetState extends State<PanWidget> {
                 onScaleEnd: _onScaleEnd,
                 onDoubleTapDown: _onDoubleTapDown,
                 onDoubleTap: _onDoubleTap,
+                onTap: _onTap,
+                onTapDown: _onDoubleTapDown,
               ),
             ),
             const Positioned.fill(

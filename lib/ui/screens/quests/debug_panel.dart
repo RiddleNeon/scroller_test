@@ -1,6 +1,7 @@
 import 'dart:async';
 
 import 'package:flutter/material.dart';
+import 'package:flutter/services.dart';
 import 'package:wurp/logic/quests/quest.dart';
 import 'package:wurp/logic/quests/quest_system.dart';
 import 'package:wurp/logic/repositories/quest_repository.dart';
@@ -297,6 +298,17 @@ class _PanelHeader extends StatelessWidget {
           Text(
             '${questSystem.quests.length} quests',
             style: const TextStyle(color: Colors.white38, fontSize: 11),
+          ),
+          const SizedBox(width: 8),
+          _DebugIconButton(
+            icon: Icons.download,
+            tooltip: 'print json',
+            color: Colors.orangeAccent,
+            onTap: () {
+              String? result = questSystem.toJson();
+              if(result != null) Clipboard.setData(ClipboardData(text: result));
+              print(result ?? "error generating json");
+            },
           ),
           const SizedBox(width: 8),
           _DebugIconButton(

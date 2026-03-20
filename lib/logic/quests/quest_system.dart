@@ -54,24 +54,28 @@ class QuestSystem with ChangeNotifier {
     notifyListeners();
   }
 
-  String toJson() {
-    return jsonEncode(
-      quests.values
-          .map(
-            (q) => {
-              'id': q.id,
-              'name': q.name,
-              'description': q.description,
-              'subject': q.subject,
-              'posX': q.posX,
-              'posY': q.posY,
-              'sizeX': q.sizeX,
-              'sizeY': q.sizeY,
-              'difficulty': q.difficulty,
-              'prerequisites': q.prerequisites.map((p) => p.id).toList(),
-            },
-          ).toList(),
-    );
+  String? toJson() {
+    try {
+      return jsonEncode(
+        quests.values
+            .map(
+              (q) => {
+                'id': q.id,
+                'name': q.name,
+                'description': q.description,
+                'subject': q.subject,
+                'posX': q.posX,
+                'posY': q.posY,
+                'sizeX': q.sizeX,
+                'sizeY': q.sizeY,
+                'difficulty': q.difficulty,
+                'prerequisites': q.prerequisites.map((p) => p.id).toList(),
+              },
+            ).toList(),
+      );
+    } on Exception catch (e) {
+      return null;
+    }
   }
 }
 
