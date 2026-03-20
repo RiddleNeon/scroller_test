@@ -22,6 +22,8 @@ class QuestLineConnectionPainter extends CustomPainter {
         final endCenter = _centerOf(prereq.id);
         final prereqColor = glowColorOfQuest(prereq.id);
 
+        if (startCenter == null || endCenter == null) continue;
+
         final curveControl = _curveControl(startCenter, endCenter);
 
         final path = Path()
@@ -33,19 +35,22 @@ class QuestLineConnectionPainter extends CustomPainter {
           Paint()
             ..shader = ui.Gradient.linear(startCenter, endCenter, [questColor.withValues(alpha: 0.65), prereqColor.withValues(alpha: 0.65)])
             ..strokeWidth = 1.5
-            ..style = PaintingStyle.stroke,
+            ..style = PaintingStyle.stroke
         );
       }
     }
   }
 
-  Offset _centerOf(int id) {
-    if (id == currentDraggedQuestId && currentDraggedQuestPos != null) {
-      final quest = questSystem.getQuestById(id);
-      return currentDraggedQuestPos! + Offset(quest.sizeX, quest.sizeY) / 2;
-    }
-    final quest = questSystem.getQuestById(id);
-    return quest.position + Offset(quest.sizeX, quest.sizeY) / 2;
+  Offset? _centerOf(int id) {
+    final quest = id == currentDraggedQuestId && currentDraggedQuestPos != null
+        ? questSystem.maybeGetQuestById(id)
+        : questSystem.maybeGetQuestById(id);
+    if (quest == null) return null;
+
+    final pos = (id == currentDraggedQuestId && currentDraggedQuestPos != null)
+        ? currentDraggedQuestPos!
+        : quest.position;
+    return pos + Offset(quest.sizeX, quest.sizeY) / 2;
   }
 
 

@@ -26,9 +26,6 @@ class BottomNavBarState extends State<BottomNavBar> {
     final index = items.indexWhere((item) => item.id == id);
     if (index != -1) {
       switchToIndex(index);
-      print("Switched nav bar to id: $id at index: $index");
-    } else {
-      print("No nav bar item found for id: $id, available ids: ${items.map((e) => e.id).join(", ")}");
     }
   }
   

@@ -10,21 +10,27 @@ class QuestSystem with ChangeNotifier {
 
   Map<int, Quest> _quests = {};
   List<Quest> get quests => _quests.values.toList();
-  
-  void revalidateQuests() {
-    _quests = Map.fromEntries(_allQuests.entries.where((e) => !e.value.isDeleted));
+
+  // ── Internal ───────────────────────────────────────────────────────────────
+
+  void _revalidate() {
+    _quests = Map.fromEntries(
+      _allQuests.entries.where((e) => !e.value.isDeleted),
+    );
   }
+
+  // ── Quest mutations ────────────────────────────────────────────────────────
 
   void upsertQuest(Quest quest) {
     _allQuests[quest.id] = quest;
-    revalidateQuests();
+    _revalidate();
     notifyListeners();
   }
 
   void removeQuest(int id) {
     _allQuests[id]?.isDeleted = true;
+    _revalidate(); // revalidate BEFORE notify so listeners see a consistent state
     notifyListeners();
-    revalidateQuests();
   }
 
   void moveQuest(int id, double newX, double newY) {
@@ -32,15 +38,36 @@ class QuestSystem with ChangeNotifier {
     if (quest == null || quest.isDeleted) return;
     quest.posX = newX;
     quest.posY = newY;
+    // No revalidate needed; isDeleted didn't change
     notifyListeners();
-    revalidateQuests();
   }
-  
+
   Quest getQuestById(int id) => _quests[id]!;
+  Quest? maybeGetQuestById(int id) => _quests[id];
+
+  // ── Connection mutations ───────────────────────────────────────────────────
+
+  void addConnection(int fromId, int toId) {
+    final from = _allQuests[fromId];
+    final to = _allQuests[toId];
+    if (from == null || to == null || from.isDeleted || to.isDeleted) return;
+    if (!from.prerequisites.any((q) => q.id == toId)) {
+      from.prerequisites.add(to);
+    }
+    notifyListeners();
+  }
+
+  void removeConnection(int fromId, int toId) {
+    _allQuests[fromId]?.prerequisites.removeWhere((q) => q.id == toId);
+    notifyListeners();
+  }
+
+  // ── Loading ────────────────────────────────────────────────────────────────
 
   /// Loads quests from the bundled [assets/quests.json] file (offline / dev).
   Future<void> loadFromAssets() async {
-    final rawJson = jsonDecode(await rootBundle.loadString('assets/quests.json')) as List;
+    final rawJson =
+    jsonDecode(await rootBundle.loadString('assets/quests.json')) as List;
     final json = rawJson.cast<Map<String, dynamic>>();
 
     for (final data in json) {
@@ -53,8 +80,12 @@ class QuestSystem with ChangeNotifier {
       final prereqIds = (data['prerequisites'] as List?)?.cast<int>();
       if (prereqIds == null || prereqIds.isEmpty) continue;
 
-      assert(prereqIds.every(_quests.containsKey), 'All prerequisite IDs must reference existing quests.');
-      _quests[data['id'] as int]!.prerequisites = prereqIds.map((id) => _quests[id]!).toList();
+      assert(
+      prereqIds.every(_quests.containsKey),
+      'All prerequisite IDs must reference existing quests.',
+      );
+      _quests[data['id'] as int]!.prerequisites =
+          prereqIds.map((id) => _quests[id]!).toList();
     }
 
     notifyListeners();
@@ -64,13 +95,13 @@ class QuestSystem with ChangeNotifier {
   /// local map. Existing quests with the same ID are replaced.
   Future<void> loadFromServer(String subject) async {
     final fetched = await questRepo.fetchQuestsBySubject(subject);
-
     for (final quest in fetched) {
       upsertQuest(quest);
     }
-
     notifyListeners();
   }
+
+  // ── Serialisation ──────────────────────────────────────────────────────────
 
   String? toJson() {
     try {
@@ -78,18 +109,18 @@ class QuestSystem with ChangeNotifier {
         _quests.values
             .map(
               (q) => {
-                'id': q.id,
-                'name': q.name,
-                'description': q.description,
-                'subject': q.subject,
-                'posX': q.posX,
-                'posY': q.posY,
-                'sizeX': q.sizeX,
-                'sizeY': q.sizeY,
-                'difficulty': q.difficulty,
-                'prerequisites': q.prerequisites.map((p) => p.id).toList(),
-              },
-            )
+            'id': q.id,
+            'name': q.name,
+            'description': q.description,
+            'subject': q.subject,
+            'posX': q.posX,
+            'posY': q.posY,
+            'sizeX': q.sizeX,
+            'sizeY': q.sizeY,
+            'difficulty': q.difficulty,
+            'prerequisites': q.prerequisites.map((p) => p.id).toList(),
+          },
+        )
             .toList(),
       );
     } on Exception {

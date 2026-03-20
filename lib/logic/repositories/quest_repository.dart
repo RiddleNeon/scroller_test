@@ -1,5 +1,4 @@
 import 'package:wurp/logic/quests/quest.dart';
-import 'package:wurp/logic/quests/quest_system.dart';
 import 'package:wurp/tools/supabase_tests/supabase_login_test.dart';
 
 import '../../base_logic.dart';
@@ -21,6 +20,7 @@ class QuestRepository {
     'pos_y': quest.posY.toInt(),
     'size_x': quest.sizeX.toInt(),
     'size_y': quest.sizeY.toInt(),
+    'is_deleted': quest.isDeleted,
   };
 
   Quest _questFromRow(Map<String, dynamic> row) => Quest(
@@ -35,7 +35,6 @@ class QuestRepository {
     sizeY: (row['size_y'] as num).toDouble(),
   );
 
-  
   // ── Fetch ──────────────────────────────────────────────────────────────────
 
   /// Loads all non-deleted quests for [subject] and wires up their
@@ -48,7 +47,6 @@ class QuestRepository {
 
     if (questMap.isEmpty) return [];
 
-    // 2. Fetch active connections whose both ends are in our quest set.
     final connectionRows = await supabaseClient
         .from('quest_connections_full')
         .select('from_id, to_id')
@@ -65,76 +63,47 @@ class QuestRepository {
     return questMap.values.toList();
   }
 
-  // ── Write ──────────────────────────────────────────────────────────────────
-
   /// Inserts a new quest row and its first version.
-  Future<void> addQuest(Quest quest, [String? message]) async {
-    print("Adding new quest ${quest.id}");
+  Future<void> addQuest(Quest quest, [String message = 'initial version']) async {
+    print('Adding new quest ${quest.id}');
     await supabaseClient.from('quests').insert({'id': quest.id, 'created_by': currentUser.id});
-    await updateQuest(quest, message ?? 'initial version');
+    await updateQuest(quest, message);
   }
 
   /// Appends a new version snapshot for an existing quest.
   Future<void> updateQuest(Quest quest, String message) async {
-    print("Updating quest ${quest.id}: $message");
+    print('Updating quest ${quest.id}: $message');
     await supabaseClient.from('quest_versions').insert(_questToMap(quest, message)).select().single();
   }
-  
+
+  /// Inserts or updates depending on whether the quest already exists in the DB.
   Future<void> upsertQuest(Quest quest, String message) async {
-    print("Upserting quest ${quest.id}: $message");
+    print('Upserting quest ${quest.id}: $message');
     final existing = await supabaseClient.from('quests').select('id').eq('id', quest.id).maybeSingle();
     if (existing == null) {
-      await addQuest(quest);
+      await addQuest(quest, message);
     } else {
       await updateQuest(quest, message);
     }
   }
 
   /// Soft-deletes a quest by inserting a version with is_deleted = true.
-  /// Hard deletion (cascade) is handled by the DB foreign-key constraints.
-  Future<void> deleteQuest(int questId) async {
-    print("Deleting quest $questId");
-    await supabaseClient
-        .from('quest_versions')
-        .insert({
-          'created_by': currentUser.id,
-          'quest_id': questId,
-          'title': '',
-          'description': '',
-          'subject': '',
-          'difficulty': 0.0,
-          'update_message': 'quest deleted',
-          'pos_x': 0,
-          'pos_y': 0,
-          'size_x': 0,
-          'size_y': 0,
-          'is_deleted': true,
-        })
-        .select()
-        .single();
-  }
-
-  // ── Connections ────────────────────────────────────────────────────────────
+  Future<void> deleteQuest(Quest quest) => upsertQuest(quest.copyWith(isDeleted: true), 'quest deleted');
 
   /// Creates a prerequisite connection: [toId] must be completed before [fromId].
+  /// Does NOT mutate local state – the caller (QuestChangeManager) is responsible
+  /// for that via [QuestSystem.addConnection].
   Future<void> addConnection(int fromId, int toId) async {
-    print("Adding connection from $fromId to $toId");
-    
-    String message;
-    bool exists = await supabaseClient
-        .from('quest_connections')
-        .select('from_id, to_id')
-        .eq('from_id', fromId)
-        .eq('to_id', toId)
-        .maybeSingle() != null;
-    if(!exists) {
+    print('Adding connection from $fromId to $toId');
+
+    final exists = await supabaseClient.from('quest_connections').select('from_id, to_id').eq('from_id', fromId).eq('to_id', toId).maybeSingle() != null;
+
+    final message = exists ? 'connection updated' : 'connection added';
+
+    if (!exists) {
       await supabaseClient.from('quest_connections').insert({'from_id': fromId, 'to_id': toId, 'created_by': currentUser.id});
-      message = 'connection added';
-      // Append a version marking the connection as active.
-    } else {
-      message = 'connection updated';
     }
-    
+
     await supabaseClient.from('quest_connection_versions').insert({
       'from_id': fromId,
       'to_id': toId,
@@ -143,13 +112,12 @@ class QuestRepository {
       'update_message': message,
       'created_by': currentUser.id,
     });
-    
-    questSystem.getQuestById(fromId).prerequisites.add(questSystem.getQuestById(toId));
   }
 
   /// Soft-deletes a prerequisite connection.
+  /// Does NOT mutate local state – the caller (QuestChangeManager) is responsible.
   Future<void> removeConnection(int fromId, int toId) async {
-    print("Removing connection from $fromId to $toId");
+    print('Removing connection from $fromId to $toId');
     await supabaseClient.from('quest_connection_versions').insert({
       'from_id': fromId,
       'to_id': toId,
@@ -158,6 +126,5 @@ class QuestRepository {
       'update_message': 'connection removed',
       'created_by': currentUser.id,
     });
-    questSystem.quests[fromId].prerequisites.removeWhere((q) => q.id == toId);
   }
 }

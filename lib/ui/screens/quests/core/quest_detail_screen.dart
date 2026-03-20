@@ -127,6 +127,7 @@ class _QuestDetailScreenState extends State<QuestDetailScreen> {
         actions: [
           TextButton(onPressed: () => Navigator.pop(context), child: const Text('Cancel')),
           ElevatedButton(onPressed: () {
+            setState(() => _isDeleted = true);
             widget.onDoneEditing?.call(_buildUpdatedQuest());
             Navigator.pop(context);
           }, style: ElevatedButton.styleFrom(backgroundColor: Colors.red), child: const Text('Delete')),
