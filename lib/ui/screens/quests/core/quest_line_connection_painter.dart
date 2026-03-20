@@ -41,10 +41,10 @@ class QuestLineConnectionPainter extends CustomPainter {
 
   Offset _centerOf(int id) {
     if (id == currentDraggedQuestId && currentDraggedQuestPos != null) {
-      final quest = questSystem.quests[id];
+      final quest = questSystem.getQuestById(id);
       return currentDraggedQuestPos! + Offset(quest.sizeX, quest.sizeY) / 2;
     }
-    final quest = questSystem.quests[id];
+    final quest = questSystem.getQuestById(id);
     return quest.position + Offset(quest.sizeX, quest.sizeY) / 2;
   }
 

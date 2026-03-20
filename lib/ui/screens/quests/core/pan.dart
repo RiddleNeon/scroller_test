@@ -56,6 +56,11 @@ class PanWidgetState extends State<PanWidget> {
     revalidateBoundaries();
     super.initState();
   }
+  @override
+  dispose() {
+    questSystem.removeListener(() => revalidateBoundaries());
+    super.dispose();
+  }
 
   Offset _boundaryMax = Offset.zero;
   Offset _boundaryMin = Offset.zero;

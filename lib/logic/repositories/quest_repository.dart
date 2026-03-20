@@ -144,7 +144,7 @@ class QuestRepository {
       'created_by': currentUser.id,
     });
     
-    questSystem.quests[fromId].prerequisites.add(questSystem.quests[toId]);
+    questSystem.getQuestById(fromId).prerequisites.add(questSystem.getQuestById(toId));
   }
 
   /// Soft-deletes a prerequisite connection.

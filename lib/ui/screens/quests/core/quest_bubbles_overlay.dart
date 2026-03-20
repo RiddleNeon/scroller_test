@@ -21,6 +21,7 @@ class QuestBubblesOverlayState extends State<QuestBubblesOverlay> {
     super.initState();
     _connectionPainter = QuestLineConnectionPainter();
     _worldBounds = _computeWorldBounds();
+    questSystem.addListener(() => _worldBounds = _computeWorldBounds());
   }
 
 

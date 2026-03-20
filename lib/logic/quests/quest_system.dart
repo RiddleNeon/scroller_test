@@ -16,24 +16,24 @@ class QuestSystem with ChangeNotifier {
   }
 
   void upsertQuest(Quest quest) {
-    if(_allQuests[quest.id]?.isDeleted != quest.isDeleted) { 
-      revalidateQuests();
-    }
     _allQuests[quest.id] = quest;
+    revalidateQuests();
     notifyListeners();
   }
 
   void removeQuest(int id) {
     _allQuests[id]?.isDeleted = true;
     notifyListeners();
+    revalidateQuests();
   }
 
   void moveQuest(int id, double newX, double newY) {
-    final quest = _quests[id];
+    final quest = _allQuests[id];
     if (quest == null || quest.isDeleted) return;
     quest.posX = newX;
     quest.posY = newY;
     notifyListeners();
+    revalidateQuests();
   }
   
   Quest getQuestById(int id) => _quests[id]!;

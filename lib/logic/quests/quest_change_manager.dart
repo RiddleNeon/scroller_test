@@ -31,13 +31,7 @@ class QuestChangeManager with ChangeNotifier {
   
   //removes changes that are undone or no longer relevant
   void handleConflicts() {
-    
-    for (var value in _pendingChanges) {
-      if (value.quest.isDeleted) {
-        _pendingChanges.remove(value);
-      }
-    }
-    
+    _pendingChanges.removeWhere((c) => c.quest.isDeleted);
   }
 }
 
