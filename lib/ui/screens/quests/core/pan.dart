@@ -1,9 +1,9 @@
 // ignore_for_file: deprecated_member_use
 
 import 'package:flutter/gestures.dart';
+import 'package:flutter/material.dart';
 import 'package:flutter/rendering.dart';
 import 'package:vector_math/vector_math_64.dart' hide Matrix4, Colors;
-import 'package:flutter/material.dart';
 import 'package:wurp/logic/quests/quest_system.dart';
 import 'package:wurp/ui/screens/quests/core/quest_bubbles_overlay.dart';
 import 'package:wurp/ui/screens/quests/core/quest_detail_screen.dart';
@@ -25,8 +25,8 @@ class PanWidgetState extends State<PanWidget> {
   late final TransformationController _controller = widget.controller ?? TransformationController();
 
   bool debugMode = false;
-  
-  final _overlayKey = GlobalKey<QuestBubblesOverlayState>();
+
+  final _questBubbleOverlayKey = GlobalKey<QuestBubblesOverlayState>();
   final _debugPanelKey = GlobalKey<QuestDebugPanelState>();
 
   Quest? _draggingQuest;
@@ -41,7 +41,7 @@ class PanWidgetState extends State<PanWidget> {
   Offset _lastPointerScenePos = Offset.zero;
 
   double get _currentScale => _controller.value.getMaxScaleOnAxis();
-  
+
   Quest? _findQuestAt(Offset scenePos) {
     for (final quest in questSystem.quests.values) {
       if (quest.rect.contains(scenePos)) return quest;
@@ -55,7 +55,6 @@ class PanWidgetState extends State<PanWidget> {
     revalidateBoundaries();
     super.initState();
   }
-
 
   Offset _boundaryMax = Offset.zero;
   Offset _boundaryMin = Offset.zero;
@@ -102,7 +101,7 @@ class PanWidgetState extends State<PanWidget> {
     _draggingQuest = _findQuestAt(scenePos);
     _dragStartQuestPos = _draggingQuest?.position ?? Offset.zero;
 
-    _overlayKey.currentState?.setDragState(questId: _draggingQuest?.id, position: _draggingQuest != null ? _dragStartQuestPos : null);
+    _questBubbleOverlayKey.currentState?.setDragState(questId: _draggingQuest?.id, position: _draggingQuest != null ? _dragStartQuestPos : null);
   }
 
   Size get _viewSize {
@@ -115,9 +114,8 @@ class PanWidgetState extends State<PanWidget> {
   static const maxScale = 3000.0;
 
   (double, double) _clampTranslation(double tx, double ty, double s) {
+    if (debugMode) return (tx, ty);
 
-    if(debugMode) return (tx, ty);
-    
     final v = _viewSize;
     final txMin = v.width - _padding - _boundaryMax.dx * s;
     final txMax = -_boundaryMin.dx * s + _padding;
@@ -135,16 +133,14 @@ class PanWidgetState extends State<PanWidget> {
     if (_draggingQuest != null) {
       final currentScale = _currentScale;
       final newPos = _dragStartQuestPos + (_focalDelta / currentScale);
-      _overlayKey.currentState?.setDragState(questId: _draggingQuest!.id, position: newPos);
+      _questBubbleOverlayKey.currentState?.setDragState(questId: _draggingQuest!.id, position: newPos);
       return;
     }
 
     final s = (_scaleAtGestureStart * details.scale).clamp(minScale, maxScale);
 
-    var tx = details.localFocalPoint.dx -
-        s * (_focalAtGestureStart.dx - _txAtGestureStart) / _scaleAtGestureStart;
-    var ty = details.localFocalPoint.dy -
-        s * (_focalAtGestureStart.dy - _tyAtGestureStart) / _scaleAtGestureStart;
+    var tx = details.localFocalPoint.dx - s * (_focalAtGestureStart.dx - _txAtGestureStart) / _scaleAtGestureStart;
+    var ty = details.localFocalPoint.dy - s * (_focalAtGestureStart.dy - _tyAtGestureStart) / _scaleAtGestureStart;
 
     (tx, ty) = _clampTranslation(tx, ty, s);
 
@@ -158,10 +154,8 @@ class PanWidgetState extends State<PanWidget> {
 
     const zoomSensitivity = 0.0010;
 
-
     final currentScale = _currentScale;
-    final newScale = (currentScale * (1.0 - event.scrollDelta.dy * zoomSensitivity))
-        .clamp(minScale, maxScale);
+    final newScale = (currentScale * (1.0 - event.scrollDelta.dy * zoomSensitivity)).clamp(minScale, maxScale);
 
     final currentTx = _controller.value.entry(0, 3);
     final currentTy = _controller.value.entry(1, 3);
@@ -182,7 +176,7 @@ class PanWidgetState extends State<PanWidget> {
       final currentScale = _currentScale;
       questSystem.moveQuest(_draggingQuest!.id, _draggingQuest!.posX + (_focalDelta.dx / currentScale), _draggingQuest!.posY + (_focalDelta.dy / currentScale));
     }
-    _overlayKey.currentState?.setDragState(questId: null, position: null);
+    _questBubbleOverlayKey.currentState?.setDragState(questId: null, position: null);
     setState(() => _draggingQuest = null);
   }
 
@@ -192,8 +186,35 @@ class PanWidgetState extends State<PanWidget> {
 
   void _onDoubleTap() {
     final quest = _findQuestAt(_lastPointerScenePos);
-    if (quest == null) return;
+    if (quest == null) {
+      showQuestAddOverlay(_lastPointerScenePos);
+      return;
+    }
     _debugPanelKey.currentState?.inspectQuest(quest.id);
+  }
+
+  ///shows an overlay to add a new quest at the given scene position.
+  void showQuestAddOverlay(Offset scenePos) {
+    showDialog(
+      context: context,
+      builder: (context) {
+        return Center(
+          child: FractionallySizedBox(
+            widthFactor: 0.9,
+            heightFactor: 0.9,
+            child: Card(
+              clipBehavior: Clip.antiAlias,
+              shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(20)),
+              child: QuestDetailScreen(
+                quest: Quest(id: DateTime.now().millisecondsSinceEpoch, name: 'No name provided', description: 'No description provided', subject: 'General'),
+                debugMode: debugMode,
+                editMode: true,
+              ),
+            ),
+          ),
+        );
+      },
+    );
   }
 
   void _onTap() {
@@ -201,17 +222,18 @@ class PanWidgetState extends State<PanWidget> {
     final quest = _findQuestAt(_lastPointerScenePos);
     if (quest == null) return;
     print("Tapped quest ${quest.name} (ID: ${quest.id})");
-    showDialog(context: context, builder: (context) => FractionallySizedBox(
-      widthFactor: 0.8,
-      heightFactor: 0.8,
-      child: Card(
-        clipBehavior: Clip.antiAlias,
-        shape: RoundedRectangleBorder(
-          borderRadius: BorderRadius.circular(20),
+    showDialog(
+      context: context,
+      builder: (context) => FractionallySizedBox(
+        widthFactor: 0.8,
+        heightFactor: 0.8,
+        child: Card(
+          clipBehavior: Clip.antiAlias,
+          shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(20)),
+          child: QuestDetailScreen(quest: quest, debugMode: debugMode, editMode: false),
         ),
-        child: QuestDetailScreen(quest: quest, debugMode: debugMode,),
       ),
-    ));
+    );
   }
 
   void _focusOnQuest(Quest quest) {
@@ -228,7 +250,6 @@ class PanWidgetState extends State<PanWidget> {
       ..translate(targetX / scale, targetY / scale);
   }
 
-
   @override
   Widget build(BuildContext context) {
     return Listener(
@@ -244,64 +265,60 @@ class PanWidgetState extends State<PanWidget> {
         }
       },
       child: ClipRRect(
-      borderRadius: BorderRadius.circular(20),
-      child: DecoratedBox(
-        decoration: const BoxDecoration(color: Color(0xFF0A1218)),
-        child: Stack(
-          children: [
-            Positioned.fill(child: InfiniteDotsBackground(controller: _controller)),
-            Positioned.fill(
-              child: IgnorePointer(
-                child: DecoratedBox(
-                  decoration: BoxDecoration(
-                    gradient: RadialGradient(
-                      center: Alignment.center,
-                      radius: 1.15,
-                      colors: [Colors.transparent, const Color(0xFF0A1218).withValues(alpha: 0.72)],
+        borderRadius: BorderRadius.circular(20),
+        child: DecoratedBox(
+          decoration: const BoxDecoration(color: Color(0xFF0A1218)),
+          child: Stack(
+            children: [
+              Positioned.fill(child: InfiniteDotsBackground(controller: _controller)),
+              Positioned.fill(
+                child: IgnorePointer(
+                  child: DecoratedBox(
+                    decoration: BoxDecoration(
+                      gradient: RadialGradient(
+                        center: Alignment.center,
+                        radius: 1.15,
+                        colors: [Colors.transparent, const Color(0xFF0A1218).withValues(alpha: 0.72)],
+                      ),
                     ),
                   ),
                 ),
               ),
-            ),
-            Positioned.fill(
-              child: AnimatedBuilder(
-                animation: _controller,
-                builder: (context, child) => Transform(
-                  transform: _controller.value,
-                  alignment: Alignment.topLeft,
-                  child: child,
-                ),
-                child: QuestBubblesOverlay(key: _overlayKey),
-              ),
-            ),
-            Positioned.fill(
-              child: GestureDetector(
-                behavior: HitTestBehavior.opaque,
-                onScaleStart: _onScaleStart,
-                onScaleUpdate: _onScaleUpdate,
-                onScaleEnd: _onScaleEnd,
-                onDoubleTapDown: _onDoubleTapDown,
-                onDoubleTap: _onDoubleTap,
-                onTap: _onTap,
-                onTapDown: _onDoubleTapDown,
-              ),
-            ),
-            const Positioned.fill(
-              child: IgnorePointer(
-                child: Column(
-                  children: [
-                    _EdgeFade(fromColor: Color(0xFF0A1218)),
-                    Spacer(),
-                    _EdgeFade(fromColor: Color(0xFF0A1218), flip: true),
-                  ],
+              Positioned.fill(
+                child: AnimatedBuilder(
+                  animation: _controller,
+                  builder: (context, child) => Transform(transform: _controller.value, alignment: Alignment.topLeft, child: child),
+                  child: QuestBubblesOverlay(key: _questBubbleOverlayKey),
                 ),
               ),
-            ),
-            if(debugMode) QuestDebugPanel(key: _debugPanelKey, onChanged: () => _overlayKey.currentState?.refresh(), onFocusQuest: _focusOnQuest),
-          ],
+              Positioned.fill(
+                child: GestureDetector(
+                  behavior: HitTestBehavior.opaque,
+                  onScaleStart: _onScaleStart,
+                  onScaleUpdate: _onScaleUpdate,
+                  onScaleEnd: _onScaleEnd,
+                  onDoubleTapDown: _onDoubleTapDown,
+                  onDoubleTap: _onDoubleTap,
+                  onTap: _onTap,
+                  onTapDown: _onDoubleTapDown,
+                ),
+              ),
+              const Positioned.fill(
+                child: IgnorePointer(
+                  child: Column(
+                    children: [
+                      _EdgeFade(fromColor: Color(0xFF0A1218)),
+                      Spacer(),
+                      _EdgeFade(fromColor: Color(0xFF0A1218), flip: true),
+                    ],
+                  ),
+                ),
+              ),
+              if (debugMode) QuestDebugPanel(key: _debugPanelKey, onChanged: () => _questBubbleOverlayKey.currentState?.refresh(), onFocusQuest: _focusOnQuest),
+            ],
+          ),
         ),
       ),
-    ),
     );
   }
 }

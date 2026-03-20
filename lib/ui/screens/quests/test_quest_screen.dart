@@ -1,7 +1,6 @@
 //test app for the quest screen
 
 import 'package:flutter/material.dart';
-import 'package:flutter/services.dart';
 import 'package:wurp/ui/screens/quests/core/pan.dart';
 
 class TestQuestScreen extends StatefulWidget {

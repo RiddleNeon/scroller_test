@@ -4,8 +4,10 @@ import 'package:wurp/logic/quests/quest.dart';
 class QuestDetailScreen extends StatelessWidget {
   final Quest quest;
   final bool debugMode;
+  final bool editMode;
+  final void Function(Quest updatedQuest)? onDoneEditing;
 
-  const QuestDetailScreen({super.key, required this.quest, required this.debugMode});
+  const QuestDetailScreen({super.key, required this.quest, required this.debugMode, required this.editMode, this.onDoneEditing});
 
   @override
   Widget build(BuildContext context) {
@@ -25,25 +27,25 @@ class QuestDetailScreen extends StatelessWidget {
                 const SizedBox(height: 24),
                 _SectionCard(
                   colorScheme: colorScheme,
-                  child: _DescriptionSection(quest: quest, colorScheme: colorScheme),
+                  child: _DescriptionSection(quest: quest, colorScheme: colorScheme, editMode: editMode),
                 ),
                 const SizedBox(height: 16),
                 _SectionCard(
                   colorScheme: colorScheme,
-                  child: _DifficultySection(quest: quest, colorScheme: colorScheme),
+                  child: _DifficultySection(quest: quest, colorScheme: colorScheme, editMode: editMode),
                 ),
                 if (quest.prerequisites.isNotEmpty) ...[
                   const SizedBox(height: 16),
                   _SectionCard(
                     colorScheme: colorScheme,
-                    child: _PrerequisitesSection(quest: quest, colorScheme: colorScheme, debugMode: debugMode,),
+                    child: _PrerequisitesSection(quest: quest, colorScheme: colorScheme, debugMode: debugMode, editMode: editMode),
                   ),
                 ],
                 const SizedBox(height: 16),
                 if (debugMode)
                   _SectionCard(
                     colorScheme: colorScheme,
-                    child: _MetaSection(quest: quest, colorScheme: colorScheme),
+                    child: _MetaSection(quest: quest, colorScheme: colorScheme, editMode: editMode),
                   ),
               ]),
             ),
@@ -262,8 +264,9 @@ class _SectionCard extends StatelessWidget {
 class _DescriptionSection extends StatelessWidget {
   final Quest quest;
   final ColorScheme colorScheme;
+  final bool editMode;
 
-  const _DescriptionSection({required this.quest, required this.colorScheme});
+  const _DescriptionSection({required this.quest, required this.colorScheme, required this.editMode});
 
   @override
   Widget build(BuildContext context) {
@@ -274,7 +277,7 @@ class _DescriptionSection extends StatelessWidget {
         children: [
           _SectionLabel(label: 'Description', colorScheme: colorScheme),
           const SizedBox(height: 10),
-          Text(quest.description, style: TextStyle(color: colorScheme.onSurface, fontSize: 15, height: 1.6)),
+          _buildText(quest.description, editMode, TextStyle(color: colorScheme.onSurface, fontSize: 15, height: 1.6)),
         ],
       ),
     );
@@ -286,8 +289,9 @@ class _DescriptionSection extends StatelessWidget {
 class _DifficultySection extends StatelessWidget {
   final Quest quest;
   final ColorScheme colorScheme;
+  final bool editMode;
 
-  const _DifficultySection({required this.quest, required this.colorScheme});
+  const _DifficultySection({required this.quest, required this.colorScheme, required this.editMode});
 
   String _difficultyLabel(double d) {
     if (d < 0.2) return 'Beginner';
@@ -350,8 +354,9 @@ class _PrerequisitesSection extends StatelessWidget {
   final Quest quest;
   final ColorScheme colorScheme;
   final bool debugMode;
+  final bool editMode;
 
-  const _PrerequisitesSection({required this.quest, required this.colorScheme, required this.debugMode});
+  const _PrerequisitesSection({required this.quest, required this.colorScheme, required this.debugMode, required this.editMode});
 
   @override
   Widget build(BuildContext context) {
@@ -417,8 +422,8 @@ class _PrerequisitesSection extends StatelessWidget {
 class _MetaSection extends StatelessWidget {
   final Quest quest;
   final ColorScheme colorScheme;
-
-  const _MetaSection({required this.quest, required this.colorScheme});
+  final bool editMode;
+  const _MetaSection({required this.quest, required this.colorScheme, required this.editMode});
 
   @override
   Widget build(BuildContext context) {
@@ -437,6 +442,7 @@ class _MetaSection extends StatelessWidget {
               _MetaItem(icon: Icons.subject_rounded, label: 'Subject', value: quest.subject),
             ],
             colorScheme: colorScheme,
+            editMode: editMode,
           ),
         ],
       ),
@@ -447,8 +453,9 @@ class _MetaSection extends StatelessWidget {
 class _MetaGrid extends StatelessWidget {
   final List<_MetaItem> items;
   final ColorScheme colorScheme;
+  final bool editMode;
 
-  const _MetaGrid({required this.items, required this.colorScheme});
+  const _MetaGrid({required this.items, required this.colorScheme, required this.editMode});
 
   @override
   Widget build(BuildContext context) {
@@ -459,7 +466,7 @@ class _MetaGrid extends StatelessWidget {
       mainAxisSpacing: 10,
       crossAxisSpacing: 10,
       childAspectRatio: 2.6,
-      children: items.map((item) => _MetaCell(item: item, colorScheme: colorScheme)).toList(),
+      children: items.map((item) => _MetaCell(item: item, colorScheme: colorScheme, editMode: editMode,)).toList(),
     );
   }
 }
@@ -475,8 +482,9 @@ class _MetaItem {
 class _MetaCell extends StatelessWidget {
   final _MetaItem item;
   final ColorScheme colorScheme;
+  final bool editMode;
 
-  const _MetaCell({required this.item, required this.colorScheme});
+  const _MetaCell({required this.item, required this.colorScheme, required this.editMode});
 
   @override
   Widget build(BuildContext context) {
@@ -497,10 +505,11 @@ class _MetaCell extends StatelessWidget {
                   style: TextStyle(color: colorScheme.onSurfaceVariant, fontSize: 10, fontWeight: FontWeight.w500, letterSpacing: 0.5),
                   overflow: TextOverflow.ellipsis,
                 ),
-                Text(
+                _buildText(
                   item.value,
-                  style: TextStyle(color: colorScheme.onSurface, fontSize: 13, fontWeight: FontWeight.w700),
-                  overflow: TextOverflow.ellipsis,
+                  editMode,
+                  TextStyle(color: colorScheme.onSurface, fontSize: 13, fontWeight: FontWeight.w700),
+                  TextOverflow.ellipsis,
                 ),
               ],
             ),
@@ -521,9 +530,20 @@ class _SectionLabel extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    return Text(
-      label.toUpperCase(),
-      style: TextStyle(color: colorScheme.primary, fontSize: 11, fontWeight: FontWeight.w700, letterSpacing: 1.4),
+    return _buildText(label.toUpperCase(), false, TextStyle(color: colorScheme.primary, fontSize: 11, fontWeight: FontWeight.w700, letterSpacing: 1.4));
+  }
+}
+
+
+Widget _buildText(String text, bool editMode, TextStyle style, [TextOverflow? overflow]) {
+  if (editMode) {
+    return TextField(
+      controller: TextEditingController(text: text),
+      style: style,
+      maxLines: null,
+      decoration: const InputDecoration(border: InputBorder.none, isDense: true, contentPadding: EdgeInsets.zero),
     );
+  } else {
+    return Text(text, style: style, overflow: overflow,);
   }
 }

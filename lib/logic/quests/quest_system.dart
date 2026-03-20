@@ -73,7 +73,7 @@ class QuestSystem with ChangeNotifier {
               },
             ).toList(),
       );
-    } on Exception catch (e) {
+    } on Exception {
       return null;
     }
   }
