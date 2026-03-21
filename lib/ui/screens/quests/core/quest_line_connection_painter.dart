@@ -75,14 +75,20 @@ class QuestLineConnectionPainter extends CustomPainter {
       ..style       = PaintingStyle.stroke
       ..strokeCap   = StrokeCap.round;
 
-    const dashLen = 9.0;
-    const gapLen  = 5.0;
-    double drawn = 0;
-    while (drawn < len) {
-      final segEnd = (drawn + dashLen).clamp(0.0, len);
-      canvas.drawLine(start + dir * drawn, start + dir * segEnd, linePaint);
-      drawn += dashLen + gapLen;
-    }
+    
+    final startCenter = start;
+    final endCenter   = start + dir * len;
+    final curveControl = _curveControl(endCenter, startCenter);
+
+    final path = Path()
+      ..moveTo(startCenter.dx, startCenter.dy)
+      ..quadraticBezierTo(
+          curveControl.dx, curveControl.dy, endCenter.dx, endCenter.dy);
+    
+    canvas.drawPath(
+      path,
+      linePaint,
+    );
 
     const arrowSize = 9.0;
     final perp = Offset(-dir.dy, dir.dx);

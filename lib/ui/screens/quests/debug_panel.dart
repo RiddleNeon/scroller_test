@@ -290,24 +290,24 @@ class _QuestListTile extends StatefulWidget {
   final VoidCallback? onFocus;
 
   @override
-  State<_QuestListTile> createState() => _QuestListTileState(initialQuest);
+  State<_QuestListTile> createState() => _QuestListTileState();
 }
 
 enum _SaveState { idle, saved }
 
 class _QuestListTileState extends State<_QuestListTile> with SingleTickerProviderStateMixin {
-  late final _nameCtrl = TextEditingController(text: quest.name);
-  late final _descCtrl = TextEditingController(text: quest.description);
-  late final _subjectCtrl = TextEditingController(text: quest.subject);
-  late final _posXCtrl = TextEditingController(text: quest.posX.toStringAsFixed(1));
-  late final _posYCtrl = TextEditingController(text: quest.posY.toStringAsFixed(1));
-  late final _sizeXCtrl = TextEditingController(text: quest.sizeX.toStringAsFixed(1));
-  late final _sizeYCtrl = TextEditingController(text: quest.sizeY.toStringAsFixed(1));
-  Quest quest;
+  late final TextEditingController _nameCtrl;
+  late final TextEditingController _descCtrl;
+  late final TextEditingController _subjectCtrl;
+  late final TextEditingController _posXCtrl;
+  late final TextEditingController _posYCtrl;
+  late final TextEditingController _sizeXCtrl;
+  late final TextEditingController _sizeYCtrl;
+  late Quest quest;
   
-  _QuestListTileState(this.quest);
+  _QuestListTileState();
   
-  late double? _difficulty;
+  double? _difficulty;
 
   _SaveState _saveState = _SaveState.idle;
   Timer? _saveTimer;
@@ -318,6 +318,17 @@ class _QuestListTileState extends State<_QuestListTile> with SingleTickerProvide
   @override
   void initState() {
     super.initState();
+
+    quest = widget.initialQuest;
+    
+    _nameCtrl = TextEditingController(text: quest.name);
+    _descCtrl = TextEditingController(text: quest.description);
+    _subjectCtrl = TextEditingController(text: quest.subject);
+    _posXCtrl = TextEditingController(text: quest.posX.toStringAsFixed(1));
+    _posYCtrl = TextEditingController(text: quest.posY.toStringAsFixed(1));
+    _sizeXCtrl = TextEditingController(text: quest.sizeX.toStringAsFixed(1));
+    _sizeYCtrl = TextEditingController(text: quest.sizeY.toStringAsFixed(1));
+    
     _chevronCtrl = AnimationController(vsync: this, duration: const Duration(milliseconds: 200), value: widget.isExpanded ? 1.0 : 0.0);
     _chevronAnim = CurvedAnimation(parent: _chevronCtrl, curve: Curves.easeOut);
   }

@@ -1,7 +1,6 @@
 import 'dart:math';
 
 import 'package:flutter/material.dart';
-import 'package:font_awesome_flutter/font_awesome_flutter.dart';
 import 'package:wurp/logic/quests/quest_change_manager.dart';
 
 /// A screen that shows all locally recorded changes since the last push.
@@ -73,6 +72,26 @@ class QuestChangeScreen extends StatelessWidget {
                             ),
                           ],
 
+                          if (undone.isNotEmpty) ...[
+                            SliverToBoxAdapter(
+                              child: _SectionHeader(label: 'Undo', count: undone.length, subtitle: 'undo via ↺'),
+                            ),
+                            SliverList.builder(
+                              itemCount: undone.length,
+                              itemBuilder: (context, index) {
+                                final change = undone[undone.length - 1 - index];
+                                return _ChangeTile(
+                                  key: ObjectKey(change),
+                                  change: change,
+                                  timestamp: changeManager.recordedAt(change),
+                                  state: _TileState.undone,
+                                  onToggle: null,
+                                );
+                              },
+                            ),
+                          ],
+                          
+                          
                           if (skipped.isNotEmpty) ...[
                             SliverToBoxAdapter(
                               child: _SectionHeader(label: 'Skipped', count: skipped.length, subtitle: 'undone locally - not pushed'),
@@ -92,25 +111,7 @@ class QuestChangeScreen extends StatelessWidget {
                               },
                             ),
                           ],
-
-                          if (undone.isNotEmpty) ...[
-                            SliverToBoxAdapter(
-                              child: _SectionHeader(label: 'Undo', count: undone.length, subtitle: 'undo via ↺'),
-                            ),
-                            SliverList.builder(
-                              itemCount: undone.length,
-                              itemBuilder: (context, index) {
-                                final change = undone[undone.length - 1 - index];
-                                return _ChangeTile(
-                                  key: ObjectKey(change),
-                                  change: change,
-                                  timestamp: changeManager.recordedAt(change),
-                                  state: _TileState.undone,
-                                  onToggle: null,
-                                );
-                              },
-                            ),
-                          ],
+                          
                           
                           const SliverToBoxAdapter(child: SizedBox(height: 80)),
                         ],

@@ -1,26 +1,24 @@
 import 'dart:math';
+
 import 'package:flutter/material.dart';
 import 'package:wurp/logic/quests/quest.dart';
+
 const double kConnectionHandleRadius = 12.0;
 
 class QuestBubble extends StatelessWidget {
+  final bool debugMode;
   final Quest quest;
   final bool isConnectionSource;
   final bool isConnectionTarget;
 
-  const QuestBubble({
-    super.key,
-    required this.quest,
-    this.isConnectionSource = false,
-    this.isConnectionTarget = false,
-  });
+  const QuestBubble({super.key, required this.quest, this.isConnectionSource = false, this.isConnectionTarget = false, this.debugMode = false});
 
   @override
   Widget build(BuildContext context) {
-    final baseColor  = getColorFromSeed(quest.id);
-    final darkColor  = _adjustColor(baseColor, lightness: 0.28, saturation: 0.60);
-    final midColor   = _adjustColor(baseColor, lightness: 0.28, saturation: 0.60);
-    final glowColor  = _adjustColor(baseColor, lightness: 0.60, saturation: 0.75);
+    final baseColor = getColorFromSeed(quest.id);
+    final darkColor = _adjustColor(baseColor, lightness: 0.28, saturation: 0.60);
+    final midColor = _adjustColor(baseColor, lightness: 0.28, saturation: 0.60);
+    final glowColor = _adjustColor(baseColor, lightness: 0.60, saturation: 0.75);
 
     final borderColor = isConnectionSource
         ? glowColor
@@ -39,11 +37,7 @@ class QuestBubble extends StatelessWidget {
           height: quest.sizeY,
           decoration: BoxDecoration(
             borderRadius: BorderRadius.circular(quest.sizeY / 2),
-            gradient: LinearGradient(
-              begin: Alignment.topLeft,
-              end: Alignment.bottomRight,
-              colors: [midColor, darkColor],
-            ),
+            gradient: LinearGradient(begin: Alignment.topLeft, end: Alignment.bottomRight, colors: [midColor, darkColor]),
             border: Border.all(color: borderColor, width: borderWidth),
             boxShadow: isConnectionTarget
                 ? [BoxShadow(color: glowColor.withValues(alpha: 0.55), blurRadius: 18, spreadRadius: 3)]
@@ -61,13 +55,7 @@ class QuestBubble extends StatelessWidget {
                   Text(
                     quest.name,
                     textAlign: TextAlign.center,
-                    style: const TextStyle(
-                      color: Colors.white,
-                      fontSize: 20,
-                      fontWeight: FontWeight.w600,
-                      letterSpacing: 0.4,
-                      height: 1.35,
-                    ),
+                    style: const TextStyle(color: Colors.white, fontSize: 20, fontWeight: FontWeight.w600, letterSpacing: 0.4, height: 1.35),
                   ),
                   const SizedBox(height: 5),
                 ],
@@ -76,16 +64,16 @@ class QuestBubble extends StatelessWidget {
           ),
         ),
 
-        Positioned(
-          right: -kConnectionHandleRadius,
-          top: quest.sizeY / 2 - kConnectionHandleRadius,
-          child: _ConnectionHandle(color: glowColor, active: isConnectionSource),
-        ),
+        if (debugMode)
+          Positioned(
+            right: -kConnectionHandleRadius,
+            top: quest.sizeY / 2 - kConnectionHandleRadius,
+            child: _ConnectionHandle(color: glowColor, active: isConnectionSource),
+          ),
       ],
     );
   }
 }
-
 
 class _ConnectionHandle extends StatelessWidget {
   const _ConnectionHandle({required this.color, required this.active});
@@ -103,10 +91,7 @@ class _ConnectionHandle extends StatelessWidget {
       decoration: BoxDecoration(
         shape: BoxShape.circle,
         color: active ? color : color.withValues(alpha: 0.70),
-        border: Border.all(
-          color: Colors.white.withValues(alpha: active ? 0.85 : 0.40),
-          width: 1.5,
-        ),
+        border: Border.all(color: Colors.white.withValues(alpha: active ? 0.85 : 0.40), width: 1.5),
         boxShadow: [
           BoxShadow(
             color: color.withValues(alpha: active ? 0.75 : 0.35),
@@ -114,15 +99,10 @@ class _ConnectionHandle extends StatelessWidget {
           ),
         ],
       ),
-      child: Icon(
-        Icons.add,
-        size: 13,
-        color: Colors.white.withValues(alpha: active ? 1.0 : 0.75),
-      ),
+      child: Icon(Icons.add, size: 13, color: Colors.white.withValues(alpha: active ? 1.0 : 0.75)),
     );
   }
 }
-
 
 Color getColorFromSeed(int seed) {
   final rng = Random(seed);
@@ -134,8 +114,5 @@ Color getColorFromSeed(int seed) {
 
 Color _adjustColor(Color color, {double? lightness, double? saturation}) {
   final hsl = HSLColor.fromColor(color);
-  return hsl
-      .withLightness(lightness ?? hsl.lightness)
-      .withSaturation(saturation ?? hsl.saturation)
-      .toColor();
+  return hsl.withLightness(lightness ?? hsl.lightness).withSaturation(saturation ?? hsl.saturation).toColor();
 }

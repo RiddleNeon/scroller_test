@@ -6,7 +6,8 @@ import 'package:wurp/ui/screens/quests/core/quest_line_connection_painter.dart';
 import 'quest_bubble.dart';
 
 class QuestBubblesOverlay extends StatefulWidget {
-  const QuestBubblesOverlay({super.key});
+  final bool debugMode;
+  const QuestBubblesOverlay({super.key, required this.debugMode});
 
   @override
   State<QuestBubblesOverlay> createState() => QuestBubblesOverlayState();
@@ -93,6 +94,7 @@ class QuestBubblesOverlayState extends State<QuestBubblesOverlay> {
                 quest: quest,
                 isConnectionSource: conn.sourceId == quest.id,
                 isConnectionTarget: conn.targetId == quest.id,
+                debugMode: widget.debugMode,
               ),
             );
           },

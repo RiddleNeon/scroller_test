@@ -60,7 +60,7 @@ class PanWidgetState extends State<PanWidget> {
   Quest? _findQuestInConnectZone(Offset scenePos) {
     const hitRadius = kConnectionHandleRadius * 1.6;
     for (final quest in questSystem.quests) {
-      final handleCenter = Offset(quest.posX + quest.sizeX, quest.posY + quest.sizeY / 2);
+      final handleCenter = Offset(quest.posX + quest.sizeX, quest.posY + quest.sizeY / 2); //on the right side of the bubble
       if ((scenePos - handleCenter).distance <= hitRadius) return quest;
     }
     return null;
@@ -121,19 +121,21 @@ class PanWidgetState extends State<PanWidget> {
     final scenePos = _controller.toScene(details.localFocalPoint);
     _lastPointerScenePos = scenePos;
 
-    final connectQuest = _findQuestInConnectZone(scenePos);
-    if (connectQuest != null) {
-      _isConnecting = true;
-      _connectingFromQuest = connectQuest;
-      _lastConnectionScene = scenePos;
-      _questBubbleOverlayKey.currentState?.setConnectionState(sourceId: connectQuest.id, targetId: null, previewPos: scenePos);
-      return;
+    if(debugMode) {
+      final connectQuest = _findQuestInConnectZone(scenePos);
+      if (connectQuest != null) {
+        _isConnecting = true;
+        _connectingFromQuest = connectQuest;
+        _lastConnectionScene = scenePos;
+        _questBubbleOverlayKey.currentState?.setConnectionState(sourceId: connectQuest.id, targetId: null, previewPos: scenePos);
+        return;
+      }
+
+      _draggingQuest = _findQuestAt(scenePos);
+      _dragStartQuestPos = _draggingQuest?.position ?? Offset.zero;
+
+      _questBubbleOverlayKey.currentState?.setDragState(questId: _draggingQuest?.id, position: _draggingQuest != null ? _dragStartQuestPos : null);
     }
-
-    _draggingQuest = _findQuestAt(scenePos);
-    _dragStartQuestPos = _draggingQuest?.position ?? Offset.zero;
-
-    _questBubbleOverlayKey.currentState?.setDragState(questId: _draggingQuest?.id, position: _draggingQuest != null ? _dragStartQuestPos : null);
   }
 
   void _onScaleUpdate(ScaleUpdateDetails details) {
@@ -212,7 +214,6 @@ class PanWidgetState extends State<PanWidget> {
 
     try {
       changeManager.record(AddConnectionChange(fromId: targetId, toId: sourceId, updateMessage: 'connection drawn'));
-      //changeManager.push(); //fixme
     } catch (e) {
       questSystem.addConnection(targetId, sourceId);
       questRepo.addConnection(targetId, sourceId);
@@ -371,10 +372,16 @@ class PanWidgetState extends State<PanWidget> {
       focusNode: FocusNode(
         onKey: (node, event) {
           if (event.logicalKey == LogicalKeyboardKey.keyZ && event is RawKeyDownEvent && (event.isMetaPressed || event.isControlPressed)) {
-            changeManager.undo();
+            setState(() {
+              changeManager.undo();
+              _controller.value.rotateX(0.0000000000001);
+            });
             return KeyEventResult.handled;
           } else if (event.logicalKey == LogicalKeyboardKey.keyY && event is RawKeyDownEvent && (event.isMetaPressed || event.isControlPressed)) {
-            changeManager.redo();
+            setState(() {
+              changeManager.redo();
+              _controller.value.rotateX(0.0000000000001);
+            });
             return KeyEventResult.handled;
           }
           return KeyEventResult.ignored;
@@ -417,7 +424,7 @@ class PanWidgetState extends State<PanWidget> {
                   child: AnimatedBuilder(
                     animation: _controller,
                     builder: (context, child) => Transform(transform: _controller.value, alignment: Alignment.topLeft, child: child),
-                    child: QuestBubblesOverlay(key: _questBubbleOverlayKey),
+                    child: QuestBubblesOverlay(key: _questBubbleOverlayKey, debugMode: debugMode,),
                   ),
                 ),
                 Positioned.fill(
@@ -443,8 +450,8 @@ class PanWidgetState extends State<PanWidget> {
                     ),
                   ),
                 ),
-                if (debugMode)
-                  QuestDebugPanel(key: _debugPanelKey, onChanged: () => _questBubbleOverlayKey.currentState?.refresh(), onFocusQuest: _focusOnQuest),
+                /*if (debugMode)
+                  QuestDebugPanel(key: _debugPanelKey, onChanged: () => _questBubbleOverlayKey.currentState?.refresh(), onFocusQuest: _focusOnQuest),*/
               ],
             ),
           ),

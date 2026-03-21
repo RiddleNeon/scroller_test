@@ -1,7 +1,6 @@
 //test app for the quest screen
 
 import 'package:flutter/material.dart';
-import 'package:font_awesome_flutter/font_awesome_flutter.dart';
 import 'package:wurp/logic/quests/quest_change_manager.dart';
 import 'package:wurp/ui/screens/quests/core/pan.dart';
 import 'package:wurp/ui/screens/quests/version_management/change_screen.dart';
@@ -26,7 +25,7 @@ class _TestQuestScreenState extends State<TestQuestScreen> {
             _panKey.currentState?.debugMode = debugMode;
             setState(() {});
           },
-          child: const Text('Test Quest Screen'))),
+          child: const Text('Quest Screen'))),
       body: SizedBox.expand(child: PanWidget(key: _panKey)),
       floatingActionButton: FloatingActionButton(
           child: const Icon(Icons.commit),
