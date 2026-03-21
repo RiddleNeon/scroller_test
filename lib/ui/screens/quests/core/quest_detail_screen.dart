@@ -1,5 +1,6 @@
 import 'package:flutter/material.dart';
 import 'package:wurp/logic/quests/quest.dart';
+import 'package:wurp/logic/quests/quest_system.dart';
 
 // ── Main Screen ───────────────────────────────────────────────────────────────
 
@@ -8,6 +9,7 @@ class QuestDetailScreen extends StatefulWidget {
   final bool debugMode;
   final bool editMode;
   final void Function(Quest updatedQuest, [String? changeMessage])? onDoneEditing;
+  final void Function(Quest quest)? onDelete;
   final String? recommendedChangeMessage;
 
   const QuestDetailScreen({
@@ -15,7 +17,8 @@ class QuestDetailScreen extends StatefulWidget {
     required this.quest,
     required this.debugMode,
     required this.editMode,
-    this.onDoneEditing, this.recommendedChangeMessage,
+    this.onDoneEditing, this.recommendedChangeMessage, 
+    this.onDelete,
   });
 
   @override
@@ -35,7 +38,6 @@ class _QuestDetailScreenState extends State<QuestDetailScreen> {
   late final TextEditingController _sizeXCtrl;
   late final TextEditingController _sizeYCtrl;
   late double _difficulty;
-  late bool _isDeleted;
 
   @override
   void initState() {
@@ -50,7 +52,6 @@ class _QuestDetailScreenState extends State<QuestDetailScreen> {
     _sizeXCtrl = TextEditingController(text: widget.quest.sizeX.toStringAsFixed(0));
     _sizeYCtrl = TextEditingController(text: widget.quest.sizeY.toStringAsFixed(0));
     _difficulty = widget.quest.difficulty.clamp(0.0, 1.0);
-    _isDeleted = widget.quest.isDeleted;
   }
 
   @override
@@ -76,7 +77,6 @@ class _QuestDetailScreenState extends State<QuestDetailScreen> {
     sizeX: double.tryParse(_sizeXCtrl.text) ?? _editedQuest.sizeX,
     sizeY: double.tryParse(_sizeYCtrl.text) ?? _editedQuest.sizeY,
     difficulty: _difficulty,
-    isDeleted: _isDeleted,
   );
 
   void _saveAndExit() {
@@ -127,9 +127,9 @@ class _QuestDetailScreenState extends State<QuestDetailScreen> {
         actions: [
           TextButton(onPressed: () => Navigator.pop(context), child: const Text('Cancel')),
           ElevatedButton(onPressed: () {
-            setState(() => _isDeleted = true);
-            widget.onDoneEditing?.call(_buildUpdatedQuest());
+            setState(() {});
             Navigator.pop(context);
+            widget.onDelete?.call(widget.quest);
           }, style: ElevatedButton.styleFrom(backgroundColor: Colors.red), child: const Text('Delete')),
         ],
       ),
@@ -177,7 +177,7 @@ class _QuestDetailScreenState extends State<QuestDetailScreen> {
                     onDifficultyChanged: (v) => setState(() => _difficulty = v),
                   ),
                 ),
-                if (_editedQuest.prerequisites.isNotEmpty) ...[
+                if (questSystem.prerequisiteIds(_editedQuest.id).isNotEmpty) ...[
                   const SizedBox(height: 16),
                   _SectionCard(
                     colorScheme: colorScheme,
@@ -449,7 +449,7 @@ class _StatusRow extends StatelessWidget {
           ),
         ),
         const SizedBox(width: 10),
-        if (quest.prerequisites.isNotEmpty)
+        if (questSystem.prerequisiteIds(quest.id).isNotEmpty)
           Container(
             padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 8),
             decoration: BoxDecoration(
@@ -463,7 +463,7 @@ class _StatusRow extends StatelessWidget {
                 Icon(Icons.lock_outline_rounded, size: 15, color: colorScheme.onSurfaceVariant),
                 const SizedBox(width: 6),
                 Text(
-                  '${quest.prerequisites.length} Prerequisite${quest.prerequisites.length > 1 ? 's' : ''}',
+                  '${questSystem.prerequisiteIds(quest.id).length} Prerequisite${questSystem.prerequisiteIds(quest.id).length > 1 ? 's' : ''}',
                   style: TextStyle(color: colorScheme.onSurfaceVariant, fontSize: 13, fontWeight: FontWeight.w500),
                 ),
               ],
@@ -664,9 +664,9 @@ class _PrerequisitesSection extends StatelessWidget {
         children: [
           _SectionLabel(label: 'Requirements', colorScheme: colorScheme),
           const SizedBox(height: 12),
-          ...quest.prerequisites.asMap().entries.map((entry) {
+          ...questSystem.prerequisitesOf(quest.id).asMap().entries.map((entry) {
             final prereq = entry.value;
-            final isLast = entry.key == quest.prerequisites.length - 1;
+            final isLast = entry.key == questSystem.prerequisiteIds(quest.id).length - 1;
             return Padding(
               padding: EdgeInsets.only(bottom: isLast ? 0 : 10),
               child: Row(

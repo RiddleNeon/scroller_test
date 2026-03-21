@@ -3,7 +3,6 @@ import 'package:wurp/logic/quests/quest.dart';
 import 'package:wurp/logic/quests/quest_system.dart';
 import 'package:wurp/logic/repositories/quest_repository.dart';
 
-
 /// Tracks quest changes locally with full undo/redo support.
 /// Changes are applied to [QuestSystem] immediately when recorded.
 /// Call [push] to sync all pending changes to the server as a single "commit",
@@ -29,7 +28,6 @@ class QuestChangeManager with ChangeNotifier {
 
   QuestChangeManager({required this.questSystem, required this.repo});
 
-
   /// Applies [change] locally and adds it to the pending queue.
   /// Clears the redo stack (new change invalidates undone history).
   void record(QuestChange change) {
@@ -39,7 +37,6 @@ class QuestChangeManager with ChangeNotifier {
     _redoStack.clear();
     notifyListeners();
   }
-
 
   void undo() {
     if (!canUndo) return;
@@ -58,7 +55,6 @@ class QuestChangeManager with ChangeNotifier {
     _undoStack.add(change);
     notifyListeners();
   }
-
 
   /// Collapses and pushes all pending changes to the server.
   ///
@@ -91,7 +87,7 @@ class QuestChangeManager with ChangeNotifier {
       } else {
         final merged = existing.mergeWith(c);
         if (merged == null) {
-          map.remove(c.collapseKey); // changes cancel each other out
+          map.remove(c.collapseKey);
         } else {
           map[c.collapseKey] = merged;
         }
@@ -100,12 +96,13 @@ class QuestChangeManager with ChangeNotifier {
     return map.values.toList();
   }
 
-
-  /// Drops any pending changes that reference a quest which has since been
-  /// deleted (e.g. after a remote sync overwrote local state).
+  /// Drops any pending changes that reference a quest which no longer exists
+  /// in the system (e.g. after a remote sync overwrote local state).
   void dropStaleChanges() {
     _pendingChanges.removeWhere(
-          (c) => c is _QuestTargetedChange && (questSystem.maybeGetQuestById(c.questId)?.isDeleted ?? true),
+          (c) =>
+      c is _QuestTargetedChange &&
+          questSystem.maybeGetQuestById(c.questId) == null,
     );
     notifyListeners();
   }
@@ -135,7 +132,7 @@ abstract class QuestChange {
   QuestChange? mergeWith(QuestChange newer) => newer;
 }
 
-/// Mixin marker for changes that target a specific quest by ID.
+/// Marker for changes that target a specific quest by ID.
 /// Used by [QuestChangeManager.dropStaleChanges].
 abstract class _QuestTargetedChange extends QuestChange {
   int get questId;
@@ -171,8 +168,7 @@ class AddQuestChange extends _QuestTargetedChange {
   @override
   QuestChange? mergeWith(QuestChange newer) {
     if (newer is DeleteQuestChange && newer.quest.id == quest.id) {
-      // Quest was added and immediately deleted → nothing to push.
-      return null;
+      return null; // added then immediately deleted → nothing to push
     }
     if (newer is UpdateQuestChange && newer.after.id == quest.id) {
       // Collapse into a single add with the final state.
@@ -216,6 +212,7 @@ class UpdateQuestChange extends _QuestTargetedChange {
   @override
   QuestChange? mergeWith(QuestChange newer) {
     if (newer is UpdateQuestChange) {
+      // Preserve the original `before` so undo goes all the way back.
       return UpdateQuestChange(
         before: before,
         after: newer.after,
@@ -251,6 +248,7 @@ class DeleteQuestChange extends _QuestTargetedChange {
   Future<void> push(QuestRepository repo) => repo.deleteQuest(quest);
 }
 
+// ── Connection changes ─────────────────────────────────────────────────────
 
 class AddConnectionChange extends QuestChange {
   final int fromId;
@@ -279,14 +277,11 @@ class AddConnectionChange extends QuestChange {
     if (newer is RemoveConnectionChange &&
         newer.fromId == fromId &&
         newer.toId == toId) {
-      return null;
+      return null; // add then remove → no-op
     }
     return newer;
   }
 }
-
-
-late QuestChangeManager changeManager;
 
 /// Records removing a prerequisite connection from→to.
 class RemoveConnectionChange extends QuestChange {
@@ -316,8 +311,10 @@ class RemoveConnectionChange extends QuestChange {
     if (newer is AddConnectionChange &&
         newer.fromId == fromId &&
         newer.toId == toId) {
-      return null;
+      return null; // remove then add → no-op
     }
     return newer;
   }
 }
+
+late QuestChangeManager changeManager;

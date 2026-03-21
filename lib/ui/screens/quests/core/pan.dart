@@ -99,7 +99,6 @@ class PanWidgetState extends State<PanWidget> {
     double minX = double.infinity;
     double minY = double.infinity;
     for (final quest in questSystem.quests) {
-      if (quest.isDeleted) continue;
       if (quest.posX > maxX) maxX = quest.posX;
       if (quest.posY > maxY) maxY = quest.posY;
       if (quest.posX < minX) minX = quest.posX;
@@ -200,7 +199,7 @@ class PanWidgetState extends State<PanWidget> {
 
   void _addConnection({required int sourceId, required int targetId}) {
     final target = questSystem.maybeGetQuestById(targetId);
-    if (target == null || target.prerequisites.any((p) => p.id == sourceId)) {
+    if (target == null || questSystem.prerequisitesOf(targetId).any((p) => p.id == sourceId)) {
       return;
     }
 
@@ -265,9 +264,17 @@ class PanWidgetState extends State<PanWidget> {
             debugMode: debugMode,
             editMode: false,
             onDoneEditing: (updatedQuest, [changeMessage]) async {
-              await questRepo.upsertQuest(updatedQuest, changeMessage ?? 'no message provided');
-              questSystem.upsertQuest(updatedQuest);
+              changeManager.record(UpdateQuestChange(
+                before: quest,
+                after: updatedQuest,
+                updateMessage: changeMessage ?? 'no message provided',
+              ));
               if (context.mounted) Navigator.of(context).pop();
+            },
+            onDelete: (q) async {
+              await questRepo.deleteQuest(q);
+              changeManager.record(DeleteQuestChange(quest: q));
+              if(context.mounted) Navigator.of(context).pop();
             },
           ),
         ),
@@ -288,13 +295,18 @@ class PanWidgetState extends State<PanWidget> {
               shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(20)),
               child: QuestDetailScreen(
                 quest: Quest(id: DateTime.now().millisecondsSinceEpoch, name: 'No name provided', description: 'No description provided', subject: 'General'),
-                debugMode: debugMode,
+                debugMode: true,
                 editMode: true,
                 recommendedChangeMessage: 'Initial version',
                 onDoneEditing: (Quest updatedQuest, [String? changeMessage]) async {
                   questSystem.upsertQuest(updatedQuest);
                   await questRepo.upsertQuest(updatedQuest, changeMessage ?? 'no message provided');
                   if (context.mounted) Navigator.of(context).pop();
+                },
+                onDelete: (q) async {
+                  await questRepo.deleteQuest(q);
+                  changeManager.record(DeleteQuestChange(quest: q));
+                  if(context.mounted) Navigator.of(context).pop();
                 },
               ),
             ),

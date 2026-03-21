@@ -3,6 +3,7 @@ import 'dart:async';
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
 import 'package:wurp/logic/quests/quest.dart';
+import 'package:wurp/logic/quests/quest_change_manager.dart';
 import 'package:wurp/logic/quests/quest_system.dart';
 import 'package:wurp/logic/repositories/quest_repository.dart';
 
@@ -69,9 +70,7 @@ class QuestDebugPanelState extends State<QuestDebugPanel> with TickerProviderSta
   }
 
   void _deleteQuest(int id) {
-    for (final q in questSystem.quests) {
-      q.prerequisites.removeWhere((p) => p.id == id);
-    }
+    changeManager.record(DeleteQuestChange(quest: questSystem.getQuestById(id)));
     questSystem.removeQuest(id);
     if (_expandedQuestId == id) _expandedQuestId = null;
     setState(() {});
@@ -340,6 +339,9 @@ class _QuestListTileState extends State<_QuestListTile> with SingleTickerProvide
   }
 
   void _applyChanges() {
+
+    final before = widget.quest.copyWith();
+    
     widget.quest
       ..name = _nameCtrl.text.trim().isEmpty ? widget.quest.name : _nameCtrl.text.trim()
       ..description = _descCtrl.text
@@ -349,6 +351,8 @@ class _QuestListTileState extends State<_QuestListTile> with SingleTickerProvide
       ..sizeX = double.tryParse(_sizeXCtrl.text) ?? widget.quest.sizeX
       ..sizeY = double.tryParse(_sizeYCtrl.text) ?? widget.quest.sizeY
       ..difficulty = _difficulty;
+
+    changeManager.record(UpdateQuestChange(before: before, after: widget.quest.copyWith()));
 
     setState(() => _saveState = _SaveState.saved);
     _saveTimer?.cancel();
@@ -620,7 +624,7 @@ class _PrerequisiteEditorState extends State<_PrerequisiteEditor> {
         .where(
           (quest) =>
               quest.id != widget.quest.id &&
-              !widget.quest.prerequisites.any((p) => p.id == quest.id) &&
+              !questSystem.prerequisiteIds(widget.quest.id).contains(quest.id) &&
               (q.isEmpty || quest.name.toLowerCase().contains(q) || quest.id.toString().contains(q) || quest.subject.toLowerCase().contains(q)),
         )
         .toList()
@@ -647,13 +651,13 @@ class _PrerequisiteEditorState extends State<_PrerequisiteEditor> {
     return Column(
       crossAxisAlignment: CrossAxisAlignment.start,
       children: [
-        if (widget.quest.prerequisites.isEmpty)
+        if (questSystem.prerequisitesOf(widget.quest.id).isEmpty)
           const Text('None', style: TextStyle(color: Colors.white30, fontSize: 11))
         else
           Wrap(
             spacing: 6,
             runSpacing: 4,
-            children: widget.quest.prerequisites.map((prereq) {
+            children: questSystem.prerequisitesOf(widget.quest.id).map((prereq) {
               return Chip(
                 label: Text('#${prereq.id} ${prereq.name}', style: const TextStyle(fontSize: 10, color: Colors.white)),
                 backgroundColor: const Color(0xFF1E3344),
@@ -768,7 +772,7 @@ class _CreateQuestDialogState extends State<_CreateQuestDialog> {
   final _subjectCtrl = TextEditingController(text: 'General');
   final _posXCtrl = TextEditingController(text: '200');
   final _posYCtrl = TextEditingController(text: '200');
-  final _sizeXCtrl = TextEditingController(text: '100');
+  final _sizeXCtrl = TextEditingController(text: '200');
   final _sizeYCtrl = TextEditingController(text: '100');
   double _difficulty = 0.5;
 
@@ -788,11 +792,11 @@ class _CreateQuestDialogState extends State<_CreateQuestDialog> {
       subject: _subjectCtrl.text.trim().isEmpty ? 'General' : _subjectCtrl.text.trim(),
       posX: double.tryParse(_posXCtrl.text) ?? 200,
       posY: double.tryParse(_posYCtrl.text) ?? 200,
-      sizeX: double.tryParse(_sizeXCtrl.text) ?? 100,
+      sizeX: double.tryParse(_sizeXCtrl.text) ?? 200,
       sizeY: double.tryParse(_sizeYCtrl.text) ?? 100,
       difficulty: _difficulty,
     );
-    questRepo.addQuest(quest);
+    changeManager.record(AddQuestChange(quest: quest, updateMessage: 'created quest'));
     Navigator.pop(context);
     widget.onCreated(quest);
   }

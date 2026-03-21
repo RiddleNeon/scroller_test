@@ -12,7 +12,7 @@ class Quest {
 
   double posX;
   double posY;
-  
+
   bool isCompleted = false;
 
   Offset get position => Offset(posX, posY);
@@ -29,7 +29,7 @@ class Quest {
     this.posX = 0,
     this.posY = 0,
     this.difficulty = 0.5,
-    this.sizeX = 100,
+    this.sizeX = 200,
     this.sizeY = 100,
     this.isCompleted = false,
   });
@@ -42,11 +42,10 @@ class Quest {
         posX = (json['posX'] as num?)?.toDouble() ?? 0,
         posY = (json['posY'] as num?)?.toDouble() ?? 0,
         difficulty = (json['difficulty'] as num?)?.toDouble() ?? 0.5,
-        sizeX = (json['sizeX'] as num?)?.toDouble() ?? 100,
+        sizeX = (json['sizeX'] as num?)?.toDouble() ?? 200,
         sizeY = (json['sizeY'] as num?)?.toDouble() ?? 100,
         isCompleted = json['isCompleted'] as bool? ?? false;
-  
-  
+
   Quest copyWith({
     int? id,
     String? name,
@@ -57,7 +56,6 @@ class Quest {
     double? difficulty,
     double? sizeX,
     double? sizeY,
-    bool? isDeleted,
     bool? isCompleted,
   }) {
     return Quest(

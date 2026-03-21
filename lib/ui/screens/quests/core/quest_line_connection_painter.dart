@@ -22,12 +22,12 @@ class QuestLineConnectionPainter extends CustomPainter {
   @override
   void paint(Canvas canvas, Size size) {
     for (final quest in questSystem.quests) {
-      if (quest.prerequisites.isEmpty) continue;
+      if (questSystem.prerequisitesOf(quest.id).isEmpty) continue;
 
       final startCenter = _centerOf(quest.id);
       final questColor  = glowColorOfQuest(quest.id);
 
-      for (final prereq in quest.prerequisites) {
+      for (final prereq in questSystem.prerequisitesOf(quest.id)) {
         final endCenter  = _centerOf(prereq.id);
         final prereqColor = glowColorOfQuest(prereq.id);
 

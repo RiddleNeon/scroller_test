@@ -6,44 +6,37 @@ import 'package:wurp/logic/quests/quest.dart';
 import 'package:wurp/logic/repositories/quest_repository.dart';
 
 class QuestSystem with ChangeNotifier {
-  final Map<int, Quest> _allQuests = {};
-
-  Map<int, Quest> _quests = {};
-  List<Quest> get quests => _quests.values.toList();
-
+  final Map<int, Quest> _quests = {};
   final Map<int, Set<int>> _prerequisites = {};
 
-  // ── Internal ───────────────────────────────────────────────────────────────
+  List<Quest> get quests => _quests.values.toList();
 
-  void _revalidate() {
-    _quests = Map.fromEntries(
-      _allQuests.entries.where((e) => !e.value.isDeleted),
-    );
-  }
+  // ── Prerequisites ──────────────────────────────────────────────────────────
+
+  /// Returns the IDs of all prerequisites for [questId].
+  Set<int> prerequisiteIds(int questId) => _prerequisites[questId] ?? const {};
+
+  /// Returns the [Quest] objects for all prerequisites of [questId].
+  /// Silently skips IDs that no longer exist in the system.
+  List<Quest> prerequisitesOf(int questId) => prerequisiteIds(questId)
+      .map((id) => _quests[id])
+      .whereType<Quest>()
+      .toList();
 
   // ── Quest mutations ────────────────────────────────────────────────────────
 
   void upsertQuest(Quest quest) {
-    _allQuests[quest.id] = quest;
-    _revalidate();
+    _quests[quest.id] = quest;
     notifyListeners();
   }
 
-  void removeQuestById(int id) {
-    _allQuests.removeWhere((key, value) => value.id == id);
-    _revalidate();
-    notifyListeners();
-  }
-  
-  void removeQuest(Quest quest) => removeQuestById(quest.id);
-  
-  @Deprecated("use upsertQuest instead")
-  void moveQuest(int id, double newX, double newY) {
-    final quest = _allQuests[id];
-    if (quest == null) return;
-    quest.posX = newX;
-    quest.posY = newY;
-    // No revalidate needed; isDeleted didn't change
+  /// Removes the quest and all connections to/from it.
+  void removeQuest(int id) {
+    _quests.remove(id);
+    _prerequisites.remove(id);                      // outgoing connections
+    for (final deps in _prerequisites.values) {     // incoming connections
+      deps.remove(id);
+    }
     notifyListeners();
   }
 
@@ -71,7 +64,7 @@ class QuestSystem with ChangeNotifier {
     final json = rawJson.cast<Map<String, dynamic>>();
 
     for (final data in json) {
-      upsertQuest(Quest.fromJson(data));
+      _quests[data['id'] as int] = Quest.fromJson(data);
     }
 
     // Wire up prerequisites in a second pass so all quests are already in the
@@ -84,8 +77,8 @@ class QuestSystem with ChangeNotifier {
       prereqIds.every(_quests.containsKey),
       'All prerequisite IDs must reference existing quests.',
       );
-      _quests[data['id'] as int]!.prerequisites =
-          prereqIds.map((id) => _quests[id]!).toList();
+
+      _prerequisites[data['id'] as int] = prereqIds.toSet();
     }
 
     notifyListeners();
@@ -93,11 +86,22 @@ class QuestSystem with ChangeNotifier {
 
   /// Fetches quests for [subject] from the server and merges them into the
   /// local map. Existing quests with the same ID are replaced.
+  ///
+  /// Note: [QuestRepository.fetchQuestsBySubject] must be updated to return
+  /// connection data separately (as a [Map<int, Set<int>>]) instead of
+  /// populating [Quest.prerequisites] directly.
   Future<void> loadFromServer(String subject) async {
-    final fetched = await questRepo.fetchQuestsBySubject(subject);
-    for (final quest in fetched) {
-      upsertQuest(quest);
+    final (fetchedQuests, fetchedConnections) =
+    await questRepo.fetchQuestsBySubject(subject);
+
+    for (final quest in fetchedQuests) {
+      _quests[quest.id] = quest;
     }
+
+    for (final entry in fetchedConnections.entries) {
+      _prerequisites[entry.key] = entry.value;
+    }
+
     notifyListeners();
   }
 
@@ -118,7 +122,8 @@ class QuestSystem with ChangeNotifier {
             'sizeX': q.sizeX,
             'sizeY': q.sizeY,
             'difficulty': q.difficulty,
-            'prerequisites': q.prerequisites.map((p) => p.id).toList(),
+            'isCompleted': q.isCompleted,
+            'prerequisites': (_prerequisites[q.id] ?? {}).toList(),
           },
         )
             .toList(),
