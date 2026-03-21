@@ -1,7 +1,9 @@
 //test app for the quest screen
 
 import 'package:flutter/material.dart';
+import 'package:wurp/logic/quests/quest_change_manager.dart';
 import 'package:wurp/ui/screens/quests/core/pan.dart';
+import 'package:wurp/ui/screens/quests/version_management/change_screen.dart';
 
 class TestQuestScreen extends StatefulWidget {
   const TestQuestScreen({super.key});
@@ -25,6 +27,9 @@ class _TestQuestScreenState extends State<TestQuestScreen> {
           },
           child: const Text('Test Quest Screen'))),
       body: SizedBox.expand(child: PanWidget(key: _panKey)),
+      floatingActionButton: FloatingActionButton(onPressed: () {
+        showDialog(context: context, builder: (context) => QuestChangeScreen(changeManager: changeManager,)); //show change screen
+      }),
     );
   }
 }

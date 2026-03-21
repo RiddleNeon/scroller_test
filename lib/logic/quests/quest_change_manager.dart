@@ -12,13 +12,17 @@ class QuestChangeManager with ChangeNotifier {
   final QuestSystem questSystem;
   final QuestRepository repo;
 
-  /// Changes that have been applied locally but not yet pushed to the server.
+  /// Changes that have been applied locally and will be pushed to the server.
   final List<QuestChange> _pendingChanges = [];
 
-  /// Stack of applied changes available for undo.
+  /// Changes that have been locally undone by the user and excluded from push.
+  /// Re-enabling one re-applies it locally and moves it back to [_pendingChanges].
+  final List<QuestChange> _skippedChanges = [];
+
+  /// Stack of applied changes available for global undo.
   final List<QuestChange> _undoStack = [];
 
-  /// Stack of undone changes available for redo.
+  /// Stack of undone changes available for global redo.
   final List<QuestChange> _redoStack = [];
 
   bool get hasPendingChanges => _pendingChanges.isNotEmpty;
@@ -26,27 +30,49 @@ class QuestChangeManager with ChangeNotifier {
   bool get canRedo => _redoStack.isNotEmpty;
   int get pendingCount => _pendingChanges.length;
 
+  /// Stores the wall-clock time at which each change was recorded.
+  /// Using an Expando avoids touching the QuestChange class hierarchy.
+  final Expando<DateTime> _recordedAt = Expando();
+
   QuestChangeManager({required this.questSystem, required this.repo});
+
+  /// Returns the timestamp at which [change] was originally recorded,
+  /// or `null` for changes created before timestamp tracking was added.
+  DateTime? recordedAt(QuestChange change) => _recordedAt[change];
+
+  // ── Public read-only views ─────────────────────────────────────────────────
+
+  List<QuestChange> get pendingChanges => List.unmodifiable(_pendingChanges);
+  List<QuestChange> get skippedChanges => List.unmodifiable(_skippedChanges);
+
+  /// Read-only view of the redo stack (globally undone, newest last).
+  List<QuestChange> get redoChanges => List.unmodifiable(_redoStack);
+
+  // ── Record / undo / redo ───────────────────────────────────────────────────
 
   /// Applies [change] locally and adds it to the pending queue.
   /// Clears the redo stack (new change invalidates undone history).
   void record(QuestChange change) {
     change.applyLocally(questSystem);
+    _recordedAt[change] = DateTime.now();
     _pendingChanges.add(change);
     _undoStack.add(change);
     _redoStack.clear();
     notifyListeners();
   }
 
+  /// Global undo: reverts the last applied change and moves it to the redo stack.
   void undo() {
     if (!canUndo) return;
     final change = _undoStack.removeLast();
     change.undoLocally(questSystem);
     _pendingChanges.remove(change);
+    _skippedChanges.remove(change);
     _redoStack.add(change);
     notifyListeners();
   }
 
+  /// Global redo: re-applies the last undone change.
   void redo() {
     if (!canRedo) return;
     final change = _redoStack.removeLast();
@@ -56,15 +82,165 @@ class QuestChangeManager with ChangeNotifier {
     notifyListeners();
   }
 
-  /// Collapses and pushes all pending changes to the server.
+  // ── Per-change skip / unskip ───────────────────────────────────────────────
+
+  /// Removes [change] from the pending queue and excludes it from the next push.
   ///
-  /// Pending list is cleared optimistically before the network calls begin.
-  /// If a push fails the caller is responsible for re-queuing or error handling.
+  /// Because later changes may have been applied on top of [change], we cannot
+  /// simply call [QuestChange.undoLocally] in isolation – that would revert the
+  /// world to the state *before* [change] while all subsequent changes are still
+  /// "applied", leaving the local state inconsistent.
+  ///
+  /// Instead we:
+  ///   1. Temporarily undo every pending change that comes *after* [change]
+  ///      (in reverse application order).
+  ///   2. Undo [change] itself.
+  ///   3. Re-apply all the changes that were temporarily undone in step 1.
+  ///
+  /// This guarantees the local [QuestSystem] reflects exactly the pending
+  /// changes minus [change], regardless of its position in the queue.
+  void skipChange(QuestChange change) {
+    final idx = _pendingChanges.indexOf(change);
+    if (idx == -1) return;
+
+    // Step 1 – temporarily undo everything after [change] (newest first).
+    final after = _pendingChanges.sublist(idx + 1);
+    for (final c in after.reversed) {
+      c.undoLocally(questSystem);
+    }
+
+    // Step 2 – undo [change] itself.
+    change.undoLocally(questSystem);
+
+    // Update bookkeeping.
+    _pendingChanges.removeAt(idx);
+    _undoStack.remove(change);
+    _skippedChanges.add(change);
+
+    // Step 3 – re-apply the later changes on top of the new base state.
+    for (final c in after) {
+      c.applyLocally(questSystem);
+    }
+
+    notifyListeners();
+  }
+
+  /// Re-applies [change] locally and appends it to the end of the pending queue.
+  ///
+  /// The change is inserted at the *end* (i.e. on top of the current state)
+  /// rather than at its original position. This matches user intent: "I want
+  /// this change to be included" means apply it now, on top of whatever has
+  /// happened since.
+  ///
+  /// Note: [UpdateQuestChange.before] may be stale after unskip, but that only
+  /// matters for a subsequent undo of this specific change, not for pushing.
+  void unskipChange(QuestChange change) {
+    if (!_skippedChanges.contains(change)) return;
+    change.applyLocally(questSystem);
+    _skippedChanges.remove(change);
+    _pendingChanges.add(change);
+    _undoStack.add(change);
+    notifyListeners();
+  }
+
+  /// Moves a pending change from [oldIndex] to [newIndex] and keeps the local
+  /// [QuestSystem] consistent via the same sandwich pattern as [skipChange]:
+  ///
+  ///   1. Undo all pending changes after [oldIndex] in reverse.
+  ///   2. Remove the change from [oldIndex].
+  ///   3. Re-apply changes up to (but not including) [newIndex].
+  ///   4. Re-insert the change at [newIndex] and apply it.
+  ///   5. Re-apply the remaining changes.
+  ///
+  /// This mirrors how a rebase works: the moved change is replayed at its new
+  /// position so the local state always equals "apply pending in list order".
+  void reorderPending(int oldIndex, int newIndex) {
+    if (oldIndex == newIndex) return;
+    if (oldIndex < 0 || oldIndex >= _pendingChanges.length) return;
+    // ReorderableListView passes newIndex *before* removal, so we adjust.
+    final insertAt = newIndex > oldIndex ? newIndex - 1 : newIndex;
+
+    final change = _pendingChanges[oldIndex];
+
+    // Step 1 – undo everything from oldIndex onward (newest first).
+    final tail = _pendingChanges.sublist(oldIndex);
+    for (final c in tail.reversed) {
+      c.undoLocally(questSystem);
+    }
+
+    // Step 2 – rebuild _pendingChanges with change at new position.
+    _pendingChanges.removeAt(oldIndex);
+    _pendingChanges.insert(insertAt, change);
+
+    // Sync _undoStack order to match (only for the affected items).
+    for (final c in tail) _undoStack.remove(c);
+    for (final c in _pendingChanges.sublist(
+        insertAt < oldIndex ? insertAt : oldIndex)) {
+      if (tail.contains(c)) _undoStack.add(c);
+    }
+
+    // Step 3 – re-apply the new order from the earliest affected index.
+    final replayFrom = insertAt < oldIndex ? insertAt : oldIndex;
+    for (final c in _pendingChanges.sublist(replayFrom)) {
+      c.applyLocally(questSystem);
+    }
+
+    notifyListeners();
+  }
+
+  // ── Conflict detection ─────────────────────────────────────────────────────
+
+  /// Returns the pending changes that are broken because [skipped] was excluded.
+  ///
+  /// Conflicts arise when a pending change targets an entity that no longer
+  /// exists because its originating change was skipped:
+  /// - Skipping [AddQuestChange] for quest X → any Update/Delete for X is dangling.
+  /// - Skipping [AddConnectionChange] for (from→to) → any Remove for (from→to)
+  ///   is dangling.
+  List<QuestChange> conflictsOf(QuestChange skipped) {
+    return _pendingChanges.where((pending) {
+      if (skipped is AddQuestChange) {
+        final id = pending.affectedQuestId;
+        if (id != null && id == skipped.quest.id) return true;
+      }
+      if (skipped is AddConnectionChange &&
+          pending is RemoveConnectionChange &&
+          pending.fromId == skipped.fromId &&
+          pending.toId == skipped.toId) {
+        return true;
+      }
+      return false;
+    }).toList();
+  }
+
+  /// All pending changes that are broken by at least one skipped change.
+  Set<QuestChange> get allConflictedPending {
+    final result = <QuestChange>{};
+    for (final skipped in _skippedChanges) {
+      result.addAll(conflictsOf(skipped));
+    }
+    return result;
+  }
+
+  /// All skipped changes that cause at least one conflict in pending.
+  Set<QuestChange> get allConflictedSkipped {
+    return _skippedChanges.where((s) => conflictsOf(s).isNotEmpty).toSet();
+  }
+
+  // ── Push ──────────────────────────────────────────────────────────────────
+
+  /// Collapses and pushes all pending changes to the server.
+  /// Skipped changes are NOT pushed – their local effect has already been undone.
+  ///
+  /// Pending list and skipped list are cleared optimistically before network
+  /// calls begin. If a push fails the caller is responsible for error handling.
   Future<void> push() async {
     if (_pendingChanges.isEmpty) return;
 
     final batch = List<QuestChange>.from(_pendingChanges);
     _pendingChanges.clear();
+    _skippedChanges.clear();
+    _undoStack.clear();
     notifyListeners();
 
     final collapsed = _collapse(batch);
@@ -73,11 +249,8 @@ class QuestChangeManager with ChangeNotifier {
     }
   }
 
-  /// Collapses redundant changes using each change's [collapseKey]:
-  /// - Multiple updates to the same quest → one update (last write wins,
-  ///   but `before` is preserved from the first change for correct rollback).
-  /// - Add + Delete for the same quest → no-op (never send to server).
-  /// - Add/Remove connection followed by its inverse → no-op.
+  // ── Internal helpers ──────────────────────────────────────────────────────
+
   List<QuestChange> _collapse(List<QuestChange> changes) {
     final Map<String, QuestChange> map = {};
     for (final c in changes) {
@@ -96,13 +269,11 @@ class QuestChangeManager with ChangeNotifier {
     return map.values.toList();
   }
 
-  /// Drops any pending changes that reference a quest which no longer exists
-  /// in the system (e.g. after a remote sync overwrote local state).
   void dropStaleChanges() {
     _pendingChanges.removeWhere(
           (c) =>
-      c is _QuestTargetedChange &&
-          questSystem.maybeGetQuestById(c.questId) == null,
+      c.affectedQuestId != null &&
+          questSystem.maybeGetQuestById(c.affectedQuestId!) == null,
     );
     notifyListeners();
   }
@@ -114,29 +285,28 @@ abstract class QuestChange {
   final String updateMessage;
   const QuestChange({required this.updateMessage});
 
-  /// Key used to detect collapsible duplicates (e.g. two moves of quest 7).
   String get collapseKey;
-
-  /// Apply this change to the local [QuestSystem].
   void applyLocally(QuestSystem system);
-
-  /// Revert this change in the local [QuestSystem].
   void undoLocally(QuestSystem system);
-
-  /// Push this change to the remote server via [repo].
   Future<void> push(QuestRepository repo);
+
+  /// The ID of the quest this change targets, or `null` for non-quest changes
+  /// (e.g. connection-only changes). Used for conflict detection and stale-
+  /// change cleanup from outside the library.
+  int? get affectedQuestId => null;
 
   /// Merge [this] (older) with [newer] (same [collapseKey]).
   /// Returns the merged change, or `null` if they cancel out.
-  /// Default: newer replaces older entirely.
   QuestChange? mergeWith(QuestChange newer) => newer;
 }
 
 /// Marker for changes that target a specific quest by ID.
-/// Used by [QuestChangeManager.dropStaleChanges].
 abstract class _QuestTargetedChange extends QuestChange {
   int get questId;
   const _QuestTargetedChange({required super.updateMessage});
+
+  @override
+  int? get affectedQuestId => questId;
 }
 
 // ── Quest changes ──────────────────────────────────────────────────────────
@@ -167,11 +337,8 @@ class AddQuestChange extends _QuestTargetedChange {
 
   @override
   QuestChange? mergeWith(QuestChange newer) {
-    if (newer is DeleteQuestChange && newer.quest.id == quest.id) {
-      return null; // added then immediately deleted → nothing to push
-    }
+    if (newer is DeleteQuestChange && newer.quest.id == quest.id) return null;
     if (newer is UpdateQuestChange && newer.after.id == quest.id) {
-      // Collapse into a single add with the final state.
       return AddQuestChange(quest: newer.after, updateMessage: newer.updateMessage);
     }
     return newer;
@@ -181,10 +348,7 @@ class AddQuestChange extends _QuestTargetedChange {
 /// Records an edit to an existing quest, preserving the previous state
 /// so the change can be properly undone.
 class UpdateQuestChange extends _QuestTargetedChange {
-  /// Snapshot of the quest before this change was applied.
   final Quest before;
-
-  /// Snapshot of the quest after this change was applied.
   final Quest after;
 
   const UpdateQuestChange({
@@ -212,7 +376,6 @@ class UpdateQuestChange extends _QuestTargetedChange {
   @override
   QuestChange? mergeWith(QuestChange newer) {
     if (newer is UpdateQuestChange) {
-      // Preserve the original `before` so undo goes all the way back.
       return UpdateQuestChange(
         before: before,
         after: newer.after,
@@ -277,13 +440,12 @@ class AddConnectionChange extends QuestChange {
     if (newer is RemoveConnectionChange &&
         newer.fromId == fromId &&
         newer.toId == toId) {
-      return null; // add then remove → no-op
+      return null;
     }
     return newer;
   }
 }
 
-/// Records removing a prerequisite connection from→to.
 class RemoveConnectionChange extends QuestChange {
   final int fromId;
   final int toId;
@@ -311,7 +473,7 @@ class RemoveConnectionChange extends QuestChange {
     if (newer is AddConnectionChange &&
         newer.fromId == fromId &&
         newer.toId == toId) {
-      return null; // remove then add → no-op
+      return null;
     }
     return newer;
   }
