@@ -66,7 +66,6 @@ class QuestChangeScreen extends StatelessWidget {
                                       state: conflictedPending.contains(change) ? _TileState.conflict : _TileState.active,
                                       conflictReason: conflictedPending.contains(change) ? _conflictReasonFor(change, changeManager.skippedChanges) : null,
                                       onToggle: () => changeManager.skipChange(change),
-                                      showDragHandle: true,
                                     ),
                                   ),
                                 );
@@ -125,7 +124,7 @@ class QuestChangeScreen extends StatelessWidget {
                     width: double.infinity,
                     child: FilledButton.icon(
                       style: hasConflicts ? FilledButton.styleFrom(backgroundColor: Theme.of(context).colorScheme.error) : null,
-                      icon: Transform.rotate(angle: pi / 2, child: const Icon(FontAwesomeIcons.codeCommit)),
+                      icon: Transform.rotate(angle: pi / 2, child: const Icon(Icons.commit)),
                       label: Text(
                         hasConflicts
                             ? 'Resolve Conflicts First'
@@ -251,7 +250,6 @@ class _ChangeTile extends StatelessWidget {
   final _TileState state;
   final String? conflictReason;
   final VoidCallback? onToggle;
-  final bool showDragHandle;
 
   const _ChangeTile({
     super.key,
@@ -260,7 +258,6 @@ class _ChangeTile extends StatelessWidget {
     required this.state,
     this.conflictReason,
     required this.onToggle,
-    this.showDragHandle = false,
   });
 
   @override
@@ -313,11 +310,9 @@ class _ChangeTile extends StatelessWidget {
           crossAxisAlignment: CrossAxisAlignment.start,
           children: [
             ListTile(
-              leading: showDragHandle
-                  ? Icon(Icons.drag_handle, color: cs.onSurfaceVariant)
-                  : Transform.rotate(
+              leading: Transform.rotate(
                       angle: pi / 2,
-                      child: Icon(FontAwesomeIcons.codeCommit, size: 16, color: iconColor),
+                      child: Icon(Icons.commit, size: 16, color: iconColor),
                     ),
               title: Text(
                 change.updateMessage,

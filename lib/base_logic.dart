@@ -45,7 +45,7 @@ Future<void> initLogic() async {
   WidgetsFlutterBinding.ensureInitialized();
   fvp.registerWith();
   await ensureSupabaseInitialized();
-  await questSystem.loadFromServer('General');
+  await questSystem.loadFromServer('Brewing');
   changeManager = QuestChangeManager(
     questSystem: questSystem,
     repo: questRepo,

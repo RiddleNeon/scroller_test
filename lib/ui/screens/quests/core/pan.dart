@@ -309,10 +309,8 @@ class PanWidgetState extends State<PanWidget> {
                 editMode: true,
                 recommendedChangeMessage: 'Initial version',
                 onDoneEditing: (updatedQuest, [changeMessage]) async {
-                  changeManager.record(UpdateQuestChange(
-                    patch: updatedQuest,
-                    reversePatch: QuestPatch.fromQuest(quest),
-                    questId: quest.id,
+                  changeManager.record(AddQuestChange(
+                    quest: updatedQuest.applyTo(quest),
                     updateMessage: changeMessage ?? 'no message provided',
                   ));
                   if (context.mounted) Navigator.of(context).pop();
