@@ -52,6 +52,15 @@ class QuestChangeManager with ChangeNotifier {
 
   /// Applies [change] locally and adds it to the pending queue.
   /// Clears the redo stack (new change invalidates undone history).
+  ///
+  /// Uses [applyLocally] (not [_applyAndRebase]) on purpose: the caller
+  /// constructs the change via [UpdateQuestChange.fromDiff], which already
+  /// captures the correct reversePatch from the real before-state.  If we
+  /// called _applyAndRebase here and the caller pre-applied the change to the
+  /// system (e.g. a drag that updates posX/posY live), we would read the
+  /// already-updated state as "before" and overwrite reversePatch with the
+  /// new position instead of the old one — breaking all subsequent undos and
+  /// reorders for that change.
   void record(QuestChange change) {
     change.applyLocally(questSystem);
     _recordedAt[change] = DateTime.now();
@@ -73,10 +82,13 @@ class QuestChangeManager with ChangeNotifier {
   }
 
   /// Global redo: re-applies the last undone change.
+  ///
+  /// The reversePatch is rebased to the actual "before" state at the current
+  /// tip of the sequence so that a subsequent undo restores the right values.
   void redo() {
     if (!canRedo) return;
     final change = _redoStack.removeLast();
-    change.applyLocally(questSystem);
+    _applyAndRebase(change);
     _pendingChanges.add(change);
     _undoStack.add(change);
     notifyListeners();
@@ -95,7 +107,8 @@ class QuestChangeManager with ChangeNotifier {
   ///   1. Temporarily undo every pending change that comes *after* [change]
   ///      (in reverse application order).
   ///   2. Undo [change] itself.
-  ///   3. Re-apply all the changes that were temporarily undone in step 1.
+  ///   3. Re-apply all the changes that were temporarily undone in step 1,
+  ///      rebasing each reversePatch as we go.
   ///
   /// This guarantees the local [QuestSystem] reflects exactly the pending
   /// changes minus [change], regardless of its position in the queue.
@@ -117,9 +130,10 @@ class QuestChangeManager with ChangeNotifier {
     _undoStack.remove(change);
     _skippedChanges.add(change);
 
-    // Step 3 – re-apply the later changes on top of the new base state.
+    // Step 3 – re-apply the later changes on top of the new base state,
+    // rebasing each reversePatch so subsequent undos stay correct.
     for (final c in after) {
-      c.applyLocally(questSystem);
+      _applyAndRebase(c);
     }
 
     notifyListeners();
@@ -127,13 +141,11 @@ class QuestChangeManager with ChangeNotifier {
 
   /// Re-applies [change] locally and appends it to the end of the pending queue.
   ///
-  /// The change is inserted at the *end* (i.e. on top of the current state)
-  /// rather than at its original position. This matches user intent: "I want
-  /// this change to be included" means apply it now, on top of whatever has
-  /// happened since.
+  /// The reversePatch is rebased to the actual "before" state at the current
+  /// tip of the sequence.
   void unskipChange(QuestChange change) {
     if (!_skippedChanges.contains(change)) return;
-    change.applyLocally(questSystem);
+    _applyAndRebase(change);
     _skippedChanges.remove(change);
     _pendingChanges.add(change);
     _undoStack.add(change);
@@ -141,49 +153,68 @@ class QuestChangeManager with ChangeNotifier {
   }
 
   /// Moves a pending change from [oldIndex] to [newIndex] and keeps the local
-  /// [QuestSystem] consistent via the same sandwich pattern as [skipChange]:
+  /// [QuestSystem] consistent.
   ///
-  ///   1. Undo all pending changes after [oldIndex] in reverse.
-  ///   2. Remove the change from [oldIndex].
-  ///   3. Re-apply changes up to (but not including) [newIndex].
-  ///   4. Re-insert the change at [newIndex] and apply it.
-  ///   5. Re-apply the remaining changes.
+  /// Two bugs are avoided here that would otherwise silently corrupt state:
   ///
-  /// This mirrors how a rebase works: the moved change is replayed at its new
-  /// position so the local state always equals "apply pending in list order".
+  /// 1. **Wrong undo range**: when moving a change *up* (insertAt < oldIndex),
+  ///    we must undo from `min(insertAt, oldIndex)`, not just from `oldIndex`.
+  ///    If we only undo from `oldIndex`, the changes between `insertAt` and
+  ///    `oldIndex-1` are never undone but ARE included in the replay range,
+  ///    so they get applied twice — corrupting non-idempotent changes like
+  ///    [AddQuestChange].
+  ///
+  /// 2. **Stale reversePatch**: [UpdateQuestChange.reversePatch] is set once
+  ///    at record time. After a reorder, each change is replayed at a new
+  ///    position in the sequence, so the actual "before" state differs from
+  ///    what was captured originally. Without rebasing, a subsequent reorder
+  ///    or undo applies the stale reversePatch, puts the quest in the wrong
+  ///    intermediate state, and then replays later patches on top of garbage.
+  ///    [_applyAndRebase] fixes this by capturing the real before-state and
+  ///    updating reversePatch immediately after each replay step.
   void reorderPending(int oldIndex, int newIndex) {
-    print("Reordering pending change from $oldIndex to $newIndex");
     if (oldIndex == newIndex) return;
     if (oldIndex < 0 || oldIndex >= _pendingChanges.length) return;
+    if (newIndex < 0 || newIndex > _pendingChanges.length) return;
+
     // ReorderableListView passes newIndex *before* removal, so we adjust.
     final insertAt = newIndex > oldIndex ? newIndex - 1 : newIndex;
+    if (insertAt == oldIndex) return;
 
     final change = _pendingChanges[oldIndex];
 
-    // Step 1 – undo everything from oldIndex onward (newest first).
-    final tail = _pendingChanges.sublist(oldIndex);
+    // Step 1 – undo all changes from the earliest affected index onward.
+    //
+    // BUG FIX: use min(insertAt, oldIndex), not just oldIndex.
+    // When moving up, changes between insertAt and oldIndex-1 must also be
+    // undone, otherwise they appear in the replay range but were never undone
+    // and end up applied twice.
+    final undoFrom = insertAt < oldIndex ? insertAt : oldIndex;
+    final tail = _pendingChanges.sublist(undoFrom);
     for (final c in tail.reversed) {
       c.undoLocally(questSystem);
     }
 
-    // Step 2 – rebuild _pendingChanges with change at new position.
+    // Step 2 – rebuild _pendingChanges with [change] at its new position.
     _pendingChanges.removeAt(oldIndex);
     _pendingChanges.insert(insertAt, change);
 
-    // Sync _undoStack order to match (only for the affected items).
+    // Sync _undoStack order: remove affected items, re-add in new list order.
     for (final c in tail) {
       _undoStack.remove(c);
     }
-    for (final c in _pendingChanges.sublist(
-        insertAt < oldIndex ? insertAt : oldIndex)) {
+    for (final c in _pendingChanges.sublist(undoFrom)) {
       if (tail.contains(c)) _undoStack.add(c);
     }
 
-    // Step 3 – re-apply the new order from the earliest affected index.
-    final replayFrom = insertAt < oldIndex ? insertAt : oldIndex;
-    for (final c in _pendingChanges.sublist(replayFrom)) {
-      print("Re-applying change during reorder: ${c.updateMessage}. val: ${c.toString()}");
-      c.applyLocally(questSystem);
+    // Step 3 – re-apply in new order from the earliest affected index.
+    //
+    // BUG FIX: use _applyAndRebase instead of applyLocally so that each
+    // UpdateQuestChange has its reversePatch updated to the real "before"
+    // state at its new position. Without this, the next reorder/undo would
+    // read a stale reversePatch and restore the wrong field values.
+    for (final c in _pendingChanges.sublist(undoFrom)) {
+      _applyAndRebase(c);
     }
 
     notifyListeners();
@@ -247,13 +278,31 @@ class QuestChangeManager with ChangeNotifier {
 
     final collapsed = _collapse(batch);
     for (final change in collapsed) {
-      // questSystem is passed so patch-based changes can resolve the full
-      // current quest state when sending to the server.
       await change.push(repo, questSystem);
     }
   }
 
   // ── Internal helpers ──────────────────────────────────────────────────────
+
+  /// Applies [c] locally and — for [UpdateQuestChange] — immediately rebases
+  /// [reversePatch] to the actual quest state seen just before application.
+  ///
+  /// This keeps reversePatch in sync with the change's current position in the
+  /// sequence. Without this rebase, any reorder or undo that happens *after*
+  /// the first reorder would read a stale reversePatch, restore the wrong
+  /// field values as the intermediate state, and then replay subsequent patches
+  /// on top of that garbage state — causing patches to appear "not applied".
+  void _applyAndRebase(QuestChange c) {
+    if (c is UpdateQuestChange) {
+      final before = questSystem.maybeGetQuestById(c.questId);
+      c.applyLocally(questSystem);
+      if (before != null) {
+        c.reversePatch = c.patch.reverse(before);
+      }
+    } else {
+      c.applyLocally(questSystem);
+    }
+  }
 
   List<QuestChange> _collapse(List<QuestChange> changes) {
     final Map<String, QuestChange> map = {};
@@ -331,7 +380,7 @@ class QuestPatch {
       after.isCompleted != before.isCompleted ? after.isCompleted : null,
     );
   }
-  
+
   factory QuestPatch.fromQuest(Quest quest) {
     return QuestPatch(
       name: quest.name,
@@ -402,9 +451,12 @@ class QuestPatch {
           sizeX == null &&
           sizeY == null &&
           isCompleted == null;
-  
+
   @override
-  String toString() => 'QuestPatch(name: $name, description: $description, subject: $subject, posX: $posX, posY: $posY, difficulty: $difficulty, sizeX: $sizeX, sizeY: $sizeY, isCompleted: $isCompleted)';
+  String toString() =>
+      'QuestPatch(name: $name, description: $description, subject: $subject, '
+          'posX: $posX, posY: $posY, difficulty: $difficulty, '
+          'sizeX: $sizeX, sizeY: $sizeY, isCompleted: $isCompleted)';
 }
 
 // ── Base ───────────────────────────────────────────────────────────────────
@@ -470,8 +522,6 @@ class AddQuestChange extends _QuestTargetedChange {
   @override
   QuestChange? mergeWith(QuestChange newer) {
     if (newer is DeleteQuestChange && newer.quest.id == quest.id) return null;
-    // Apply the patch directly onto the quest we're about to add so the
-    // server receives the fully resolved state in one AddQuest call.
     if (newer is UpdateQuestChange && newer.questId == quest.id) {
       return AddQuestChange(
         quest: newer.patch.applyTo(quest),
@@ -485,20 +535,30 @@ class AddQuestChange extends _QuestTargetedChange {
 /// Records an edit to an existing quest.
 ///
 /// Instead of storing full before/after snapshots, only the changed fields are
-/// kept in [patch]. This means [applyLocally] and [undoLocally] read the
-/// **current** quest state and surgically update only the relevant fields,
-/// so reordering changes never accidentally restores a stale field value.
+/// kept in [patch]. [applyLocally] and [undoLocally] read the **current** quest
+/// state and surgically update only the relevant fields, so reordering changes
+/// never accidentally restores a stale field value.
+///
+/// [reversePatch] is intentionally **mutable**: whenever this change is
+/// replayed at a new position in the sequence (reorder, skip, redo),
+/// [QuestChangeManager._applyAndRebase] captures the real quest state
+/// immediately before application and writes it back to [reversePatch].
+/// This keeps [undoLocally] correct regardless of how many reorders have
+/// occurred since the change was first recorded.
 class UpdateQuestChange extends _QuestTargetedChange {
   @override
   final int questId;
 
-  /// The fields that changed – only non-null fields are written.
+  /// The fields that changed — only non-null fields are written.
   final QuestPatch patch;
 
-  /// The previous values for every field in [patch] – used for undo.
-  final QuestPatch reversePatch;
+  /// The previous values for every field in [patch] — used for undo.
+  ///
+  /// Non-final so that [QuestChangeManager._applyAndRebase] can keep it in
+  /// sync with the change's current position in the sequence.
+  QuestPatch reversePatch;
 
-  const UpdateQuestChange({
+  UpdateQuestChange({
     required this.questId,
     required this.patch,
     required this.reversePatch,
@@ -528,11 +588,7 @@ class UpdateQuestChange extends _QuestTargetedChange {
   void applyLocally(QuestSystem s) {
     final current = s.maybeGetQuestById(questId);
     if (current == null) return;
-    final applied = patch.applyTo(current);
-    
-    print("Applying UpdateQuestChange locally. questId: $questId, patch: $patch, reversePatch: $reversePatch, updateMessage: $updateMessage, applied quest: ${applied.position}");
-    
-    s.upsertQuest(applied);
+    s.upsertQuest(patch.applyTo(current));
   }
 
   @override
@@ -554,8 +610,6 @@ class UpdateQuestChange extends _QuestTargetedChange {
   @override
   QuestChange? mergeWith(QuestChange newer) {
     if (newer is UpdateQuestChange && newer.questId == questId) {
-      // Combine the two patches; keep our (oldest) reversePatch so undo
-      // always goes back to the state before the first change.
       return UpdateQuestChange(
         questId: questId,
         patch: patch.mergedWith(newer.patch),
@@ -566,9 +620,11 @@ class UpdateQuestChange extends _QuestTargetedChange {
     if (newer is DeleteQuestChange) return newer;
     return newer;
   }
-  
+
   @override
-  String toString() => 'UpdateQuestChange(questId: $questId, patch: $patch, reversePatch: $reversePatch, updateMessage: $updateMessage)';
+  String toString() =>
+      'UpdateQuestChange(questId: $questId, patch: $patch, '
+          'reversePatch: $reversePatch, updateMessage: $updateMessage)';
 }
 
 class DeleteQuestChange extends _QuestTargetedChange {

@@ -196,7 +196,7 @@ class PanWidgetState extends State<PanWidget> {
 
       _draggingQuest = after.applyTo(_draggingQuest!);
       
-      changeManager.record(UpdateQuestChange(questId: _draggingQuest!.id, patch: before, reversePatch: after, updateMessage: 'moved quest'));
+      changeManager.record(UpdateQuestChange(questId: _draggingQuest!.id, patch: after, reversePatch: before, updateMessage: 'moved quest'));
       
       questSystem.upsertQuest(_draggingQuest!);
     }
