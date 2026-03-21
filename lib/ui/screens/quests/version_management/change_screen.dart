@@ -305,38 +305,43 @@ class _ChangeTile extends StatelessWidget {
     return AnimatedContainer(
       duration: const Duration(milliseconds: 200),
       color: isConflict ? cs.errorContainer.withValues(alpha: 0.3) : null,
-      child: Column(
-        crossAxisAlignment: CrossAxisAlignment.start,
-        children: [
-          ListTile(
-            leading: showDragHandle
-                ? Icon(Icons.drag_handle, color: cs.onSurfaceVariant)
-                : Transform.rotate(
-                    angle: pi / 2,
-                    child: Icon(FontAwesomeIcons.codeCommit, size: 16, color: iconColor),
-                  ),
-            title: Text(
-              change.updateMessage,
-              style: TextStyle(decoration: isDimmed ? TextDecoration.lineThrough : TextDecoration.none, decorationColor: textColor, color: textColor),
-            ),
-            subtitle: _buildSubtitle(theme, cs, isDimmed, textColor),
-            trailing: trailing,
-          ),
-          if (isConflict && conflictReason != null)
-            Padding(
-              padding: const EdgeInsets.fromLTRB(56, 0, 16, 10),
-              child: Row(
-                crossAxisAlignment: CrossAxisAlignment.start,
-                children: [
-                  Icon(Icons.error_outline, size: 14, color: cs.error),
-                  const SizedBox(width: 4),
-                  Expanded(
-                    child: Text(conflictReason!, style: theme.textTheme.bodySmall?.copyWith(color: cs.error)),
-                  ),
-                ],
+      child: InkWell(
+        onTap: () {
+          print("change: ${change.updateMessage}, state: $state. change vals: ${change.toString()}");
+        },
+        child: Column(
+          crossAxisAlignment: CrossAxisAlignment.start,
+          children: [
+            ListTile(
+              leading: showDragHandle
+                  ? Icon(Icons.drag_handle, color: cs.onSurfaceVariant)
+                  : Transform.rotate(
+                      angle: pi / 2,
+                      child: Icon(FontAwesomeIcons.codeCommit, size: 16, color: iconColor),
+                    ),
+              title: Text(
+                change.updateMessage,
+                style: TextStyle(decoration: isDimmed ? TextDecoration.lineThrough : TextDecoration.none, decorationColor: textColor, color: textColor),
               ),
+              subtitle: _buildSubtitle(theme, cs, isDimmed, textColor),
+              trailing: trailing,
             ),
-        ],
+            if (isConflict && conflictReason != null)
+              Padding(
+                padding: const EdgeInsets.fromLTRB(56, 0, 16, 10),
+                child: Row(
+                  crossAxisAlignment: CrossAxisAlignment.start,
+                  children: [
+                    Icon(Icons.error_outline, size: 14, color: cs.error),
+                    const SizedBox(width: 4),
+                    Expanded(
+                      child: Text(conflictReason!, style: theme.textTheme.bodySmall?.copyWith(color: cs.error)),
+                    ),
+                  ],
+                ),
+              ),
+          ],
+        ),
       ),
     );
   }

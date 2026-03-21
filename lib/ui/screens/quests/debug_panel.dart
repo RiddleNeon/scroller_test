@@ -185,7 +185,7 @@ class QuestDebugPanelState extends State<QuestDebugPanel> with TickerProviderSta
         final isExpanded = _expandedQuestId == quest.id;
         return _QuestListTile(
           key: ValueKey(quest.id),
-          quest: quest,
+          initialQuest: quest,
           isExpanded: isExpanded,
           allQuests: questSystem.quests,
           onToggle: () => setState(() => _expandedQuestId = isExpanded ? null : quest.id),
@@ -272,7 +272,7 @@ class _SearchBar extends StatelessWidget {
 class _QuestListTile extends StatefulWidget {
   const _QuestListTile({
     super.key,
-    required this.quest,
+    required this.initialQuest,
     required this.isExpanded,
     required this.allQuests,
     required this.onToggle,
@@ -281,7 +281,7 @@ class _QuestListTile extends StatefulWidget {
     this.onFocus,
   });
 
-  final Quest quest;
+  final Quest initialQuest;
   final bool isExpanded;
   final List<Quest> allQuests;
   final VoidCallback onToggle;
@@ -290,20 +290,24 @@ class _QuestListTile extends StatefulWidget {
   final VoidCallback? onFocus;
 
   @override
-  State<_QuestListTile> createState() => _QuestListTileState();
+  State<_QuestListTile> createState() => _QuestListTileState(initialQuest);
 }
 
 enum _SaveState { idle, saved }
 
 class _QuestListTileState extends State<_QuestListTile> with SingleTickerProviderStateMixin {
-  late final _nameCtrl = TextEditingController(text: widget.quest.name);
-  late final _descCtrl = TextEditingController(text: widget.quest.description);
-  late final _subjectCtrl = TextEditingController(text: widget.quest.subject);
-  late final _posXCtrl = TextEditingController(text: widget.quest.posX.toStringAsFixed(1));
-  late final _posYCtrl = TextEditingController(text: widget.quest.posY.toStringAsFixed(1));
-  late final _sizeXCtrl = TextEditingController(text: widget.quest.sizeX.toStringAsFixed(1));
-  late final _sizeYCtrl = TextEditingController(text: widget.quest.sizeY.toStringAsFixed(1));
-  late double _difficulty = widget.quest.difficulty;
+  late final _nameCtrl = TextEditingController(text: quest.name);
+  late final _descCtrl = TextEditingController(text: quest.description);
+  late final _subjectCtrl = TextEditingController(text: quest.subject);
+  late final _posXCtrl = TextEditingController(text: quest.posX.toStringAsFixed(1));
+  late final _posYCtrl = TextEditingController(text: quest.posY.toStringAsFixed(1));
+  late final _sizeXCtrl = TextEditingController(text: quest.sizeX.toStringAsFixed(1));
+  late final _sizeYCtrl = TextEditingController(text: quest.sizeY.toStringAsFixed(1));
+  Quest quest;
+  
+  _QuestListTileState(this.quest);
+  
+  late double? _difficulty;
 
   _SaveState _saveState = _SaveState.idle;
   Timer? _saveTimer;
@@ -323,8 +327,8 @@ class _QuestListTileState extends State<_QuestListTile> with SingleTickerProvide
     super.didUpdateWidget(old);
     widget.isExpanded ? _chevronCtrl.forward() : _chevronCtrl.reverse();
     if (!widget.isExpanded) {
-      _posXCtrl.text = widget.quest.posX.toStringAsFixed(1);
-      _posYCtrl.text = widget.quest.posY.toStringAsFixed(1);
+      _posXCtrl.text = quest.posX.toStringAsFixed(1);
+      _posYCtrl.text = quest.posY.toStringAsFixed(1);
     }
   }
 
@@ -339,20 +343,43 @@ class _QuestListTileState extends State<_QuestListTile> with SingleTickerProvide
   }
 
   void _applyChanges() {
-
-    final before = widget.quest.copyWith();
     
-    widget.quest
-      ..name = _nameCtrl.text.trim().isEmpty ? widget.quest.name : _nameCtrl.text.trim()
-      ..description = _descCtrl.text
-      ..subject = _subjectCtrl.text
-      ..posX = double.tryParse(_posXCtrl.text) ?? widget.quest.posX
-      ..posY = double.tryParse(_posYCtrl.text) ?? widget.quest.posY
-      ..sizeX = double.tryParse(_sizeXCtrl.text) ?? widget.quest.sizeX
-      ..sizeY = double.tryParse(_sizeYCtrl.text) ?? widget.quest.sizeY
-      ..difficulty = _difficulty;
+    QuestPatch before = QuestPatch(
+      name: quest.name,
+      description: quest.description,
+      subject: quest.subject,
+      posX: quest.posX,
+      posY: quest.posY,
+      sizeX: quest.sizeX,
+      sizeY: quest.sizeY,
+      difficulty: quest.difficulty,
+    );
+    
+    String? newName = _nameCtrl.text.trim().isEmpty ? null : _nameCtrl.text.trim();
+    String? newDesc = _descCtrl.text.trim() == quest.description.trim() ? null : _descCtrl.text.trim();
+    String? newSubject = _subjectCtrl.text.trim() == quest.subject.trim() ? null : _subjectCtrl.text.trim();
+    
+    double? newPosX = double.tryParse(_posXCtrl.text);
+    double? newPosY = double.tryParse(_posYCtrl.text);
+    double? newSizeX = double.tryParse(_sizeXCtrl.text);
+    double? newSizeY = double.tryParse(_sizeYCtrl.text);
+    
+    double? newDifficulty = _difficulty == quest.difficulty ? null : _difficulty;
+    
+    QuestPatch after = QuestPatch(
+      name: newName,
+      description: newDesc,
+      subject: newSubject,
+      posX: newPosX,
+      posY: newPosY,
+      sizeX: newSizeX,
+      sizeY: newSizeY,
+      difficulty: newDifficulty,
+    );
+    
+    quest = after.applyTo(quest);
 
-    changeManager.record(UpdateQuestChange(before: before, after: widget.quest.copyWith()));
+    changeManager.record(UpdateQuestChange(questId: quest.id, patch: after, reversePatch: before));
 
     setState(() => _saveState = _SaveState.saved);
     _saveTimer?.cancel();
@@ -365,12 +392,11 @@ class _QuestListTileState extends State<_QuestListTile> with SingleTickerProvide
 
   Color get _subjectColor {
     const palette = [Colors.cyan, Colors.purple, Colors.orange, Colors.green, Colors.pink, Colors.teal, Colors.amber];
-    return palette[widget.quest.subject.hashCode.abs() % palette.length];
+    return palette[quest.subject.hashCode.abs() % palette.length];
   }
 
   @override
   Widget build(BuildContext context) {
-    final quest = widget.quest;
     return Column(
       crossAxisAlignment: CrossAxisAlignment.stretch,
       children: [
@@ -478,7 +504,7 @@ class _QuestListTileState extends State<_QuestListTile> with SingleTickerProvide
             ],
           ),
           const SizedBox(height: 8),
-          _SectionLabel('Difficulty  ${(_difficulty * 100).round()}%'),
+          _SectionLabel('Difficulty  ${((_difficulty ?? quest.difficulty) * 100).round()}%'),
           SliderTheme(
             data: SliderTheme.of(context).copyWith(
               activeTrackColor: Colors.cyan,
@@ -488,11 +514,11 @@ class _QuestListTileState extends State<_QuestListTile> with SingleTickerProvide
               trackHeight: 3,
               thumbShape: const RoundSliderThumbShape(enabledThumbRadius: 7),
             ),
-            child: Slider(value: _difficulty, min: 0, max: 1, divisions: 20, onChanged: (v) => setState(() => _difficulty = v)),
+            child: Slider(value: _difficulty ?? quest.difficulty, min: 0, max: 1, divisions: 20, onChanged: (v) => setState(() => _difficulty = v)),
           ),
           const SizedBox(height: 8),
           const _SectionLabel('Prerequisites'),
-          _PrerequisiteEditor(quest: widget.quest, allQuests: widget.allQuests, onChanged: widget.onChanged),
+          _PrerequisiteEditor(quest: quest, allQuests: widget.allQuests, onChanged: widget.onChanged),
           const SizedBox(height: 12),
           _ApplyButton(saveState: _saveState, onPressed: _applyChanges),
         ],
@@ -505,8 +531,8 @@ class _QuestListTileState extends State<_QuestListTile> with SingleTickerProvide
       context: context,
       builder: (context) => AlertDialog(
         backgroundColor: const Color(0xFF152232),
-        title: Text('Delete "${widget.quest.name}"?', style: const TextStyle(color: Colors.white, fontSize: 14)),
-        content: Text('Quest #${widget.quest.id} will be permanently removed.', style: const TextStyle(color: Colors.white54, fontSize: 12)),
+        title: Text('Delete "${quest.name}"?', style: const TextStyle(color: Colors.white, fontSize: 14)),
+        content: Text('Quest #${quest.id} will be permanently removed.', style: const TextStyle(color: Colors.white54, fontSize: 12)),
         actions: [
           TextButton(
             onPressed: () => Navigator.pop(context),
@@ -516,7 +542,7 @@ class _QuestListTileState extends State<_QuestListTile> with SingleTickerProvide
             onPressed: () {
               Navigator.pop(context);
               widget.onDelete();
-              print("Deleted quest ${widget.quest.id}");
+              print("Deleted quest ${quest.id}");
             },
             child: const Text('Delete', style: TextStyle(color: Colors.redAccent)),
           ),
@@ -623,8 +649,8 @@ class _PrerequisiteEditorState extends State<_PrerequisiteEditor> {
     return widget.allQuests
         .where(
           (quest) =>
-              quest.id != widget.quest.id &&
-              !questSystem.prerequisiteIds(widget.quest.id).contains(quest.id) &&
+              quest.id != quest.id &&
+              !questSystem.prerequisiteIds(quest.id).contains(quest.id) &&
               (q.isEmpty || quest.name.toLowerCase().contains(q) || quest.id.toString().contains(q) || quest.subject.toLowerCase().contains(q)),
         )
         .toList()

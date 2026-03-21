@@ -1,14 +1,15 @@
 import 'package:flutter/material.dart';
 import 'package:wurp/logic/quests/quest.dart';
+import 'package:wurp/logic/quests/quest_change_manager.dart';
 import 'package:wurp/logic/quests/quest_system.dart';
+import 'package:wurp/util/extensions/num_distance.dart';
 
-// ── Main Screen ───────────────────────────────────────────────────────────────
 
 class QuestDetailScreen extends StatefulWidget {
   final Quest quest;
   final bool debugMode;
   final bool editMode;
-  final void Function(Quest updatedQuest, [String? changeMessage])? onDoneEditing;
+  final void Function(QuestPatch questPatch, [String? changeMessage])? onDoneEditing;
   final void Function(Quest quest)? onDelete;
   final String? recommendedChangeMessage;
 
@@ -68,21 +69,43 @@ class _QuestDetailScreenState extends State<QuestDetailScreen> {
   
   /// Reads all controllers and builds an updated [Quest].
   /// Requires Quest to have a copyWith method.
-  Quest _buildUpdatedQuest() => _editedQuest.copyWith(
-    name: _nameCtrl.text.trim().isEmpty ? _editedQuest.name : _nameCtrl.text.trim(),
-    description: _descriptionCtrl.text,
-    subject: _subjectCtrl.text.trim().isEmpty ? _editedQuest.subject : _subjectCtrl.text.trim(),
-    posX: double.tryParse(_posXCtrl.text) ?? _editedQuest.posX,
-    posY: double.tryParse(_posYCtrl.text) ?? _editedQuest.posY,
-    sizeX: double.tryParse(_sizeXCtrl.text) ?? _editedQuest.sizeX,
-    sizeY: double.tryParse(_sizeYCtrl.text) ?? _editedQuest.sizeY,
-    difficulty: _difficulty,
-  );
+  QuestPatch _buildUpdatedQuestPatch() {
+    String newNameRaw = _nameCtrl.text.trim();
+    String? newName = (newNameRaw.isEmpty || newNameRaw == widget.quest.name) ? null : newNameRaw;
+    String newDescriptionRaw = _descriptionCtrl.text.trim();
+    String? newDescription = (newDescriptionRaw.isEmpty || newDescriptionRaw == widget.quest.description) ? null : newDescriptionRaw;
+    String newSubjectRaw = _subjectCtrl.text.trim();
+    String? newSubject = (newSubjectRaw.isEmpty || newSubjectRaw == widget.quest.subject) ? null : newSubjectRaw;
+    
+    double? newPosXRaw = double.tryParse(_posXCtrl.text);
+    double? newPosX = (newPosXRaw == null || newPosXRaw.distanceTo(widget.quest.posX) < 1) ? null : newPosXRaw;
+    double? newPosYRaw = double.tryParse(_posYCtrl.text);
+    double? newPosY = (newPosYRaw == null || newPosYRaw.distanceTo(widget.quest.posY) < 1) ? null : newPosYRaw;
+    double? newSizeXRaw = double.tryParse(_sizeXCtrl.text);
+    double? newSizeX = (newSizeXRaw == null || newSizeXRaw == widget.quest.sizeX) ? null : newSizeXRaw;
+    double? newSizeYRaw = double.tryParse(_sizeYCtrl.text);
+    double? newSizeY = (newSizeYRaw == null || newSizeYRaw == widget.quest.sizeY) ? null : newSizeYRaw;
+    
+    double? newDifficulty = (_difficulty == widget.quest.difficulty) ? null : _difficulty;
+    
+    print("Built QuestPatch with values: name=$newName, description=$newDescription, subject=$newSubject, posX=$newPosX, posY=$newPosY, sizeX=$newSizeX, sizeY=$newSizeY, difficulty=$newDifficulty");
+    
+    return QuestPatch(
+      name: newName,
+      description: newDescription,
+      subject: newSubject,
+      posX: newPosX,
+      posY: newPosY,
+      sizeX: newSizeX,
+      sizeY: newSizeY,
+      difficulty: newDifficulty,
+    );
+  }
 
   void _saveAndExit() {
-    final updated = _buildUpdatedQuest();
+    final updated = _buildUpdatedQuestPatch();
     setState(() {
-      _editedQuest = updated;
+      _editedQuest = updated.applyTo(_editedQuest);
       _editMode = false;
     });
     showChangeMessageDialog(widget.recommendedChangeMessage).then((message) {

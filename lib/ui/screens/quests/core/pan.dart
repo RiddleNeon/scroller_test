@@ -183,15 +183,22 @@ class PanWidgetState extends State<PanWidget> {
 
     if (_draggingQuest != null) {
       final currentScale = _currentScale;
-
-      final before = _draggingQuest!.copyWith();
-      final after = _draggingQuest!.copyWith(
-          posX: _dragStartQuestPos.dx + (_focalDelta.dx / currentScale),
-          posY: _dragStartQuestPos.dy + (_focalDelta.dy / currentScale)      
+      
+      QuestPatch before = QuestPatch(
+        posX: _draggingQuest!.posX,
+        posY: _draggingQuest!.posY,
+      );
+      
+      QuestPatch after = QuestPatch(
+        posX: _dragStartQuestPos.dx + (_focalDelta.dx / currentScale),
+        posY: _dragStartQuestPos.dy + (_focalDelta.dy / currentScale),
       );
 
-      changeManager.record(UpdateQuestChange(before: before, after: after, updateMessage: 'moved quest'));
-      questSystem.upsertQuest(after);
+      _draggingQuest = after.applyTo(_draggingQuest!);
+      
+      changeManager.record(UpdateQuestChange(questId: _draggingQuest!.id, patch: before, reversePatch: after, updateMessage: 'moved quest'));
+      
+      questSystem.upsertQuest(_draggingQuest!);
     }
     _questBubbleOverlayKey.currentState?.setDragState(questId: null, position: null);
     setState(() => _draggingQuest = null);
@@ -205,7 +212,7 @@ class PanWidgetState extends State<PanWidget> {
 
     try {
       changeManager.record(AddConnectionChange(fromId: targetId, toId: sourceId, updateMessage: 'connection drawn'));
-      changeManager.push(); //fixme
+      //changeManager.push(); //fixme
     } catch (e) {
       questSystem.addConnection(targetId, sourceId);
       questRepo.addConnection(targetId, sourceId);
@@ -264,10 +271,12 @@ class PanWidgetState extends State<PanWidget> {
             debugMode: debugMode,
             editMode: false,
             onDoneEditing: (updatedQuest, [changeMessage]) async {
+              print("done, new pos: ${updatedQuest.posX}, ${updatedQuest.posY}");
               changeManager.record(UpdateQuestChange(
-                before: quest,
-                after: updatedQuest,
-                updateMessage: changeMessage ?? 'no message provided',
+                patch: updatedQuest,
+                reversePatch: QuestPatch.fromQuest(quest),
+                questId: quest.id,
+                updateMessage: changeMessage ?? 'no message provided', 
               ));
               if (context.mounted) Navigator.of(context).pop();
             },
@@ -283,6 +292,7 @@ class PanWidgetState extends State<PanWidget> {
   }
 
   void showQuestAddOverlay(Offset scenePos) {
+    Quest quest = Quest(id: DateTime.now().millisecondsSinceEpoch, name: 'No name provided', description: 'No description provided', subject: 'General');
     showDialog(
       context: context,
       builder: (context) {
@@ -294,13 +304,17 @@ class PanWidgetState extends State<PanWidget> {
               clipBehavior: Clip.antiAlias,
               shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(20)),
               child: QuestDetailScreen(
-                quest: Quest(id: DateTime.now().millisecondsSinceEpoch, name: 'No name provided', description: 'No description provided', subject: 'General'),
+                quest: quest,
                 debugMode: true,
                 editMode: true,
                 recommendedChangeMessage: 'Initial version',
-                onDoneEditing: (Quest updatedQuest, [String? changeMessage]) async {
-                  questSystem.upsertQuest(updatedQuest);
-                  await questRepo.upsertQuest(updatedQuest, changeMessage ?? 'no message provided');
+                onDoneEditing: (updatedQuest, [changeMessage]) async {
+                  changeManager.record(UpdateQuestChange(
+                    patch: updatedQuest,
+                    reversePatch: QuestPatch.fromQuest(quest),
+                    questId: quest.id,
+                    updateMessage: changeMessage ?? 'no message provided',
+                  ));
                   if (context.mounted) Navigator.of(context).pop();
                 },
                 onDelete: (q) async {

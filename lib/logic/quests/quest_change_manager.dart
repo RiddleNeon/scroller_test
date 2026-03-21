@@ -131,9 +131,6 @@ class QuestChangeManager with ChangeNotifier {
   /// rather than at its original position. This matches user intent: "I want
   /// this change to be included" means apply it now, on top of whatever has
   /// happened since.
-  ///
-  /// Note: [UpdateQuestChange.before] may be stale after unskip, but that only
-  /// matters for a subsequent undo of this specific change, not for pushing.
   void unskipChange(QuestChange change) {
     if (!_skippedChanges.contains(change)) return;
     change.applyLocally(questSystem);
@@ -155,6 +152,7 @@ class QuestChangeManager with ChangeNotifier {
   /// This mirrors how a rebase works: the moved change is replayed at its new
   /// position so the local state always equals "apply pending in list order".
   void reorderPending(int oldIndex, int newIndex) {
+    print("Reordering pending change from $oldIndex to $newIndex");
     if (oldIndex == newIndex) return;
     if (oldIndex < 0 || oldIndex >= _pendingChanges.length) return;
     // ReorderableListView passes newIndex *before* removal, so we adjust.
@@ -173,7 +171,9 @@ class QuestChangeManager with ChangeNotifier {
     _pendingChanges.insert(insertAt, change);
 
     // Sync _undoStack order to match (only for the affected items).
-    for (final c in tail) _undoStack.remove(c);
+    for (final c in tail) {
+      _undoStack.remove(c);
+    }
     for (final c in _pendingChanges.sublist(
         insertAt < oldIndex ? insertAt : oldIndex)) {
       if (tail.contains(c)) _undoStack.add(c);
@@ -182,6 +182,7 @@ class QuestChangeManager with ChangeNotifier {
     // Step 3 – re-apply the new order from the earliest affected index.
     final replayFrom = insertAt < oldIndex ? insertAt : oldIndex;
     for (final c in _pendingChanges.sublist(replayFrom)) {
+      print("Re-applying change during reorder: ${c.updateMessage}. val: ${c.toString()}");
       c.applyLocally(questSystem);
     }
 
@@ -239,13 +240,16 @@ class QuestChangeManager with ChangeNotifier {
 
     final batch = List<QuestChange>.from(_pendingChanges);
     _pendingChanges.clear();
-    _skippedChanges.clear();
     _undoStack.clear();
+    _redoStack.clear();
+
     notifyListeners();
 
     final collapsed = _collapse(batch);
     for (final change in collapsed) {
-      await change.push(repo);
+      // questSystem is passed so patch-based changes can resolve the full
+      // current quest state when sending to the server.
+      await change.push(repo, questSystem);
     }
   }
 
@@ -279,6 +283,130 @@ class QuestChangeManager with ChangeNotifier {
   }
 }
 
+// ── Patch ──────────────────────────────────────────────────────────────────
+
+/// A sparse set of quest field values. Only non-null fields are applied.
+///
+/// This is intentionally separate from [Quest] so that an [UpdateQuestChange]
+/// can express "only the position changed" without carrying stale snapshots of
+/// every other field.
+class QuestPatch {
+  final String? name;
+  final String? description;
+  final String? subject;
+  final double? posX;
+  final double? posY;
+  final double? difficulty;
+  final double? sizeX;
+  final double? sizeY;
+  final bool? isCompleted;
+
+  const QuestPatch({
+    this.name,
+    this.description,
+    this.subject,
+    this.posX,
+    this.posY,
+    this.difficulty,
+    this.sizeX,
+    this.sizeY,
+    this.isCompleted,
+  });
+
+  /// Creates a patch from two quest snapshots, keeping only fields that differ.
+  factory QuestPatch.diff(Quest before, Quest after) {
+    assert(before.id == after.id, 'Diff requires the same quest ID');
+    return QuestPatch(
+      name: after.name != before.name ? after.name : null,
+      description:
+      after.description != before.description ? after.description : null,
+      subject: after.subject != before.subject ? after.subject : null,
+      posX: after.posX != before.posX ? after.posX : null,
+      posY: after.posY != before.posY ? after.posY : null,
+      difficulty:
+      after.difficulty != before.difficulty ? after.difficulty : null,
+      sizeX: after.sizeX != before.sizeX ? after.sizeX : null,
+      sizeY: after.sizeY != before.sizeY ? after.sizeY : null,
+      isCompleted:
+      after.isCompleted != before.isCompleted ? after.isCompleted : null,
+    );
+  }
+  
+  factory QuestPatch.fromQuest(Quest quest) {
+    return QuestPatch(
+      name: quest.name,
+      description: quest.description,
+      subject: quest.subject,
+      posX: quest.posX,
+      posY: quest.posY,
+      difficulty: quest.difficulty,
+      sizeX: quest.sizeX,
+      sizeY: quest.sizeY,
+      isCompleted: quest.isCompleted,
+    );
+  }
+
+  /// Creates a reverse patch that restores every field touched by [this]
+  /// to its value in [before].
+  QuestPatch reverse(Quest before) {
+    return QuestPatch(
+      name: name != null ? before.name : null,
+      description: description != null ? before.description : null,
+      subject: subject != null ? before.subject : null,
+      posX: posX != null ? before.posX : null,
+      posY: posY != null ? before.posY : null,
+      difficulty: difficulty != null ? before.difficulty : null,
+      sizeX: sizeX != null ? before.sizeX : null,
+      sizeY: sizeY != null ? before.sizeY : null,
+      isCompleted: isCompleted != null ? before.isCompleted : null,
+    );
+  }
+
+  /// Returns a new patch with all fields from [this], overridden by any
+  /// non-null fields in [newer]. Used when collapsing two updates for the
+  /// same quest into one.
+  QuestPatch mergedWith(QuestPatch newer) {
+    return QuestPatch(
+      name: newer.name ?? name,
+      description: newer.description ?? description,
+      subject: newer.subject ?? subject,
+      posX: newer.posX ?? posX,
+      posY: newer.posY ?? posY,
+      difficulty: newer.difficulty ?? difficulty,
+      sizeX: newer.sizeX ?? sizeX,
+      sizeY: newer.sizeY ?? sizeY,
+      isCompleted: newer.isCompleted ?? isCompleted,
+    );
+  }
+
+  /// Applies only the non-null fields of this patch to [quest].
+  Quest applyTo(Quest quest) => quest.copyWith(
+    name: name,
+    description: description,
+    subject: subject,
+    posX: posX,
+    posY: posY,
+    difficulty: difficulty,
+    sizeX: sizeX,
+    sizeY: sizeY,
+    isCompleted: isCompleted,
+  );
+
+  bool get isEmpty =>
+      name == null &&
+          description == null &&
+          subject == null &&
+          posX == null &&
+          posY == null &&
+          difficulty == null &&
+          sizeX == null &&
+          sizeY == null &&
+          isCompleted == null;
+  
+  @override
+  String toString() => 'QuestPatch(name: $name, description: $description, subject: $subject, posX: $posX, posY: $posY, difficulty: $difficulty, sizeX: $sizeX, sizeY: $sizeY, isCompleted: $isCompleted)';
+}
+
 // ── Base ───────────────────────────────────────────────────────────────────
 
 abstract class QuestChange {
@@ -288,7 +416,10 @@ abstract class QuestChange {
   String get collapseKey;
   void applyLocally(QuestSystem system);
   void undoLocally(QuestSystem system);
-  Future<void> push(QuestRepository repo);
+
+  /// [system] is provided so patch-based changes can resolve the current quest
+  /// state when serialising for the server (no stale snapshots needed).
+  Future<void> push(QuestRepository repo, QuestSystem system);
 
   /// The ID of the quest this change targets, or `null` for non-quest changes
   /// (e.g. connection-only changes). Used for conflict detection and stale-
@@ -333,58 +464,111 @@ class AddQuestChange extends _QuestTargetedChange {
   void undoLocally(QuestSystem s) => s.removeQuest(quest.id);
 
   @override
-  Future<void> push(QuestRepository repo) => repo.addQuest(quest, updateMessage);
+  Future<void> push(QuestRepository repo, QuestSystem system) =>
+      repo.addQuest(quest, updateMessage);
 
   @override
   QuestChange? mergeWith(QuestChange newer) {
     if (newer is DeleteQuestChange && newer.quest.id == quest.id) return null;
-    if (newer is UpdateQuestChange && newer.after.id == quest.id) {
-      return AddQuestChange(quest: newer.after, updateMessage: newer.updateMessage);
+    // Apply the patch directly onto the quest we're about to add so the
+    // server receives the fully resolved state in one AddQuest call.
+    if (newer is UpdateQuestChange && newer.questId == quest.id) {
+      return AddQuestChange(
+        quest: newer.patch.applyTo(quest),
+        updateMessage: newer.updateMessage,
+      );
     }
     return newer;
   }
 }
 
-/// Records an edit to an existing quest, preserving the previous state
-/// so the change can be properly undone.
+/// Records an edit to an existing quest.
+///
+/// Instead of storing full before/after snapshots, only the changed fields are
+/// kept in [patch]. This means [applyLocally] and [undoLocally] read the
+/// **current** quest state and surgically update only the relevant fields,
+/// so reordering changes never accidentally restores a stale field value.
 class UpdateQuestChange extends _QuestTargetedChange {
-  final Quest before;
-  final Quest after;
+  @override
+  final int questId;
+
+  /// The fields that changed – only non-null fields are written.
+  final QuestPatch patch;
+
+  /// The previous values for every field in [patch] – used for undo.
+  final QuestPatch reversePatch;
 
   const UpdateQuestChange({
-    required this.before,
-    required this.after,
+    required this.questId,
+    required this.patch,
+    required this.reversePatch,
     super.updateMessage = 'updated quest',
   });
 
-  @override
-  int get questId => after.id;
+  /// Convenience constructor: computes [patch] and [reversePatch] automatically
+  /// from two full quest snapshots.
+  factory UpdateQuestChange.fromDiff({
+    required Quest before,
+    required Quest after,
+    String updateMessage = 'updated quest',
+  }) {
+    final patch = QuestPatch.diff(before, after);
+    return UpdateQuestChange(
+      questId: after.id,
+      patch: patch,
+      reversePatch: patch.reverse(before),
+      updateMessage: updateMessage,
+    );
+  }
 
   @override
-  String get collapseKey => 'quest:${after.id}';
+  String get collapseKey => 'quest:$questId';
 
   @override
-  void applyLocally(QuestSystem s) => s.upsertQuest(after);
+  void applyLocally(QuestSystem s) {
+    final current = s.maybeGetQuestById(questId);
+    if (current == null) return;
+    final applied = patch.applyTo(current);
+    
+    print("Applying UpdateQuestChange locally. questId: $questId, patch: $patch, reversePatch: $reversePatch, updateMessage: $updateMessage, applied quest: ${applied.position}");
+    
+    s.upsertQuest(applied);
+  }
 
   @override
-  void undoLocally(QuestSystem s) => s.upsertQuest(before);
+  void undoLocally(QuestSystem s) {
+    final current = s.maybeGetQuestById(questId);
+    if (current == null) return;
+    s.upsertQuest(reversePatch.applyTo(current));
+  }
 
+  /// Sends the full current quest state so the server always receives a
+  /// consistent object, regardless of how many patches were collapsed.
   @override
-  Future<void> push(QuestRepository repo) =>
-      repo.updateQuest(after, updateMessage);
+  Future<void> push(QuestRepository repo, QuestSystem system) {
+    final current = system.maybeGetQuestById(questId);
+    if (current == null) return Future.value();
+    return repo.updateQuest(current, updateMessage);
+  }
 
   @override
   QuestChange? mergeWith(QuestChange newer) {
-    if (newer is UpdateQuestChange) {
+    if (newer is UpdateQuestChange && newer.questId == questId) {
+      // Combine the two patches; keep our (oldest) reversePatch so undo
+      // always goes back to the state before the first change.
       return UpdateQuestChange(
-        before: before,
-        after: newer.after,
+        questId: questId,
+        patch: patch.mergedWith(newer.patch),
+        reversePatch: reversePatch,
         updateMessage: newer.updateMessage,
       );
     }
     if (newer is DeleteQuestChange) return newer;
     return newer;
   }
+  
+  @override
+  String toString() => 'UpdateQuestChange(questId: $questId, patch: $patch, reversePatch: $reversePatch, updateMessage: $updateMessage)';
 }
 
 class DeleteQuestChange extends _QuestTargetedChange {
@@ -408,7 +592,8 @@ class DeleteQuestChange extends _QuestTargetedChange {
   void undoLocally(QuestSystem s) => s.upsertQuest(quest);
 
   @override
-  Future<void> push(QuestRepository repo) => repo.deleteQuest(quest);
+  Future<void> push(QuestRepository repo, QuestSystem system) =>
+      repo.deleteQuest(quest);
 }
 
 // ── Connection changes ─────────────────────────────────────────────────────
@@ -433,7 +618,8 @@ class AddConnectionChange extends QuestChange {
   void undoLocally(QuestSystem s) => s.removeConnection(fromId, toId);
 
   @override
-  Future<void> push(QuestRepository repo) => repo.addConnection(fromId, toId);
+  Future<void> push(QuestRepository repo, QuestSystem system) =>
+      repo.addConnection(fromId, toId);
 
   @override
   QuestChange? mergeWith(QuestChange newer) {
@@ -466,7 +652,8 @@ class RemoveConnectionChange extends QuestChange {
   void undoLocally(QuestSystem s) => s.addConnection(fromId, toId);
 
   @override
-  Future<void> push(QuestRepository repo) => repo.removeConnection(fromId, toId);
+  Future<void> push(QuestRepository repo, QuestSystem system) =>
+      repo.removeConnection(fromId, toId);
 
   @override
   QuestChange? mergeWith(QuestChange newer) {

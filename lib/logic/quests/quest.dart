@@ -70,5 +70,5 @@ class Quest {
       sizeY: sizeY ?? this.sizeY,
       isCompleted: isCompleted ?? this.isCompleted,
     );
-  }
+  }  
 }
