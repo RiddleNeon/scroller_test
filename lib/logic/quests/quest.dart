@@ -13,10 +13,6 @@ class Quest {
   double posX;
   double posY;
   
-  bool isDeleted = false;
-
-  List<Quest> prerequisites = [];
-
   bool isCompleted = false;
 
   Offset get position => Offset(posX, posY);
@@ -35,7 +31,7 @@ class Quest {
     this.difficulty = 0.5,
     this.sizeX = 100,
     this.sizeY = 100,
-    this.isDeleted = false,
+    this.isCompleted = false,
   });
 
   Quest.fromJson(Map<String, dynamic> json)
@@ -48,7 +44,7 @@ class Quest {
         difficulty = (json['difficulty'] as num?)?.toDouble() ?? 0.5,
         sizeX = (json['sizeX'] as num?)?.toDouble() ?? 100,
         sizeY = (json['sizeY'] as num?)?.toDouble() ?? 100,
-        isDeleted = json['isDeleted'] as bool? ?? false; 
+        isCompleted = json['isCompleted'] as bool? ?? false;
   
   
   Quest copyWith({
@@ -62,6 +58,7 @@ class Quest {
     double? sizeX,
     double? sizeY,
     bool? isDeleted,
+    bool? isCompleted,
   }) {
     return Quest(
       id: id ?? this.id,
@@ -73,7 +70,7 @@ class Quest {
       difficulty: difficulty ?? this.difficulty,
       sizeX: sizeX ?? this.sizeX,
       sizeY: sizeY ?? this.sizeY,
-      isDeleted: isDeleted ?? this.isDeleted,
+      isCompleted: isCompleted ?? this.isCompleted,
     );
   }
 }

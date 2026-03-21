@@ -11,6 +11,8 @@ class QuestSystem with ChangeNotifier {
   Map<int, Quest> _quests = {};
   List<Quest> get quests => _quests.values.toList();
 
+  final Map<int, Set<int>> _prerequisites = {};
+
   // ── Internal ───────────────────────────────────────────────────────────────
 
   void _revalidate() {
@@ -27,15 +29,18 @@ class QuestSystem with ChangeNotifier {
     notifyListeners();
   }
 
-  void removeQuest(int id) {
-    _allQuests[id]?.isDeleted = true;
-    _revalidate(); // revalidate BEFORE notify so listeners see a consistent state
+  void removeQuestById(int id) {
+    _allQuests.removeWhere((key, value) => value.id == id);
+    _revalidate();
     notifyListeners();
   }
-
+  
+  void removeQuest(Quest quest) => removeQuestById(quest.id);
+  
+  @Deprecated("use upsertQuest instead")
   void moveQuest(int id, double newX, double newY) {
     final quest = _allQuests[id];
-    if (quest == null || quest.isDeleted) return;
+    if (quest == null) return;
     quest.posX = newX;
     quest.posY = newY;
     // No revalidate needed; isDeleted didn't change
@@ -48,17 +53,12 @@ class QuestSystem with ChangeNotifier {
   // ── Connection mutations ───────────────────────────────────────────────────
 
   void addConnection(int fromId, int toId) {
-    final from = _allQuests[fromId];
-    final to = _allQuests[toId];
-    if (from == null || to == null || from.isDeleted || to.isDeleted) return;
-    if (!from.prerequisites.any((q) => q.id == toId)) {
-      from.prerequisites.add(to);
-    }
+    _prerequisites.putIfAbsent(fromId, () => {}).add(toId);
     notifyListeners();
   }
 
   void removeConnection(int fromId, int toId) {
-    _allQuests[fromId]?.prerequisites.removeWhere((q) => q.id == toId);
+    _prerequisites[fromId]?.remove(toId);
     notifyListeners();
   }
 

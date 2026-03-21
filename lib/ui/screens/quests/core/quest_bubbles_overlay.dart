@@ -30,10 +30,10 @@ class QuestBubblesOverlayState extends State<QuestBubblesOverlay> {
     super.initState();
     _connectionPainter = QuestLineConnectionPainter();
     _worldBounds = _computeWorldBounds();
-    questSystem.addListener(() {
-      if (mounted) setState(() => _worldBounds = _computeWorldBounds());
-    });
+    questSystem.addListener(revalidateWorldBounds);
   }
+  
+  
 
 
   void setDragState({required int? questId, required Offset? position}) {
@@ -109,11 +109,19 @@ class QuestBubblesOverlayState extends State<QuestBubblesOverlay> {
     }
     return Size(maxX, maxY);
   }
+  
+  void revalidateWorldBounds() {
+    final newBounds = _computeWorldBounds();
+    if (newBounds != _worldBounds) {
+      setState(() => _worldBounds = newBounds);
+    }
+  }
 
   @override
   void dispose() {
     _dragNotifier.dispose();
     _connectionNotifier.dispose();
+    questSystem.removeListener(revalidateWorldBounds);
     super.dispose();
   }
 }
