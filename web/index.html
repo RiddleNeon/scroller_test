@@ -1,19 +1,6 @@
 <!DOCTYPE html>
 <html>
 <head>
-  <!--
-    If you are serving your web app in a path other than the root, change the
-    href value below to reflect the base path you are serving from.
-
-    The path provided below has to start and end with a slash "/" in order for
-    it to work correctly.
-
-    For more details:
-    * https://developer.mozilla.org/en-US/docs/Web/HTML/Element/base
-
-    This is a placeholder for base href that will be replaced by the value of
-    the `--base-href` argument provided to `flutter build`.
-  -->
   <base href="$FLUTTER_BASE_HREF">
 
   <meta charset="UTF-8">
@@ -33,14 +20,115 @@
   <link rel="manifest" href="manifest.json">
 </head>
 <body>
-  <!--
-    You can customize the "flutter_bootstrap.js" script.
-    This is useful to provide a custom configuration to the Flutter loader
-    or to give the user feedback during the initialization process.
+<script src="flutter_bootstrap.js" async></script>
 
-    For more details:
-    * https://docs.flutter.dev/platform-integration/web/initialization
-  -->
-  <script src="flutter_bootstrap.js" async></script>
+<!-- Whisper.js: Läuft komplett im Browser, kein Server nötig.      -->
+<!-- Das Modell (~150MB) wird beim ersten Mal geladen und gecacht.  -->
+<script type="module">
+  import {
+    pipeline,
+    env
+  } from 'https://cdn.jsdelivr.net/npm/@huggingface/transformers@3.0.0';
+
+  env.useBrowserCache = true;
+  env.allowLocalModels  = false;
+
+  let transcriber = null;
+
+  async function loadWhisper(onProgress) {
+    if (transcriber) return transcriber;
+    transcriber = await pipeline(
+            'automatic-speech-recognition',
+            'Xenova/whisper-small',
+            // Für weniger Speicher: 'Xenova/whisper-tiny' (~38MB)
+            {
+              progress_callback: (p) => {
+                if (onProgress && p.progress != null)
+                  onProgress(Math.round(p.progress));
+              }
+            }
+    );
+    return transcriber;
+  }
+
+  // Wird aus Dart via js_interop aufgerufen.
+  // audioBlob  – WAV-Blob aus extractAudioFromVideo()
+  // language   – z.B. 'german' oder 'english'
+  // prompt     – optionaler Fachvokabular-String (initial_prompt)
+  // onProgress – Callback mit 0-100
+  window.transcribeAudio = async function(audioBlob, language, prompt, onProgress) {
+    try {
+      const pipe = await loadWhisper(onProgress);
+
+      const arrayBuffer = await audioBlob.arrayBuffer();
+      const audioCtx   = new AudioContext({ sampleRate: 16000 });
+      const decoded    = await audioCtx.decodeAudioData(arrayBuffer);
+      const samples    = decoded.getChannelData(0); // Mono Float32Array
+
+      const result = await pipe(samples, {
+        language:             language || 'english',
+        task:                 'transcribe',
+        return_timestamps:    true,
+        chunk_length_s:       30,
+        stride_length_s:      5,
+        initial_prompt:       prompt || '',
+        num_beams:            5,
+        no_repeat_ngram_size: 3,
+        temperature:          0.3,
+      });
+
+      return JSON.stringify({ success: true, data: result });
+    } catch (e) {
+      return JSON.stringify({ success: false, error: e.message });
+    }
+  };
+
+  // Extrahiert das Audio-Signal aus einer MP4/MOV/WebM-Datei.
+  // Gibt einen WAV-Blob zurück.
+  window.extractAudioFromVideo = async function(videoFile) {
+    try {
+      const url         = URL.createObjectURL(videoFile);
+      const response    = await fetch(url);
+      const arrayBuffer = await response.arrayBuffer();
+      URL.revokeObjectURL(url);
+
+      const audioCtx    = new OfflineAudioContext(1, 1, 44100);
+      const audioBuffer = await audioCtx.decodeAudioData(arrayBuffer);
+
+      return _audioBufferToWav(audioBuffer);
+    } catch (e) {
+      console.error('Audio-Extraktion fehlgeschlagen:', e);
+      return null;
+    }
+  };
+
+  function _audioBufferToWav(buffer) {
+    const samples    = buffer.getChannelData(0);
+    const sampleRate = buffer.sampleRate;
+    const wavBuffer  = new ArrayBuffer(44 + samples.length * 2);
+    const view       = new DataView(wavBuffer);
+
+    const str = (off, s) => { for (let i = 0; i < s.length; i++) view.setUint8(off + i, s.charCodeAt(i)); };
+    str(0,  'RIFF');  view.setUint32(4,  36 + samples.length * 2, true);
+    str(8,  'WAVE');  str(12, 'fmt ');
+    view.setUint32(16, 16, true);
+    view.setUint16(20, 1,  true);   // PCM
+    view.setUint16(22, 1,  true);   // Mono
+    view.setUint32(24, sampleRate,      true);
+    view.setUint32(28, sampleRate * 2,  true);
+    view.setUint16(32, 2,  true);
+    view.setUint16(34, 16, true);
+    str(36, 'data');  view.setUint32(40, samples.length * 2, true);
+
+    for (let i = 0; i < samples.length; i++) {
+      const s = Math.max(-1, Math.min(1, samples[i]));
+      view.setInt16(44 + i * 2, s < 0 ? s * 0x8000 : s * 0x7FFF, true);
+    }
+
+    return new Blob([wavBuffer], { type: 'audio/wav' });
+  }
+
+  console.log('[wurp] Whisper.js bereit');
+</script>
 </body>
 </html>

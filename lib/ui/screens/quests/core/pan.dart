@@ -424,7 +424,7 @@ class PanWidgetState extends State<PanWidget> {
                   child: AnimatedBuilder(
                     animation: _controller,
                     builder: (context, child) => Transform(transform: _controller.value, alignment: Alignment.topLeft, child: child),
-                    child: QuestBubblesOverlay(key: _questBubbleOverlayKey, debugMode: debugMode,),
+                    child: QuestBubblesOverlay(key: _questBubbleOverlayKey, debugMode: debugMode),
                   ),
                 ),
                 Positioned.fill(

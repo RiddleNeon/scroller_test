@@ -2,6 +2,7 @@ import 'package:flutter/cupertino.dart';
 import 'package:flutter/material.dart';
 import 'package:go_router/go_router.dart';
 import 'package:wurp/main.dart';
+import 'package:wurp/transcription/uploading/video_upload_screen.dart';
 import 'package:wurp/ui/screens/auth_screen.dart';
 import 'package:wurp/ui/screens/chat/chat_managing_screen.dart';
 import 'package:wurp/ui/screens/profile_screen.dart';
@@ -54,16 +55,7 @@ void initRouter() {
             path: '/create',
             builder: (context, state) => const Scaffold(
               // appBar: AppBar(title: const Text('Not yet implemented')),
-              body: Center(
-                child: Column(
-                  mainAxisSize: MainAxisSize.min,
-                  children: [
-                    Icon(Icons.build, size: 64, color: Colors.grey),
-                    SizedBox(height: 12),
-                    Text('Not yet implemented', style: TextStyle(color: Colors.grey)),
-                  ],
-                ),
-              ),
+              body: VideoUploadWidget()
             ),
           ), //indicator that this is not implemented yet,
           GoRoute(
