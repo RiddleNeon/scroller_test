@@ -7,6 +7,7 @@ class Comment {
   String message;
   DateTime date;
   int likeCount;
+  bool likedByCurrentUser;
   int? replyCount;
 
   /// null  → top-level comment
@@ -31,20 +32,25 @@ class Comment {
     this.depth = 0,
     List<Comment>? replies,
     required this.replyCount,
+    this.likedByCurrentUser = false,
   }) : _replies = replies ?? [];
 
-  factory Comment.fromSupabase(Map<String, dynamic> data) => Comment(
-    id: data['id'].toString(),
-    userId: data['author_id'] as String,
-    username: data['profiles']['username'] as String,
-    userProfileImageUrl: data['profiles']['avatar_url'] as String? ?? '',
-    message: data['content'] as String,
-    date: DateTime.parse(data['created_at']).toLocal(),
-    likeCount: 0, //todo
-    parentId: data['parent_id']?.toString(),
-    depth: data['parent_id'] != null ? 1 : 0,
-    replyCount: data['reply_count'] as int? ?? 0,
-  );
+  factory Comment.fromSupabase(Map<String, dynamic> data, {bool? likedByMe}) {
+    print("liked by me: ${likedByMe ?? (data['liked_by_current_user'] as bool?)}");
+    return Comment(
+      id: data['id'].toString(),
+      userId: data['author_id'] as String,
+      username: data['profiles']['username'] as String,
+      userProfileImageUrl: data['profiles']['avatar_url'] as String? ?? '',
+      message: data['content'] as String,
+      date: DateTime.parse(data['created_at']).toLocal(),
+      likeCount: int.tryParse(data['like_count']?.toString() ?? '0') ?? 0,
+      parentId: data['parent_id']?.toString(),
+      depth: data['parent_id'] != null ? 1 : 0,
+      replyCount: data['reply_count'] as int? ?? 0,
+      likedByCurrentUser: likedByMe ?? (data['liked_by_current_user'] as bool?) ?? false,
+    );
+  }
   
   void addReply(Comment reply) {
     _replies.add(reply);

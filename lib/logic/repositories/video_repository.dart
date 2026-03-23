@@ -1,3 +1,5 @@
+import 'dart:convert';
+
 import 'package:wurp/logic/comments/comment.dart';
 import 'package:wurp/logic/video/video.dart';
 import 'package:wurp/tools/supabase_tests/supabase_login_test.dart';
@@ -200,6 +202,7 @@ class VideoRepository {
       parentId: parentId?.toString(),
       depth: parentId == null ? 0 : 1,
       replyCount: 0,
+      likeCount: 0,
     );
   }
 
@@ -209,8 +212,8 @@ class VideoRepository {
     int offset = 0,
     int limit = 20,
   }) async {
-    final comments = await getCommentsSupabase(
-      videoId,
+    final comments = await getCommentsWithLikeSupabase(
+      videoId: int.parse(videoId),
       parentCommentId: commentId == null ? null : int.tryParse(commentId),
       limit: limit,
       offset: offset,
@@ -219,28 +222,56 @@ class VideoRepository {
     return (comments: comments, nextOffset: comments.length < limit ? null : offset + comments.length);
   }
 
-  Future<List<Comment>> getCommentsSupabase(String videoId, {int? parentCommentId, int limit = 20, int offset = 0}) async {
-    dynamic baseQuery = supabaseClient
-        .from('comments')
-        .select('''
-          *,
-          profiles (
-            username,
-            avatar_url
-          )
-        ''')
-        .eq('video_id', _parseVideoId(videoId));
+  Future<List<Comment>> getCommentsWithLikeSupabase({
+    required int videoId,
+    int? parentCommentId,
+    int limit = 20,
+    int offset = 0,
+  }) async {
+    final rpcResult = await supabaseClient.rpc('get_comments_with_like', params: {
+      'p_video_id': videoId,
+      'p_current_user': currentUser.id,
+      'p_parent_id': parentCommentId,
+      'p_limit': limit,
+      'p_offset': offset,
+    });
 
-    if (parentCommentId == null) {
-      baseQuery = baseQuery.isFilter('parent_id', null);
-      print("top-level comments for video $videoId");
-    } else {
-      baseQuery = baseQuery.eq('parent_id', parentCommentId);
-      print("parent comment $parentCommentId");
+    late final List rows;
+    try {
+      rows = (rpcResult.data as List).cast();
+    } catch (_) {
+      rows = (rpcResult as List).cast();
     }
 
-    final result = await baseQuery.order('created_at', ascending: false).range(offset, offset + limit - 1);
-    return result.map<Comment>((entry) => Comment.fromSupabase(entry)).toList();
+    return rows.map<Comment>((e) {
+      final Map<String, dynamic> profiles = e['profiles'] is String
+          ? (jsonDecode(e['profiles']) as Map<String, dynamic>)
+          : (e['profiles'] as Map<String, dynamic>);
+      final mapped = {
+        'id': e['id'],
+        'author_id': e['author_id'],
+        'profiles': profiles,
+        'content': e['content'],
+        'created_at': e['created_at'],
+        'like_count': e['like_count'],
+        'parent_id': e['parent_id'],
+        'reply_count': e['reply_count'],
+        'liked_by_current_user': e['liked_by_current_user'],
+      };
+      print("Comment row: $e");
+      final liked = (e['liked_by_current_user'] as bool?);
+      return Comment.fromSupabase(mapped, likedByMe: liked);
+    }).toList();
+  }
+
+  
+  Future<bool> toggleCommentLike(String commentId) async {
+    final parsedCommentId = int.tryParse(commentId);
+    if (parsedCommentId == null) {
+      throw FormatException('Expected numeric Supabase comment id, got: $commentId');
+    }
+    final bool result = await supabaseClient.rpc('toggle_like_comment', params: {'p_comment_id': parsedCommentId});
+    return result;
   }
 
   Future<void> saveVideo(String userId, String videoId) async => saveVideoSupabase(userId, _parseVideoId(videoId));

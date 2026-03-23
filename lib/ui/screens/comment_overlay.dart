@@ -13,7 +13,8 @@ import '../../logic/video/video.dart';
 
 class _CommentVM {
   final Comment comment;
-  bool likedByMe;
+  bool get likedByMe => comment.likedByCurrentUser;
+  set likedByMe(bool value) => comment.likedByCurrentUser = value;
   int likeCount;
   
   bool isLoadingReplies;
@@ -29,7 +30,6 @@ class _CommentVM {
 
   _CommentVM({
     required this.comment,
-    this.likedByMe = false, //todo link with LocalSeenService
     this.isLoadingReplies = false,
     this.repliesLoaded = false,
     this.showReplies = false,
@@ -261,6 +261,7 @@ class _CommentsOverlayState extends State<CommentsOverlay> {
       parentId: target?.comment.id,
       depth: target != null ? target.comment.depth + 1 : 0, 
       replyCount: 0,
+      likedByCurrentUser: false,
     );
 
     final savedComment = await widget.onCommentAdded(newComment);
@@ -302,17 +303,21 @@ class _CommentsOverlayState extends State<CommentsOverlay> {
     _focusNode.unfocus();
   }
 
-  void _toggleLike(_CommentVM vm) {
+  void _toggleLike(_CommentVM vm) async {
     HapticFeedback.selectionClick();
-    setState(() {
-      if (vm.likedByMe) {
-        vm.likedByMe = false;
-        vm.likeCount--;
-      } else {
+    
+    bool liked = await videoRepo.toggleCommentLike(vm.comment.id);
+    if(mounted) {
+      setState(() {
+      if (liked) {
         vm.likedByMe = true;
         vm.likeCount++;
+      } else {
+        vm.likedByMe = false;
+        vm.likeCount--;
       }
     });
+    }
   }
   
   
