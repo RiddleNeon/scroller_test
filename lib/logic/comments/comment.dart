@@ -60,7 +60,8 @@ class Comment {
 
   void addReplies(List<Comment> replies) {
     _replies.addAll(replies);
-    replyCount = (replyCount ?? _replies.length) + 1;
+    replyCount ??= _replies.length;
+    replyCount ??= ((replyCount ?? 0) + 1);
   }
   
   List<Comment> getReplies(){

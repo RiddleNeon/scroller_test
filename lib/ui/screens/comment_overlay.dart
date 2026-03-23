@@ -16,6 +16,8 @@ class _CommentVM {
   bool get likedByMe => comment.likedByCurrentUser;
   set likedByMe(bool value) => comment.likedByCurrentUser = value;
   int likeCount;
+  int get replyCount => comment.replyCount ?? 0;
+  set replyCount(int newVal) => comment.replyCount = newVal;
   
   bool isLoadingReplies;
 
@@ -467,7 +469,7 @@ class _CommentsOverlayState extends State<CommentsOverlay> {
           ),
 
           // ── Replies toggle / spinner ────────────────────────────
-          if (showRepliesRow)
+          if (showRepliesRow && (vm.replyCount > 0))
             Padding(
               padding: const EdgeInsets.only(left: 52, bottom: 4),
               child: GestureDetector(
@@ -503,9 +505,7 @@ class _CommentsOverlayState extends State<CommentsOverlay> {
                       Text(
                         vm.showReplies
                             ? 'Hide replies'
-                            : vm.repliesLoaded
-                                ? 'View ${vm.replies.length} repl${vm.replies.length == 1 ? 'y' : 'ies'}'
-                                : 'View replies',
+                            : 'View ${vm.replyCount} repl${vm.replyCount == 1 ? 'y' : 'ies'}',
                         style: const TextStyle(
                           color: _subtleText,
                           fontSize: 12.5,

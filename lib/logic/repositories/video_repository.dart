@@ -166,7 +166,6 @@ class VideoRepository {
 
   Future<Comment> addComment(String videoId, Comment comment) async {
     return postCommentSupabase(
-      userId: comment.userId,
       videoId: _parseVideoId(videoId),
       content: comment.message,
       parentId: comment.parentId == null ? null : int.tryParse(comment.parentId!),
@@ -174,31 +173,24 @@ class VideoRepository {
   }
 
   Future<Comment> postCommentSupabase({
-    required String userId,
     required int videoId,
     required String content,
     int? parentId,
   }) async {
-    final inserted = await supabaseClient.from('comments').insert({
-      'author_id': userId,
-      'video_id': videoId,
-      'content': content,
-      'parent_id': parentId,
-    }).select('id, created_at').single();
+    int insertedId = await supabaseClient.rpc('post_comment', params: {
+      'p_author_id': currentUser.id,
+      'p_video_id': videoId,
+      'p_parent_id': parentId,
+      'p_content': content,
+    });
 
-    if (parentId != null) {
-      await _adjustCommentMetric(parentId, 'reply_count', 1);
-    }
-    await _adjustVideoMetric(videoId, 'comment_count', 1);
-
-    final profile = await supabaseClient.from('profiles').select('username, avatar_url').eq('id', userId).single();
     return Comment(
-      id: inserted['id'].toString(),
-      userId: userId,
-      username: profile['username'] as String? ?? currentAuthUsername(),
-      userProfileImageUrl: profile['avatar_url'] as String? ?? '',
+      id: insertedId.toString(),
+      userId: currentUser.id,
+      username: currentUser.username,
+      userProfileImageUrl: currentUser.profileImageUrl,
       message: content,
-      date: DateTime.parse(inserted['created_at'] as String).toLocal(),
+      date: DateTime.now(),
       parentId: parentId?.toString(),
       depth: parentId == null ? 0 : 1,
       replyCount: 0,
