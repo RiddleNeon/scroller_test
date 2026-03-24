@@ -47,7 +47,7 @@ Future<void> initLogic() async {
   fvp.registerWith();
   if(_currentUser != null) await onUserLogout();
   await ensureSupabaseInitialized();
-  await questSystem.loadFromServer('Brewing');
+  await questSystem.loadFromServer('');
   changeManager = QuestChangeManager(
     questSystem: questSystem,
     repo: questRepo,
