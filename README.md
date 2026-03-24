@@ -50,3 +50,11 @@ additionally these reads are pretty expensive. Here is the pricing of reads, wri
 - writes: 0.09$
 - deletes: 0.01$
 
+## data storage provider
+for storing the actual video data, profile images, thumbnails, subtitles and all of the actual heavy data i chose **Cloudflare**. cloudflare is especcially useful since it doesnt fee any egress costs, you only really pay for the actual storage. this is important since egress usually is pretty much the biggest bottleneck for social-media-like apps since the users are mass-downloading data from the server. if you take a look at tiktok for example single videos can reach immense amounts of views, reaching from the millions into the billions. since egress fees are free we only pay for the storage of a single video. there is however a limited amount of read operations. the operations are split into 2 categories, class A and class B operations. class A operations are more expensive but give you more power. besides of uploading videos we only need the class B operations which are a lot cheaper. here are the prices:
+- class A operations: 1m free, then 4.50$/1m operations
+- class B operations: 10m free, then 0.36$/1m operations
+
+since profile images are being cached, we can count one sroll roughly as 1.2 class B operations.
+
+
