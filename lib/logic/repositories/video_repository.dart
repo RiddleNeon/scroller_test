@@ -457,10 +457,6 @@ class VideoRepository {
     await supabaseClient.rpc('increment_profile_metric', params: {'p_user_id': userId, 'p_column': column, 'p_delta': delta});
   }
 
-  Future<void> _adjustCommentMetric(int commentId, String column, int delta) async {
-    await supabaseClient.rpc('increment_comment_metric', params: {'p_comment_id': commentId, 'p_column': column, 'p_delta': delta});
-  }
-
   Video _toVideo(Map<String, dynamic> data) {
     final profile = (data['profiles'] as Map<String, dynamic>? ?? <String, dynamic>{});
     final authorName = profile['display_name'] ?? profile['username'] ?? data['display_name'] ?? data['username'] ?? 'Unknown';

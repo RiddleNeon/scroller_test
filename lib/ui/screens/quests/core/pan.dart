@@ -81,7 +81,7 @@ class PanWidgetState extends State<PanWidget> {
 
   Offset _boundaryMax = Offset.zero;
   Offset _boundaryMin = Offset.zero;
-  static const double _boundaryPadding = 20.0;
+  static const double _boundaryPadding = 200.0;
 
   void revalidateBoundaries() {
     if (!mounted) return;
@@ -99,10 +99,12 @@ class PanWidgetState extends State<PanWidget> {
     double minX = double.infinity;
     double minY = double.infinity;
     for (final quest in questSystem.quests) {
-      if (quest.posX > maxX) maxX = quest.posX;
-      if (quest.posY > maxY) maxY = quest.posY;
-      if (quest.posX < minX) minX = quest.posX;
-      if (quest.posY < minY) minY = quest.posY;
+      double questX = quest.posX + (quest.sizeX / 2);
+      double questY = quest.posY + (quest.sizeY / 2);
+      if (questX > maxX) maxX = questX;
+      if (questY > maxY) maxY = questY;
+      if (questX < minX) minX = questX;
+      if (questY < minY) minY = questY;
     }
 
     setState(() {
@@ -120,8 +122,9 @@ class PanWidgetState extends State<PanWidget> {
 
     final scenePos = _controller.toScene(details.localFocalPoint);
     _lastPointerScenePos = scenePos;
-    
-    if(debugMode && details.pointerCount == 1) { //ignore if not a single finger, to avoid conflicts with pinch zoom or other gestures
+
+    if (debugMode && details.pointerCount == 1) {
+      //ignore if not a single finger, to avoid conflicts with pinch zoom or other gestures
       final connectQuest = _findQuestInConnectZone(scenePos);
       if (connectQuest != null) {
         _isConnecting = true;
@@ -153,8 +156,18 @@ class PanWidgetState extends State<PanWidget> {
     }
 
     if (_draggingQuest != null) {
-      final currentScale = _currentScale;
-      final newPos = _dragStartQuestPos + (_focalDelta / currentScale);
+      final worldDelta = _focalDelta / _currentScale;
+
+      final rawPos = _dragStartQuestPos + worldDelta;
+      final Offset newPos;
+      
+      if(isGridSnappingEnabled) {
+        final snappedX = (rawPos.dx / gridSize).round() * gridSize;
+        final snappedY = (rawPos.dy / gridSize).round() * gridSize;
+        newPos = Offset(snappedX, snappedY);
+      } else {
+        newPos = rawPos;
+      }
       _questBubbleOverlayKey.currentState?.setDragState(questId: _draggingQuest!.id, position: newPos);
       return;
     }
@@ -185,21 +198,30 @@ class PanWidgetState extends State<PanWidget> {
 
     if (_draggingQuest != null) {
       final currentScale = _currentScale;
-      
-      QuestPatch before = QuestPatch(
-        posX: _draggingQuest!.posX,
-        posY: _draggingQuest!.posY,
-      );
-      
+      QuestPatch before = QuestPatch(posX: _draggingQuest!.posX, posY: _draggingQuest!.posY);      
+      final worldDelta = _focalDelta / currentScale;
+
+      final rawPos = _dragStartQuestPos + worldDelta;
+
+      final snappedX = (rawPos.dx / gridSize).round() * gridSize;
+      final snappedY = (rawPos.dy / gridSize).round() * gridSize;
+
+      final Offset newPos;
+      if(isGridSnappingEnabled) {
+        newPos = Offset(snappedX, snappedY);
+      } else {
+        newPos = rawPos;
+      }
+
       QuestPatch after = QuestPatch(
-        posX: _dragStartQuestPos.dx + (_focalDelta.dx / currentScale),
-        posY: _dragStartQuestPos.dy + (_focalDelta.dy / currentScale),
+        posX: newPos.dx,
+        posY: newPos.dy,
       );
 
       _draggingQuest = after.applyTo(_draggingQuest!);
-      
+
       changeManager.record(UpdateQuestChange(questId: _draggingQuest!.id, patch: after, reversePatch: before, updateMessage: 'moved quest'));
-      
+
       questSystem.upsertQuest(_draggingQuest!);
     }
     _questBubbleOverlayKey.currentState?.setDragState(questId: null, position: null);
@@ -272,18 +294,20 @@ class PanWidgetState extends State<PanWidget> {
             debugMode: debugMode,
             editMode: false,
             onDoneEditing: (updatedQuest, [changeMessage]) async {
-              changeManager.record(UpdateQuestChange(
-                patch: updatedQuest,
-                reversePatch: QuestPatch.fromQuest(quest),
-                questId: quest.id,
-                updateMessage: changeMessage ?? 'no message provided', 
-              ));
+              changeManager.record(
+                UpdateQuestChange(
+                  patch: updatedQuest,
+                  reversePatch: QuestPatch.fromQuest(quest),
+                  questId: quest.id,
+                  updateMessage: changeMessage ?? 'no message provided',
+                ),
+              );
               if (context.mounted) Navigator.of(context).pop();
             },
             onDelete: (q) async {
               await questRepo.deleteQuest(q);
               changeManager.record(DeleteQuestChange(quest: q));
-              if(context.mounted) Navigator.of(context).pop();
+              if (context.mounted) Navigator.of(context).pop();
             },
           ),
         ),
@@ -292,7 +316,14 @@ class PanWidgetState extends State<PanWidget> {
   }
 
   void showQuestAddOverlay(Offset scenePos) {
-    Quest quest = Quest(id: DateTime.now().millisecondsSinceEpoch, name: 'No name provided', description: 'No description provided', subject: 'General');
+    Quest quest = Quest(
+      id: DateTime.now().millisecondsSinceEpoch,
+      name: 'No name provided',
+      description: 'No description provided',
+      subject: 'General',
+      posX: scenePos.dx,
+      posY: scenePos.dy,
+    );
     showDialog(
       context: context,
       builder: (context) {
@@ -309,16 +340,13 @@ class PanWidgetState extends State<PanWidget> {
                 editMode: true,
                 recommendedChangeMessage: 'Initial version',
                 onDoneEditing: (updatedQuest, [changeMessage]) async {
-                  changeManager.record(AddQuestChange(
-                    quest: updatedQuest.applyTo(quest),
-                    updateMessage: changeMessage ?? 'no message provided',
-                  ));
+                  changeManager.record(AddQuestChange(quest: updatedQuest.applyTo(quest), updateMessage: changeMessage ?? 'no message provided'));
                   if (context.mounted) Navigator.of(context).pop();
                 },
                 onDelete: (q) async {
                   await questRepo.deleteQuest(q);
                   changeManager.record(DeleteQuestChange(quest: q));
-                  if(context.mounted) Navigator.of(context).pop();
+                  if (context.mounted) Navigator.of(context).pop();
                 },
               ),
             ),
@@ -328,7 +356,7 @@ class PanWidgetState extends State<PanWidget> {
     );
   }
 
-  void _focusOnQuest(Quest quest) {
+  void focusOnQuest(Quest quest) {
     final renderBox = context.findRenderObject() as RenderBox?;
     if (renderBox == null) return;
     final viewSize = renderBox.size;
@@ -340,6 +368,21 @@ class PanWidgetState extends State<PanWidget> {
     _controller.value = Matrix4.identity()
       ..scale(scale)
       ..translate(targetX / scale, targetY / scale);
+  }
+
+  void centerOnAllQuests(double screenWidth, double screenHeight, {bool autoZoom = true}) {
+    final boundaryCenter = Offset((_boundaryMin.dx + _boundaryMax.dx) / 2, (_boundaryMin.dy + _boundaryMax.dy) / 2);
+
+    double scaleX = screenWidth / (_boundaryMax.dx - _boundaryMin.dx + 1);
+    double scaleY = screenHeight / (_boundaryMax.dy - _boundaryMin.dy + 1);
+    double targetScale = autoZoom ? (scaleX < scaleY ? scaleX : scaleY) * 0.85 : _currentScale;
+
+    final targetTx = screenWidth / 2 - boundaryCenter.dx * (targetScale);
+    final targetTy = screenHeight / 2 - boundaryCenter.dy * (targetScale);
+
+    _controller.value = Matrix4.identity()
+      ..scale(targetScale)
+      ..translate(targetTx / targetScale, targetTy / targetScale);
   }
 
   Size get _viewSize {
@@ -365,6 +408,9 @@ class PanWidgetState extends State<PanWidget> {
     return (clampedTx, clampedTy);
   }
 
+  bool isGridSnappingEnabled = true;
+  double gridSize = 20.0;
+
   @override
   Widget build(BuildContext context) {
     return RawKeyboardListener(
@@ -382,6 +428,19 @@ class PanWidgetState extends State<PanWidget> {
               _controller.value.rotateX(0.0000000000001);
             });
             return KeyEventResult.handled;
+          } else if (event.logicalKey == LogicalKeyboardKey.keyC && !HardwareKeyboard.instance.isShiftPressed) {
+            centerOnAllQuests(context.size?.width ?? 100, context.size?.height ?? 100, autoZoom: false);
+            return KeyEventResult.handled;
+          } else if (event.logicalKey == LogicalKeyboardKey.keyC && HardwareKeyboard.instance.isShiftPressed) {
+            centerOnAllQuests(context.size?.width ?? 100, context.size?.height ?? 100, autoZoom: true);
+            return KeyEventResult.handled;
+          }
+
+          if (HardwareKeyboard.instance.isShiftPressed) {
+            isGridSnappingEnabled = false;
+          } else {
+            isGridSnappingEnabled = true;
+            print("Grid snapping enabled");
           }
           return KeyEventResult.ignored;
         },

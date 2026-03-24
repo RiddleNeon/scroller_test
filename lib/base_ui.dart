@@ -1,12 +1,11 @@
 import 'package:flutter/material.dart';
 import 'package:wurp/ui/router.dart';
-import 'package:wurp/tools/supabase_tests/supabase_login_test.dart';
 
 import 'base_logic.dart';
 
 void startApp() async {
   print("starting app");
-  final session = auth?.currentSession;
+  final session = auth.currentSession;
   if (session != null) {
     final authUser = session.user;
     final user = await userRepository.getUserSupabase(authUser.id) ?? await userRepository.getOrCreateCurrentUser();
