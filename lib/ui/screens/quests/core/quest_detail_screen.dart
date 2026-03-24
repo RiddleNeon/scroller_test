@@ -196,7 +196,7 @@ class _QuestDetailScreenState extends State<QuestDetailScreen> {
                   child: _DifficultySection(
                     colorScheme: colorScheme,
                     editMode: _editMode,
-                    difficulty: _difficulty,
+                    initialDifficulty: _difficulty,
                     onDifficultyChanged: (v) => setState(() => _difficulty = v),
                   ),
                 ),
@@ -561,19 +561,34 @@ class _DescriptionSection extends StatelessWidget {
 
 // ── Difficulty ────────────────────────────────────────────────────────────────
 
-class _DifficultySection extends StatelessWidget {
+class _DifficultySection extends StatefulWidget {
   final ColorScheme colorScheme;
   final bool editMode;
-  final double difficulty;
+  final double initialDifficulty;
   final ValueChanged<double> onDifficultyChanged;
 
   const _DifficultySection({
     required this.colorScheme,
     required this.editMode,
-    required this.difficulty,
+    required this.initialDifficulty,
     required this.onDifficultyChanged,
   });
 
+  @override
+  State<_DifficultySection> createState() => _DifficultySectionState();
+}
+
+class _DifficultySectionState extends State<_DifficultySection> {
+  
+  late double _difficulty;
+  
+  @override
+  initState() {
+    super.initState();
+    _difficulty = widget.initialDifficulty.clamp(0.0, 1.0);
+  }
+  
+  
   String _difficultyLabel(double d) {
     if (d < 0.2) return 'Beginner';
     if (d < 0.4) return 'Novice';
@@ -590,8 +605,7 @@ class _DifficultySection extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    final d = difficulty.clamp(0.0, 1.0);
-    final color = _difficultyColor(d, colorScheme);
+    final color = _difficultyColor(_difficulty, widget.colorScheme);
     const segments = 10;
 
     return Padding(
@@ -601,55 +615,58 @@ class _DifficultySection extends StatelessWidget {
         children: [
           Row(
             children: [
-              Expanded(child: _SectionLabel(label: 'Difficulty', colorScheme: colorScheme)),
+              Expanded(child: _SectionLabel(label: 'Difficulty', colorScheme: widget.colorScheme)),
               // Label + percentage animate as the slider moves.
               AnimatedSwitcher(
                 duration: const Duration(milliseconds: 120),
                 child: Text(
-                  key: ValueKey('${_difficultyLabel(d)}-${(d * 100).round()}'),
-                  '${_difficultyLabel(d)}  ·  ${(d * 100).round()}%',
+                  key: ValueKey('${_difficultyLabel(_difficulty)}-${(_difficulty * 100).round()}'),
+                  '${_difficultyLabel(_difficulty)}  ·  ${(_difficulty * 100).round()}%',
                   style: TextStyle(color: color, fontSize: 13, fontWeight: FontWeight.w700),
                 ),
               ),
             ],
           ),
           const SizedBox(height: 14),
-          if (editMode)
+          if (widget.editMode)
             SliderTheme(
               data: SliderTheme.of(context).copyWith(
                 activeTrackColor: color,
                 thumbColor: color,
                 overlayColor: color.withValues(alpha: 0.15),
-                inactiveTrackColor: colorScheme.surfaceContainerHighest,
+                inactiveTrackColor: widget.colorScheme.surfaceContainerHighest,
                 valueIndicatorColor: color,
                 trackHeight: 8,
                 thumbShape: const RoundSliderThumbShape(enabledThumbRadius: 10),
               ),
               child: Slider(
-                value: d,
-                onChanged: onDifficultyChanged,
+                value: _difficulty,
+                onChanged: (v) {
+                  setState(() {_difficulty = v;});
+                },
+                onChangeEnd: (value) => widget.onDifficultyChanged(value),
                 divisions: 20,
-                label: '${(d * 100).round()}%',
+                label: '${(_difficulty * 100).round()}%',
               ),
             )
           else ...[
             Row(
               children: [
-                Icon(Icons.bar_chart_rounded, size: 16, color: colorScheme.onSurfaceVariant),
+                Icon(Icons.bar_chart_rounded, size: 16, color: widget.colorScheme.onSurfaceVariant),
                 const SizedBox(width: 6),
-                Text('${(d * 100).round()}%', style: TextStyle(color: colorScheme.onSurfaceVariant, fontSize: 13)),
+                Text('${(_difficulty * 100).round()}%', style: TextStyle(color: widget.colorScheme.onSurfaceVariant, fontSize: 13)),
               ],
             ),
             const SizedBox(height: 14),
             Row(
               children: List.generate(segments, (i) {
-                final filled = i < (d * segments).round();
+                final filled = i < (_difficulty * segments).round();
                 return Expanded(
                   child: Container(
                     height: 8,
                     margin: EdgeInsets.only(right: i < segments - 1 ? 4 : 0),
                     decoration: BoxDecoration(
-                      color: filled ? color : colorScheme.surfaceContainerHighest,
+                      color: filled ? color : widget.colorScheme.surfaceContainerHighest,
                       borderRadius: BorderRadius.circular(4),
                     ),
                   ),

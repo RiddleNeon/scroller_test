@@ -120,8 +120,8 @@ class PanWidgetState extends State<PanWidget> {
 
     final scenePos = _controller.toScene(details.localFocalPoint);
     _lastPointerScenePos = scenePos;
-
-    if(debugMode) {
+    
+    if(debugMode && details.pointerCount == 1) { //ignore if not a single finger, to avoid conflicts with pinch zoom or other gestures
       final connectQuest = _findQuestInConnectZone(scenePos);
       if (connectQuest != null) {
         _isConnecting = true;
@@ -272,7 +272,6 @@ class PanWidgetState extends State<PanWidget> {
             debugMode: debugMode,
             editMode: false,
             onDoneEditing: (updatedQuest, [changeMessage]) async {
-              print("done, new pos: ${updatedQuest.posX}, ${updatedQuest.posY}");
               changeManager.record(UpdateQuestChange(
                 patch: updatedQuest,
                 reversePatch: QuestPatch.fromQuest(quest),
