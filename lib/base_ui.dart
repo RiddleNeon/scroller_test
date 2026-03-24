@@ -6,14 +6,11 @@ import 'base_logic.dart';
 
 void startApp() async {
   print("starting app");
-  if (auth?.currentUser != null) {
-    print("user logged in, ensuring supabase is initialized");
-    await ensureSupabaseInitialized();
-    print("initialized supabase");
-    final user = await userRepository.getUserSupabase(auth!.currentUser!.uid) ?? await userRepository.getOrCreateCurrentUser();
-    print("got user");
+  final session = auth?.currentSession;
+  if (session != null) {
+    final authUser = session.user;
+    final user = await userRepository.getUserSupabase(authUser.id) ?? await userRepository.getOrCreateCurrentUser();
     await onUserLogin(user);
-    print("user logged in");
   }
   
   initRouter();

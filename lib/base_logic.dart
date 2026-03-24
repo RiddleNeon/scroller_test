@@ -1,7 +1,7 @@
-import 'package:firebase_auth/firebase_auth.dart';
 import 'package:flutter/foundation.dart';
 import 'package:flutter/material.dart';
 import 'package:fvp/fvp.dart' as fvp;
+import 'package:supabase_flutter/supabase_flutter.dart';
 import 'package:wurp/logic/quests/quest_system.dart';
 import 'package:wurp/logic/repositories/quest_repository.dart';
 import 'package:wurp/tools/supabase_tests/supabase_login_test.dart';
@@ -15,7 +15,7 @@ import 'logic/repositories/chat_repository.dart';
 import 'logic/repositories/user_repository.dart';
 import 'logic/video/video_provider.dart';
 
-FirebaseAuth? auth;
+GoTrueClient? auth;
 
 UserRepository userRepository = UserRepository();
 ChatRepository chatRepository = ChatRepository();
@@ -50,7 +50,7 @@ Future<void> initLogic() async {
     questSystem: questSystem,
     repo: questRepo,
   );
-  auth = FirebaseAuth.instance;
+  auth = supabaseClient.auth;
 }
 
 Future<void> onUserLogin(UserProfile user, [BuildContext? context]) async {
@@ -63,21 +63,26 @@ Future<void> onUserLogin(UserProfile user, [BuildContext? context]) async {
   }
 }
 
+String currentAuthUserId() => auth?.currentUser?.id ?? currentUser.id;
+
+String currentAuthUsername() {
+  final user = auth!.currentUser;
+  if (user == null) return currentUser.id;
+
+  final displayName = user.userMetadata?['full_name'];
+  if (displayName != null) return displayName;
+
+  final email = user.email;
+  if (email != null && email.contains('@')) {
+    return email.split('@').first;
+  }
+  return user.id;
+}
+
 Future<void> onUserLogout() async {
+  await auth?.signOut();
   UserPreferenceManager.reset();
   await feedViewModel.dispose();
 }
 
 bool runningOnMobile = defaultTargetPlatform == TargetPlatform.iOS || defaultTargetPlatform == TargetPlatform.android;
-
-String currentAuthUserId() => auth?.currentUser?.uid ?? currentUser.id;
-
-String currentAuthUsername() {
-  final displayName = auth?.currentUser?.displayName;
-  if (displayName != null && displayName.trim().isNotEmpty) return displayName;
-  final email = auth?.currentUser?.email;
-  if (email != null && email.contains('@')) {
-    return email.split('@').first;
-  }
-  return auth?.currentUser?.uid ?? currentUser.id;
-}

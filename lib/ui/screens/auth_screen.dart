@@ -1,8 +1,7 @@
-import 'package:firebase_auth/firebase_auth.dart' hide User;
 import 'package:flutter/foundation.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter_login/flutter_login.dart';
-import 'package:font_awesome_flutter/font_awesome_flutter.dart';
+import 'package:supabase_flutter/supabase_flutter.dart';
 import 'package:wurp/ui/router.dart';
 
 import '../../base_logic.dart';
@@ -22,63 +21,54 @@ class _LoginScreenState extends State<LoginScreen> {
   UserProfile? user;
 
   Future<String?> _authUser(LoginData data) async {
-    if(auth?.currentUser != null){
-      await auth!.signOut();
-    }
-
     try {
-      final response = await FirebaseAuth.instance.signInWithEmailAndPassword(email: data.name, password: data.password);
+      final response = await auth!.signInWithPassword(
+        email: data.name,
+        password: data.password,
+      );
+
       final signedInUser = response.user;
       if (signedInUser == null) return "Unable to sign in.";
-      user = await userRepository.getUserSupabase(signedInUser.uid) ?? await userRepository.getOrCreateCurrentUser();
-      print(user);
+
+      user = await userRepository.getUserSupabase(signedInUser.id) ?? await userRepository.getOrCreateCurrentUser();
       return null;
-    } on FirebaseAuthException catch (e) {
-      String? fullMessage = e.message;
-      print("$fullMessage");
-      if (fullMessage?.contains("internal") ?? false) {
-        setState(() {
-          enteredPasswordIncorrectly = true;
-        });
-      }
-      return fullMessage ?? "An unknown error has occurred!";
+    } on AuthException catch (e) {
+      return e.message;
     } catch (e) {
-      print("unknown signup error! $e");
-      return "an unknown error has occurred!";
+      return "An unknown error occurred!";
     }
   }
-
+  
   Future<String?> _signupUser(SignupData data) async {
-    if(auth?.currentUser != null){
-      await auth!.signOut();
-    }
-    
-    
-    if (data.password == null || data.name == null) return "please enter a valid email or password!";
+    if (data.password == null || data.name == null) return "Please enter credentials!";
     try {
-      final response = await FirebaseAuth.instance.createUserWithEmailAndPassword(email: data.name!, password: data.password!);
+      final response = await auth!.signUp(
+        email: data.name!,
+        password: data.password!,
+      );
+
       if (response.user == null) return "Unable to create user.";
+
       user = await userRepository.createCurrentUser(
         username: currentAuthUsername(),
       );
-      print(user);
       return null;
-    } on FirebaseAuthException catch (e) {
-      String? fullMessage = e.message;
-      print("$fullMessage");
-      return fullMessage ?? "An unknown error has occurred!";
-    } catch (e) {
-      print("unknown signup error! $e");
-      return "an unknown error has occurred!";
+    } on AuthException catch (e) {
+      return e.message;
     }
   }
 
   Future<String?> _recoverPassword(String email) async {
     try {
-      await FirebaseAuth.instance.sendPasswordResetEmail(email: email.trim());
+      await auth!.resetPasswordForEmail(
+        email.trim(),
+        redirectTo: kIsWeb ? null : 'de.riddleneon.wurp://reset-callback/', //todo
+      );
       return null;
-    } on FirebaseAuthException catch (e) {
-      return e.message ?? 'Password reset failed';
+    } on AuthException catch (e) {
+      return e.message;
+    } catch (e) {
+      return "An error occurred.";
     }
   }
 
@@ -106,35 +96,7 @@ class _LoginScreenState extends State<LoginScreen> {
       theme: LoginTheme(primaryColor: Colors.blueAccent),
       messages: LoginMessages(recoverPasswordDescription: "Enter your email to receive a password reset link.", recoverPasswordSuccess: "Password reset email sent!"),
       onSubmitAnimationCompleted: completeLogin,
-      loginProviders: <LoginProvider>[
-        if (notWindows || kIsWeb)
-          LoginProvider(
-            icon: FontAwesomeIcons.google,
-            label: 'Google',
-            callback: signInWithGoogle,
-          ),
-      ],
     );
-  }
-
-  Future<String?> signInWithGoogle() async{
-    if(auth?.currentUser != null){
-      await auth!.signOut();
-    }
-
-    try {
-      if (kIsWeb) {
-        await FirebaseAuth.instance.signInWithPopup(GoogleAuthProvider());
-      } else if (defaultTargetPlatform == TargetPlatform.android || defaultTargetPlatform == TargetPlatform.iOS) {
-        await FirebaseAuth.instance.signInWithProvider(GoogleAuthProvider());
-      } else {
-        return 'Unsupported Device! Please use regular login!';
-      }
-      user = await userRepository.getOrCreateCurrentUser();
-      return null;
-    } on FirebaseAuthException catch(e) {
-      return e.message;
-    }
   }
 
   bool get notWindows =>

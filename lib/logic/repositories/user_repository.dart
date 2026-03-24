@@ -23,30 +23,38 @@ class UserRepository {
   }
 
   Future<UserProfile> getOrCreateCurrentUser() async {
-    final supabaseResult = await supabaseClient.from('profiles').select().eq('id', auth!.currentUser!.uid).maybeSingle();
+    final userId = currentAuthUserId();
+
+    final supabaseResult = await supabaseClient
+        .from('profiles')
+        .select()
+        .eq('id', userId)
+        .maybeSingle();
+
     if (supabaseResult != null) {
-      UserProfile model = UserProfile.fromSupabase(supabaseResult);
-      return model;
+      return UserProfile.fromSupabase(supabaseResult);
     } else {
-      UserProfile model = await createCurrentUser();
-      return model;
+      return await createCurrentUser();
     }
   }
 
   Future<UserProfile> createCurrentUser({String? username, String? profileImageUrl, String bio = ''}) async {
-    username ??= currentAuthUsername();
+    final userId = currentAuthUserId();
+    final name = username ?? currentAuthUsername();
+    final avatar = profileImageUrl ?? createUserProfileImageUrl(name);
+
     await supabaseClient.from("profiles").insert({
-      "id": auth!.currentUser!.uid,
-      "username": username,
-      "display_name": username,
-      "avatar_url": profileImageUrl ?? createUserProfileImageUrl(username),
+      "id": userId,
+      "username": name,
+      "display_name": name,
+      "avatar_url": avatar,
       "bio": bio,
     });
 
     return UserProfile(
-      id: auth!.currentUser!.uid,
-      username: username,
-      profileImageUrl: profileImageUrl ?? createUserProfileImageUrl(username),
+      id: userId,
+      username: name,
+      profileImageUrl: avatar,
       bio: bio,
       createdAt: DateTime.now(),
       followersCount: 0,
