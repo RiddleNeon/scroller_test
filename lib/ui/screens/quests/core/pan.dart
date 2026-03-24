@@ -156,18 +156,7 @@ class PanWidgetState extends State<PanWidget> {
     }
 
     if (_draggingQuest != null) {
-      final worldDelta = _focalDelta / _currentScale;
-
-      final rawPos = _dragStartQuestPos + worldDelta;
-      final Offset newPos;
-      
-      if(isGridSnappingEnabled) {
-        final snappedX = (rawPos.dx / gridSize).round() * gridSize;
-        final snappedY = (rawPos.dy / gridSize).round() * gridSize;
-        newPos = Offset(snappedX, snappedY);
-      } else {
-        newPos = rawPos;
-      }
+      final newPos = snap(_dragStartQuestPos);
       _questBubbleOverlayKey.currentState?.setDragState(questId: _draggingQuest!.id, position: newPos);
       return;
     }
@@ -197,26 +186,10 @@ class PanWidgetState extends State<PanWidget> {
     }
 
     if (_draggingQuest != null) {
-      final currentScale = _currentScale;
-      QuestPatch before = QuestPatch(posX: _draggingQuest!.posX, posY: _draggingQuest!.posY);      
-      final worldDelta = _focalDelta / currentScale;
-
-      final rawPos = _dragStartQuestPos + worldDelta;
-
-      final snappedX = (rawPos.dx / gridSize).round() * gridSize;
-      final snappedY = (rawPos.dy / gridSize).round() * gridSize;
-
-      final Offset newPos;
-      if(isGridSnappingEnabled) {
-        newPos = Offset(snappedX, snappedY);
-      } else {
-        newPos = rawPos;
-      }
-
-      QuestPatch after = QuestPatch(
-        posX: newPos.dx,
-        posY: newPos.dy,
-      );
+      QuestPatch before = QuestPatch(posX: _draggingQuest!.posX, posY: _draggingQuest!.posY);
+      
+      final newPos = snap(_dragStartQuestPos);
+      QuestPatch after = QuestPatch(posX: newPos.dx, posY: newPos.dy);
 
       _draggingQuest = after.applyTo(_draggingQuest!);
 
@@ -226,6 +199,24 @@ class PanWidgetState extends State<PanWidget> {
     }
     _questBubbleOverlayKey.currentState?.setDragState(questId: null, position: null);
     setState(() => _draggingQuest = null);
+  }
+  
+  Offset snap(Offset before){
+    final currentScale = _currentScale;
+    final worldDelta = _focalDelta / currentScale;
+
+    final rawPos = before + worldDelta;
+
+    final snappedX = ((rawPos.dx / gridSize + 0.5).round()) * gridSize;
+    final snappedY = ((rawPos.dy / gridSize + 0.5).round()) * gridSize;
+
+    final Offset newPos;
+    if (isGridSnappingEnabled) {
+      newPos = Offset(snappedX, snappedY);
+    } else {
+      newPos = rawPos;
+    }
+    return newPos;
   }
 
   void _addConnection({required int sourceId, required int targetId}) {
@@ -409,7 +400,7 @@ class PanWidgetState extends State<PanWidget> {
   }
 
   bool isGridSnappingEnabled = true;
-  double gridSize = 20.0;
+  double gridSize = 25.0;
 
   @override
   Widget build(BuildContext context) {

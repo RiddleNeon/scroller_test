@@ -17,7 +17,7 @@ out vec4 fragColor;
 const vec3 kPrimary = vec3(0.424, 0.478, 0.588);
 const vec3 kAccent  = vec3(0.545, 0.624, 0.749);
 
-const float kBaseSpacing = 28.0;
+const float kBaseSpacing = 25.0;
 const float kBaseDotR    =  2.0;
 const float kAccentMult  =  1.8;
 const float kAccentEvery =  4.0;

@@ -77,7 +77,7 @@ class _ShaderDotsPainter extends CustomPainter {
   @override
   void paint(Canvas canvas, Size size) {
 
-    const double spacing = 28.0;
+    const double spacing = 25.0;
     const double accentSpacing = spacing * 4.0;
     final double period = accentSpacing * scale;
 
