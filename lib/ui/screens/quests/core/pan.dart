@@ -307,13 +307,14 @@ class PanWidgetState extends State<PanWidget> {
   }
 
   void showQuestAddOverlay(Offset scenePos) {
+    final snappedPos = snap(scenePos);
     Quest quest = Quest(
       id: DateTime.now().millisecondsSinceEpoch,
       name: 'No name provided',
       description: 'No description provided',
       subject: 'General',
-      posX: scenePos.dx,
-      posY: scenePos.dy,
+      posX: snappedPos.dx,
+      posY: snappedPos.dy,
     );
     showDialog(
       context: context,

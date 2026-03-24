@@ -118,12 +118,12 @@ class _QuestDetailScreenState extends State<QuestDetailScreen> {
     await showDialog(
       context: context,
       builder: (context) {
-        final controller = TextEditingController();
+        final controller = TextEditingController(text: recommendedChangeMessage ?? '')..selection = TextSelection(baseOffset: 0, extentOffset: recommendedChangeMessage?.length ?? 0);
         return AlertDialog(
           title: const Text('Describe your changes'),
           content: TextField(
             controller: controller,
-            decoration: InputDecoration(hintText: recommendedChangeMessage ?? 'What did you change?'),
+            decoration: const InputDecoration(hintText: 'What did you change?'),
             autofocus: true,
           ),
           actions: [

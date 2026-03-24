@@ -148,7 +148,7 @@ class QuestChangeScreen extends StatelessWidget {
   static String _conflictReasonFor(QuestChange change, List<QuestChange> skippedChanges) {
     for (final skipped in skippedChanges) {
       if (skipped is AddQuestChange) {
-        final id = change.affectedQuestId;
+        final id = change.affectedQuestIds?.firstWhere((id) => id == skipped.quest.id, orElse: () => -1);
         if (id != null && id == skipped.quest.id) {
           return 'Depends on "${skipped.updateMessage}", which was skipped.';
         }

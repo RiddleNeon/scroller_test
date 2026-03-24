@@ -22,8 +22,6 @@
 <body>
 <script src="flutter_bootstrap.js" async></script>
 
-<!-- Whisper.js: Läuft komplett im Browser, kein Server nötig.      -->
-<!-- Das Modell (~150MB) wird beim ersten Mal geladen und gecacht.  -->
 <script type="module">
   import {
     pipeline,
@@ -40,7 +38,6 @@
     transcriber = await pipeline(
             'automatic-speech-recognition',
             'Xenova/whisper-small',
-            // Für weniger Speicher: 'Xenova/whisper-tiny' (~38MB)
             {
               progress_callback: (p) => {
                 if (onProgress && p.progress != null)
@@ -50,12 +47,7 @@
     );
     return transcriber;
   }
-
-  // Wird aus Dart via js_interop aufgerufen.
-  // audioBlob  – WAV-Blob aus extractAudioFromVideo()
-  // language   – z.B. 'german' oder 'english'
-  // prompt     – optionaler Fachvokabular-String (initial_prompt)
-  // onProgress – Callback mit 0-100
+  
   window.transcribeAudio = async function(audioBlob, language, prompt, onProgress) {
     try {
       const pipe = await loadWhisper(onProgress);
@@ -82,9 +74,7 @@
       return JSON.stringify({ success: false, error: e.message });
     }
   };
-
-  // Extrahiert das Audio-Signal aus einer MP4/MOV/WebM-Datei.
-  // Gibt einen WAV-Blob zurück.
+  
   window.extractAudioFromVideo = async function(videoFile) {
     try {
       const url         = URL.createObjectURL(videoFile);

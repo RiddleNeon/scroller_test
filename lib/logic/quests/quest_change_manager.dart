@@ -232,8 +232,9 @@ class QuestChangeManager with ChangeNotifier {
   List<QuestChange> conflictsOf(QuestChange skipped) {
     return _pendingChanges.where((pending) {
       if (skipped is AddQuestChange) {
-        final id = pending.affectedQuestId;
-        if (id != null && id == skipped.quest.id) return true;
+        for(var e in pending.affectedQuestIds?.whereType<int>() ?? []) {
+          if (e == skipped.quest.id) return true;
+        }
       }
       if (skipped is AddConnectionChange &&
           pending is RemoveConnectionChange &&
@@ -325,8 +326,8 @@ class QuestChangeManager with ChangeNotifier {
   void dropStaleChanges() {
     _pendingChanges.removeWhere(
           (c) =>
-      c.affectedQuestId != null &&
-          questSystem.maybeGetQuestById(c.affectedQuestId!) == null,
+      c.affectedQuestIds != null &&
+          !(c.affectedQuestIds?.any((id) => questSystem.maybeGetQuestById(id) != null) ?? true),
     );
     notifyListeners();
   }
@@ -500,7 +501,7 @@ abstract class QuestChange {
   /// The ID of the quest this change targets, or `null` for non-quest changes
   /// (e.g. connection-only changes). Used for conflict detection and stale-
   /// change cleanup from outside the library.
-  int? get affectedQuestId => null;
+  List<int>? get affectedQuestIds => null;
 
   /// Merge [this] (older) with [newer] (same [collapseKey]).
   /// Returns the merged change, or `null` if they cancel out.
@@ -510,10 +511,11 @@ abstract class QuestChange {
 /// Marker for changes that target a specific quest by ID.
 abstract class _QuestTargetedChange extends QuestChange {
   int get questId;
+  int? get otherQuestId => null;
   const _QuestTargetedChange({required super.updateMessage});
 
   @override
-  int? get affectedQuestId => questId;
+  List<int>? get affectedQuestIds => [questId, ?otherQuestId];
 }
 
 // ── Quest changes ──────────────────────────────────────────────────────────
@@ -674,7 +676,7 @@ class DeleteQuestChange extends _QuestTargetedChange {
 
 // ── Connection changes ─────────────────────────────────────────────────────
 
-class AddConnectionChange extends QuestChange {
+class AddConnectionChange extends _QuestTargetedChange {
   final int fromId;
   final int toId;
 
@@ -706,9 +708,15 @@ class AddConnectionChange extends QuestChange {
     }
     return newer;
   }
+
+  @override
+  int get questId => fromId;
+  
+  @override
+  int? get otherQuestId => toId;
 }
 
-class RemoveConnectionChange extends QuestChange {
+class RemoveConnectionChange extends _QuestTargetedChange {
   final int fromId;
   final int toId;
 
@@ -740,6 +748,12 @@ class RemoveConnectionChange extends QuestChange {
     }
     return newer;
   }
+
+  @override
+  int get questId => fromId;
+
+  @override
+  int? get otherQuestId => toId;
 }
 
 late QuestChangeManager changeManager;
