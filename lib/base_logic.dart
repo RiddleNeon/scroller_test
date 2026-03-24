@@ -15,12 +15,13 @@ import 'logic/repositories/chat_repository.dart';
 import 'logic/repositories/user_repository.dart';
 import 'logic/video/video_provider.dart';
 
-GoTrueClient? auth;
+GoTrueClient get auth => supabaseClient.auth;
 
 UserRepository userRepository = UserRepository();
 ChatRepository chatRepository = ChatRepository();
 
 UserProfile get currentUser {
+  print("current user id: ${auth.currentUser?.id}, current user profile id: ${_currentUser?.id}");
   assert(_currentUser != null, "No user is currently logged in!");
   return _currentUser!;
 }
@@ -44,29 +45,29 @@ Future<void> initLogic() async {
   debugPrint("Initializing logic...");
   WidgetsFlutterBinding.ensureInitialized();
   fvp.registerWith();
+  if(_currentUser != null) await onUserLogout();
   await ensureSupabaseInitialized();
   await questSystem.loadFromServer('Brewing');
   changeManager = QuestChangeManager(
     questSystem: questSystem,
     repo: questRepo,
   );
-  auth = supabaseClient.auth;
 }
 
-Future<void> onUserLogin(UserProfile user, [BuildContext? context]) async {
+Future<void> onUserLogin(UserProfile user) async {
+  print("User logged in: ${user.id}");
   _currentUser = user;
   await onUserLoginSupabaseTest();
-  await onUserLogout();
   await initLocalSeenService();
   if (kIsWeb) {
     print("Using Supabase persisted auth session on web.");
   }
 }
 
-String currentAuthUserId() => auth?.currentUser?.id ?? currentUser.id;
+String currentAuthUserId() => auth.currentUser?.id ?? currentUser.id;
 
 String currentAuthUsername() {
-  final user = auth!.currentUser;
+  final user = auth.currentUser;
   if (user == null) return currentUser.id;
 
   final displayName = user.userMetadata?['full_name'];
@@ -80,7 +81,7 @@ String currentAuthUsername() {
 }
 
 Future<void> onUserLogout() async {
-  await auth?.signOut();
+  await auth.signOut();
   UserPreferenceManager.reset();
   await feedViewModel.dispose();
 }

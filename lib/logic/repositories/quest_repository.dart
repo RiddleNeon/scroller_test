@@ -1,4 +1,5 @@
 import 'package:wurp/logic/quests/quest.dart';
+import 'package:wurp/logic/quests/quest_change_manager.dart';
 import 'package:wurp/tools/supabase_tests/supabase_login_test.dart';
 
 import '../../base_logic.dart';
@@ -8,6 +9,7 @@ QuestRepository questRepo = QuestRepository();
 class QuestRepository {
   // ── Helpers ────────────────────────────────────────────────────────────────
 
+  /// Full snapshot – only used for the initial version of a new quest.
   Map<String, dynamic> _questToMap(
       Quest quest,
       String updateMessage, {
@@ -16,11 +18,11 @@ class QuestRepository {
       {
         'quest_id': quest.id,
         'created_by': currentUser.id,
+        'update_message': updateMessage,
         'title': quest.name,
         'description': quest.description,
         'subject': quest.subject,
         'difficulty': quest.difficulty,
-        'update_message': updateMessage,
         'pos_x': quest.posX.toInt(),
         'pos_y': quest.posY.toInt(),
         'size_x': quest.sizeX.toInt(),
@@ -29,7 +31,7 @@ class QuestRepository {
       };
 
   Quest _questFromRow(Map<String, dynamic> row) => Quest(
-    id: row['id'] as int,
+    id: row['quest_id'] as int,
     name: row['title'] as String,
     description: row['description'] as String,
     subject: row['subject'] as String,
@@ -54,7 +56,7 @@ class QuestRepository {
 
     final Map<int, Quest> questMap = {
       for (final row in questRows as List<dynamic>)
-        (row['id'] as int): _questFromRow(row as Map<String, dynamic>)
+        (row['quest_id'] as int): _questFromRow(row as Map<String, dynamic>)
     };
 
     if (questMap.isEmpty) return (<Quest>[], <int, Set<int>>{});
@@ -78,18 +80,13 @@ class QuestRepository {
 
   // ── Write ──────────────────────────────────────────────────────────────────
 
-  /// Inserts a new quest row and its first version.
+  /// Inserts a new quest row and its first version (full snapshot).
   Future<void> addQuest(Quest quest, [String message = 'initial version']) async {
-    print('Adding new quest ${quest.id}');
+    print('Adding new quest ${quest.id} for user ${supabaseClient.auth.currentUser?.id}');
     await supabaseClient
         .from('quests')
         .insert({'id': quest.id, 'created_by': currentUser.id});
-    await updateQuest(quest, message);
-  }
-
-  /// Appends a new version snapshot for an existing quest.
-  Future<void> updateQuest(Quest quest, String message) async {
-    print('Updating quest ${quest.id}: $message');
+    print("inserted");
     await supabaseClient
         .from('quest_versions')
         .insert(_questToMap(quest, message))
@@ -97,19 +94,21 @@ class QuestRepository {
         .single();
   }
 
-  /// Inserts or updates depending on whether the quest already exists in the DB.
-  Future<void> upsertQuest(Quest quest, String message) async {
-    print('Upserting quest ${quest.id}: $message');
-    final existing = await supabaseClient
-        .from('quests')
-        .select('id')
-        .eq('id', quest.id)
-        .maybeSingle();
-    if (existing == null) {
-      await addQuest(quest, message);
-    } else {
-      await updateQuest(quest, message);
-    }
+  /// Appends a version that contains only the changed fields from [patch].
+  /// NULL fields are omitted – the DB trigger fills them from the previous
+  /// version via COALESCE.
+  Future<void> patchQuest(
+      int questId, QuestPatch patch, String message) async {
+    print('Patching quest $questId: $message');
+    await supabaseClient
+        .from('quest_versions')
+        .insert(patch.toSupabaseMap(
+      questId: questId,
+      updateMessage: message,
+      createdBy: currentUser.id,
+    ))
+        .select()
+        .single();
   }
 
   /// Soft-deletes a quest by inserting a version with is_deleted = true.

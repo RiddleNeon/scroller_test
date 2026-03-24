@@ -452,6 +452,30 @@ class QuestPatch {
           sizeY == null &&
           isCompleted == null;
 
+  /// Serialises only the non-null fields for Supabase.
+  ///
+  /// [isCompleted] is intentionally excluded – it is client-only state and
+  /// has no column in quest_versions.
+  Map<String, dynamic> toSupabaseMap({
+    required int questId,
+    required String updateMessage,
+    required String createdBy,
+  }) {
+    return {
+      'quest_id': questId,
+      'created_by': createdBy,
+      'update_message': updateMessage,
+      if (name != null) 'title': name,
+      if (description != null) 'description': description,
+      if (subject != null) 'subject': subject,
+      if (difficulty != null) 'difficulty': difficulty,
+      if (posX != null) 'pos_x': posX!.toInt(),
+      if (posY != null) 'pos_y': posY!.toInt(),
+      if (sizeX != null) 'size_x': sizeX!.toInt(),
+      if (sizeY != null) 'size_y': sizeY!.toInt(),
+    };
+  }
+
   @override
   String toString() =>
       'QuestPatch(name: $name, description: $description, subject: $subject, '
@@ -598,14 +622,10 @@ class UpdateQuestChange extends _QuestTargetedChange {
     s.upsertQuest(reversePatch.applyTo(current));
   }
 
-  /// Sends the full current quest state so the server always receives a
-  /// consistent object, regardless of how many patches were collapsed.
+  /// Sends only the changed fields so the DB trigger merges them via COALESCE.
   @override
-  Future<void> push(QuestRepository repo, QuestSystem system) {
-    final current = system.maybeGetQuestById(questId);
-    if (current == null) return Future.value();
-    return repo.updateQuest(current, updateMessage);
-  }
+  Future<void> push(QuestRepository repo, QuestSystem system) =>
+      repo.patchQuest(questId, patch, updateMessage);
 
   @override
   QuestChange? mergeWith(QuestChange newer) {

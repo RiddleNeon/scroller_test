@@ -22,10 +22,14 @@ class _LoginScreenState extends State<LoginScreen> {
 
   Future<String?> _authUser(LoginData data) async {
     try {
-      final response = await auth!.signInWithPassword(
+      final response = await auth.signInWithPassword(
         email: data.name,
         password: data.password,
       );
+      print("sign in response: $response");
+      print("current session: ${auth.currentSession}");
+      print("login successful, current user: ${auth.currentUser}");
+      print("login successful, current user id: ${auth.currentUser?.id}");
 
       final signedInUser = response.user;
       if (signedInUser == null) return "Unable to sign in.";
@@ -42,7 +46,7 @@ class _LoginScreenState extends State<LoginScreen> {
   Future<String?> _signupUser(SignupData data) async {
     if (data.password == null || data.name == null) return "Please enter credentials!";
     try {
-      final response = await auth!.signUp(
+      final response = await auth.signUp(
         email: data.name!,
         password: data.password!,
       );
@@ -60,7 +64,7 @@ class _LoginScreenState extends State<LoginScreen> {
 
   Future<String?> _recoverPassword(String email) async {
     try {
-      await auth!.resetPasswordForEmail(
+      await auth.resetPasswordForEmail(
         email.trim(),
         redirectTo: kIsWeb ? null : 'de.riddleneon.wurp://reset-callback/', //todo
       );
@@ -76,7 +80,7 @@ class _LoginScreenState extends State<LoginScreen> {
     assert(user != null, "Login completed but no user is logged in!");
     print("completing login...");
     try {
-      await onUserLogin(user!, context);
+      await onUserLogin(user!);
       if(mounted) {
         routerConfig.push('/feed');
       }
