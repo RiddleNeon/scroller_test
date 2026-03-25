@@ -77,8 +77,10 @@ class VideoRepository {
             })
             .select('id')
             .single())['id'] as int;
+    
+    print('Published video "$title" with ID $publishedVideoId for author $authorId. Now processing tags: $tags');
 
-    if (tags.isNotEmpty) {
+    if (tags.isNotEmpty) {      
       final upsertedTags = await supabaseClient.from('tags').upsert(
         tags.map((tag) => {'name': tag.toLowerCase()}).toList(),
         onConflict: 'name',
@@ -87,59 +89,12 @@ class VideoRepository {
       final videoTags = upsertedTags.map((tag) => {'video_id': publishedVideoId, 'tag_id': tag['id']}).toList();
       await supabaseClient.from('video_tags').upsert(videoTags, onConflict: 'video_id, tag_id');
     }
-
-    await _adjustProfileMetric(authorId, 'total_videos_count', 1);
-  }
-
-  Future<void> likeVideo(String videoId, String authorId) async {
-    final parsedVideoId = _parseVideoId(videoId);
-    final existing = await supabaseClient.from('likes').select().eq('user_id', currentUser.id).eq('video_id', parsedVideoId).maybeSingle();
-    if (existing != null) return;
-    
-    await supabaseClient.from('dislikes').delete().eq('user_id', currentUser.id).eq('video_id', parsedVideoId).select();
-    
-    await supabaseClient.from('likes').insert({'user_id': currentUser.id, 'video_id': parsedVideoId});
-    await _adjustVideoMetric(parsedVideoId, 'like_count', 1);
-    await _adjustProfileMetric(authorId, 'total_likes_count', 1);
-  }
-
-  Future<void> unlikeVideo(String videoId, String authorId) async {
-    final parsedVideoId = _parseVideoId(videoId);
-    final removed = await supabaseClient.from('likes').delete().eq('user_id', currentUser.id).eq('video_id', parsedVideoId).select();
-    if ((removed as List).isEmpty) return;
-    await _adjustVideoMetric(parsedVideoId, 'like_count', -1);
-    await _adjustProfileMetric(authorId, 'total_likes_count', -1);
   }
   
   // Toggles like for the given video and user. Returns true if the video is now liked, false if it's now unliked. Also removes dislike if it exists.
   Future<bool> toggleLike(String videoId) async {
     final String result = await supabaseClient.rpc('toggle_like', params: {'p_user_id': currentUser.id, 'p_video_id': _parseVideoId(videoId)});
     return result == 'liked';
-  }
-  
-  
-  ///returns true if the video is now undisliked, false if it was not disliked before
-  Future<bool> dislikeVideo(String videoId) async {
-    final parsedVideoId = _parseVideoId(videoId);
-    final existing = await supabaseClient.from('dislikes').select().eq('user_id', currentUser.id).eq('video_id', parsedVideoId).maybeSingle();
-    if (existing != null) return false;
-    
-    final removedLikes = await supabaseClient.from('likes').delete().eq('user_id', currentUser.id).eq('video_id', parsedVideoId).select();
-    if ((removedLikes as List).isNotEmpty) {
-      final authorRow = await supabaseClient.from('videos').select('author_id').eq('id', parsedVideoId).single();
-      await _adjustVideoMetric(parsedVideoId, 'like_count', -1);
-      await _adjustProfileMetric(authorRow['author_id'] as String, 'total_likes_count', -1);
-    }
-
-    await supabaseClient.from('dislikes').insert({'user_id': currentUser.id, 'video_id': parsedVideoId});
-    return true;
-  }
-
-  ///returns true if the video is now undisliked, false if it was not disliked before
-  Future<bool> undislikeVideo(String videoId) async {
-    final parsedVideoId = _parseVideoId(videoId);
-    final removed = await supabaseClient.from('dislikes').delete().eq('user_id', currentUser.id).eq('video_id', parsedVideoId).select();
-    return (removed as List).isNotEmpty;
   }
   
   Future<bool> toggleDislike(String videoId) async {
@@ -337,6 +292,7 @@ class VideoRepository {
   }
 
   Future<List<Video>> searchVideosSupabase(String query, {int limit = 20, int offset = 0, bool withAuthor = false}) async {
+    print("searching videos with query '$query', limit $limit, offset $offset, withAuthor: $withAuthor");
     final result = await supabaseClient
         .rpc(withAuthor ? 'search_videos_with_author' : 'search_videos', params: {
       'search_query': query,
@@ -454,7 +410,8 @@ class VideoRepository {
   }
 
   Future<void> _adjustProfileMetric(String userId, String column, int delta) async {
-    await supabaseClient.rpc('increment_profile_metric', params: {'p_user_id': userId, 'p_column': column, 'p_delta': delta});
+    print('Adjusting profile metric for user $userId: $column by $delta');
+    await supabaseClient.rpc('_increment_profile_metric', params: {'p_user_id': userId, 'p_column': column, 'p_delta': delta});
   }
 
   Video _toVideo(Map<String, dynamic> data) {

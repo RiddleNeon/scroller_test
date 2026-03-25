@@ -1,9 +1,19 @@
 import 'dart:convert';
 
+import 'package:cloudinary_url_gen/cloudinary.dart';
+import 'package:flutter/cupertino.dart';
 import 'package:flutter/services.dart';
 import 'package:wurp/logic/repositories/user_repository.dart';
 import 'package:wurp/logic/repositories/video_repository.dart';
 import 'package:wurp/tools/supabase_tests/supabase_login_test.dart';
+
+///   to make the import idempotent.
+
+
+void main() async {
+  WidgetsFlutterBinding.ensureInitialized();
+  await publishTest();
+}
 
 /// Tool to bulk-import videos from a JSON file into Supabase.
 ///
@@ -36,23 +46,36 @@ import 'package:wurp/tools/supabase_tests/supabase_login_test.dart';
 /// - After publishing, sets the initial view/like counts via RPC so that
 ///   the imported metrics match the source data.
 /// - Skips a video if its source URL is already present in the `videos` table
-///   to make the import idempotent.
-
 Future<void> publishTest() async { //todo republish, in case there were issues
+  
   final file = await rootBundle.loadString("pixabay_videos.json"); //load the file as a string
-
+  final allLinksFile = await rootBundle.loadString("all_cloudinary_image_urls"); //load the file as a string
+  parseCloudinaryUrls(allLinksFile);
   final Map<String, dynamic> json = jsonDecode(file);
   final List<dynamic> items = json['data'] as List<dynamic>;
 
   print('Found ${items.length} video(s) to import.\n');
-
+  
   final userRepo = UserRepository();
   final videoRepo = VideoRepository();
   final importer = BulkVideoImporter(userRepo: userRepo, videoRepo: videoRepo);
 
-  await importer.importAll(items.cast<Map<String, dynamic>>());
+  await importer.importAll(items.take(1000).toList().cast<Map<String, dynamic>>());
 
   print('\nDone.');
+}
+Map<String, String> cloudinaryUrlMap = {};
+void parseCloudinaryUrls(String fileContent) {
+  final lines = fileContent.split('\n');
+  for (var line in lines) {
+    if(!line.contains(".webp")) {
+      continue; // Skip lines that don't match the expected length
+    }
+    final importantPart = line.substring(62).replaceAll(".webp", ""); // Remove the first 63 characters
+    final underscoreIndex = importantPart.lastIndexOf('_');
+    final datePart = importantPart.substring(0, underscoreIndex);
+    cloudinaryUrlMap[datePart] = line.trim();
+  }
 }
 
 class BulkVideoImporter {
@@ -69,7 +92,7 @@ class BulkVideoImporter {
     int skipped = 0;
     items.shuffle(); // Shuffle to mix authors and videos for better testing of the caching and parallelism
 
-    for (int i = 0; i < items.length; i++) {
+    for (int i = 0; i < 5; i++) {
       final item = items[i];
       print('[${i + 1}/${items.length}] Processing "${item['title']?.toString()}..."');
 
@@ -101,6 +124,8 @@ class BulkVideoImporter {
     final String? authorProfileImageUrl = item['author_profile_image'] as String?;
     final int views = item['views'] as int? ?? 0;
     final int likes = item['likes'] as int? ?? 0;
+    final String raw = videoUrl.replaceAll('https://cdn.pixabay.com/video/', '').replaceAll('_large.mp4', '').replaceAll('/', '_');
+    final String thumbnailUrl = cloudinaryUrlMap[raw] ?? '';
     //final int durationMs = ((item['duration'] as num?)?.toInt() ?? 0) * 1000;
 
     // --- 1. Ensure author profile exists --------------------------------
@@ -114,6 +139,8 @@ class BulkVideoImporter {
     if (await _videoUrlExists(videoUrl)) {
       print('  ⏭  Skipped (URL already in DB)');
       return false;
+    } else {
+      print('  🎬 Publishing new video for "$title" by "$authorUsername" (author ID: $supabaseAuthorId)');
     }
 
     // --- 3. Publish video -----------------------------------------------
@@ -123,6 +150,7 @@ class BulkVideoImporter {
       videoUrl: videoUrl,
       authorId: supabaseAuthorId,
       tags: tags,
+      thumbnailUrl: thumbnailUrl,
     );
 
     // --- 4. Back-fill view / like counts from source data ---------------
@@ -209,22 +237,26 @@ class BulkVideoImporter {
           .select('id')
           .eq('video_url', videoUrl)
           .maybeSingle();
+      
+      print('  🔧 Backfilling metrics for video ID ${row?['id']} (views: $views, likes: $likes)');
 
       if (row == null) return;
       final int videoId = row['id'] as int;
 
       if (views > 0) {
-        await supabaseClient.rpc('increment_video_metric',
+        print('  🔧 Incremented view count by $views');
+        await supabaseClient.rpc('_increment_video_metric',
             params: {'p_video_id': videoId, 'p_column': 'view_count', 'p_delta': views});
       }
       if (likes > 0) {
-        await supabaseClient.rpc('increment_video_metric',
+        print('  🔧 Incremented like count by $likes');
+        await supabaseClient.rpc('_increment_video_metric',
             params: {'p_video_id': videoId, 'p_column': 'like_count', 'p_delta': likes});
-        await supabaseClient.rpc('increment_profile_metric',
-            params: {'p_user_id': authorId, 'p_column': 'total_likes_count', 'p_delta': likes});
+        // await supabaseClient.rpc('increment_profile_metric',
+        //     params: {'p_user_id': authorId, 'p_column': 'total_likes_count', 'p_delta': likes});
       }
     } catch (e) {
-      print('  ⚠️  Could not back-fill metrics: $e');
+      print('⚠️ Could not back-fill metrics: $e');
     }
   }
 
