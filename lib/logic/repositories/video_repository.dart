@@ -16,7 +16,6 @@ class VideoRepository {
   }
 
   Future<Video?> getVideoByIdSupabase(String id) async {
-    print("fetching video by id $id");
     final supabaseVid = await supabaseClient
         .from('videos')
         .select('''
@@ -65,7 +64,6 @@ class VideoRepository {
     List<String> tags = const [],
     int commentCount = 0,
   }) async {
-    print("publishing");
     final publishedVideoId = (await supabaseClient
             .from('videos')
             .insert({
@@ -79,9 +77,6 @@ class VideoRepository {
             })
             .select('id')
             .single())['id'] as int;
-    
-    print('Published video "$title" with ID $publishedVideoId for author $authorId. Now processing tags: $tags');
-
     if (tags.isNotEmpty) {      
       final upsertedTags = await supabaseClient.from('tags').upsert(
         tags.map((tag) => {'name': tag.toLowerCase()}).toList(),
@@ -95,13 +90,12 @@ class VideoRepository {
   
   // Toggles like for the given video and user. Returns true if the video is now liked, false if it's now unliked. Also removes dislike if it exists.
   Future<bool> toggleLike(String videoId) async {
-    final String result = await supabaseClient.rpc('toggle_like', params: {'p_user_id': currentUser.id, 'p_video_id': _parseVideoId(videoId)});
+    final String result = await supabaseClient.rpc('toggle_like', params: {'p_video_id': _parseVideoId(videoId)});
     return result == 'liked';
   }
   
   Future<bool> toggleDislike(String videoId) async {
-    print("calling with user id ${currentUser.id} [type: ${currentUser.id.runtimeType}] and video id $videoId [parsed: ${_parseVideoId(videoId)}, type: ${_parseVideoId(videoId).runtimeType}]");
-    final String result = await supabaseClient.rpc('toggle_dislike', params: {'p_user_id': currentUser.id, 'p_video_id': _parseVideoId(videoId)});
+    final String result = await supabaseClient.rpc('toggle_dislike', params: {'p_video_id': _parseVideoId(videoId)});
     return result == 'disliked';
   }
 
@@ -181,9 +175,20 @@ class VideoRepository {
       'p_video_id': videoId,
       'p_current_user': currentUser.id,
       'p_parent_id': parentCommentId,
-      'p_limit': limit,
+      'p_limit': 20, //fixme: hardcoded limit in the RPC function, should be passed as parameter
       'p_offset': offset,
     });
+    
+    if(rpcResult == null) {
+      print("RPC result is null, returning empty comment list");
+      return [];
+    }
+    
+    if(rpcResult is Map<String, dynamic>){
+      print("RPC result is a single comment, mapping it directly");
+      return [_mapComment(rpcResult)];
+    }
+    
 
     late final List rows;
     try {
@@ -191,26 +196,29 @@ class VideoRepository {
     } catch (_) {
       rows = (rpcResult as List).cast();
     }
+    
+    print("RPC returned ${rows.length} comments for video $videoId with parentCommentId $parentCommentId, offset $offset, limit $limit");
 
-    return rows.map<Comment>((e) {
-      final Map<String, dynamic> profiles = e['profiles'] is String
-          ? (jsonDecode(e['profiles']) as Map<String, dynamic>)
-          : (e['profiles'] as Map<String, dynamic>);
-      final mapped = {
-        'id': e['id'],
-        'author_id': e['author_id'],
-        'profiles': profiles,
-        'content': e['content'],
-        'created_at': e['created_at'],
-        'like_count': e['like_count'],
-        'parent_id': e['parent_id'],
-        'reply_count': e['reply_count'],
-        'liked_by_current_user': e['liked_by_current_user'],
-      };
-      print("Comment row: $e");
-      final liked = (e['liked_by_current_user'] as bool?);
-      return Comment.fromSupabase(mapped, likedByMe: liked);
-    }).toList();
+    return rows.map<Comment>((e) => _mapComment(e)).toList();
+  }
+  
+  Comment _mapComment(Map<String, dynamic> e) {
+    final Map<String, dynamic> profiles = e['profiles'] is String
+        ? (jsonDecode(e['profiles']) as Map<String, dynamic>)
+        : (e['profiles'] as Map<String, dynamic>);
+    final mapped = {
+      'id': e['id'],
+      'author_id': e['author_id'],
+      'profiles': profiles,
+      'content': e['content'],
+      'created_at': e['created_at'],
+      'like_count': e['like_count'],
+      'parent_id': e['parent_id'],
+      'reply_count': e['reply_count'],
+      'liked_by_current_user': e['liked_by_current_user'],
+    };
+    final liked = (e['liked_by_current_user'] as bool?);
+    return Comment.fromSupabase(mapped, likedByMe: liked);
   }
 
   
@@ -263,7 +271,6 @@ class VideoRepository {
         .toList();
     if (followingIds.isEmpty) return [];
     
-    print("getting following feed for user $userId, following ${followingIds.length} users, limit $limit, offset $offset");
 
     final result = await supabaseClient
         .from('videos')
@@ -278,7 +285,6 @@ class VideoRepository {
   Future<List<Video>> getTrendingVideos({int limit = 20}) async => getTrendingVideosSupabase(limit: limit);
 
   Future<List<Video>> getTrendingVideosSupabase({int limit = 20}) async {
-    print("getting trending");
     final result = await supabaseClient
         .from('videos')
         .select(_videoSelect)
@@ -297,7 +303,6 @@ class VideoRepository {
   }
 
   Future<List<Video>> searchVideosSupabase(String query, {int limit = 20, int offset = 0, bool withAuthor = false}) async {
-    print("searching videos with query '$query', limit $limit, offset $offset, withAuthor: $withAuthor");
     final result = await supabaseClient
         .rpc(withAuthor ? 'search_videos_with_author' : 'search_videos', params: {
       'search_query': query,
@@ -305,8 +310,6 @@ class VideoRepository {
       'p_offset': offset,
     });
     
-    print("RESULT: $result");
-
     return (result as List).map<Video>((e) => _toVideo(e)).toList();
   }
   
@@ -326,7 +329,6 @@ class VideoRepository {
   }
 
   Future<List<Video>> searchVideosByTagSupabase(String tag, {int limit = 20, int offset = 0}) async {
-    print("Searching videos by tag '$tag' with limit $limit and offset $offset");
     final result = await supabaseClient
         .from('video_tags')
         .select('''
@@ -351,8 +353,6 @@ class VideoRepository {
     if (videoIds.isEmpty) return [];
 
     
-    print("Getting videos by tags ${tags.join(', ')}, found ${videoIds.length} matching videos, limit $limit, offset $offset");
-    
     final result = await supabaseClient
         .from('videos')
         .select(_videoSelect)
@@ -374,8 +374,6 @@ class VideoRepository {
     final videoIds = taggedVideoIds.map((e) => e['video_id']).where((id) => id.toString() != video.id).toSet().toList();
     if (videoIds.isEmpty) return [];
     
-    print("Getting related videos for video ${video.id} with tags ${video.tags.join(', ')}, found ${videoIds.length} candidate videos, limit $limit");
-
     final result = await supabaseClient
         .from('videos')
         .select(_videoSelect)
@@ -411,18 +409,12 @@ class VideoRepository {
 
   Future<List<Video>> fetchVideosByIdsSupabase(List<int> ids) async {
     if (ids.isEmpty) return [];
-    print("Fetching videos by IDs: ${ids.join(', ')}");
     final result = await supabaseClient.from('videos').select(_videoSelect).inFilter('id', ids);
     return result.map<Video>(_toVideo).toList();
   }
 
   Future<void> _adjustVideoMetric(int videoId, String column, int delta) async {
     await supabaseClient.rpc('increment_video_metric', params: {'p_video_id': videoId, 'p_column': column, 'p_delta': delta});
-  }
-
-  Future<void> _adjustProfileMetric(String userId, String column, int delta) async {
-    print('Adjusting profile metric for user $userId: $column by $delta');
-    await supabaseClient.rpc('_increment_profile_metric', params: {'p_user_id': userId, 'p_column': column, 'p_delta': delta});
   }
 
   Video _toVideo(Map<String, dynamic> data) {

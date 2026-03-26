@@ -17,7 +17,6 @@ abstract class VideoRecommenderBase {
   }
 
   Future<UserPreferences> getUserPreferences() async {
-    print("Loading user preferences from cache...");
     await preferenceManager.loadCache();
     return UserPreferences(
       tagPreferences: preferenceManager.cachedTagPrefs.map((k, v) => MapEntry(k, v.engagementScore)),
@@ -59,14 +58,12 @@ abstract class VideoRecommenderBase {
   }
 
   Future<List<Video>> getColdStartVideos({int limit = 20}) async {
-    print("Fetching cold start videos with limit: $limit");
     final videos = await videoRepo.getTrendingVideos(limit: limit * 2);
     videos.shuffle();
     return videos.take(limit).toList();
   }
 
   Future<List<Video>> fetchNewVideos(DateTime? newestSeen, int limit) async {
-    print("Fetching new videos with cursor: $newestSeen, limit: $limit");
     var query = supabaseClient
         .from('videos')
         .select(_recommenderVideoSelect)
@@ -87,7 +84,6 @@ abstract class VideoRecommenderBase {
     required int limit,
   }) async {
     cursor ??= localSeenService.getTrendingCursor();
-    print("Fetching trending videos with cursor: $cursor, limit: $limit");
     var query = supabaseClient
         .from('videos')
         .select(_recommenderVideoSelect)
@@ -161,7 +157,6 @@ Future<void> trackInteraction({
   bool commented = false,
   bool saved = false,
 }) async {
-  print("Tracking interaction for user $userId on video ${video.id}: watchTime=$watchTime, liked=$liked, disliked=$disliked, shared=$shared, commented=$commented, saved=$saved");
   await UserPreferenceManager().updatePreferences(
     video: video,
     normalizedEngagementScore: calculateNormalizedEngagementScore(

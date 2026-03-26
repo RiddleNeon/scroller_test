@@ -11,6 +11,6 @@ final GlobalKey<NavigatorState> appNavigatorKey = GlobalKey<NavigatorState>();
 void main() async {  
   await initLogic();
   await setupMessaging();
-  await publishTest();
+  //await publishTest();
   startApp();
 }

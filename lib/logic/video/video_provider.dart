@@ -24,10 +24,8 @@ class RecommendationVideoProvider implements VideoProvider {
   @override
   Future<Video?> getVideoByIndex(int index, [bool retry = true]) async {
     Future? loadingFuture;
-    print("Requesting video at index: $index, current cache length: ${_videoCache.length}");
     // Preload more videos if we're running low
     if (index >= _videoCache.length - _preloadThreshold) {
-      print("Approaching end of cache, preloading more videos...");
       loadingFuture = preloadVideos(_preloadBatchSize);
       if(index >= _videoCache.length) {
         // If requested index is beyond current cache, wait for preload to finish
@@ -55,7 +53,6 @@ class RecommendationVideoProvider implements VideoProvider {
   Future<void>? _currentInitVideoLoadingTask;
   Future<void> _loadInitialVideosInternal() async {
     if (_currentInitVideoLoadingTask != null) return _currentInitVideoLoadingTask;
-    print("LOADING INITIAL VIDEOS");
     try {
       // For new users, use cold start videos
       final videos = await _recommender.getColdStartVideos(
@@ -76,7 +73,6 @@ class RecommendationVideoProvider implements VideoProvider {
   }
   
   Future<void> _preloadMoreVideosInternal(int count) async {
-    print("Preloading more videos...");
     try {      
 
       final newVideos = await _recommender.getRecommendedVideos(

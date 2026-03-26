@@ -1,6 +1,5 @@
 import 'dart:convert';
 
-import 'package:cloudinary_url_gen/cloudinary.dart';
 import 'package:flutter/cupertino.dart';
 import 'package:flutter/services.dart';
 import 'package:wurp/logic/repositories/user_repository.dart';
@@ -246,15 +245,15 @@ class BulkVideoImporter {
 
       if (views > 0) {
         print('  🔧 Incremented view count by $views');
-        // await supabaseClient.rpc('_increment_video_metric',
-        //     params: {'p_video_id': videoId, 'p_column': 'view_count', 'p_delta': views});
+        await supabaseClient.rpc('_increment_video_metric',
+            params: {'p_video_id': videoId, 'p_column': 'view_count', 'p_delta': views});
       }
       if (likes > 0) {
         print('  🔧 Incremented like count by $likes');
         await supabaseClient.rpc('_increment_video_metric',
             params: {'p_video_id': videoId, 'p_column': 'like_count', 'p_delta': likes});
-        // await supabaseClient.rpc('increment_profile_metric',
-        //     params: {'p_user_id': authorId, 'p_column': 'total_likes_count', 'p_delta': likes});
+        await supabaseClient.rpc('increment_profile_metric',
+            params: {'p_user_id': authorId, 'p_column': 'total_likes_count', 'p_delta': likes});
       }
     } catch (e) {
       print('⚠️ Could not back-fill metrics: $e');

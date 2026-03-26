@@ -47,7 +47,6 @@ class UserPreferenceManager {
   }
 
   Future<void> updatePreferences({required Video video, required double normalizedEngagementScore}) async {
-    print("Updating preferences for video ${video.id} with engagement score: $normalizedEngagementScore");
     await loadCache();
 
     double adaptiveLR(double currentScore) {

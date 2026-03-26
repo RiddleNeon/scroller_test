@@ -42,7 +42,6 @@ class FeedViewModel {
   Future<VideoContainer> _loadContainer(int index, {VideoProvider? videoSource}) async {
     videoSource ??= this.videoSource;
     assert(videoSource != null, "you have to provide a video source!");
-    print("Loading video at index $index");
     final video = await videoSource!.getVideoByIndex(index);
     final container = VideoContainer(video: video);
     await container.loadController();
