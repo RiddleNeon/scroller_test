@@ -1,6 +1,6 @@
 import '../../base_logic.dart';
 import '../../tools/supabase_tests/supabase_login_test.dart';
-import '../models/user_model.dart';
+import '../users/user_model.dart';
 
 class Video {
   final String id;
@@ -102,19 +102,13 @@ class Video {
 class VideoWithAuthor {
   final Video video;
   final UserProfile author;
-  final bool isLiked;
-  final bool isAuthorFollowed;
-
-  VideoWithAuthor({required this.video, required this.author, this.isLiked = false, this.isAuthorFollowed = false});
+  VideoWithAuthor({required this.video, required this.author});
 
   static Future<VideoWithAuthor?> fromVideo(Video video, String currentUserId) async {
     final author = await video.getAuthorProfile();
     if (author == null) return null;
 
-    final isLiked = await video.isLikedByUser(currentUserId);
-    final isFollowed = await video.isAuthorFollowedByUser(currentUserId);
-
-    return VideoWithAuthor(video: video, author: author, isLiked: isLiked, isAuthorFollowed: isFollowed);
+    return VideoWithAuthor(video: video, author: author,);
   }
 
   static Future<Map<String, UserProfile>> fetchAuthorProfiles(List<Video> videos) async {

@@ -3,7 +3,7 @@ import '../../tools/supabase_tests/supabase_login_test.dart';
 import '../chat/chat.dart';
 import '../chat/chat_message.dart';
 import '../local_storage/local_seen_service.dart';
-import '../models/user_model.dart';
+import '../users/user_model.dart';
 
 class ChatRepository {
   Future<void> sendNotification({required Chat chat, required ChatMessage message}) async {

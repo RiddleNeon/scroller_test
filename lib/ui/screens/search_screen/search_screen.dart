@@ -1,7 +1,7 @@
 import 'package:flutter/material.dart';
 import 'package:wurp/base_logic.dart';
 import 'package:wurp/logic/feed_recommendation/search_video_result_recommender.dart';
-import 'package:wurp/logic/models/user_model.dart';
+import 'package:wurp/logic/users/user_model.dart';
 import 'package:wurp/logic/repositories/video_repository.dart';
 import 'package:wurp/logic/video/video.dart';
 import 'package:wurp/ui/feed_view_model.dart';

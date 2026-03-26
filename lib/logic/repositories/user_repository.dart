@@ -1,7 +1,7 @@
 import 'package:wurp/tools/supabase_tests/supabase_login_test.dart';
 
 import '../../base_logic.dart';
-import '../models/user_model.dart';
+import '../users/user_model.dart';
 import '../video/video.dart';
 
 class UserRepository {

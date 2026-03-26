@@ -5,7 +5,7 @@ import 'package:supabase_flutter/supabase_flutter.dart';
 import 'package:wurp/ui/router.dart';
 
 import '../../base_logic.dart';
-import '../../logic/models/user_model.dart';
+import '../../logic/users/user_model.dart';
 
 class LoginScreen extends StatefulWidget {
   const LoginScreen({super.key});

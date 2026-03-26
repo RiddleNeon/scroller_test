@@ -3,7 +3,7 @@ import 'dart:math';
 import 'package:flutter/material.dart';
 import 'package:font_awesome_flutter/font_awesome_flutter.dart';
 import 'package:wurp/logic/chat/chat.dart';
-import 'package:wurp/logic/models/user_model.dart';
+import 'package:wurp/logic/users/user_model.dart';
 import 'package:wurp/logic/video/video.dart';
 import 'package:wurp/ui/misc/avatar.dart';
 import 'package:wurp/ui/screens/search_screen/search_query.dart';

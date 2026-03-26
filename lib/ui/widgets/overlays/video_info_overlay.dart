@@ -1,5 +1,5 @@
 import 'package:flutter/material.dart';
-import 'package:wurp/logic/models/user_model.dart';
+import 'package:wurp/logic/users/user_model.dart';
 
 import '../../../base_logic.dart';
 import '../../../logic/local_storage/local_seen_service.dart';

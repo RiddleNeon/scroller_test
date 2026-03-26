@@ -9,7 +9,7 @@ import 'package:wurp/ui/feed_view_model.dart';
 
 import 'logic/feed_recommendation/user_preference_manager.dart';
 import 'logic/local_storage/local_seen_service.dart';
-import 'logic/models/user_model.dart';
+import 'logic/users/user_model.dart';
 import 'logic/quests/quest_change_manager.dart';
 import 'logic/repositories/chat_repository.dart';
 import 'logic/repositories/user_repository.dart';

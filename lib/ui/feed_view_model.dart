@@ -52,8 +52,6 @@ class FeedViewModel {
   /// Called by the PageView whenever the user lands on a new page.
   Future<void> switchToVideoAt(int index, {VideoProvider? videoSource}) async {
     videoSource ??= this.videoSource;
-    
-    
     final previous = _currentIndex;
     _currentIndex = index;
 

@@ -1,17 +1,14 @@
+import 'dart:async';
+
 import 'package:flutter/foundation.dart';
 import 'package:flutter/material.dart';
+import 'package:http/http.dart' as http;
 import 'package:shimmer_animation/shimmer_animation.dart';
 import 'package:video_thumbnail/video_thumbnail.dart';
 import 'package:wurp/logic/video/video.dart';
 
 class VideoCard extends StatefulWidget {
-  const VideoCard({
-    super.key,
-    this.thumbnail,
-    required this.video,
-    required this.onTap,
-    required this.cs,
-  });
+  const VideoCard({super.key, this.thumbnail, required this.video, required this.onTap, required this.cs});
 
   final Video video;
   final Future<Uint8List?>? thumbnail;
@@ -57,14 +54,8 @@ class _VideoCardState extends State<VideoCard> {
           decoration: BoxDecoration(
             color: _hovered ? cs.surfaceContainerHigh : cs.surfaceContainer,
             borderRadius: BorderRadius.circular(16),
-            border: Border.all(
-              color: _hovered
-                  ? cs.primary.withValues(alpha: 0.35)
-                  : cs.outlineVariant.withValues(alpha: 0.3),
-            ),
-            boxShadow: _hovered
-                ? [BoxShadow(color: cs.primary.withValues(alpha: 0.08), blurRadius: 12, offset: const Offset(0, 4))]
-                : [],
+            border: Border.all(color: _hovered ? cs.primary.withValues(alpha: 0.35) : cs.outlineVariant.withValues(alpha: 0.3)),
+            boxShadow: _hovered ? [BoxShadow(color: cs.primary.withValues(alpha: 0.08), blurRadius: 12, offset: const Offset(0, 4))] : [],
           ),
           child: Column(
             crossAxisAlignment: CrossAxisAlignment.start,
@@ -73,10 +64,7 @@ class _VideoCardState extends State<VideoCard> {
                 crossAxisAlignment: CrossAxisAlignment.start,
                 children: [
                   ClipRRect(
-                    borderRadius: const BorderRadius.only(
-                      topLeft: Radius.circular(16),
-                      bottomLeft: Radius.circular(16),
-                    ),
+                    borderRadius: const BorderRadius.only(topLeft: Radius.circular(16), bottomLeft: Radius.circular(16)),
                     child: SizedBox(
                       width: 140,
                       height: 110,
@@ -90,10 +78,7 @@ class _VideoCardState extends State<VideoCard> {
                               right: 5,
                               child: Container(
                                 padding: const EdgeInsets.symmetric(horizontal: 5, vertical: 2),
-                                decoration: BoxDecoration(
-                                  color: Colors.black.withValues(alpha: 0.72),
-                                  borderRadius: BorderRadius.circular(5),
-                                ),
+                                decoration: BoxDecoration(color: Colors.black.withValues(alpha: 0.72), borderRadius: BorderRadius.circular(5)),
                                 child: Text(
                                   _formatDuration(video.duration),
                                   style: const TextStyle(color: Colors.white, fontSize: 10, fontWeight: FontWeight.w600),
@@ -115,12 +100,7 @@ class _VideoCardState extends State<VideoCard> {
                             video.title,
                             maxLines: 2,
                             overflow: TextOverflow.ellipsis,
-                            style: TextStyle(
-                              color: cs.onSurface,
-                              fontSize: 14,
-                              fontWeight: FontWeight.w600,
-                              height: 1.35,
-                            ),
+                            style: TextStyle(color: cs.onSurface, fontSize: 14, fontWeight: FontWeight.w600, height: 1.35),
                           ),
                           const SizedBox(height: 5),
 
@@ -133,11 +113,7 @@ class _VideoCardState extends State<VideoCard> {
                                   video.authorName,
                                   maxLines: 1,
                                   overflow: TextOverflow.ellipsis,
-                                  style: TextStyle(
-                                    color: cs.onSurfaceVariant,
-                                    fontSize: 12,
-                                    fontWeight: FontWeight.w500,
-                                  ),
+                                  style: TextStyle(color: cs.onSurfaceVariant, fontSize: 12, fontWeight: FontWeight.w500),
                                 ),
                               ),
                             ],
@@ -148,21 +124,9 @@ class _VideoCardState extends State<VideoCard> {
                             spacing: 10,
                             runSpacing: 4,
                             children: [
-                              _StatChip(
-                                icon: Icons.visibility_outlined,
-                                label: _formatCount(video.viewsCount),
-                                cs: cs,
-                              ),
-                              _StatChip(
-                                icon: Icons.favorite_border_rounded,
-                                label: _formatCount(video.likesCount),
-                                cs: cs,
-                              ),
-                              _StatChip(
-                                icon: Icons.chat_bubble_outline_rounded,
-                                label: _formatCount(video.commentsCount),
-                                cs: cs,
-                              ),
+                              _StatChip(icon: Icons.visibility_outlined, label: _formatCount(video.viewsCount), cs: cs),
+                              _StatChip(icon: Icons.favorite_border_rounded, label: _formatCount(video.likesCount), cs: cs),
+                              _StatChip(icon: Icons.chat_bubble_outline_rounded, label: _formatCount(video.commentsCount), cs: cs),
                             ],
                           ),
                         ],
@@ -172,11 +136,7 @@ class _VideoCardState extends State<VideoCard> {
 
                   Padding(
                     padding: const EdgeInsets.only(right: 10, top: 10),
-                    child: Icon(
-                      Icons.chevron_right_rounded,
-                      color: _hovered ? cs.primary : cs.onSurfaceVariant.withValues(alpha: 0.4),
-                      size: 20,
-                    ),
+                    child: Icon(Icons.chevron_right_rounded, color: _hovered ? cs.primary : cs.onSurfaceVariant.withValues(alpha: 0.4), size: 20),
                   ),
                 ],
               ),
@@ -191,22 +151,15 @@ class _VideoCardState extends State<VideoCard> {
                           .take(5)
                           .map(
                             (tag) => Container(
-                          margin: const EdgeInsets.only(right: 6),
-                          padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 3),
-                          decoration: BoxDecoration(
-                            color: cs.secondaryContainer.withValues(alpha: 0.6),
-                            borderRadius: BorderRadius.circular(20),
-                          ),
-                          child: Text(
-                            '#$tag',
-                            style: TextStyle(
-                              color: cs.onSecondaryContainer,
-                              fontSize: 11,
-                              fontWeight: FontWeight.w500,
+                              margin: const EdgeInsets.only(right: 6),
+                              padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 3),
+                              decoration: BoxDecoration(color: cs.secondaryContainer.withValues(alpha: 0.6), borderRadius: BorderRadius.circular(20)),
+                              child: Text(
+                                '#$tag',
+                                style: TextStyle(color: cs.onSecondaryContainer, fontSize: 11, fontWeight: FontWeight.w500),
+                              ),
                             ),
-                          ),
-                        ),
-                      )
+                          )
                           .toList(),
                     ),
                   ),
@@ -219,10 +172,6 @@ class _VideoCardState extends State<VideoCard> {
   }
 
   Widget _buildThumbnail(ColorScheme cs) {
-    if (!(defaultTargetPlatform == TargetPlatform.android ||
-        defaultTargetPlatform == TargetPlatform.iOS)) {
-      return _shimmer(cs);
-    }
     thumbnail ??= thumbnailFor(widget.video);
     return FutureBuilder<Uint8List?>(
       future: thumbnail,
@@ -235,9 +184,7 @@ class _VideoCardState extends State<VideoCard> {
               if (_hovered)
                 Container(
                   color: Colors.black.withValues(alpha: 0.2),
-                  child: const Center(
-                    child: Icon(Icons.play_circle_fill_rounded, color: Colors.white, size: 36),
-                  ),
+                  child: const Center(child: Icon(Icons.play_circle_fill_rounded, color: Colors.white, size: 36)),
                 ),
             ],
           );
@@ -247,8 +194,7 @@ class _VideoCardState extends State<VideoCard> {
     );
   }
 
-  Widget _shimmer(ColorScheme cs) =>
-      Shimmer(child: Container(color: cs.surfaceContainerHighest));
+  Widget _shimmer(ColorScheme cs) => Shimmer(child: Container(color: cs.surfaceContainerHighest));
 }
 
 class _StatChip extends StatelessWidget {
@@ -274,10 +220,24 @@ class _StatChip extends StatelessWidget {
   }
 }
 
+final Map<String, FutureOr<Uint8List?>> _cachedThumbnails = {};
 
-final Map<String, Future<Uint8List?>> _cachedThumbnails = {};
+Future<Uint8List?> thumbnailFor(Video video) async {
+  return _cachedThumbnails[video.videoUrl] ??= loadThumbnailFor(video);
+}
 
-Future<Uint8List?> thumbnailFor(Video video) {
+Future<Uint8List?> loadThumbnailFor(Video video) async {
+  if (video.thumbnailUrl != null) {
+    var thumbnailUrl = video.thumbnailUrl!;
+    if(!thumbnailUrl.startsWith('http')) {
+      thumbnailUrl = 'https://$thumbnailUrl';
+    }
+    http.Response response = await http.get(Uri.parse(video.thumbnailUrl!));
+    final data = response.bodyBytes;
+    _cachedThumbnails[video.videoUrl] = data;
+    return data;
+  }
+
   if (!(defaultTargetPlatform == TargetPlatform.android || defaultTargetPlatform == TargetPlatform.iOS)) {
     return Future.value(null);
   }

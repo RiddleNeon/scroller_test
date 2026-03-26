@@ -2,7 +2,7 @@ import 'package:hive_flutter/hive_flutter.dart';
 import 'package:wurp/logic/chat/chat.dart';
 import 'package:wurp/logic/chat/chat_message.dart';
 import 'package:wurp/logic/feed_recommendation/user_interaction.dart';
-import 'package:wurp/logic/models/user_model.dart';
+import 'package:wurp/logic/users/user_model.dart';
 import 'package:wurp/logic/video/video.dart';
 
 import '../../base_logic.dart';

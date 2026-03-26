@@ -1,5 +1,5 @@
 import 'package:flutter/material.dart';
-import 'package:wurp/logic/models/user_model.dart';
+import 'package:wurp/logic/users/user_model.dart';
 import 'package:wurp/logic/repositories/user_repository.dart';
 import 'package:wurp/ui/screens/profile_screen.dart';
 import 'package:wurp/ui/widgets/overlays/follow_button.dart';
