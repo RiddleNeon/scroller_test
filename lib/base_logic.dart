@@ -21,7 +21,6 @@ UserRepository userRepository = UserRepository();
 ChatRepository chatRepository = ChatRepository();
 
 UserProfile get currentUser {
-  print("current user id: ${auth.currentUser?.id}, current user profile id: ${_currentUser?.id}");
   assert(_currentUser != null, "No user is currently logged in!");
   return _currentUser!;
 }

@@ -85,15 +85,15 @@ class _SearchScreenState extends State<SearchScreen> with TickerProviderStateMix
       _lastScrollOffset = 0.0;
     });
 
-    _videoQuery = SearchQuery<Video>((limit, offset) async {
-      final result = await videoRepo.searchVideos(val!, limit: limit, offset: offset, withAuthor: true);
-      return result.videos;
-    }, () => videoRepo.countSearchVideos(val!));
-
     _userQuery = SearchQuery<UserProfile>((limit, offset) async {
       final result = await userRepository.searchUsers(val!, limit: limit, offset: offset);
       return result.users;
     }, () => userRepository.countSearchUsers(val!));
+
+    _videoQuery = SearchQuery<Video>((limit, offset) async {
+      final result = await videoRepo.searchVideos(val!, limit: limit, offset: offset, withAuthor: true);
+      return result.videos;
+    }, () => videoRepo.countSearchVideos(val!));
 
     await Future.wait([_videoQuery!.complete(), _userQuery!.complete()]);
 

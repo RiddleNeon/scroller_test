@@ -28,6 +28,7 @@ class VideoRecommender extends VideoRecommenderBase {
 
   /// Main recommendation function
   Future<Set<Video>> getRecommendedVideos({int limit = 20}) async {
+    print("Getting recommended videos for user with limit: $limit");
     try {
       // Get user preferences
       final userPreferences = await getUserPreferences();
@@ -60,6 +61,7 @@ class VideoRecommender extends VideoRecommenderBase {
 
   /// Get candidate videos with smart filtering based on user preferences
   Future<Set<Video>> _getCandidateVideos({required UserPreferences userPreferences, required int limit}) async {
+    print("getting candidate videos for user. new user: ${userPreferences.isNewUser}, limit: $limit");
     if (userPreferences.isNewUser) return fetchTrendingVideos(limit: limit);
 
     final Set<Video> candidates = {};

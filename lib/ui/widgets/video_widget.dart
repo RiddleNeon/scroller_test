@@ -130,6 +130,7 @@ class _VideoItemState extends State<VideoItem> {
   /// Save complete interaction when user leaves video
   /// This creates ONE interaction document with all data
   void _saveInteraction() async {
+    print("Saving interaction for video ${widget.video.id}: watchTime=$_totalWatchTime, liked=$_isLiked, disliked=$_isDisliked, shared=$_hasShared, commented=$_hasCommented, saved=$_hasSaved");
     if (currentlySaving) return;
     if (_startWatchTime != null) {
       final elapsed = DateTime.now().difference(_startWatchTime!).inSeconds.toDouble();

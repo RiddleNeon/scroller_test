@@ -94,7 +94,7 @@ class UserRepository {
   ///returns if the user is followed after the operation
   Future<bool> toggleFollowUser(String followingId) async {
     if (currentUser.id == followingId) throw Exception('Cannot toggle follow yourself');
-    String result = await supabaseClient.rpc('toggle_follow', params: {'p_user_id': currentUser.id, 'p_other_id': followingId});
+    String result = await supabaseClient.rpc('toggle_follow', params: {'p_other_id': followingId});
     bool followed = result == 'followed';
     currentUser = currentUser.copyWith(followingCount: followed ? (currentUser.followingCount ?? 0) + 1 : (currentUser.followingCount ?? 1) - 1);
     return followed;
@@ -171,6 +171,7 @@ class UserRepository {
   }
 
   Future<List<Video>> getPublishedVideos(String userId, {int limit = 20, int offset = 0}) async {
+    print("Fetching published videos for user $userId with limit $limit and offset $offset");
     try {
       final response = await supabaseClient
           .from('videos')

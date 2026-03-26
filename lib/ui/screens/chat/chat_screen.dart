@@ -240,7 +240,6 @@ class MessagingScreenState extends State<MessagingScreen> with TickerProviderSta
   }
 
   PreferredSizeWidget _buildAppBar(ThemeData theme, ColorScheme cs) {
-    print("toolbar height: $kToolbarHeight");
     return AppBar(
       backgroundColor: cs.surface,
       elevation: 0,

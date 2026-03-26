@@ -334,8 +334,9 @@ class ChatRepository {
     final conversationId = await supabaseClient.rpc(
       'create_conversation',
       params: {
-        'p_type': 'direct',
         'p_receiver_id': receiverId,
+        'p_title': null,
+        'p_type': 'direct',
       },
     ) as int;
 

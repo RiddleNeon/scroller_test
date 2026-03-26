@@ -232,6 +232,7 @@ class BulkVideoImporter {
         required int likes,
       }) async {
     try {
+      print('  🔍 Looking up video ID for backfilling metrics...');
       final row = await supabaseClient
           .from('videos')
           .select('id')
@@ -245,8 +246,8 @@ class BulkVideoImporter {
 
       if (views > 0) {
         print('  🔧 Incremented view count by $views');
-        await supabaseClient.rpc('_increment_video_metric',
-            params: {'p_video_id': videoId, 'p_column': 'view_count', 'p_delta': views});
+        // await supabaseClient.rpc('_increment_video_metric',
+        //     params: {'p_video_id': videoId, 'p_column': 'view_count', 'p_delta': views});
       }
       if (likes > 0) {
         print('  🔧 Incremented like count by $likes');

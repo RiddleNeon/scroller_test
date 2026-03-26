@@ -16,6 +16,7 @@ class VideoRepository {
   }
 
   Future<Video?> getVideoByIdSupabase(String id) async {
+    print("fetching video by id $id");
     final supabaseVid = await supabaseClient
         .from('videos')
         .select('''
@@ -64,6 +65,7 @@ class VideoRepository {
     List<String> tags = const [],
     int commentCount = 0,
   }) async {
+    print("publishing");
     final publishedVideoId = (await supabaseClient
             .from('videos')
             .insert({
@@ -260,6 +262,8 @@ class VideoRepository {
         .map((e) => e['following_id'] as String)
         .toList();
     if (followingIds.isEmpty) return [];
+    
+    print("getting following feed for user $userId, following ${followingIds.length} users, limit $limit, offset $offset");
 
     final result = await supabaseClient
         .from('videos')
@@ -274,6 +278,7 @@ class VideoRepository {
   Future<List<Video>> getTrendingVideos({int limit = 20}) async => getTrendingVideosSupabase(limit: limit);
 
   Future<List<Video>> getTrendingVideosSupabase({int limit = 20}) async {
+    print("getting trending");
     final result = await supabaseClient
         .from('videos')
         .select(_videoSelect)
@@ -345,6 +350,9 @@ class VideoRepository {
     final videoIds = taggedVideoIds.map((e) => e['video_id']).toSet().toList();
     if (videoIds.isEmpty) return [];
 
+    
+    print("Getting videos by tags ${tags.join(', ')}, found ${videoIds.length} matching videos, limit $limit, offset $offset");
+    
     final result = await supabaseClient
         .from('videos')
         .select(_videoSelect)
@@ -365,6 +373,8 @@ class VideoRepository {
         .inFilter('tags.name', video.tags.take(5).toList());
     final videoIds = taggedVideoIds.map((e) => e['video_id']).where((id) => id.toString() != video.id).toSet().toList();
     if (videoIds.isEmpty) return [];
+    
+    print("Getting related videos for video ${video.id} with tags ${video.tags.join(', ')}, found ${videoIds.length} candidate videos, limit $limit");
 
     final result = await supabaseClient
         .from('videos')
@@ -401,6 +411,7 @@ class VideoRepository {
 
   Future<List<Video>> fetchVideosByIdsSupabase(List<int> ids) async {
     if (ids.isEmpty) return [];
+    print("Fetching videos by IDs: ${ids.join(', ')}");
     final result = await supabaseClient.from('videos').select(_videoSelect).inFilter('id', ids);
     return result.map<Video>(_toVideo).toList();
   }
