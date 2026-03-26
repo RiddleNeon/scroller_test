@@ -81,6 +81,7 @@ class _TestQuestScreenState extends State<TestQuestScreen> {
                 duration: const Duration(milliseconds: 350),
                 curve: Curves.easeInOutCirc,
                 child: FloatingActionButton(
+                  heroTag: null,
                   clipBehavior: Clip.none,
                   child: Stack(
                     clipBehavior: Clip.none,
@@ -109,6 +110,7 @@ class _TestQuestScreenState extends State<TestQuestScreen> {
               ),
               const SizedBox(width: 16), //space between buttons
               FloatingActionButton(
+                heroTag: null,
                 child: const Icon(Icons.filter_center_focus),
                 onPressed: () {
                   _panKey.currentState?.centerOnAllQuests(context.size?.width ?? 100, context.size?.height ?? 100, autoZoom: true);

@@ -170,6 +170,9 @@ class PanWidgetState extends State<PanWidget> {
     var tx = details.localFocalPoint.dx - s * (_focalAtGestureStart.dx - _txAtGestureStart) / _scaleAtGestureStart;
     var ty = details.localFocalPoint.dy - s * (_focalAtGestureStart.dy - _tyAtGestureStart) / _scaleAtGestureStart;
 
+    final viewportRect = Rect.fromLTWH(-tx / s, -ty / s, context.size!.width / s, context.size!.height / s);
+    _questBubbleOverlayKey.currentState?.onScaleChange(s, viewportRect);
+
     _controller.value = Matrix4.identity()
       ..scale(s)
       ..setTranslation(Vector3(tx, ty, 0));
@@ -250,6 +253,9 @@ class PanWidgetState extends State<PanWidget> {
 
     var tx = focal.dx - newScale * (focal.dx - currentTx) / currentScale;
     var ty = focal.dy - newScale * (focal.dy - currentTy) / currentScale;
+    
+    final viewportRect = Rect.fromLTWH(-tx / newScale, -ty / newScale, context.size!.width / newScale, context.size!.height / newScale);
+    _questBubbleOverlayKey.currentState?.onScaleChange(newScale, viewportRect);
     
     _controller.value = Matrix4.identity()
       ..scale(newScale)
@@ -414,7 +420,6 @@ class PanWidgetState extends State<PanWidget> {
             isGridSnappingEnabled = false;
           } else {
             isGridSnappingEnabled = true;
-            print("Grid snapping enabled");
           }
           return KeyEventResult.ignored;
         },
