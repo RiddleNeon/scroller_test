@@ -22,4 +22,7 @@ for storing the actual video data, profile images, thumbnails, subtitles and all
 - class A operations: 1m free, then 4.50$/1m operations
 - class B operations: 10m free, then 0.36$/1m operations
 
-since profile images are being cached, we can count one sroll roughly as 1.2 class B operations. <br>
+since profile images are being cached, we can count one sroll roughly as 1.2 class B operations. 
+# costs calculation
+now for the fun part: calculating the costs and income per MAU (monthly active user). Note that these values can vary a lot since there are a lot of variables we cant control and predict as much as others. for example ad income varies depending of the region youre in, the time, the company, the time of the year and just the ad providers in general, depening on how many good ad offers there currently are. these calculations are made based on the most realistic ones. <br>
+
