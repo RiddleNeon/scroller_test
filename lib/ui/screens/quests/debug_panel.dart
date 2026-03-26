@@ -8,7 +8,10 @@ import 'package:wurp/logic/quests/quest_system.dart';
 import 'package:wurp/logic/repositories/quest_repository.dart';
 
 class QuestDebugPanel extends StatefulWidget {
-  const QuestDebugPanel({super.key, required this.onChanged, this.onFocusQuest});
+  final QuestSystem questSystem;
+  final QuestChangeManager changeManager;
+
+  const QuestDebugPanel({super.key, required this.onChanged, this.onFocusQuest, required this.questSystem, required this.changeManager});
 
   final VoidCallback onChanged;
   final void Function(Quest quest)? onFocusQuest;
@@ -23,6 +26,10 @@ class QuestDebugPanelState extends State<QuestDebugPanel> with TickerProviderSta
   late final Animation<double> _slideAnim;
 
   bool get isOpen => _isOpen;
+
+  QuestSystem get questSystem => widget.questSystem;
+
+  QuestChangeManager get changeManager => widget.changeManager;
 
   String _searchQuery = '';
   int? _expandedQuestId;
@@ -86,7 +93,7 @@ class QuestDebugPanelState extends State<QuestDebugPanel> with TickerProviderSta
           questSystem.upsertQuest(quest);
           setState(() => _expandedQuestId = quest.id);
           widget.onChanged();
-        },
+        }, changeManager: changeManager,
       ),
     );
   }
@@ -157,7 +164,7 @@ class QuestDebugPanelState extends State<QuestDebugPanel> with TickerProviderSta
               ),
               child: Column(
                 children: [
-                  _PanelHeader(onAddQuest: _showCreateDialog),
+                  _PanelHeader(onAddQuest: _showCreateDialog, questSystem: questSystem),
                   _SearchBar(onChanged: (v) => setState(() => _searchQuery = v)),
                   Expanded(child: _buildQuestList()),
                 ],
@@ -186,6 +193,7 @@ class QuestDebugPanelState extends State<QuestDebugPanel> with TickerProviderSta
         return _QuestListTile(
           key: ValueKey(quest.id),
           initialQuest: quest,
+          questSystem: questSystem,
           isExpanded: isExpanded,
           allQuests: questSystem.quests,
           onToggle: () => setState(() => _expandedQuestId = isExpanded ? null : quest.id),
@@ -194,7 +202,7 @@ class QuestDebugPanelState extends State<QuestDebugPanel> with TickerProviderSta
           onChanged: () {
             setState(() {});
             widget.onChanged();
-          },
+          }, changeManager: changeManager,
         );
       },
     );
@@ -202,8 +210,9 @@ class QuestDebugPanelState extends State<QuestDebugPanel> with TickerProviderSta
 }
 
 class _PanelHeader extends StatelessWidget {
-  const _PanelHeader({required this.onAddQuest});
+  const _PanelHeader({required this.onAddQuest, required this.questSystem});
 
+  final QuestSystem questSystem;
   final VoidCallback onAddQuest;
 
   @override
@@ -279,6 +288,8 @@ class _QuestListTile extends StatefulWidget {
     required this.onDelete,
     required this.onChanged,
     this.onFocus,
+    required this.questSystem,
+    required this.changeManager,
   });
 
   final Quest initialQuest;
@@ -288,6 +299,9 @@ class _QuestListTile extends StatefulWidget {
   final VoidCallback onDelete;
   final VoidCallback onChanged;
   final VoidCallback? onFocus;
+
+  final QuestSystem questSystem;
+  final QuestChangeManager changeManager;
 
   @override
   State<_QuestListTile> createState() => _QuestListTileState();
@@ -304,9 +318,13 @@ class _QuestListTileState extends State<_QuestListTile> with SingleTickerProvide
   late final TextEditingController _sizeXCtrl;
   late final TextEditingController _sizeYCtrl;
   late Quest quest;
-  
+
+  QuestSystem get questSystem => widget.questSystem;
+
+  QuestChangeManager get changeManager => widget.changeManager;
+
   _QuestListTileState();
-  
+
   double? _difficulty;
 
   _SaveState _saveState = _SaveState.idle;
@@ -320,7 +338,7 @@ class _QuestListTileState extends State<_QuestListTile> with SingleTickerProvide
     super.initState();
 
     quest = widget.initialQuest;
-    
+
     _nameCtrl = TextEditingController(text: quest.name);
     _descCtrl = TextEditingController(text: quest.description);
     _subjectCtrl = TextEditingController(text: quest.subject);
@@ -328,7 +346,7 @@ class _QuestListTileState extends State<_QuestListTile> with SingleTickerProvide
     _posYCtrl = TextEditingController(text: quest.posY.toStringAsFixed(1));
     _sizeXCtrl = TextEditingController(text: quest.sizeX.toStringAsFixed(1));
     _sizeYCtrl = TextEditingController(text: quest.sizeY.toStringAsFixed(1));
-    
+
     _chevronCtrl = AnimationController(vsync: this, duration: const Duration(milliseconds: 200), value: widget.isExpanded ? 1.0 : 0.0);
     _chevronAnim = CurvedAnimation(parent: _chevronCtrl, curve: Curves.easeOut);
   }
@@ -354,7 +372,6 @@ class _QuestListTileState extends State<_QuestListTile> with SingleTickerProvide
   }
 
   void _applyChanges() {
-    
     QuestPatch before = QuestPatch(
       name: quest.name,
       description: quest.description,
@@ -365,18 +382,18 @@ class _QuestListTileState extends State<_QuestListTile> with SingleTickerProvide
       sizeY: quest.sizeY,
       difficulty: quest.difficulty,
     );
-    
+
     String? newName = _nameCtrl.text.trim().isEmpty ? null : _nameCtrl.text.trim();
     String? newDesc = _descCtrl.text.trim() == quest.description.trim() ? null : _descCtrl.text.trim();
     String? newSubject = _subjectCtrl.text.trim() == quest.subject.trim() ? null : _subjectCtrl.text.trim();
-    
+
     double? newPosX = double.tryParse(_posXCtrl.text);
     double? newPosY = double.tryParse(_posYCtrl.text);
     double? newSizeX = double.tryParse(_sizeXCtrl.text);
     double? newSizeY = double.tryParse(_sizeYCtrl.text);
-    
+
     double? newDifficulty = _difficulty == quest.difficulty ? null : _difficulty;
-    
+
     QuestPatch after = QuestPatch(
       name: newName,
       description: newDesc,
@@ -387,7 +404,7 @@ class _QuestListTileState extends State<_QuestListTile> with SingleTickerProvide
       sizeY: newSizeY,
       difficulty: newDifficulty,
     );
-    
+
     quest = after.applyTo(quest);
 
     changeManager.record(UpdateQuestChange(questId: quest.id, patch: after, reversePatch: before));
@@ -529,7 +546,7 @@ class _QuestListTileState extends State<_QuestListTile> with SingleTickerProvide
           ),
           const SizedBox(height: 8),
           const _SectionLabel('Prerequisites'),
-          _PrerequisiteEditor(quest: quest, allQuests: widget.allQuests, onChanged: widget.onChanged),
+          _PrerequisiteEditor(quest: quest, allQuests: widget.allQuests, onChanged: widget.onChanged, questSystem: questSystem),
           const SizedBox(height: 12),
           _ApplyButton(saveState: _saveState, onPressed: _applyChanges),
         ],
@@ -624,11 +641,12 @@ class _ApplyButton extends StatelessWidget {
 }
 
 class _PrerequisiteEditor extends StatefulWidget {
-  const _PrerequisiteEditor({required this.quest, required this.allQuests, required this.onChanged});
+  const _PrerequisiteEditor({required this.quest, required this.allQuests, required this.onChanged, required this.questSystem});
 
   final Quest quest;
   final List<Quest> allQuests;
   final VoidCallback onChanged;
+  final QuestSystem questSystem;
 
   @override
   State<_PrerequisiteEditor> createState() => _PrerequisiteEditorState();
@@ -639,6 +657,8 @@ class _PrerequisiteEditorState extends State<_PrerequisiteEditor> {
   final _focusNode = FocusNode();
   bool _showList = false;
   String _query = '';
+
+  QuestSystem get questSystem => widget.questSystem;
 
   @override
   void initState() {
@@ -795,9 +815,11 @@ class _PrerequisiteEditorState extends State<_PrerequisiteEditor> {
 }
 
 class _CreateQuestDialog extends StatefulWidget {
-  const _CreateQuestDialog({required this.onCreated});
+  const _CreateQuestDialog({required this.onCreated, required this.changeManager});
 
   final void Function(Quest) onCreated;
+  
+  final QuestChangeManager changeManager;
 
   @override
   State<_CreateQuestDialog> createState() => _CreateQuestDialogState();
@@ -812,6 +834,8 @@ class _CreateQuestDialogState extends State<_CreateQuestDialog> {
   final _sizeXCtrl = TextEditingController(text: '200');
   final _sizeYCtrl = TextEditingController(text: '100');
   double _difficulty = 0.5;
+  
+  QuestChangeManager get changeManager => widget.changeManager;
 
   @override
   void dispose() {

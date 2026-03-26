@@ -91,7 +91,7 @@ class BulkVideoImporter {
     int skipped = 0;
     items.shuffle(); // Shuffle to mix authors and videos for better testing of the caching and parallelism
 
-    for (int i = 0; i < 5; i++) {
+    for (int i = 0; i < items.length; i++) {
       final item = items[i];
       print('[${i + 1}/${items.length}] Processing "${item['title']?.toString()}..."');
 

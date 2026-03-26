@@ -60,7 +60,7 @@ void initRouter() {
           ), //indicator that this is not implemented yet,
           GoRoute(
             path: '/quests',
-            builder: (context, state) => const TestQuestScreen()
+            builder: (context, state) => const TestQuestScreen(subject: 'General')
           ),
         ],
       ),

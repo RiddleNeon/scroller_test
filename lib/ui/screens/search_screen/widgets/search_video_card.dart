@@ -4,7 +4,6 @@ import 'package:flutter/foundation.dart';
 import 'package:flutter/material.dart';
 import 'package:http/http.dart' as http;
 import 'package:shimmer_animation/shimmer_animation.dart';
-import 'package:video_thumbnail/video_thumbnail.dart';
 import 'package:wurp/logic/video/video.dart';
 
 class VideoCard extends StatefulWidget {
@@ -176,7 +175,7 @@ class _VideoCardState extends State<VideoCard> {
     return FutureBuilder<Uint8List?>(
       future: thumbnail,
       builder: (context, snapshot) {
-        if (snapshot.hasData && snapshot.data != null) {
+        if (snapshot.hasData && snapshot.data != null && snapshot.data!.isNotEmpty) {
           return Stack(
             fit: StackFit.expand,
             children: [
@@ -227,21 +226,16 @@ Future<Uint8List?> thumbnailFor(Video video) async {
 }
 
 Future<Uint8List?> loadThumbnailFor(Video video) async {
-  if (video.thumbnailUrl != null) {
-    var thumbnailUrl = video.thumbnailUrl!;
-    if(!thumbnailUrl.startsWith('http')) {
-      thumbnailUrl = 'https://$thumbnailUrl';
-    }
-    http.Response response = await http.get(Uri.parse(video.thumbnailUrl!));
-    final data = response.bodyBytes;
-    _cachedThumbnails[video.videoUrl] = data;
-    return data;
-  }
+  if (video.thumbnailUrl == null) return Future.value(null);
 
-  if (!(defaultTargetPlatform == TargetPlatform.android || defaultTargetPlatform == TargetPlatform.iOS)) {
-    return Future.value(null);
+  var thumbnailUrl = video.thumbnailUrl!;
+  if (!thumbnailUrl.startsWith('http')) {
+    thumbnailUrl = 'https://$thumbnailUrl';
   }
-  return _cachedThumbnails[video.videoUrl] ??= VideoThumbnail.thumbnailData(video: video.videoUrl);
+  http.Response response = await http.get(Uri.parse(video.thumbnailUrl!));
+  final data = response.bodyBytes;
+  _cachedThumbnails[video.videoUrl] = data;
+  return data;
 }
 
 void disposeThumbnailCache() {

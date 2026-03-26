@@ -755,5 +755,3 @@ class RemoveConnectionChange extends _QuestTargetedChange {
   @override
   int? get otherQuestId => toId;
 }
-
-late QuestChangeManager changeManager;

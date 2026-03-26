@@ -4,7 +4,6 @@ import 'package:wurp/logic/quests/quest_change_manager.dart';
 import 'package:wurp/logic/quests/quest_system.dart';
 import 'package:wurp/util/extensions/num_distance.dart';
 
-
 class QuestDetailScreen extends StatefulWidget {
   final Quest quest;
   final bool debugMode;
@@ -13,13 +12,17 @@ class QuestDetailScreen extends StatefulWidget {
   final void Function(Quest quest)? onDelete;
   final String? recommendedChangeMessage;
 
+  final QuestSystem questSystem;
+
   const QuestDetailScreen({
     super.key,
     required this.quest,
     required this.debugMode,
     required this.editMode,
-    this.onDoneEditing, this.recommendedChangeMessage, 
+    this.onDoneEditing,
+    this.recommendedChangeMessage,
     this.onDelete,
+    required this.questSystem,
   });
 
   @override
@@ -29,16 +32,16 @@ class QuestDetailScreen extends StatefulWidget {
 class _QuestDetailScreenState extends State<QuestDetailScreen> {
   late bool _editMode;
   late Quest _editedQuest;
-  
-  
+
   late final TextEditingController _nameCtrl;
   late final TextEditingController _descriptionCtrl;
-  late final TextEditingController _subjectCtrl;
   late final TextEditingController _posXCtrl;
   late final TextEditingController _posYCtrl;
   late final TextEditingController _sizeXCtrl;
   late final TextEditingController _sizeYCtrl;
   late double _difficulty;
+
+  QuestSystem get questSystem => widget.questSystem;
 
   @override
   void initState() {
@@ -47,7 +50,6 @@ class _QuestDetailScreenState extends State<QuestDetailScreen> {
     _editedQuest = widget.quest;
     _nameCtrl = TextEditingController(text: widget.quest.name);
     _descriptionCtrl = TextEditingController(text: widget.quest.description);
-    _subjectCtrl = TextEditingController(text: widget.quest.subject);
     _posXCtrl = TextEditingController(text: widget.quest.posX.toStringAsFixed(0));
     _posYCtrl = TextEditingController(text: widget.quest.posY.toStringAsFixed(0));
     _sizeXCtrl = TextEditingController(text: widget.quest.sizeX.toStringAsFixed(0));
@@ -59,14 +61,13 @@ class _QuestDetailScreenState extends State<QuestDetailScreen> {
   void dispose() {
     _nameCtrl.dispose();
     _descriptionCtrl.dispose();
-    _subjectCtrl.dispose();
     _posXCtrl.dispose();
     _posYCtrl.dispose();
     _sizeXCtrl.dispose();
     _sizeYCtrl.dispose();
     super.dispose();
   }
-  
+
   /// Reads all controllers and builds an updated [Quest].
   /// Requires Quest to have a copyWith method.
   QuestPatch _buildUpdatedQuestPatch() {
@@ -74,9 +75,7 @@ class _QuestDetailScreenState extends State<QuestDetailScreen> {
     String? newName = (newNameRaw.isEmpty || newNameRaw == widget.quest.name) ? null : newNameRaw;
     String newDescriptionRaw = _descriptionCtrl.text.trim();
     String? newDescription = (newDescriptionRaw.isEmpty || newDescriptionRaw == widget.quest.description) ? null : newDescriptionRaw;
-    String newSubjectRaw = _subjectCtrl.text.trim();
-    String? newSubject = (newSubjectRaw.isEmpty || newSubjectRaw == widget.quest.subject) ? null : newSubjectRaw;
-    
+
     double? newPosXRaw = double.tryParse(_posXCtrl.text);
     double? newPosX = (newPosXRaw == null || newPosXRaw.distanceTo(widget.quest.posX) < 1) ? null : newPosXRaw;
     double? newPosYRaw = double.tryParse(_posYCtrl.text);
@@ -85,21 +84,14 @@ class _QuestDetailScreenState extends State<QuestDetailScreen> {
     double? newSizeX = (newSizeXRaw == null || newSizeXRaw == widget.quest.sizeX) ? null : newSizeXRaw;
     double? newSizeYRaw = double.tryParse(_sizeYCtrl.text);
     double? newSizeY = (newSizeYRaw == null || newSizeYRaw == widget.quest.sizeY) ? null : newSizeYRaw;
-    
+
     double? newDifficulty = (_difficulty == widget.quest.difficulty) ? null : _difficulty;
-    
-    print("Built QuestPatch with values: name=$newName, description=$newDescription, subject=$newSubject, posX=$newPosX, posY=$newPosY, sizeX=$newSizeX, sizeY=$newSizeY, difficulty=$newDifficulty");
-    
-    return QuestPatch(
-      name: newName,
-      description: newDescription,
-      subject: newSubject,
-      posX: newPosX,
-      posY: newPosY,
-      sizeX: newSizeX,
-      sizeY: newSizeY,
-      difficulty: newDifficulty,
+
+    print(
+      "Built QuestPatch with values: name=$newName, description=$newDescription, posX=$newPosX, posY=$newPosY, sizeX=$newSizeX, sizeY=$newSizeY, difficulty=$newDifficulty",
     );
+
+    return QuestPatch(name: newName, description: newDescription, posX: newPosX, posY: newPosY, sizeX: newSizeX, sizeY: newSizeY, difficulty: newDifficulty);
   }
 
   void _saveAndExit() {
@@ -112,13 +104,15 @@ class _QuestDetailScreenState extends State<QuestDetailScreen> {
       widget.onDoneEditing?.call(updated, message.isEmpty ? null : message);
     });
   }
+
   ///asks the user what he changed and returns the message, or null if the user cancels
   Future<String> showChangeMessageDialog(String? recommendedChangeMessage) async {
     String? message;
     await showDialog(
       context: context,
       builder: (context) {
-        final controller = TextEditingController(text: recommendedChangeMessage ?? '')..selection = TextSelection(baseOffset: 0, extentOffset: recommendedChangeMessage?.length ?? 0);
+        final controller = TextEditingController(text: recommendedChangeMessage ?? '')
+          ..selection = TextSelection(baseOffset: 0, extentOffset: recommendedChangeMessage?.length ?? 0);
         return AlertDialog(
           title: const Text('Describe your changes'),
           content: TextField(
@@ -128,10 +122,13 @@ class _QuestDetailScreenState extends State<QuestDetailScreen> {
           ),
           actions: [
             TextButton(onPressed: () => Navigator.pop(context), child: const Text('Cancel')),
-            ElevatedButton(onPressed: () {
-              message = controller.text.trim();
-              Navigator.pop(context);
-            }, child: const Text('Save')),
+            ElevatedButton(
+              onPressed: () {
+                message = controller.text.trim();
+                Navigator.pop(context);
+              },
+              child: const Text('Save'),
+            ),
           ],
         );
       },
@@ -140,7 +137,7 @@ class _QuestDetailScreenState extends State<QuestDetailScreen> {
   }
 
   void _toggleEditMode() => setState(() => _editMode = !_editMode);
-  
+
   void onDelete() {
     showDialog(
       context: context,
@@ -149,11 +146,15 @@ class _QuestDetailScreenState extends State<QuestDetailScreen> {
         content: const Text('Are you sure you want to delete this quest? This action cannot be undone.'),
         actions: [
           TextButton(onPressed: () => Navigator.pop(context), child: const Text('Cancel')),
-          ElevatedButton(onPressed: () {
-            setState(() {});
-            Navigator.pop(context);
-            widget.onDelete?.call(widget.quest);
-          }, style: ElevatedButton.styleFrom(backgroundColor: Colors.red), child: const Text('Delete')),
+          ElevatedButton(
+            onPressed: () {
+              setState(() {});
+              Navigator.pop(context);
+              widget.onDelete?.call(widget.quest);
+            },
+            style: ElevatedButton.styleFrom(backgroundColor: Colors.red),
+            child: const Text('Delete'),
+          ),
         ],
       ),
     );
@@ -179,7 +180,7 @@ class _QuestDetailScreenState extends State<QuestDetailScreen> {
             padding: const EdgeInsets.fromLTRB(20, 24, 20, 40),
             sliver: SliverList(
               delegate: SliverChildListDelegate([
-                _StatusRow(quest: _editedQuest, colorScheme: colorScheme),
+                _StatusRow(quest: _editedQuest, colorScheme: colorScheme, questSystem: questSystem,),
                 const SizedBox(height: 24),
                 _SectionCard(
                   colorScheme: colorScheme,
@@ -204,12 +205,7 @@ class _QuestDetailScreenState extends State<QuestDetailScreen> {
                   const SizedBox(height: 16),
                   _SectionCard(
                     colorScheme: colorScheme,
-                    child: _PrerequisitesSection(
-                      quest: _editedQuest,
-                      colorScheme: colorScheme,
-                      debugMode: widget.debugMode,
-                      editMode: _editMode,
-                    ),
+                    child: _PrerequisitesSection(quest: _editedQuest, colorScheme: colorScheme, debugMode: widget.debugMode, editMode: _editMode, questSystem: questSystem,),
                   ),
                 ],
                 if (widget.debugMode) ...[
@@ -220,7 +216,6 @@ class _QuestDetailScreenState extends State<QuestDetailScreen> {
                       quest: _editedQuest,
                       colorScheme: colorScheme,
                       editMode: _editMode,
-                      subjectCtrl: _subjectCtrl,
                       posXCtrl: _posXCtrl,
                       posYCtrl: _posYCtrl,
                       sizeXCtrl: _sizeXCtrl,
@@ -231,7 +226,7 @@ class _QuestDetailScreenState extends State<QuestDetailScreen> {
                 if (_editMode) ...[
                   const SizedBox(height: 28),
                   _SaveButton(colorScheme: colorScheme, onSave: _saveAndExit),
-                  _DeleteButton(colorScheme: colorScheme, onDelete: onDelete)
+                  _DeleteButton(colorScheme: colorScheme, onDelete: onDelete),
                 ],
               ]),
             ),
@@ -280,11 +275,7 @@ class _QuestSliverAppBar extends StatelessWidget {
                 icon: Icon(editMode ? Icons.edit_off_rounded : Icons.edit_rounded),
                 tooltip: editMode ? 'Exit Edit Mode' : 'Edit Mode',
                 onPressed: onToggleEditMode,
-                style: IconButton.styleFrom(
-                  backgroundColor: editMode
-                      ? colorScheme.onPrimaryContainer.withValues(alpha: 0.18)
-                      : Colors.transparent,
-                ),
+                style: IconButton.styleFrom(backgroundColor: editMode ? colorScheme.onPrimaryContainer.withValues(alpha: 0.18) : Colors.transparent),
               ),
             ),
           ),
@@ -295,37 +286,24 @@ class _QuestSliverAppBar extends StatelessWidget {
         titlePadding: EdgeInsets.fromLTRB(60, 0, debugMode ? 56 : 20, 16),
         title: editMode
             ? TextField(
-          controller: nameController,
-          style: TextStyle(
-            color: colorScheme.onPrimaryContainer,
-            fontWeight: FontWeight.w700,
-            fontSize: 20,
-            height: 1.2,
-          ),
-          maxLines: 2,
-          cursorColor: colorScheme.onPrimaryContainer,
-          decoration: InputDecoration(
-            border: InputBorder.none,
-            isDense: true,
-            contentPadding: EdgeInsets.zero,
-            hintText: 'Quest-Name…',
-            hintStyle: TextStyle(
-              color: colorScheme.onPrimaryContainer.withValues(alpha: 0.35),
-              fontSize: 20,
-            ),
-          ),
-        )
+                controller: nameController,
+                style: TextStyle(color: colorScheme.onPrimaryContainer, fontWeight: FontWeight.w700, fontSize: 20, height: 1.2),
+                maxLines: 2,
+                cursorColor: colorScheme.onPrimaryContainer,
+                decoration: InputDecoration(
+                  border: InputBorder.none,
+                  isDense: true,
+                  contentPadding: EdgeInsets.zero,
+                  hintText: 'Quest-Name…',
+                  hintStyle: TextStyle(color: colorScheme.onPrimaryContainer.withValues(alpha: 0.35), fontSize: 20),
+                ),
+              )
             : Text(
-          quest.name,
-          style: TextStyle(
-            color: colorScheme.onPrimaryContainer,
-            fontWeight: FontWeight.w700,
-            fontSize: 20,
-            height: 1.2,
-          ),
-          maxLines: 2,
-          overflow: TextOverflow.ellipsis,
-        ),
+                quest.name,
+                style: TextStyle(color: colorScheme.onPrimaryContainer, fontWeight: FontWeight.w700, fontSize: 20, height: 1.2),
+                maxLines: 2,
+                overflow: TextOverflow.ellipsis,
+              ),
         background: Stack(
           fit: StackFit.expand,
           children: [
@@ -365,12 +343,7 @@ class _QuestSliverAppBar extends StatelessWidget {
                 left: 20,
                 child: Text(
                   '#${quest.id}',
-                  style: TextStyle(
-                    color: colorScheme.onPrimaryContainer.withValues(alpha: 0.5),
-                    fontSize: 12,
-                    fontWeight: FontWeight.w600,
-                    letterSpacing: 1.5,
-                  ),
+                  style: TextStyle(color: colorScheme.onPrimaryContainer.withValues(alpha: 0.5), fontSize: 12, fontWeight: FontWeight.w600, letterSpacing: 1.5),
                 ),
               ),
           ],
@@ -432,7 +405,9 @@ class _StatusRow extends StatelessWidget {
   final Quest quest;
   final ColorScheme colorScheme;
 
-  const _StatusRow({required this.quest, required this.colorScheme});
+  final QuestSystem questSystem;
+
+  const _StatusRow({required this.quest, required this.colorScheme, required this.questSystem});
 
   @override
   Widget build(BuildContext context) {
@@ -446,10 +421,7 @@ class _StatusRow extends StatelessWidget {
           decoration: BoxDecoration(
             color: isCompleted ? colorScheme.tertiaryContainer : colorScheme.surfaceContainerHighest,
             borderRadius: BorderRadius.circular(24),
-            border: Border.all(
-              color: isCompleted ? colorScheme.tertiary : colorScheme.outline.withValues(alpha: 0.4),
-              width: 1.5,
-            ),
+            border: Border.all(color: isCompleted ? colorScheme.tertiary : colorScheme.outline.withValues(alpha: 0.4), width: 1.5),
           ),
           child: Row(
             mainAxisSize: MainAxisSize.min,
@@ -527,12 +499,7 @@ class _DescriptionSection extends StatelessWidget {
   final TextEditingController controller;
   final String description;
 
-  const _DescriptionSection({
-    required this.colorScheme,
-    required this.editMode,
-    required this.controller,
-    required this.description,
-  });
+  const _DescriptionSection({required this.colorScheme, required this.editMode, required this.controller, required this.description});
 
   @override
   Widget build(BuildContext context) {
@@ -567,28 +534,21 @@ class _DifficultySection extends StatefulWidget {
   final double initialDifficulty;
   final ValueChanged<double> onDifficultyChanged;
 
-  const _DifficultySection({
-    required this.colorScheme,
-    required this.editMode,
-    required this.initialDifficulty,
-    required this.onDifficultyChanged,
-  });
+  const _DifficultySection({required this.colorScheme, required this.editMode, required this.initialDifficulty, required this.onDifficultyChanged});
 
   @override
   State<_DifficultySection> createState() => _DifficultySectionState();
 }
 
 class _DifficultySectionState extends State<_DifficultySection> {
-  
   late double _difficulty;
-  
+
   @override
   initState() {
     super.initState();
     _difficulty = widget.initialDifficulty.clamp(0.0, 1.0);
   }
-  
-  
+
   String _difficultyLabel(double d) {
     if (d < 0.2) return 'Beginner';
     if (d < 0.4) return 'Novice';
@@ -615,7 +575,9 @@ class _DifficultySectionState extends State<_DifficultySection> {
         children: [
           Row(
             children: [
-              Expanded(child: _SectionLabel(label: 'Difficulty', colorScheme: widget.colorScheme)),
+              Expanded(
+                child: _SectionLabel(label: 'Difficulty', colorScheme: widget.colorScheme),
+              ),
               // Label + percentage animate as the slider moves.
               AnimatedSwitcher(
                 duration: const Duration(milliseconds: 120),
@@ -642,7 +604,9 @@ class _DifficultySectionState extends State<_DifficultySection> {
               child: Slider(
                 value: _difficulty,
                 onChanged: (v) {
-                  setState(() {_difficulty = v;});
+                  setState(() {
+                    _difficulty = v;
+                  });
                 },
                 onChangeEnd: (value) => widget.onDifficultyChanged(value),
                 divisions: 20,
@@ -665,10 +629,7 @@ class _DifficultySectionState extends State<_DifficultySection> {
                   child: Container(
                     height: 8,
                     margin: EdgeInsets.only(right: i < segments - 1 ? 4 : 0),
-                    decoration: BoxDecoration(
-                      color: filled ? color : widget.colorScheme.surfaceContainerHighest,
-                      borderRadius: BorderRadius.circular(4),
-                    ),
+                    decoration: BoxDecoration(color: filled ? color : widget.colorScheme.surfaceContainerHighest, borderRadius: BorderRadius.circular(4)),
                   ),
                 );
               }),
@@ -688,12 +649,9 @@ class _PrerequisitesSection extends StatelessWidget {
   final bool debugMode;
   final bool editMode;
 
-  const _PrerequisitesSection({
-    required this.quest,
-    required this.colorScheme,
-    required this.debugMode,
-    required this.editMode,
-  });
+  final QuestSystem questSystem;
+
+  const _PrerequisitesSection({required this.quest, required this.colorScheme, required this.debugMode, required this.editMode, required this.questSystem});
 
   @override
   Widget build(BuildContext context) {
@@ -729,7 +687,10 @@ class _PrerequisitesSection extends StatelessWidget {
                     child: Column(
                       crossAxisAlignment: CrossAxisAlignment.start,
                       children: [
-                        Text(prereq.name, style: TextStyle(color: colorScheme.onSurface, fontSize: 14, fontWeight: FontWeight.w600)),
+                        Text(
+                          prereq.name,
+                          style: TextStyle(color: colorScheme.onSurface, fontSize: 14, fontWeight: FontWeight.w600),
+                        ),
                         Text(prereq.subject, style: TextStyle(color: colorScheme.onSurfaceVariant, fontSize: 12)),
                       ],
                     ),
@@ -759,7 +720,6 @@ class _MetaSection extends StatelessWidget {
   final Quest quest;
   final ColorScheme colorScheme;
   final bool editMode;
-  final TextEditingController subjectCtrl;
   final TextEditingController posXCtrl;
   final TextEditingController posYCtrl;
   final TextEditingController sizeXCtrl;
@@ -769,7 +729,6 @@ class _MetaSection extends StatelessWidget {
     required this.quest,
     required this.colorScheme,
     required this.editMode,
-    required this.subjectCtrl,
     required this.posXCtrl,
     required this.posYCtrl,
     required this.sizeXCtrl,
@@ -796,9 +755,9 @@ class _MetaSection extends StatelessWidget {
       colorScheme: colorScheme,
       items: [
         _MetaItem(icon: Icons.tag_rounded, label: 'Quest ID', value: '#${quest.id}'),
+        _MetaItem(icon: Icons.subject_rounded, label: 'Subject', value: quest.subject),
         _MetaItem(icon: Icons.place_outlined, label: 'Position', value: '(${quest.posX.toStringAsFixed(0)}, ${quest.posY.toStringAsFixed(0)})'),
         _MetaItem(icon: Icons.aspect_ratio_rounded, label: 'Size', value: '${quest.sizeX.toStringAsFixed(0)} × ${quest.sizeY.toStringAsFixed(0)}'),
-        _MetaItem(icon: Icons.subject_rounded, label: 'Subject', value: quest.subject),
       ],
     );
   }
@@ -806,19 +765,9 @@ class _MetaSection extends StatelessWidget {
   Widget _buildEditLayout() {
     return Column(
       children: [
-        _MetaReadOnlyRow(
-          icon: Icons.tag_rounded,
-          label: 'Quest ID',
-          value: '#${quest.id}',
-          colorScheme: colorScheme,
-        ),
+        _MetaReadOnlyRow(icon: Icons.tag_rounded, label: 'Quest ID', value: '#${quest.id}', colorScheme: colorScheme),
         const SizedBox(height: 12),
-        _MetaEditField(
-          icon: Icons.subject_rounded,
-          label: 'Subject',
-          controller: subjectCtrl,
-          colorScheme: colorScheme,
-        ),
+        _MetaReadOnlyRow(icon: Icons.tag_rounded, label: 'Subject', value: quest.subject, colorScheme: colorScheme),
         const SizedBox(height: 12),
         _MetaCoordRow(
           icon: Icons.place_outlined,
@@ -850,12 +799,7 @@ class _MetaReadOnlyRow extends StatelessWidget {
   final String value;
   final ColorScheme colorScheme;
 
-  const _MetaReadOnlyRow({
-    required this.icon,
-    required this.label,
-    required this.value,
-    required this.colorScheme,
-  });
+  const _MetaReadOnlyRow({required this.icon, required this.label, required this.value, required this.colorScheme});
 
   @override
   Widget build(BuildContext context) {
@@ -876,20 +820,11 @@ class _MetaReadOnlyRow extends StatelessWidget {
               children: [
                 Text(
                   label,
-                  style: TextStyle(
-                    color: colorScheme.onSurfaceVariant.withValues(alpha: 0.6),
-                    fontSize: 10,
-                    fontWeight: FontWeight.w500,
-                    letterSpacing: 0.5,
-                  ),
+                  style: TextStyle(color: colorScheme.onSurfaceVariant.withValues(alpha: 0.6), fontSize: 10, fontWeight: FontWeight.w500, letterSpacing: 0.5),
                 ),
                 Text(
                   value,
-                  style: TextStyle(
-                    color: colorScheme.onSurface.withValues(alpha: 0.45),
-                    fontSize: 13,
-                    fontWeight: FontWeight.w700,
-                  ),
+                  style: TextStyle(color: colorScheme.onSurface.withValues(alpha: 0.45), fontSize: 13, fontWeight: FontWeight.w700),
                 ),
               ],
             ),
@@ -897,53 +832,6 @@ class _MetaReadOnlyRow extends StatelessWidget {
           Icon(Icons.lock_outline_rounded, size: 14, color: colorScheme.onSurfaceVariant.withValues(alpha: 0.4)),
         ],
       ),
-    );
-  }
-}
-
-class _MetaEditField extends StatelessWidget {
-  final IconData icon;
-  final String label;
-  final TextEditingController controller;
-  final ColorScheme colorScheme;
-
-  const _MetaEditField({
-    required this.icon,
-    required this.label,
-    required this.controller,
-    required this.colorScheme,
-  });
-
-  @override
-  Widget build(BuildContext context) {
-    return Row(
-      crossAxisAlignment: CrossAxisAlignment.center,
-      children: [
-        Icon(icon, size: 18, color: colorScheme.primary),
-        const SizedBox(width: 10),
-        Expanded(
-          child: Column(
-            crossAxisAlignment: CrossAxisAlignment.start,
-            children: [
-              Text(
-                label,
-                style: TextStyle(
-                  color: colorScheme.onSurfaceVariant,
-                  fontSize: 10,
-                  fontWeight: FontWeight.w500,
-                  letterSpacing: 0.5,
-                ),
-              ),
-              const SizedBox(height: 4),
-              TextField(
-                controller: controller,
-                style: TextStyle(color: colorScheme.onSurface, fontSize: 13, fontWeight: FontWeight.w700),
-                decoration: _editInputDecoration(colorScheme),
-              ),
-            ],
-          ),
-        ),
-      ],
     );
   }
 }
@@ -983,30 +871,17 @@ class _MetaCoordRow extends StatelessWidget {
             children: [
               Text(
                 label,
-                style: TextStyle(
-                  color: colorScheme.onSurfaceVariant,
-                  fontSize: 10,
-                  fontWeight: FontWeight.w500,
-                  letterSpacing: 0.5,
-                ),
+                style: TextStyle(color: colorScheme.onSurfaceVariant, fontSize: 10, fontWeight: FontWeight.w500, letterSpacing: 0.5),
               ),
               const SizedBox(height: 4),
               Row(
                 children: [
                   Expanded(
-                    child: _NumericField(
-                      prefixLabel: firstLabel,
-                      controller: firstCtrl,
-                      colorScheme: colorScheme,
-                    ),
+                    child: _NumericField(prefixLabel: firstLabel, controller: firstCtrl, colorScheme: colorScheme),
                   ),
                   const SizedBox(width: 8),
                   Expanded(
-                    child: _NumericField(
-                      prefixLabel: secondLabel,
-                      controller: secondCtrl,
-                      colorScheme: colorScheme,
-                    ),
+                    child: _NumericField(prefixLabel: secondLabel, controller: secondCtrl, colorScheme: colorScheme),
                   ),
                 ],
               ),
@@ -1023,11 +898,7 @@ class _NumericField extends StatelessWidget {
   final TextEditingController controller;
   final ColorScheme colorScheme;
 
-  const _NumericField({
-    required this.prefixLabel,
-    required this.controller,
-    required this.colorScheme,
-  });
+  const _NumericField({required this.prefixLabel, required this.controller, required this.colorScheme});
 
   @override
   Widget build(BuildContext context) {
@@ -1037,11 +908,7 @@ class _NumericField extends StatelessWidget {
       style: TextStyle(color: colorScheme.onSurface, fontSize: 13, fontWeight: FontWeight.w700),
       decoration: _editInputDecoration(colorScheme).copyWith(
         prefixText: '$prefixLabel  ',
-        prefixStyle: TextStyle(
-          color: colorScheme.onSurfaceVariant,
-          fontSize: 12,
-          fontWeight: FontWeight.w600,
-        ),
+        prefixStyle: TextStyle(color: colorScheme.onSurfaceVariant, fontSize: 12, fontWeight: FontWeight.w600),
       ),
     );
   }
@@ -1114,7 +981,6 @@ class _MetaCell extends StatelessWidget {
   }
 }
 
-
 class _SaveButton extends StatelessWidget {
   final ColorScheme colorScheme;
   final VoidCallback onSave;
@@ -1164,7 +1030,6 @@ class _DeleteButton extends StatelessWidget {
   }
 }
 
-
 class _SectionLabel extends StatelessWidget {
   final String label;
   final ColorScheme colorScheme;
@@ -1175,12 +1040,7 @@ class _SectionLabel extends StatelessWidget {
   Widget build(BuildContext context) {
     return Text(
       label.toUpperCase(),
-      style: TextStyle(
-        color: colorScheme.primary,
-        fontSize: 11,
-        fontWeight: FontWeight.w700,
-        letterSpacing: 1.4,
-      ),
+      style: TextStyle(color: colorScheme.primary, fontSize: 11, fontWeight: FontWeight.w700, letterSpacing: 1.4),
     );
   }
 }

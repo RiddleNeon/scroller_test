@@ -1,12 +1,14 @@
 //test app for the quest screen
 
 import 'package:flutter/material.dart';
-import 'package:wurp/logic/quests/quest_change_manager.dart';
+import 'package:wurp/logic/quests/quest_system.dart';
 import 'package:wurp/ui/screens/quests/core/pan.dart';
 import 'package:wurp/ui/screens/quests/version_management/change_screen.dart';
 
 class TestQuestScreen extends StatefulWidget {
-  const TestQuestScreen({super.key});
+  final String subject;
+
+  const TestQuestScreen({super.key, required this.subject});
 
   @override
   State<TestQuestScreen> createState() => _TestQuestScreenState();
@@ -15,53 +17,107 @@ class TestQuestScreen extends StatefulWidget {
 class _TestQuestScreenState extends State<TestQuestScreen> {
   final GlobalKey<PanWidgetState> _panKey = GlobalKey<PanWidgetState>();
   bool debugMode = false;
-  
+  bool hasPendingChanges = false;
+
   @override
-  void initState() {
-    WidgetsBinding.instance.addPostFrameCallback((timeStamp) async {
-      if(!mounted) return;
-      _panKey.currentState?.centerOnAllQuests(context.size?.width ?? 1000, context.size?.height ?? 1000);
-    });
+  initState() {
     super.initState();
+    questSystemFuture = loadQuestSystem();
   }
+
+  Future<QuestSystem> loadQuestSystem() async {
+    QuestSystem questSystem = QuestSystem();
+    await questSystem.loadFromServer(widget.subject);
+
+    WidgetsBinding.instance.addPostFrameCallback((timeStamp) {
+      if (!mounted) return;
+      setState(() {
+        _panKey.currentState?.centerOnAllQuests(context.size?.width ?? 1000, context.size?.height ?? 1000);
+      });
+    });
+
+    questSystem.changeManager.addListener(() {
+      if (!mounted) return;
+      if (questSystem.changeManager.hasPendingChanges != hasPendingChanges) {
+        setState(() {
+          hasPendingChanges = questSystem.changeManager.hasPendingChanges;
+        });
+      }
+    });
+    return questSystem;
+  }
+
+  late Future<QuestSystem> questSystemFuture;
 
   @override
   Widget build(BuildContext context) {
-    return Scaffold(
-      appBar: AppBar(
-        title: InkWell(
-          onTap: () {
-            debugMode = !debugMode;
-            _panKey.currentState?.debugMode = debugMode;
-            setState(() {});
-          },
-          child: const Text('Quest Screen'),
-        ),
-      ),
-      body: SizedBox.expand(child: PanWidget(key: _panKey)),
-      floatingActionButton: debugMode
-          ? Row(
-        mainAxisAlignment: MainAxisAlignment.end,
-              children: [
-                FloatingActionButton(
-                  child: const Icon(Icons.commit),
+    return FutureBuilder(
+      future: questSystemFuture,
+      builder: (context, asyncSnapshot) {
+        final loaded = asyncSnapshot.hasData;
+        final questSystem = asyncSnapshot.data;
+
+        return Scaffold(
+          appBar: AppBar(
+            title: InkWell(
+              onTap: () {
+                debugMode = !debugMode;
+                _panKey.currentState?.debugMode = debugMode;
+                setState(() {});
+              },
+              child: const Text('Quest Screen'),
+            ),
+          ),
+          body: loaded
+              ? SizedBox.expand(
+                  child: PanWidget(key: _panKey, questSystem: questSystem!),
+                )
+              : const Center(child: CircularProgressIndicator()),
+          floatingActionButton: Row(
+            mainAxisAlignment: MainAxisAlignment.end,
+            children: [
+              AnimatedSlide(
+                offset: debugMode && loaded ? Offset.zero : const Offset(0, 2),
+                duration: const Duration(milliseconds: 350),
+                curve: Curves.easeInOutCirc,
+                child: FloatingActionButton(
+                  clipBehavior: Clip.none,
+                  child: Stack(
+                    clipBehavior: Clip.none,
+                    children: [
+                      const Icon(Icons.commit),
+                      if (loaded)
+                        Positioned(
+                          top: -kFloatingActionButtonMargin*1.5,
+                          right: -kFloatingActionButtonMargin*1.5,
+                          child: AnimatedOpacity(
+                            opacity: questSystem!.changeManager.hasPendingChanges ? 0.8 : 0,
+                            duration: const Duration(seconds: 1),
+                            curve: Curves.easeInOutCirc,
+                            child: const Icon(Icons.circle, color: Colors.red), //red dot
+                          ), //red dot to indicate changes
+                        ),
+                    ],
+                  ),
                   onPressed: () {
                     showDialog(
                       context: context,
-                      builder: (context) => QuestChangeScreen(changeManager: changeManager),
+                      builder: (context) => QuestChangeScreen(changeManager: questSystem!.changeManager),
                     ); //show change screen
                   },
                 ),
-                const SizedBox(width: 16), //space between buttons
-                FloatingActionButton(
-                  child: const Icon(Icons.filter_center_focus),
-                  onPressed: () {
-                    _panKey.currentState?.centerOnAllQuests(context.size?.width ?? 100, context.size?.height ?? 100, autoZoom: false);
-                  },
-                ),
-              ],
-            )
-          : null,
+              ),
+              const SizedBox(width: 16), //space between buttons
+              FloatingActionButton(
+                child: const Icon(Icons.filter_center_focus),
+                onPressed: () {
+                  _panKey.currentState?.centerOnAllQuests(context.size?.width ?? 100, context.size?.height ?? 100, autoZoom: true);
+                },
+              ),
+            ],
+          ),
+        );
+      },
     );
   }
 }

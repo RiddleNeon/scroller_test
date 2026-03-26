@@ -7,7 +7,8 @@ import 'quest_bubble.dart';
 
 class QuestBubblesOverlay extends StatefulWidget {
   final bool debugMode;
-  const QuestBubblesOverlay({super.key, required this.debugMode});
+  final QuestSystem questSystem;
+  const QuestBubblesOverlay({super.key, required this.debugMode, required this.questSystem});
 
   @override
   State<QuestBubblesOverlay> createState() => QuestBubblesOverlayState();
@@ -16,6 +17,8 @@ class QuestBubblesOverlay extends StatefulWidget {
 class QuestBubblesOverlayState extends State<QuestBubblesOverlay> {
   late final QuestLineConnectionPainter _connectionPainter;
   late Size _worldBounds;
+  
+  QuestSystem get questSystem => widget.questSystem;
 
   final _dragNotifier = ValueNotifier<({int? id, Offset? pos})>(
     (id: null, pos: null),
@@ -29,7 +32,7 @@ class QuestBubblesOverlayState extends State<QuestBubblesOverlay> {
   @override
   void initState() {
     super.initState();
-    _connectionPainter = QuestLineConnectionPainter();
+    _connectionPainter = QuestLineConnectionPainter(questSystem: questSystem);
     _worldBounds = _computeWorldBounds();
     questSystem.addListener(revalidateWorldBounds);
   }

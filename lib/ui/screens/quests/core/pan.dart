@@ -17,9 +17,10 @@ import 'pan_background.dart';
 import 'quest_bubble.dart';
 
 class PanWidget extends StatefulWidget {
-  const PanWidget({super.key, this.controller});
+  const PanWidget({super.key, this.controller, required this.questSystem});
 
   final TransformationController? controller;
+  final QuestSystem questSystem;
 
   @override
   State<PanWidget> createState() => PanWidgetState();
@@ -49,6 +50,9 @@ class PanWidgetState extends State<PanWidget> {
   Offset _lastPointerScenePos = Offset.zero;
 
   double get _currentScale => _controller.value.getMaxScaleOnAxis();
+
+  QuestSystem get questSystem => widget.questSystem;
+  QuestChangeManager get changeManager => widget.questSystem.changeManager;
 
   Quest? _findQuestAt(Offset scenePos) {
     for (final quest in questSystem.quests) {
@@ -166,8 +170,6 @@ class PanWidgetState extends State<PanWidget> {
     var tx = details.localFocalPoint.dx - s * (_focalAtGestureStart.dx - _txAtGestureStart) / _scaleAtGestureStart;
     var ty = details.localFocalPoint.dy - s * (_focalAtGestureStart.dy - _tyAtGestureStart) / _scaleAtGestureStart;
 
-    (tx, ty) = _clampTranslation(tx, ty, s);
-
     _controller.value = Matrix4.identity()
       ..scale(s)
       ..setTranslation(Vector3(tx, ty, 0));
@@ -187,7 +189,7 @@ class PanWidgetState extends State<PanWidget> {
 
     if (_draggingQuest != null) {
       QuestPatch before = QuestPatch(posX: _draggingQuest!.posX, posY: _draggingQuest!.posY);
-      
+
       final newPos = snap(_dragStartQuestPos);
       QuestPatch after = QuestPatch(posX: newPos.dx, posY: newPos.dy);
 
@@ -200,8 +202,8 @@ class PanWidgetState extends State<PanWidget> {
     _questBubbleOverlayKey.currentState?.setDragState(questId: null, position: null);
     setState(() => _draggingQuest = null);
   }
-  
-  Offset snap(Offset before){
+
+  Offset snap(Offset before) {
     final currentScale = _currentScale;
     final worldDelta = _focalDelta / currentScale;
 
@@ -248,9 +250,7 @@ class PanWidgetState extends State<PanWidget> {
 
     var tx = focal.dx - newScale * (focal.dx - currentTx) / currentScale;
     var ty = focal.dy - newScale * (focal.dy - currentTy) / currentScale;
-
-    (tx, ty) = _clampTranslation(tx, ty, newScale);
-
+    
     _controller.value = Matrix4.identity()
       ..scale(newScale)
       ..setTranslation(Vector3(tx, ty, 0));
@@ -300,6 +300,7 @@ class PanWidgetState extends State<PanWidget> {
               changeManager.record(DeleteQuestChange(quest: q));
               if (context.mounted) Navigator.of(context).pop();
             },
+            questSystem: questSystem,
           ),
         ),
       ),
@@ -340,6 +341,7 @@ class PanWidgetState extends State<PanWidget> {
                   changeManager.record(DeleteQuestChange(quest: q));
                   if (context.mounted) Navigator.of(context).pop();
                 },
+                questSystem: questSystem,
               ),
             ),
           ),
@@ -377,28 +379,8 @@ class PanWidgetState extends State<PanWidget> {
       ..translate(targetTx / targetScale, targetTy / targetScale);
   }
 
-  Size get _viewSize {
-    final rb = context.findRenderObject() as RenderBox?;
-    return rb?.size ?? const Size(400, 400);
-  }
-
-  static const double _padding = 2400.0;
   static const double minScale = 0.000000001;
   static const double maxScale = 3000.0;
-
-  (double, double) _clampTranslation(double tx, double ty, double s) {
-    if (debugMode) return (tx, ty);
-
-    final v = _viewSize;
-    final txMin = v.width - _padding - _boundaryMax.dx * s;
-    final txMax = -_boundaryMin.dx * s + _padding;
-    final tyMin = v.height - _padding - _boundaryMax.dy * s;
-    final tyMax = -_boundaryMin.dy * s + _padding;
-
-    final clampedTx = txMin > txMax ? (txMin + txMax) / 2 : tx.clamp(txMin, txMax);
-    final clampedTy = tyMin > tyMax ? (tyMin + tyMax) / 2 : ty.clamp(tyMin, tyMax);
-    return (clampedTx, clampedTy);
-  }
 
   bool isGridSnappingEnabled = true;
   double gridSize = 25.0;
@@ -474,7 +456,7 @@ class PanWidgetState extends State<PanWidget> {
                   child: AnimatedBuilder(
                     animation: _controller,
                     builder: (context, child) => Transform(transform: _controller.value, alignment: Alignment.topLeft, child: child),
-                    child: QuestBubblesOverlay(key: _questBubbleOverlayKey, debugMode: debugMode),
+                    child: QuestBubblesOverlay(key: _questBubbleOverlayKey, debugMode: debugMode, questSystem: questSystem),
                   ),
                 ),
                 Positioned.fill(

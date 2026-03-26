@@ -19,7 +19,7 @@ import '../../logic/local_storage/local_seen_service.dart';
 import '../feed_view_model.dart';
 import '../misc/basic_player.dart';
 import '../misc/rolling_digit_counter.dart';
-import '../widgets/profile_image_picker.dart';
+import '../misc/profile_image_picker.dart';
 import 'chat/chat_managing_screen.dart';
 
 class ProfileScreen extends StatefulWidget {

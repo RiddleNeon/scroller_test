@@ -5,11 +5,11 @@ import 'package:cached_network_image/cached_network_image.dart';
 import 'package:flutter/foundation.dart';
 import 'package:flutter/material.dart';
 import 'package:http/http.dart' as http;
-import 'package:image_picker/image_picker.dart';
+import 'package:file_picker/file_picker.dart';
 import 'package:wurp/logic/repositories/user_repository.dart';
 
 import '../../base_logic.dart';
-import 'camera/camera_dialog.dart';
+import '../widgets/camera/camera_dialog.dart';
 
 Future<String?> showProfileImagePicker(BuildContext context) {
   return showModalBottomSheet<String>(
@@ -31,12 +31,10 @@ class _ProfileImagePickerSheet extends StatefulWidget {
 class _ProfileImagePickerSheetState extends State<_ProfileImagePickerSheet>
     with SingleTickerProviderStateMixin {
   int _selectedTab = 0;
-
   Uint8List? _pickedBytes;
 
   final TextEditingController _seedController = TextEditingController();
   String _seedPreviewUrl = '';
-
   bool _uploading = false;
 
   late final AnimationController _fadeCtrl;
@@ -64,16 +62,21 @@ class _ProfileImagePickerSheetState extends State<_ProfileImagePickerSheet>
     super.dispose();
   }
 
-  Future<void> _pickImage(ImageSource source) async {
-    if (kIsWeb && source == ImageSource.camera) {
+  Future<void> _pickImage() async {
+    if (_selectedTab == 1 && kIsWeb) {
       await _pickImageWebCamera();
-    } else {
-      final file =
-      await ImagePicker().pickImage(source: source, imageQuality: 85);
-      if (file == null) return;
-      final bytes = await file.readAsBytes();
+      return;
+    }
+
+    final result = await FilePicker.platform.pickFiles(
+      type: FileType.image,
+      allowMultiple: false,
+      withData: true,
+    );
+
+    if (result != null && result.files.first.bytes != null) {
       setState(() {
-        _pickedBytes = bytes;
+        _pickedBytes = result.files.first.bytes;
       });
     }
   }
@@ -91,9 +94,9 @@ class _ProfileImagePickerSheetState extends State<_ProfileImagePickerSheet>
     }
   }
 
-  static const _cloudinaryCloudName = 'dvw3vksqx';
+  static const _cloudinaryCloudName = String.fromEnvironment('CLOUDINARY_CLOUD_NAME');
 
-  Future<String> _uploadToCloudinary(Uint8List bytes) async {
+  Future<String> _uploadToCloudinary(Uint8List bytes) async {    
     final uri = Uri.parse(
         'https://api.cloudinary.com/v1_1/$_cloudinaryCloudName/image/upload');
     final request = http.MultipartRequest('POST', uri)
@@ -150,8 +153,7 @@ class _ProfileImagePickerSheetState extends State<_ProfileImagePickerSheet>
         builder: (_, scrollController) => Container(
           decoration: BoxDecoration(
             color: cs.surface,
-            borderRadius:
-            const BorderRadius.vertical(top: Radius.circular(28)),
+            borderRadius: const BorderRadius.vertical(top: Radius.circular(28)),
           ),
           child: Column(
             children: [
@@ -165,7 +167,6 @@ class _ProfileImagePickerSheetState extends State<_ProfileImagePickerSheet>
                 ),
               ),
               const SizedBox(height: 20),
-
               Text(
                 'Change profile picture',
                 style: TextStyle(
@@ -176,10 +177,8 @@ class _ProfileImagePickerSheetState extends State<_ProfileImagePickerSheet>
                 ),
               ),
               const SizedBox(height: 20),
-
               _buildTabBar(cs),
               const SizedBox(height: 24),
-
               Expanded(
                 child: SingleChildScrollView(
                   controller: scrollController,
@@ -190,7 +189,6 @@ class _ProfileImagePickerSheetState extends State<_ProfileImagePickerSheet>
                   ),
                 ),
               ),
-
               _buildConfirmButton(cs),
               const SizedBox(height: 20),
             ],
@@ -242,8 +240,7 @@ class _ProfileImagePickerSheetState extends State<_ProfileImagePickerSheet>
                       style: TextStyle(
                         fontSize: 13,
                         fontWeight: FontWeight.w600,
-                        color:
-                        selected ? cs.onPrimary : cs.onSurfaceVariant,
+                        color: selected ? cs.onPrimary : cs.onSurfaceVariant,
                       ),
                     ),
                   ],
@@ -259,11 +256,9 @@ class _ProfileImagePickerSheetState extends State<_ProfileImagePickerSheet>
   Widget _buildTabContent(ColorScheme cs) {
     switch (_selectedTab) {
       case 0:
-        return _buildMediaTab(cs, ImageSource.gallery,
-            key: const ValueKey('gallery'));
+        return _buildMediaTab(cs, isCamera: false, key: const ValueKey('gallery'));
       case 1:
-        return _buildMediaTab(cs, ImageSource.camera,
-            key: const ValueKey('camera'));
+        return _buildMediaTab(cs, isCamera: true, key: const ValueKey('camera'));
       case 2:
         return _buildSeedTab(cs, key: const ValueKey('random'));
       default:
@@ -271,7 +266,7 @@ class _ProfileImagePickerSheetState extends State<_ProfileImagePickerSheet>
     }
   }
 
-  Widget _buildMediaTab(ColorScheme cs, ImageSource source, {Key? key}) {
+  Widget _buildMediaTab(ColorScheme cs, {required bool isCamera, Key? key}) {
     return Column(
       key: key,
       children: [
@@ -281,9 +276,7 @@ class _ProfileImagePickerSheetState extends State<_ProfileImagePickerSheet>
               ? Image.memory(_pickedBytes!, fit: BoxFit.cover)
               : null,
           placeholder: Icon(
-            source == ImageSource.gallery
-                ? Icons.photo_library_outlined
-                : Icons.camera_alt_outlined,
+            isCamera ? Icons.camera_alt_outlined : Icons.photo_library_outlined,
             size: 40,
             color: cs.onSurfaceVariant.withValues(alpha: 0.5),
           ),
@@ -291,21 +284,14 @@ class _ProfileImagePickerSheetState extends State<_ProfileImagePickerSheet>
         const SizedBox(height: 28),
         _OutlinedActionButton(
           cs: cs,
-          icon: source == ImageSource.gallery
-              ? Icons.photo_library_outlined
-              : Icons.camera_alt_outlined,
-          label: source == ImageSource.gallery
-              ? 'Select from gallery'
-              : 'Take a photo',
-          onTap: () => _pickImage(source),
+          icon: isCamera ? Icons.camera_alt_outlined : Icons.photo_library_outlined,
+          label: isCamera ? 'Take a photo' : 'Select file',
+          onTap: _pickImage,
         ),
         if (_pickedBytes != null) ...[
           const SizedBox(height: 12),
           TextButton(
-            onPressed: () =>
-                setState(() {
-                  _pickedBytes = null;
-                }),
+            onPressed: () => setState(() => _pickedBytes = null),
             child: Text('Remove',
                 style: TextStyle(
                     color: cs.onSurfaceVariant, fontWeight: FontWeight.w500)),
@@ -329,8 +315,8 @@ class _ProfileImagePickerSheetState extends State<_ProfileImagePickerSheet>
             placeholder: (_, _) => Center(
                 child: CircularProgressIndicator(
                     strokeWidth: 2, color: cs.primary)),
-            errorWidget: (_, _, _) => Icon(Icons.error_outline,
-                color: cs.onSurfaceVariant),
+            errorWidget: (_, _, _) =>
+                Icon(Icons.error_outline, color: cs.onSurfaceVariant),
           )
               : null,
           placeholder: Icon(Icons.auto_awesome_outlined,
@@ -343,16 +329,14 @@ class _ProfileImagePickerSheetState extends State<_ProfileImagePickerSheet>
           cursorColor: cs.primary,
           decoration: InputDecoration(
             hintText: 'Enter a seed — try your name!',
-            hintStyle:
-            TextStyle(color: cs.onSurfaceVariant, fontSize: 14),
+            hintStyle: TextStyle(color: cs.onSurfaceVariant, fontSize: 14),
             filled: true,
             fillColor: cs.surfaceContainer,
-            prefixIcon:
-            Icon(Icons.tag, color: cs.onSurfaceVariant),
+            prefixIcon: Icon(Icons.tag, color: cs.onSurfaceVariant),
             suffixIcon: _seedController.text.isNotEmpty
                 ? IconButton(
-              icon: Icon(Icons.close,
-                  size: 18, color: cs.onSurfaceVariant),
+              icon:
+              Icon(Icons.close, size: 18, color: cs.onSurfaceVariant),
               onPressed: () => _seedController.clear(),
             )
                 : null,
@@ -377,6 +361,8 @@ class _ProfileImagePickerSheetState extends State<_ProfileImagePickerSheet>
       ],
     );
   }
+
+  // ... (Rest der Hilfs-Widgets _buildPreviewCircle, _buildConfirmButton, _OutlinedActionButton bleibt gleich)
 
   Widget _buildPreviewCircle({
     required ColorScheme cs,
