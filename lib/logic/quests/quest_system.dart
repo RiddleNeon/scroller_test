@@ -25,6 +25,8 @@ class QuestSystem with ChangeNotifier {
       .map((id) => _quests[id])
       .whereType<Quest>()
       .toList();
+  
+  bool isConnected(int fromId, int toId) => _prerequisites[fromId]?.contains(toId) ?? false;
 
   // ── Quest mutations ────────────────────────────────────────────────────────
 

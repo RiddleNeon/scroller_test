@@ -65,10 +65,11 @@ class QuestLineConnectionPainter extends CustomPainter {
 
         final anchorStart = _getBestAnchor(startQuest.id, endCenter);
         final anchorEnd = _getBestAnchor(quest.id, startCenter);
-
-        final cps = _cubicControlPoints(
+        
+        final cps = _cubicControlPointsOffsetting(
             anchorStart.pos, anchorStart.sideDir,
-            anchorEnd.pos, anchorEnd.sideDir
+            anchorEnd.pos, anchorEnd.sideDir,
+            startQuest.id, quest.id
         );
 
         final p0 = anchorStart.pos;
@@ -99,6 +100,45 @@ class QuestLineConnectionPainter extends CustomPainter {
         _drawConnectionPreview(canvas, start, connectionPreviewEnd!, glowColorOfQuest(connectionSourceId!), connectionSourceId!);
       }
     }
+  }
+
+  List<Offset> _cubicControlPointsOffsetting(
+      Offset pStart, Offset dirStart,
+      Offset pEnd, Offset dirEnd,
+      int sourceId, int targetId
+      ) {
+    final delta = pEnd - pStart;
+    final dist = delta.distance;
+    final tension = (dist * 0.4).clamp(30.0, 200.0);
+
+    Offset cp1 = pStart + dirStart * tension;
+    Offset cp2 = pEnd + dirEnd * tension;
+    
+    final int lowId = sourceId < targetId ? sourceId : targetId;
+    final int highId = sourceId < targetId ? targetId : sourceId;
+
+    final pLow = _centerOf(lowId)!;
+    final pHigh = _centerOf(highId)!;
+    final refDelta = pHigh - pLow;
+    final refDist = refDelta.distance;
+
+    if (refDist > 1.0) {
+      final perp = Offset(-refDelta.dy, refDelta.dx) / refDist;
+      
+      final double side = (sourceId == lowId) ? 1.0 : -1.0;
+
+      double pushAmount = (dist * 0.2).clamp(10.0, 60.0);
+
+      bool hasReverse = questSystem.isConnected(sourceId, targetId) && questSystem.isConnected(targetId, sourceId);
+      if (!hasReverse) {
+        pushAmount = 0;
+      }
+
+      cp1 += perp * (pushAmount * side);
+      cp2 += perp * (pushAmount * side);
+    }
+
+    return [cp1, cp2];
   }
 
   List<Offset> _cubicControlPoints(Offset pStart, Offset dirStart, Offset pEnd, Offset dirEnd) {
@@ -302,8 +342,9 @@ class QuestLineConnectionPainter extends CustomPainter {
 
     final cps = _cubicControlPoints(
         anchorStart.pos, anchorStart.sideDir,
-        anchorEnd.pos, anchorEnd.sideDir
+        anchorEnd.pos, anchorEnd.sideDir,
     );
+
 
     final p0 = anchorStart.pos;
     final cp1 = cps[0];
