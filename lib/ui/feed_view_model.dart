@@ -28,9 +28,7 @@ class FeedViewModel {
     }
 
     _videoFutures[index] ??= _loadContainer(index, videoSource: videoSource);
-
-    // Only pre-load the NEXT video – avoid spawning multiple decoders at once.
-    // Do NOT pre-load if we already have 2+ containers loaded (memory pressure).
+    
     final next = index + 1;
     if (_loadedContainers.length < 2 && !_disposedIndices.contains(next)) {
       _videoFutures[next] ??= _loadContainer(next, videoSource: videoSource);
@@ -60,7 +58,7 @@ class FeedViewModel {
     final indicesToDispose = _loadedContainers.keys
         .where((i) => (i - index).abs() > 2)
         .toList();
-    Future.wait(indicesToDispose.map(_disposeIndex));
+    await Future.wait(indicesToDispose.map(_disposeIndex));
 
     // 2. Pause the previous video
     if (previous != index && !_disposedIndices.contains(previous)) {

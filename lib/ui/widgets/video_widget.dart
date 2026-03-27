@@ -79,6 +79,7 @@ class _VideoItemState extends State<VideoItem> {
     if (isPlaying && !_wasPlaying) {
       _wasPlaying = true;
       _startTracking();
+      setState(() {});
     } else if (!isPlaying && _wasPlaying) {
       _wasPlaying = false;
       _stopTracking();
@@ -126,7 +127,6 @@ class _VideoItemState extends State<VideoItem> {
   }
 
   bool currentlySaving = false;
-
   /// Save complete interaction when user leaves video
   /// This creates ONE interaction document with all data
   void _saveInteraction() async {
@@ -226,12 +226,19 @@ class _VideoItemState extends State<VideoItem> {
                   children: [
                     RepaintBoundary(
                       child: Center(
-                        child: AspectRatio(
-                          aspectRatio: widget.controller.value.aspectRatio,
-                          child: VideoPlayer(
-                            widget.controller,
-                            key: ValueKey(widget.video.id),
-                          ),
+                        child: ValueListenableBuilder<VideoPlayerValue>(
+                          valueListenable: widget.controller,
+                          builder: (context, value, _) {
+                            return Center(
+                              child: AspectRatio(
+                                aspectRatio: value.aspectRatio,
+                                child: VideoPlayer(
+                                  widget.controller,
+                                  key: ValueKey(widget.video.id),
+                                ),
+                              ),
+                            );
+                          },
                         ),
                       ),
                     ),

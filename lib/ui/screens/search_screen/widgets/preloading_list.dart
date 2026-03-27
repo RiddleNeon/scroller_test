@@ -43,7 +43,7 @@ class _PreloadingListState<T> extends State<PreloadingList<T>> {
     }
 
     setState(() => _loading = true);
-    await widget.query.complete();
+    await widget.query.preloadMore();
     if (mounted) {
       setState(() {
         _currentLoadedCount = widget.query.results.length;
@@ -80,6 +80,7 @@ class _PreloadingListState<T> extends State<PreloadingList<T>> {
 
   @override
   void dispose() {
+    _scrollController.removeListener(_onScroll);
     _scrollController.dispose();
     super.dispose();
   }
@@ -109,11 +110,11 @@ class _PreloadingListState<T> extends State<PreloadingList<T>> {
               if (index == _currentLoadedCount) {
                 return _preloading
                     ? Padding(
-                  padding: const EdgeInsets.symmetric(vertical: 16),
-                  child: Center(
-                    child: LinearProgressIndicator(color: cs.primary, backgroundColor: cs.surfaceContainerHighest),
-                  ),
-                )
+                        padding: const EdgeInsets.symmetric(vertical: 16),
+                        child: Center(
+                          child: LinearProgressIndicator(color: cs.primary, backgroundColor: cs.surfaceContainerHighest),
+                        ),
+                      )
                     : const SizedBox.shrink();
               }
               if (index < widget.query.results.length) {
@@ -165,11 +166,11 @@ class _SliverPreloadingListState<T> extends _PreloadingListState<T> {
           if (index == _currentLoadedCount) {
             return _preloading
                 ? Padding(
-              padding: const EdgeInsets.symmetric(vertical: 16),
-              child: Center(
-                child: LinearProgressIndicator(color: cs.primary, backgroundColor: cs.surfaceContainerHighest),
-              ),
-            )
+                    padding: const EdgeInsets.symmetric(vertical: 16),
+                    child: Center(
+                      child: LinearProgressIndicator(color: cs.primary, backgroundColor: cs.surfaceContainerHighest),
+                    ),
+                  )
                 : const SizedBox.shrink();
           }
           return widget.itemBuilder(context, items[index]);
@@ -193,7 +194,7 @@ class AnimatedPreloadingList<T> extends StatefulWidget {
     required this.query,
     required this.itemBuilder,
     this.emptyStateLabel,
-    this.animationDuration = const Duration(milliseconds: 350), 
+    this.animationDuration = const Duration(milliseconds: 350),
     this.notFoundWidget,
   });
 
@@ -201,134 +202,119 @@ class AnimatedPreloadingList<T> extends StatefulWidget {
   AnimatedPreloadingListState<T> createState() => AnimatedPreloadingListState<T>();
 }
 
-class AnimatedPreloadingListState<T> extends State<AnimatedPreloadingList<T>> with AutomaticKeepAliveClientMixin {
+class AnimatedPreloadingListState<T> extends State<AnimatedPreloadingList<T>>
+    with AutomaticKeepAliveClientMixin {
+
   final GlobalKey<AnimatedListState> _listKey = GlobalKey<AnimatedListState>();
-  final List<T?> items = [];
+  final ScrollController _scrollController = ScrollController();
+
+  final List<T> items = [];
+
   bool _loading = false;
   bool _preloading = false;
-  bool _preloadingGuard = false;
-
-  @override
-  bool get wantKeepAlive => true;
-
-  late final ScrollController _scrollController;
+  bool _guard = false;
 
   @override
   void initState() {
     super.initState();
-    _scrollController = ScrollController();
     _scrollController.addListener(_onScroll);
     _init();
   }
 
+  Future<void> _init() async {
+    setState(() => _loading = true);
+
+    await widget.query.preloadMore();
+    _syncItems(widget.query.results);
+
+    setState(() => _loading = false);
+  }
+
+  void _syncItems(List<T> newItems) {
+    final startIndex = items.length;
+
+    for (int i = startIndex; i < newItems.length; i++) {
+      items.add(newItems[i]);
+      _listKey.currentState?.insertItem(i, duration: widget.animationDuration);
+    }
+  }
+
+  Future<void> preloadMore({int limit = 20}) async {
+    if (_guard) return;
+    _guard = true;
+
+    setState(() => _preloading = true);
+
+    await widget.query.preloadMore(limit: limit);
+    _syncItems(widget.query.results);
+
+    setState(() => _preloading = false);
+    _guard = false;
+  }
+
   void _onScroll() {
-    if (!mounted || _preloading || widget.query.isCompleted) return;
-    if (_scrollController.position.pixels >= _scrollController.position.maxScrollExtent - 400) {
-      _preloadMore();
+    if (_loading || _preloading) return;
+
+    if (_scrollController.position.pixels >=
+        _scrollController.position.maxScrollExtent - 300) {
+      preloadMore();
     }
   }
 
   @override
-  void dispose() {
-    _scrollController.removeListener(_onScroll);
-    _scrollController.dispose();
-    super.dispose();
-  }
-
-  Future<void> _init() async {
-    if (widget.query.results.isNotEmpty) {
-      setState(() => items.addAll(widget.query.results));
-      return;
-    }
-
-    setState(() => _loading = true);
-    await widget.query.complete();
-    if (mounted) {
-      setState(() => _loading = false);
-      _addItemsWithAnimation(widget.query.results);
-    }
-  }
-
-  void _addItemsWithAnimation(List<T> newItems) {
-    for (final item in newItems) {
-      final int insertIndex = items.whereType<T>().length;
-      items.add(item);
-      _listKey.currentState?.insertItem(insertIndex, duration: widget.animationDuration);
-    }
-  }
+  bool get wantKeepAlive => true;
 
   void removeItem(int index, Widget Function(BuildContext, Animation<double>) removedBuilder) {
     if (index < 0 || index >= items.length) return;
-    
+
     items.removeAt(index);
 
-    _listKey.currentState?.removeItem(
-      index,
-          (context, animation) => removedBuilder(context, animation),
-      duration: widget.animationDuration,
-    );
+    _listKey.currentState?.removeItem(index, (context, animation) => removedBuilder(context, animation), duration: widget.animationDuration);
   }
-  
+
   void addItem(T item) {
     items.add(item);
     final int insertIndex = items.indexOf(item);
     _listKey.currentState?.insertItem(insertIndex, duration: widget.animationDuration);
   }
 
-  Future<void> _preloadMore() async {
-    if (_preloadingGuard || widget.query.isCompleted) return;
-    _preloadingGuard = true;
-    setState(() => _preloading = true);
-
-    final int oldLength = widget.query.results.length;
-    await widget.query.preloadMore();
-
-    if (mounted) {
-      final newItems = widget.query.results.sublist(oldLength);
-      _addItemsWithAnimation(newItems);
-      Future.delayed(const Duration(milliseconds: 20), () {
-        if (mounted) setState(() => _preloading = false);
-      });
-    }
-
-    _preloadingGuard = false;
-  }
-
   @override
   Widget build(BuildContext context) {
     super.build(context);
+
     final cs = Theme.of(context).colorScheme;
 
     if (_loading) {
       return Center(child: CircularProgressIndicator(color: cs.primary));
     }
-    
-    if(items.isEmpty) {
-      return widget.notFoundWidget ?? Center(child: Text(widget.emptyStateLabel ?? 'Nothing found', style: Theme.of(context).textTheme.bodyMedium));
+
+    if (items.isEmpty) {
+      return widget.notFoundWidget ??
+          Center(child: Text(widget.emptyStateLabel ?? 'Nothing found'));
     }
 
-    return ScrollConfiguration(
-      behavior: SmoothScrollBehavior(),
-      child: ScrollArea(
-        scrollController: _scrollController,
-        child: Scrollbar(
-          controller: _scrollController,
-          interactive: true,
-          thumbVisibility: true,
-          child: AnimatedList(
-            key: _listKey,
-            controller: _scrollController,
-            initialItemCount: items.length,
-            padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 8),
-            physics: const NeverScrollableScrollPhysics(),
-            itemBuilder: (context, index, animation) {
-              final item = items[index];
-              if (item == null) return const SizedBox.shrink();
-              return widget.itemBuilder(context, item, animation, index, items);
-            },
-          ),
-        ),
-      ),
+    return AnimatedList(
+      key: _listKey,
+      controller: _scrollController,
+      initialItemCount: items.length,
+      itemBuilder: (context, index, animation) {
+        if (index == items.length) {
+          return _preloading
+              ? const Padding(
+            padding: EdgeInsets.all(16),
+            child: LinearProgressIndicator(),
+          )
+              : const SizedBox.shrink();
+        }
+
+        return widget.itemBuilder(
+          context,
+          items[index],
+          animation,
+          index,
+          items,
+        );
+      },
     );
   }
 }

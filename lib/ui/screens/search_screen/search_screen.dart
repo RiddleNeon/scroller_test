@@ -95,7 +95,7 @@ class _SearchScreenState extends State<SearchScreen> with TickerProviderStateMix
       return result.videos;
     }, () => videoRepo.countSearchVideos(val!));
 
-    await Future.wait([_videoQuery!.complete(), _userQuery!.complete()]);
+    await Future.wait([_videoQuery!.preloadMore(), _userQuery!.preloadMore()]);
 
     _currentSearchViewModel = FeedViewModel();
 

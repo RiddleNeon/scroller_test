@@ -86,6 +86,8 @@ class _ProfileScreenState extends State<ProfileScreen> with TickerProviderStateM
         return userRepository.getFollowersCount(user.id);
       },
     );
+    _followingQuery.preloadMore(limit: 8);
+    _followersQuery.preloadMore(limit: 8);
   }
 
   @override
@@ -175,6 +177,7 @@ class _ProfileScreenState extends State<ProfileScreen> with TickerProviderStateM
                               final currentIndex = _followingListKey.currentState?.items.indexOf(itemUser) ?? -1;
                               if (currentIndex != -1) {
                                 _followingListKey.currentState?.removeItem(currentIndex, (context, anim) => _buildSqueezeItem(itemUser, anim, cs));
+                                //_followingListKey.currentState?.preloadMore(limit: 1); //fixme 
                                 print('Removed user ${itemUser.username} from following list');
                               } else {
                                 print('Tried to remove user ${itemUser.username} from following list, but they were not found in the list');
@@ -206,6 +209,7 @@ class _ProfileScreenState extends State<ProfileScreen> with TickerProviderStateM
                             final currentIndex = _followingListKey.currentState?.items.indexOf(itemUser) ?? -1;
                             if (currentIndex != -1) {
                               _followingListKey.currentState?.removeItem(currentIndex, (context, anim) => _buildSqueezeItem(itemUser, anim, cs));
+                              //_followingListKey.currentState?.preloadMore(limit: 1); //fixme
                             }
                           }
                           setState(() {
@@ -403,7 +407,7 @@ class _ProfileScreenState extends State<ProfileScreen> with TickerProviderStateM
                     } else {
                       final currentIndex =
                           _followersListKey.currentState?.items.indexOf(
-                            _followersListKey.currentState?.items.where((element) => element?.id == currentUser.id).singleOrNull ?? currentUser,
+                            _followersListKey.currentState?.items.where((element) => element.id == currentUser.id).singleOrNull ?? currentUser,
                           ) ??
                           -1;
                       if (currentIndex != -1) {

@@ -31,7 +31,6 @@ void initRouter() {
       if (!userLoggedIn && !onLogin) return '/login';
       if (userLoggedIn && onLogin) return '/feed';
       if (userLoggedIn && state.matchedLocation == '/') return '/feed';
-      print("no redirect");
       return null;
     },
     routes: [
@@ -53,25 +52,16 @@ void initRouter() {
           ),
           GoRoute(
             path: '/create',
-            builder: (context, state) => const Scaffold(
-              // appBar: AppBar(title: const Text('Not yet implemented')),
-              body: VideoUploadWidget()
-            ),
-          ), //indicator that this is not implemented yet,
+            builder: (context, state) => const Scaffold(body: VideoUploadWidget()),
+          ),
           GoRoute(
             path: '/quests',
-            builder: (context, state) => const TestQuestScreen(subject: 'General')
+            builder: (context, state) => const TestQuestScreen(subject: 'General'),
           ),
         ],
       ),
       GoRoute(path: '/login', builder: (context, state) => const LoginScreen()),
-      GoRoute(
-        path: '/',
-        builder: (context, state) {
-          print("matched /");
-          return const SizedBox.shrink();
-        },
-      ),
+      GoRoute(path: '/', builder: (context, state) => const SizedBox.shrink()),
     ],
   );
 }
