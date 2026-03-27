@@ -1,14 +1,7 @@
 import 'dart:math';
-
 import 'package:flutter/material.dart';
 import 'package:wurp/logic/quests/quest_change_manager.dart';
 
-/// A screen that shows all locally recorded changes since the last push.
-///
-/// Pending changes are shown in a [ReorderableListView] so the user can
-/// adjust the application order by dragging. Each change shows the time it
-/// was recorded. Skipping a change undoes it locally via the sandwich pattern
-/// in [QuestChangeManager.skipChange]. Conflicts are highlighted in red.
 class QuestChangeScreen extends StatelessWidget {
   final QuestChangeManager changeManager;
 
@@ -29,115 +22,128 @@ class QuestChangeScreen extends StatelessWidget {
 
         final isEmpty = pending.isEmpty && skipped.isEmpty && undone.isEmpty;
 
+        void showDetails(QuestChange change, _TileState state, DateTime? ts, String? conflict) {
+          showModalBottomSheet(
+            context: context,
+            isScrollControlled: true,
+            backgroundColor: Colors.transparent,
+            builder: (context) => _ChangeDetailsSheet(
+              change: change,
+              state: state,
+              timestamp: ts,
+              conflictReason: conflict,
+              changeManager: changeManager,
+            ),
+          );
+        }
+
         return Scaffold(
+          backgroundColor: Theme.of(context).colorScheme.surfaceContainerLow,
           appBar: AppBar(
-            title: Text(pending.isEmpty ? 'No Pending Changes' : '${pending.length} Pending Change${pending.length == 1 ? '' : 's'}'),
+            title: Text(pending.isEmpty ? 'Change History' : '${pending.length} Pending'),
+            backgroundColor: Theme.of(context).colorScheme.surfaceContainerLow,
             actions: [
-              IconButton(tooltip: 'Undo last change', icon: const Icon(Icons.undo), onPressed: changeManager.canUndo ? changeManager.undo : null),
-              IconButton(tooltip: 'Redo last undone change', icon: const Icon(Icons.redo), onPressed: changeManager.canRedo ? changeManager.redo : null),
+              IconButton(
+                  tooltip: 'Undo',
+                  icon: const Icon(Icons.undo),
+                  onPressed: changeManager.canUndo ? changeManager.undo : null),
+              IconButton(
+                  tooltip: 'Redo',
+                  icon: const Icon(Icons.redo),
+                  onPressed: changeManager.canRedo ? changeManager.redo : null),
             ],
           ),
           body: Column(
             children: [
               if (hasConflicts) _ConflictBanner(conflictCount: conflictedPending.length),
-
               Expanded(
                 child: isEmpty
                     ? const _EmptyState()
                     : CustomScrollView(
-                        slivers: [
-                          if (pending.isNotEmpty) ...[
-                            SliverToBoxAdapter(
-                              child: _SectionHeader(label: 'Pending', count: pending.length),
-                            ),
-                            SliverReorderableList(
-                              itemCount: pending.length,
-                              onReorder: changeManager.reorderPending,
-                              itemBuilder: (context, index) {
-                                final change = pending[index];
-                                return ReorderableDragStartListener(
-                                  key: ObjectKey(change),
-                                  index: index,
-                                  child: Material(
-                                    child: _ChangeTile(
-                                      change: change,
-                                      timestamp: changeManager.recordedAt(change),
-                                      state: conflictedPending.contains(change) ? _TileState.conflict : _TileState.active,
-                                      conflictReason: conflictedPending.contains(change) ? _conflictReasonFor(change, changeManager.skippedChanges) : null,
-                                      onToggle: () => changeManager.skipChange(change),
-                                    ),
-                                  ),
-                                );
-                              },
-                            ),
-                          ],
+                  slivers: [
+                    if (pending.isNotEmpty) ...[
+                      const SliverToBoxAdapter(
+                          child: _SectionHeader(label: 'Pending Queue', icon: Icons.pending_actions)),
+                      SliverReorderableList(
+                        itemCount: pending.length,
+                        onReorder: changeManager.reorderPending,
+                        itemBuilder: (context, index) {
+                          final change = pending[index];
+                          final ts = changeManager.recordedAt(change);
+                          final isConflicted = conflictedPending.contains(change);
+                          final state = isConflicted ? _TileState.conflict : _TileState.active;
 
-                          if (undone.isNotEmpty) ...[
-                            SliverToBoxAdapter(
-                              child: _SectionHeader(label: 'Undo', count: undone.length, subtitle: 'undo via ↺'),
+                          return ReorderableDragStartListener(
+                            key: ObjectKey(change),
+                            index: index,
+                            child: _ChangeTimelineTile(
+                              change: change,
+                              timestamp: ts,
+                              state: state,
+                              isFirst: index == 0,
+                              isLast: index == pending.length - 1 && undone.isEmpty && skipped.isEmpty,
+                              conflictReason: isConflicted ? _getConflictReason(change, skipped) : null,
+                              onTap: () => showDetails(change, state, ts,
+                                  isConflicted ? _getConflictReason(change, skipped) : null),
+                              onToggle: () => changeManager.skipChange(change),
                             ),
-                            SliverList.builder(
-                              itemCount: undone.length,
-                              itemBuilder: (context, index) {
-                                final change = undone[undone.length - 1 - index];
-                                return _ChangeTile(
-                                  key: ObjectKey(change),
-                                  change: change,
-                                  timestamp: changeManager.recordedAt(change),
-                                  state: _TileState.undone,
-                                  onToggle: null,
-                                );
-                              },
-                            ),
-                          ],
-                          
-                          
-                          if (skipped.isNotEmpty) ...[
-                            SliverToBoxAdapter(
-                              child: _SectionHeader(label: 'Skipped', count: skipped.length, subtitle: 'undone locally - not pushed'),
-                            ),
-                            SliverList.builder(
-                              itemCount: skipped.length,
-                              itemBuilder: (context, index) {
-                                final change = skipped[index];
-                                return _ChangeTile(
-                                  key: ObjectKey(change),
-                                  change: change,
-                                  timestamp: changeManager.recordedAt(change),
-                                  state: conflictedSkipped.contains(change) ? _TileState.conflictSkipped : _TileState.skipped,
-                                  conflictReason: conflictedSkipped.contains(change) ? _conflictCauseFor(change, changeManager.conflictsOf(change)) : null,
-                                  onToggle: () => changeManager.unskipChange(change),
-                                );
-                              },
-                            ),
-                          ],
-                          
-                          
-                          const SliverToBoxAdapter(child: SizedBox(height: 80)),
-                        ],
+                          );
+                        },
                       ),
-              ),
+                    ],
+                    if (undone.isNotEmpty) ...[
+                      const SliverToBoxAdapter(
+                          child: _SectionHeader(label: 'Recently Undone', icon: Icons.history)),
+                      SliverList.builder(
+                        itemCount: undone.length,
+                        itemBuilder: (context, index) {
+                          final change = undone[undone.length - 1 - index];
+                          final ts = changeManager.recordedAt(change);
+                          return _ChangeTimelineTile(
+                            key: ObjectKey(change),
+                            change: change,
+                            timestamp: ts,
+                            state: _TileState.undone,
+                            isFirst: index == 0 && pending.isEmpty,
+                            isLast: index == undone.length - 1 && skipped.isEmpty,
+                            onTap: () => showDetails(change, _TileState.undone, ts, null),
+                            onToggle: null,
+                          );
+                        },
+                      ),
+                    ],
+                    if (skipped.isNotEmpty) ...[
+                      const SliverToBoxAdapter(
+                          child: _SectionHeader(label: 'Skipped Changes', icon: Icons.visibility_off_outlined)),
+                      SliverList.builder(
+                        itemCount: skipped.length,
+                        itemBuilder: (context, index) {
+                          final change = skipped[index];
+                          final ts = changeManager.recordedAt(change);
+                          final isConflicted = conflictedSkipped.contains(change);
+                          final state = isConflicted ? _TileState.conflictSkipped : _TileState.skipped;
 
-              SafeArea(
-                child: Padding(
-                  padding: const EdgeInsets.fromLTRB(16, 8, 16, 16),
-                  child: SizedBox(
-                    width: double.infinity,
-                    child: FilledButton.icon(
-                      style: hasConflicts ? FilledButton.styleFrom(backgroundColor: Theme.of(context).colorScheme.error) : null,
-                      icon: Transform.rotate(angle: pi / 2, child: const Icon(Icons.commit)),
-                      label: Text(
-                        hasConflicts
-                            ? 'Resolve Conflicts First'
-                            : pending.isNotEmpty
-                            ? 'Push Changes to Server'
-                            : 'Nothing to Push',
+                          return _ChangeTimelineTile(
+                            key: ObjectKey(change),
+                            change: change,
+                            timestamp: ts,
+                            state: state,
+                            isFirst: index == 0 && pending.isEmpty && undone.isEmpty,
+                            isLast: index == skipped.length - 1,
+                            conflictReason: isConflicted
+                                ? _getConflictCause(change, changeManager.conflictsOf(change))
+                                : null,
+                            onTap: () => showDetails(change, state, ts, null),
+                            onToggle: () => changeManager.unskipChange(change),
+                          );
+                        },
                       ),
-                      onPressed: pending.isNotEmpty && !hasConflicts ? changeManager.push : null,
-                    ),
-                  ),
+                    ],
+                    const SliverToBoxAdapter(child: SizedBox(height: 100)),
+                  ],
                 ),
               ),
+              _buildBottomBar(context, pending, hasConflicts),
             ],
           ),
         );
@@ -145,120 +151,183 @@ class QuestChangeScreen extends StatelessWidget {
     );
   }
 
-  static String _conflictReasonFor(QuestChange change, List<QuestChange> skippedChanges) {
+  Widget _buildBottomBar(BuildContext context, List<QuestChange> pending, bool hasConflicts) {
+    return Container(
+      padding: EdgeInsets.fromLTRB(16, 12, 16, MediaQuery.of(context).padding.bottom + 12),
+      decoration: BoxDecoration(
+        color: Theme.of(context).colorScheme.surface,
+        boxShadow: const [BoxShadow(color: Colors.black12, blurRadius: 10)],
+      ),
+      child: FilledButton.icon(
+        style: FilledButton.styleFrom(
+          minimumSize: const Size(double.infinity, 50),
+          backgroundColor: hasConflicts ? Theme.of(context).colorScheme.error : null,
+        ),
+        onPressed: pending.isNotEmpty && !hasConflicts ? changeManager.push : null,
+        icon: const Icon(Icons.cloud_upload_outlined),
+        label: Text(hasConflicts ? 'Resolve Conflicts' : 'Push Changes'),
+      ),
+    );
+  }
+
+  static String _getConflictReason(QuestChange change, List<QuestChange> skippedChanges) {
     for (final skipped in skippedChanges) {
       if (skipped is AddQuestChange) {
         final id = change.affectedQuestIds?.firstWhere((id) => id == skipped.quest.id, orElse: () => -1);
-        if (id != null && id == skipped.quest.id) {
-          return 'Depends on "${skipped.updateMessage}", which was skipped.';
-        }
+        if (id != null && id == skipped.quest.id) return 'Depends on "${skipped.updateMessage}" (skipped).';
       }
-      if (skipped is AddConnectionChange && change is RemoveConnectionChange && change.fromId == skipped.fromId && change.toId == skipped.toId) {
-        return 'Connection was skipped – Deletion not possible.';
+      if (skipped is AddConnectionChange &&
+          change is RemoveConnectionChange &&
+          change.fromId == skipped.fromId &&
+          change.toId == skipped.toId) {
+        return 'Connection was skipped – cannot remove.';
       }
     }
-    return 'dependency is missing through a skipped change.';
+    return 'Missing dependency.';
   }
 
-  static String _conflictCauseFor(QuestChange skipped, List<QuestChange> conflicts) {
+  static String _getConflictCause(QuestChange skipped, List<QuestChange> conflicts) {
     if (conflicts.isEmpty) return '';
-    final n = conflicts.length;
-    final s = n == 1 ? '' : 's';
-    if (skipped is AddQuestChange) {
-      return '$n depending change$s reference this quest – please re-enable or skip the dependant change.';
-    }
-    if (skipped is AddConnectionChange) {
-      return '$n Change$s depend on this connection.';
-    }
-    return '$n Conflict$s caused by this change.';
+    return '${conflicts.length} dependent change(s) blocked.';
   }
 }
 
-enum _TileState { active, skipped, conflict, conflictSkipped, undone }
-
-class _SectionHeader extends StatelessWidget {
-  final String label;
-  final int count;
-  final String? subtitle;
-
-  const _SectionHeader({required this.label, required this.count, this.subtitle});
-
-  @override
-  Widget build(BuildContext context) {
-    final theme = Theme.of(context);
-    return Padding(
-      padding: const EdgeInsets.fromLTRB(16, 16, 16, 4),
-      child: Column(
-        crossAxisAlignment: CrossAxisAlignment.start,
-        children: [
-          Row(
-            children: [
-              Text(
-                label.toUpperCase(),
-                style: theme.textTheme.labelSmall?.copyWith(color: theme.colorScheme.primary, letterSpacing: 1.2, fontWeight: FontWeight.bold),
-              ),
-              const SizedBox(width: 6),
-              Container(
-                padding: const EdgeInsets.symmetric(horizontal: 6, vertical: 1),
-                decoration: BoxDecoration(color: theme.colorScheme.surfaceContainerHighest, borderRadius: BorderRadius.circular(10)),
-                child: Text('$count', style: theme.textTheme.labelSmall),
-              ),
-            ],
-          ),
-          if (subtitle != null) ...[
-            const SizedBox(height: 2),
-            Text(subtitle!, style: theme.textTheme.bodySmall?.copyWith(color: theme.colorScheme.onSurfaceVariant)),
-          ],
-        ],
-      ),
-    );
-  }
-}
-
-class _ConflictBanner extends StatelessWidget {
-  final int conflictCount;
-
-  const _ConflictBanner({required this.conflictCount});
-
-  @override
-  Widget build(BuildContext context) {
-    final cs = Theme.of(context).colorScheme;
-    return Container(
-      width: double.infinity,
-      color: cs.errorContainer,
-      padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 10),
-      child: Row(
-        children: [
-          Icon(Icons.warning_amber_rounded, color: cs.onErrorContainer, size: 18),
-          const SizedBox(width: 8),
-          Expanded(
-            child: Text(
-              '$conflictCount Change${conflictCount == 1 ? '' : 's'} '
-              '${conflictCount == 1 ? 'has' : 'have'} Conflicts. '
-              'Please resolve or skip the conflicting changes to proceed.',
-              style: Theme.of(context).textTheme.bodySmall?.copyWith(color: cs.onErrorContainer),
-            ),
-          ),
-        ],
-      ),
-    );
-  }
-}
-
-class _ChangeTile extends StatelessWidget {
+class _ChangeTimelineTile extends StatelessWidget {
   final QuestChange change;
   final DateTime? timestamp;
   final _TileState state;
+  final bool isFirst;
+  final bool isLast;
   final String? conflictReason;
+  final VoidCallback onTap;
   final VoidCallback? onToggle;
 
-  const _ChangeTile({
+  const _ChangeTimelineTile({
     super.key,
     required this.change,
     required this.timestamp,
     required this.state,
+    required this.isFirst,
+    required this.isLast,
     this.conflictReason,
-    required this.onToggle,
+    required this.onTap,
+    this.onToggle,
+  });
+
+  @override
+  Widget build(BuildContext context) {
+    final theme = Theme.of(context);
+    final cs = theme.colorScheme;
+    final isDimmed = state == _TileState.skipped || state == _TileState.undone;
+    final isError = state == _TileState.conflict || state == _TileState.conflictSkipped;
+    final color = isError ? cs.error : isDimmed ? cs.outline : cs.primary;
+
+    return InkWell(
+      onTap: onTap,
+      child: Padding(
+        padding: const EdgeInsets.symmetric(horizontal: 16),
+        child: IntrinsicHeight(
+          child: Row(
+            children: [
+              SizedBox(
+                width: 45,
+                child: Padding(
+                  padding: const EdgeInsets.symmetric(vertical: 8),
+                  child: Text(
+                    timestamp != null ? "${timestamp!.hour}:${timestamp!.minute.toString().padLeft(2, '0')}" : "--:--",
+                    style: theme.textTheme.labelSmall?.copyWith(
+                      color: isDimmed ? cs.outline : cs.onSurfaceVariant,
+                      fontWeight: FontWeight.bold,
+                    ),
+                  ),
+                ),
+              ),
+              SizedBox(
+                width: 24,
+                child: Column(
+                  children: [
+                    Expanded(child: Container(width: 2, color: isFirst ? Colors.transparent : color.withOpacity(0.3))),
+                    Container(
+                      width: 10,
+                      height: 10,
+                      decoration: BoxDecoration(
+                        shape: BoxShape.circle,
+                        color: color,
+                        border: Border.all(color: cs.surface, width: 2),
+                      ),
+                    ),
+                    Expanded(child: Container(width: 2, color: isLast ? Colors.transparent : color.withOpacity(0.3))),
+                  ],
+                ),
+              ),
+              const SizedBox(width: 8),
+              Expanded(
+                child: Padding(
+                  padding: const EdgeInsets.symmetric(vertical: 6),
+                  child: Container(
+                    padding: const EdgeInsets.all(12),
+                    decoration: BoxDecoration(
+                      color: isError ? cs.errorContainer.withOpacity(0.2) : cs.surface,
+                      borderRadius: BorderRadius.circular(12),
+                      border: isError ? Border.all(color: cs.error.withOpacity(0.5)) : null,
+                    ),
+                    child: Row(
+                      children: [
+                        Expanded(
+                          child: Column(
+                            crossAxisAlignment: CrossAxisAlignment.start,
+                            children: [
+                              Text(change.updateMessage,
+                                  style: theme.textTheme.titleSmall?.copyWith(
+                                    fontWeight: FontWeight.bold,
+                                    decoration: isDimmed ? TextDecoration.lineThrough : null,
+                                    color: isError ? cs.error : (isDimmed ? cs.outline : null),
+                                  )),
+                              if (isError && conflictReason != null)
+                                Padding(
+                                  padding: const EdgeInsets.only(top: 4),
+                                  child: Text(conflictReason!,
+                                      style: theme.textTheme.bodySmall?.copyWith(color: cs.error, fontSize: 10)),
+                                ),
+                            ],
+                          ),
+                        ),
+                        if (onToggle != null)
+                          IconButton(
+                            tooltip: state == _TileState.active ? 'Skip' : 'Include',
+                            icon: Icon(state == _TileState.active || state == _TileState.conflict
+                                ? Icons.visibility_outlined
+                                : Icons.visibility_off_outlined),
+                            onPressed: onToggle,
+                            visualDensity: VisualDensity.compact,
+                          ),
+                        const Icon(Icons.chevron_right, size: 16, color: Colors.grey),
+                      ],
+                    ),
+                  ),
+                ),
+              ),
+            ],
+          ),
+        ),
+      ),
+    );
+  }
+}
+
+class _ChangeDetailsSheet extends StatelessWidget {
+  final QuestChange change;
+  final _TileState state;
+  final DateTime? timestamp;
+  final String? conflictReason;
+  final QuestChangeManager changeManager;
+
+  const _ChangeDetailsSheet({
+    required this.change,
+    required this.state,
+    this.timestamp,
+    this.conflictReason,
+    required this.changeManager,
   });
 
   @override
@@ -266,127 +335,203 @@ class _ChangeTile extends StatelessWidget {
     final theme = Theme.of(context);
     final cs = theme.colorScheme;
 
-    final isConflict = state == _TileState.conflict || state == _TileState.conflictSkipped;
-    final isDimmed = state == _TileState.skipped || state == _TileState.undone;
-    //final isSkippedVariant = state == _TileState.skipped || state == _TileState.conflictSkipped;
-
-    final iconColor = isConflict
-        ? cs.error
-        : isDimmed
-        ? cs.onSurface.withValues(alpha: 0.3)
-        : cs.primary;
-
-    final textColor = isConflict
-        ? cs.error
-        : isDimmed
-        ? cs.onSurface.withValues(alpha: 0.4)
-        : null;
-
-    Widget? trailing = switch (state) {
-      _TileState.undone => null,
-      _TileState.active || _TileState.conflict => Tooltip(
-        message: 'Skip (undo locally)',
-        child: IconButton(
-          icon: Icon(Icons.visibility_outlined, color: iconColor),
-          onPressed: onToggle,
-        ),
+    return Container(
+      decoration: BoxDecoration(
+        color: cs.surface,
+        borderRadius: const BorderRadius.vertical(top: Radius.circular(24)),
       ),
-      _TileState.skipped || _TileState.conflictSkipped => Tooltip(
-        message: isConflict ? 'Conflict! Unskip to see details' : 'Unskip (restore change)',
-        child: IconButton(
-          icon: Icon(Icons.visibility_off_outlined, color: isConflict ? cs.error : null),
-          onPressed: onToggle,
-        ),
-      ),
-    };
-
-    return AnimatedContainer(
-      duration: const Duration(milliseconds: 200),
-      color: isConflict ? cs.errorContainer.withValues(alpha: 0.3) : null,
-      child: InkWell(
-        onTap: () {
-          print("change: ${change.updateMessage}, state: $state. change vals: ${change.toString()}");
-        },
-        child: Column(
-          crossAxisAlignment: CrossAxisAlignment.start,
-          children: [
-            ListTile(
-              leading: Transform.rotate(
-                      angle: pi / 2,
-                      child: Icon(Icons.commit, size: 16, color: iconColor),
-                    ),
-              title: Text(
-                change.updateMessage,
-                style: TextStyle(decoration: isDimmed ? TextDecoration.lineThrough : TextDecoration.none, decorationColor: textColor, color: textColor),
-              ),
-              subtitle: _buildSubtitle(theme, cs, isDimmed, textColor),
-              trailing: trailing,
+      padding: const EdgeInsets.fromLTRB(20, 12, 20, 32),
+      child: Column(
+        mainAxisSize: MainAxisSize.min,
+        crossAxisAlignment: CrossAxisAlignment.start,
+        children: [
+          Center(
+              child: Container(
+                  width: 40, height: 4, decoration: BoxDecoration(color: cs.outlineVariant, borderRadius: BorderRadius.circular(2)))),
+          const SizedBox(height: 24),
+          Row(
+            children: [
+              _getIconForChange(change, cs),
+              const SizedBox(width: 12),
+              Expanded(
+                  child: Text(change.updateMessage,
+                      style: theme.textTheme.titleLarge?.copyWith(fontWeight: FontWeight.bold))),
+            ],
+          ),
+          const SizedBox(height: 16),
+          _buildInfoRow(context, Icons.access_time, "Recorded at", timestamp?.toLocal().toString().split('.')[0] ?? "Unknown"),
+          _buildInfoRow(context, Icons.category_outlined, "Change Type", change.runtimeType.toString()),
+          if (conflictReason != null)
+            Container(
+              margin: const EdgeInsets.only(top: 12),
+              padding: const EdgeInsets.all(12),
+              decoration: BoxDecoration(color: cs.errorContainer, borderRadius: BorderRadius.circular(8)),
+              child: Row(children: [
+                Icon(Icons.warning, color: cs.error, size: 16),
+                const SizedBox(width: 8),
+                Expanded(child: Text(conflictReason!, style: TextStyle(color: cs.onErrorContainer, fontSize: 12))),
+              ]),
             ),
-            if (isConflict && conflictReason != null)
-              Padding(
-                padding: const EdgeInsets.fromLTRB(56, 0, 16, 10),
-                child: Row(
-                  crossAxisAlignment: CrossAxisAlignment.start,
-                  children: [
-                    Icon(Icons.error_outline, size: 14, color: cs.error),
-                    const SizedBox(width: 4),
-                    Expanded(
-                      child: Text(conflictReason!, style: theme.textTheme.bodySmall?.copyWith(color: cs.error)),
-                    ),
-                  ],
-                ),
-              ),
-          ],
-        ),
+          const SizedBox(height: 24),
+          Text("TECHNICAL DETAILS", style: theme.textTheme.labelLarge?.copyWith(color: cs.primary, fontWeight: FontWeight.bold)),
+          const SizedBox(height: 12),
+          _buildPrettyTechnicalData(context),
+        ],
       ),
     );
   }
 
-  Widget? _buildSubtitle(ThemeData theme, ColorScheme cs, bool isDimmed, Color? textColor) {
-    final parts = <String>[];
+  Widget _buildPrettyTechnicalData(BuildContext context) {
+    final cs = Theme.of(context).colorScheme;
 
-    if (timestamp != null) parts.add(_formatTimestamp(timestamp!));
+    if (change is UpdateQuestChange) {
+      final update = change as UpdateQuestChange;
+      final patch = update.patch;
 
-    if (state == _TileState.undone) {
-      parts.add('Undone – will not be pushed');
+      // Map of fields to display
+      final Map<String, dynamic> fields = {
+        "Name": patch.name,
+        "Description": patch.description,
+        "Subject": patch.subject,
+        "Pos X": patch.posX,
+        "Pos Y": patch.posY,
+        "Difficulty": patch.difficulty,
+        "Size X": patch.sizeX,
+        "Size Y": patch.sizeY,
+        "Completed": patch.isCompleted,
+      };
+
+      final activeFields = fields.entries.where((e) => e.value != null).toList();
+
+      return Column(
+        children: activeFields.map((e) {
+          // Note: To show real "From" values, you'd need to store them in UpdateQuestChange
+          return _buildDetailDiffRow(context, e.key, "?", e.value.toString());
+        }).toList(),
+      );
     }
 
-    if (parts.isEmpty) return null;
+    if (change is AddConnectionChange || change is RemoveConnectionChange) {
+      final dynamic conn = change;
+      return Column(
+        children: [
+          _buildDetailRow("Source ID", conn.fromId.toString()),
+          _buildDetailRow("Target ID", conn.toId.toString()),
+        ],
+      );
+    }
 
-    return Text(parts.join(' · '), style: theme.textTheme.bodySmall?.copyWith(color: textColor ?? cs.onSurfaceVariant));
+    return Container(
+      width: double.infinity,
+      padding: const EdgeInsets.all(12),
+      decoration: BoxDecoration(color: cs.surfaceContainerHighest, borderRadius: BorderRadius.circular(8)),
+      child: Text(change.toString(), style: const TextStyle(fontFamily: 'monospace', fontSize: 11)),
+    );
   }
 
-  static String _formatTimestamp(DateTime dt) {
-    final now = DateTime.now();
-    final diff = now.difference(dt);
+  Widget _buildDetailDiffRow(BuildContext context, String label, String oldValue, String newValue) {
+    final cs = Theme.of(context).colorScheme;
+    return Padding(
+      padding: const EdgeInsets.symmetric(vertical: 6),
+      child: Row(
+        children: [
+          SizedBox(width: 100, child: Text("$label:", style: const TextStyle(fontWeight: FontWeight.bold))),
+          Expanded(
+            child: Wrap(
+              crossAxisAlignment: WrapCrossAlignment.center,
+              children: [
+                Text(oldValue, style: TextStyle(color: cs.outline, decoration: TextDecoration.lineThrough)),
+                const Padding(padding: EdgeInsets.symmetric(horizontal: 8), child: Icon(Icons.arrow_forward, size: 12)),
+                Text(newValue, style: TextStyle(color: cs.primary, fontWeight: FontWeight.bold)),
+              ],
+            ),
+          ),
+        ],
+      ),
+    );
+  }
 
-    if (diff.inSeconds < 60) return 'Just now';
-    if (diff.inMinutes < 60) return '${diff.inMinutes} Minutes ago';
-    if (diff.inHours < 24) return '${diff.inHours} Hours ago';
+  Widget _buildDetailRow(String label, String value) {
+    return Padding(
+      padding: const EdgeInsets.symmetric(vertical: 4),
+      child: Row(children: [
+        SizedBox(width: 100, child: Text("$label: ", style: const TextStyle(fontWeight: FontWeight.bold))),
+        Text(value),
+      ]),
+    );
+  }
 
-    final day = dt.day.toString().padLeft(2, '0');
-    final month = dt.month.toString().padLeft(2, '0');
-    if (dt.year == now.year) return '$day.$month.';
-    return '$day.$month.${dt.year}';
+  Widget _getIconForChange(QuestChange change, ColorScheme cs) {
+    IconData icon = Icons.edit_note;
+    if (change is AddQuestChange) icon = Icons.add_circle_outline;
+    if (change is DeleteQuestChange) icon = Icons.delete_outline;
+    if (change is AddConnectionChange || change is RemoveConnectionChange) icon = Icons.link;
+    return Container(
+      padding: const EdgeInsets.all(8),
+      decoration: BoxDecoration(color: cs.primaryContainer, borderRadius: BorderRadius.circular(8)),
+      child: Icon(icon, color: cs.onPrimaryContainer),
+    );
+  }
+
+  Widget _buildInfoRow(BuildContext context, IconData icon, String label, String val) {
+    return Padding(
+      padding: const EdgeInsets.symmetric(vertical: 4),
+      child: Row(
+        children: [
+          Icon(icon, size: 16, color: Colors.grey),
+          const SizedBox(width: 8),
+          Text("$label: ", style: const TextStyle(fontWeight: FontWeight.w500)),
+          Expanded(child: Text(val, style: const TextStyle(overflow: TextOverflow.ellipsis))),
+        ],
+      ),
+    );
+  }
+}
+
+enum _TileState { active, skipped, conflict, conflictSkipped, undone }
+
+class _SectionHeader extends StatelessWidget {
+  final String label;
+  final IconData icon;
+  const _SectionHeader({required this.label, required this.icon});
+
+  @override
+  Widget build(BuildContext context) {
+    final theme = Theme.of(context);
+    return Padding(
+      padding: const EdgeInsets.fromLTRB(16, 20, 16, 8),
+      child: Row(
+        children: [
+          Icon(icon, size: 14, color: theme.colorScheme.primary),
+          const SizedBox(width: 8),
+          Text(label.toUpperCase(),
+              style: theme.textTheme.labelSmall
+                  ?.copyWith(color: theme.colorScheme.primary, fontWeight: FontWeight.bold, letterSpacing: 1.1)),
+        ],
+      ),
+    );
   }
 }
 
 class _EmptyState extends StatelessWidget {
   const _EmptyState();
+  @override
+  Widget build(BuildContext context) => const Center(child: Text("Everything is up to date!"));
+}
 
+class _ConflictBanner extends StatelessWidget {
+  final int conflictCount;
+  const _ConflictBanner({required this.conflictCount});
   @override
   Widget build(BuildContext context) {
-    return Center(
-      child: Column(
-        mainAxisSize: MainAxisSize.min,
-        children: [
-          Icon(Icons.check_circle_outline, size: 48, color: Theme.of(context).colorScheme.onSurfaceVariant),
-          const SizedBox(height: 12),
-          Text('Everything is up to date!', style: Theme.of(context).textTheme.titleMedium),
-          const SizedBox(height: 4),
-          Text('No pending changes', style: Theme.of(context).textTheme.bodySmall),
-        ],
-      ),
+    return Container(
+      color: Theme.of(context).colorScheme.errorContainer,
+      width: double.infinity,
+      padding: const EdgeInsets.all(10),
+      child: Text("⚠️ Resolve $conflictCount conflict(s) before pushing!",
+          textAlign: TextAlign.center,
+          style: TextStyle(
+              color: Theme.of(context).colorScheme.onErrorContainer, fontWeight: FontWeight.bold)),
     );
   }
 }

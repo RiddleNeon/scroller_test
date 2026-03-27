@@ -245,13 +245,33 @@ class QuestChangeManager with ChangeNotifier {
       return false;
     }).toList();
   }
-
-  /// All pending changes that are broken by at least one skipped change.
+  
   Set<QuestChange> get allConflictedPending {
     final result = <QuestChange>{};
+
     for (final skipped in _skippedChanges) {
       result.addAll(conflictsOf(skipped));
     }
+
+    final createdIdsInOrder = <int>{};
+    for (final pending in _pendingChanges) {
+      if (pending is AddQuestChange) {
+        createdIdsInOrder.add(pending.questId);
+      }
+      else if (pending is _QuestTargetedChange) {
+        final idsToVerify = [pending.questId, if (pending.otherQuestId != null) pending.otherQuestId!];
+
+        for (final id in idsToVerify) {
+          //final existsGlobally = questSystem.maybeGetQuestById(id) != null;
+          final isCreatedLater = _pendingChanges.any((c) => c is AddQuestChange && c.questId == id && _pendingChanges.indexOf(c) > _pendingChanges.indexOf(pending));
+
+          if (isCreatedLater) {
+            result.add(pending);
+          }
+        }
+      }
+    }
+
     return result;
   }
 
