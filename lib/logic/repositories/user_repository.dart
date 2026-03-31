@@ -1,3 +1,5 @@
+import 'package:flutter/cupertino.dart';
+import 'package:supabase_flutter/supabase_flutter.dart';
 import 'package:wurp/tools/supabase_tests/supabase_login_test.dart';
 
 import '../../base_logic.dart';
@@ -10,16 +12,12 @@ class UserRepository {
   Future<UserProfile?> getUserSupabase(String userId) async {
     final supabaseResult = await supabaseClient.from('profiles').select().eq('id', userId).maybeSingle();
     if(supabaseResult == null) return null;
+    
+    if(supabaseResult['is_banned'] && (!userLoggedIn || userId == currentUser.id)) {
+      throw const AuthException("You are banned from this app");
+    }
 
     return UserProfile.fromSupabase(supabaseResult);
-  }
-
-  Future<UserProfile> getOrCreateUser(String userId) async {
-    return (await getUserSupabase(userId)) ??
-        await createUser(
-          id: userId,
-          username: currentAuthUsername(),
-        );
   }
 
   Future<UserProfile> getOrCreateCurrentUser() async {
@@ -406,6 +404,12 @@ class UserRepository {
 
   Future<void> _adjustProfileMetric(String userId, String column, int delta) async {
     await supabaseClient.rpc('increment_profile_metric', params: {'p_user_id': userId, 'p_column': column, 'p_delta': delta});
+  }
+  
+  Future<void> selfBanUserSupabase() async {
+    await supabaseClient.from('profiles').update({"is_banned": true}).eq('id', currentUser.id);
+    await onUserLogout();
+    await auth.signOut();
   }
 }
 

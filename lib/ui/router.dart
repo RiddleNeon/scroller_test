@@ -28,7 +28,7 @@ void initRouter() {
 
       final onLogin = state.matchedLocation == '/login';
 
-      if (!userLoggedIn && !onLogin) return '/profile';
+      if (!userLoggedIn && !onLogin) return '/login';
       if (userLoggedIn && onLogin) return '/profile';
       if (userLoggedIn && state.matchedLocation == '/') return '/profile';
       return null;

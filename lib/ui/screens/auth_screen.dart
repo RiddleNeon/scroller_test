@@ -26,15 +26,14 @@ class _LoginScreenState extends State<LoginScreen> {
         email: data.name,
         password: data.password,
       );
-      print("sign in response: $response");
-      print("current session: ${auth.currentSession}");
-      print("login successful, current user: ${auth.currentUser}");
-      print("login successful, current user id: ${auth.currentUser?.id}");
-
       final signedInUser = response.user;
       if (signedInUser == null) return "Unable to sign in.";
 
       user = await userRepository.getUserSupabase(signedInUser.id) ?? await userRepository.getOrCreateCurrentUser();
+      if(user == null){
+        await auth.signOut();
+        return "You are banned from this app.";
+      }
       return null;
     } on AuthException catch (e) {
       return e.message;

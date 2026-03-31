@@ -1,4 +1,5 @@
 import 'package:flutter/material.dart';
+import 'package:supabase_flutter/supabase_flutter.dart';
 import 'package:wurp/ui/router.dart';
 
 import 'base_logic.dart';
@@ -8,8 +9,13 @@ void startApp() async {
   final session = auth.currentSession;
   if (session != null) {
     final authUser = session.user;
-    final user = await userRepository.getUserSupabase(authUser.id) ?? await userRepository.getOrCreateCurrentUser();
-    await onUserLogin(user);
+    try {
+      final user = await userRepository.getUserSupabase(authUser.id) ?? await userRepository.getOrCreateCurrentUser();
+      await onUserLogin(user);
+    } on AuthException catch (e) {
+      print("Error fetching user profile: $e");
+      await auth.signOut();
+    }
   }
   
   initRouter();

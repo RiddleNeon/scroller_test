@@ -236,7 +236,7 @@ class _ChangeTimelineTile extends StatelessWidget {
                         decoration: BoxDecoration(
                           shape: BoxShape.circle,
                           color: color,
-                          border: Border.all(color: cs.surface, width: 2),
+                          border: Border.all(color: cs.surface, width: 2), 
                         ),
                       ),
                       Expanded(
