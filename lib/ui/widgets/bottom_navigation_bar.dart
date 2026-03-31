@@ -3,15 +3,16 @@ import 'package:flutter/material.dart';
 class BottomNavBar extends StatefulWidget {
   final void Function(String) onSelectionChange;
   final List<({IconData icon, String id, String label})> items;
+  final int initialIndex;
 
-  const BottomNavBar({super.key, required this.onSelectionChange, required this.items});
+  const BottomNavBar({super.key, required this.onSelectionChange, required this.items, this.initialIndex = 0});
 
   @override
   State<BottomNavBar> createState() => BottomNavBarState();
 }
 
 class BottomNavBarState extends State<BottomNavBar> {
-  int currentSelectedIndex = 0;  
+  late int currentSelectedIndex = widget.initialIndex;  
   List get items => widget.items;
   
   void switchToIndex(int index) {

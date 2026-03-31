@@ -112,7 +112,7 @@ class _VideoCardState extends State<VideoCard> {
                                   video.authorName,
                                   maxLines: 1,
                                   overflow: TextOverflow.ellipsis,
-                                  style: TextStyle(color: cs.onSurfaceVariant, fontSize: 12, fontWeight: FontWeight.w500),
+                                  style: TextStyle(color: cs.onSurfaceVariant, fontSize: 12, fontWeight: FontWeight.w500),  
                                 ),
                               ),
                             ],
@@ -123,9 +123,9 @@ class _VideoCardState extends State<VideoCard> {
                             spacing: 10,
                             runSpacing: 4,
                             children: [
-                              _StatChip(icon: Icons.visibility_outlined, label: _formatCount(video.viewsCount), cs: cs),
-                              _StatChip(icon: Icons.favorite_border_rounded, label: _formatCount(video.likesCount), cs: cs),
-                              _StatChip(icon: Icons.chat_bubble_outline_rounded, label: _formatCount(video.commentsCount), cs: cs),
+                              StatChip(icon: Icons.visibility_outlined, label: _formatCount(video.viewsCount), cs: cs),
+                              StatChip(icon: Icons.favorite_border_rounded, label: _formatCount(video.likesCount), cs: cs),
+                              StatChip(icon: Icons.chat_bubble_outline_rounded, label: _formatCount(video.commentsCount), cs: cs),
                             ],
                           ),
                         ],
@@ -140,6 +140,7 @@ class _VideoCardState extends State<VideoCard> {
                 ],
               ),
 
+              const SizedBox(height: 8),
               if (video.tags.isNotEmpty)
                 Padding(
                   padding: const EdgeInsets.fromLTRB(12, 0, 12, 10),
@@ -196,8 +197,8 @@ class _VideoCardState extends State<VideoCard> {
   Widget _shimmer(ColorScheme cs) => Shimmer(child: Container(color: cs.surfaceContainerHighest));
 }
 
-class _StatChip extends StatelessWidget {
-  const _StatChip({required this.icon, required this.label, required this.cs});
+class StatChip extends StatelessWidget {
+  const StatChip({super.key, required this.icon, required this.label, required this.cs});
 
   final IconData icon;
   final String label;

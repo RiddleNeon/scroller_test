@@ -3,6 +3,7 @@ import 'package:wurp/logic/local_storage/local_seen_service.dart';
 import 'package:wurp/logic/repositories/video_repository.dart';
 import 'package:wurp/logic/video/video.dart';
 import 'package:wurp/ui/screens/comment_overlay.dart';
+import 'package:wurp/ui/widgets/overlays/pause_indicator.dart';
 import 'package:wurp/ui/widgets/overlays/video_info_overlay.dart';
 
 import 'comment_button.dart';
@@ -14,7 +15,6 @@ class PageOverlay extends StatefulWidget {
   final Video video;
   final int index;
 
-  final Widget child;
   final bool initiallyLiked;
   final bool initiallyDisliked;
 
@@ -23,6 +23,7 @@ class PageOverlay extends StatefulWidget {
   final void Function(bool hasShared)? onShareChanged;
   final void Function(bool hasSaved)? onSaveChanged;
   final void Function(bool hasCommented)? onCommentChanged;
+  final void Function(bool isPaused) onPauseChanged;
 
   const PageOverlay({
     super.key,
@@ -34,9 +35,9 @@ class PageOverlay extends StatefulWidget {
     this.onShareChanged,
     this.onSaveChanged,
     this.onCommentChanged,
-    required this.child,
     required this.initiallyLiked,
     required this.initiallyDisliked,
+    required this.onPauseChanged,
   });
 
   @override
@@ -49,11 +50,29 @@ class _PageOverlayState extends State<PageOverlay> {
   late bool liked = widget.initiallyLiked;
   late bool disliked = widget.initiallyDisliked;
 
+  GlobalKey<PauseIndicatorState> pauseIndicatorKey = GlobalKey();
+
   @override
   Widget build(BuildContext context) {
     return Stack(
       children: [
-        Positioned.fill(child: widget.child),
+        Listener(
+          behavior: HitTestBehavior.translucent,
+          onPointerDown: (_) {
+            pauseIndicatorKey.currentState?.toggleVisibility();
+          },
+          child: const SizedBox.expand(),
+        ),
+        Positioned.fill(
+          child:  Center(
+              child: PauseIndicator(
+                key: pauseIndicatorKey,
+                onToggle: (val) {
+                  widget.onPauseChanged(val);
+                },
+              ),
+          ),
+        ),
         Align(
           alignment: Alignment.centerRight,
           child: Column(
@@ -90,7 +109,7 @@ class _PageOverlayState extends State<PageOverlay> {
       });
     }
     bool toggleResult = await videoRepo.toggleLike(widget.video.id);
-    if(toggleResult != newLiked) {
+    if (toggleResult != newLiked) {
       print("Error toggling like: expected $newLiked but got $toggleResult");
       setState(() {
         liked = toggleResult;
@@ -116,8 +135,8 @@ class _PageOverlayState extends State<PageOverlay> {
       });
     }
     bool toggleResult = await videoRepo.toggleDislike(widget.video.id);
-    
-    if(toggleResult != newDisliked) {
+
+    if (toggleResult != newDisliked) {
       print("Error toggling dislike: expected $newDisliked but got $toggleResult");
       setState(() {
         disliked = toggleResult;

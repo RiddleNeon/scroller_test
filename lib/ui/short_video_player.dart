@@ -34,7 +34,12 @@ Widget feedVideos(
               future: feedModel!.getVideoAt(index, videoSource: videoProvider),
               builder: (context, snapshot) {
                 if (snapshot.connectionState != ConnectionState.done) {
-                  return const Center(child: CircularProgressIndicator());
+                  return FutureBuilder(future: videoProvider.getVideoByIndex(index), builder: (context, snapshot) {
+                    if(!snapshot.hasData || snapshot.data?.thumbnailUrl == null){
+                      return const Center(child: CircularProgressIndicator(),);
+                    }
+                    return FittedBox(fit: BoxFit.fitHeight, child: Image.network(snapshot.data!.thumbnailUrl!));
+                  });
                 }
 
                 if (snapshot.hasError) {

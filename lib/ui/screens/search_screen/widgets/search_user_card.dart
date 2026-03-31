@@ -83,6 +83,15 @@ class _UserCardState extends State<UserCard> {
                   ),
                   const SizedBox(height: 2),
                   Text('@${user.username}', style: TextStyle(color: widget.cs.onSurfaceVariant, fontSize: 13)),
+                  /*Wrap(
+                    spacing: 10,
+                    runSpacing: 4,
+                    children: [
+                      StatChip(icon: Icons.video_collection, label: _formatCount(user.totalVideosCount), cs: widget.cs),
+                      StatChip(icon: Icons.favorite_border_rounded, label: _formatCount(user.totalLikesCount), cs: widget.cs),
+                      StatChip(icon: FontAwesomeIcons.users, label: _formatCount(user.followersCount), cs: widget.cs),
+                    ],
+                  ),*/ //fixme
                 ],
               ),
             ),

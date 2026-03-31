@@ -1,4 +1,3 @@
-import 'dart:math';
 import 'package:flutter/material.dart';
 import 'package:wurp/logic/quests/quest_change_manager.dart';
 
@@ -246,7 +245,7 @@ class _ChangeTimelineTile extends StatelessWidget {
                 width: 24,
                 child: Column(
                   children: [
-                    Expanded(child: Container(width: 2, color: isFirst ? Colors.transparent : color.withOpacity(0.3))),
+                    Expanded(child: Container(width: 2, color: isFirst ? Colors.transparent : color.withValues(alpha: 0.3))),
                     Container(
                       width: 10,
                       height: 10,
@@ -256,7 +255,7 @@ class _ChangeTimelineTile extends StatelessWidget {
                         border: Border.all(color: cs.surface, width: 2),
                       ),
                     ),
-                    Expanded(child: Container(width: 2, color: isLast ? Colors.transparent : color.withOpacity(0.3))),
+                    Expanded(child: Container(width: 2, color: isLast ? Colors.transparent : color.withValues(alpha: 0.3))),
                   ],
                 ),
               ),
@@ -267,9 +266,9 @@ class _ChangeTimelineTile extends StatelessWidget {
                   child: Container(
                     padding: const EdgeInsets.all(12),
                     decoration: BoxDecoration(
-                      color: isError ? cs.errorContainer.withOpacity(0.2) : cs.surface,
+                      color: isError ? cs.errorContainer.withValues(alpha: 0.2) : cs.surface,
                       borderRadius: BorderRadius.circular(12),
-                      border: isError ? Border.all(color: cs.error.withOpacity(0.5)) : null,
+                      border: isError ? Border.all(color: cs.error.withValues(alpha: 0.5)) : null,
                     ),
                     child: Row(
                       children: [

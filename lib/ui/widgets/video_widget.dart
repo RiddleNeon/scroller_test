@@ -27,7 +27,8 @@ class VideoItem extends StatefulWidget {
     required this.userId,
     required this.provider,
     required this.videoProvider,
-    required this.index, this.onLikeChanged,
+    required this.index,
+    this.onLikeChanged,
   });
 
   @override
@@ -127,6 +128,7 @@ class _VideoItemState extends State<VideoItem> {
   }
 
   bool currentlySaving = false;
+
   /// Save complete interaction when user leaves video
   /// This creates ONE interaction document with all data
   void _saveInteraction() async {
@@ -218,46 +220,41 @@ class _VideoItemState extends State<VideoItem> {
     return RepaintBoundary(
       child: Center(
         child: RepaintBoundary(
-          child: AspectRatio(
-            aspectRatio: 9 / 16,
-            child: LayoutBuilder(
-              builder: (context, constraints) {
-                return Stack(
-                  children: [
-                    RepaintBoundary(
-                      child: Center(
-                        child: ValueListenableBuilder<VideoPlayerValue>(
-                          valueListenable: widget.controller,
-                          builder: (context, value, _) {
-                            return Center(
-                              child: AspectRatio(
-                                aspectRatio: value.aspectRatio,
-                                child: VideoPlayer(
-                                  widget.controller,
-                                  key: ValueKey(widget.video.id),
-                                ),
-                              ),
-                            );
-                          },
-                        ),
+          child: Container(
+            color: Colors.amber,
+            child: AspectRatio(
+              aspectRatio: 9 / 16,
+              child: LayoutBuilder(
+                builder: (context, constraints) {
+                  return Stack(
+                    children: [
+                      RepaintBoundary(
+                        child: VideoPlayer(widget.controller, key: ValueKey(widget.video.id)),
                       ),
-                    ),
-                    PageOverlay(
-                      provider: widget.provider,
-                      video: widget.video,
-                      onLikeChanged: onLikeChanged,
-                      onDislikeChanged: onDislikeChanged,
-                      onShareChanged: onShareChanged,
-                      onSaveChanged: onSaveChanged,
-                      onCommentChanged: onCommentChanged,
-                      initiallyLiked: localSeenService.isLiked(widget.video.id),
-                      initiallyDisliked: localSeenService.isDisliked(widget.video.id),
-                      index: widget.index,
-                      child: Container(),
-                    ),
-                  ],
-                );
-              },
+                      PageOverlay(
+                        provider: widget.provider,
+                        video: widget.video,
+                        onLikeChanged: onLikeChanged,
+                        onDislikeChanged: onDislikeChanged,
+                        onShareChanged: onShareChanged,
+                        onSaveChanged: onSaveChanged,
+                        onCommentChanged: onCommentChanged,
+                        initiallyLiked: localSeenService.isLiked(widget.video.id),
+                        initiallyDisliked: localSeenService.isDisliked(widget.video.id),
+                        onPauseChanged: (isPaused) {
+                          print("Pause changed: $isPaused");
+                          if(isPaused){
+                            widget.controller.pause();
+                          } else {
+                            widget.controller.play();
+                          }
+                        },
+                        index: widget.index,
+                      ),
+                    ],
+                  );
+                },
+              ),
             ),
           ),
         ),

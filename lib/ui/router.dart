@@ -28,9 +28,9 @@ void initRouter() {
 
       final onLogin = state.matchedLocation == '/login';
 
-      if (!userLoggedIn && !onLogin) return '/login';
-      if (userLoggedIn && onLogin) return '/feed';
-      if (userLoggedIn && state.matchedLocation == '/') return '/feed';
+      if (!userLoggedIn && !onLogin) return '/profile';
+      if (userLoggedIn && onLogin) return '/profile';
+      if (userLoggedIn && state.matchedLocation == '/') return '/profile';
       return null;
     },
     routes: [
@@ -68,6 +68,7 @@ void initRouter() {
 
 GlobalObjectKey<BottomNavBarState> navBarKey = const GlobalObjectKey('bottomNavBarKey');
 BottomNavBar _bottomNavBar = BottomNavBar(
+  initialIndex: 3,
   key: navBarKey,
   onSelectionChange: (p0) {
     routerConfig.go(p0);
