@@ -220,9 +220,7 @@ class _VideoItemState extends State<VideoItem> {
     return RepaintBoundary(
       child: Center(
         child: RepaintBoundary(
-          child: Container(
-            color: Colors.amber,
-            child: AspectRatio(
+          child: AspectRatio(
               aspectRatio: 9 / 16,
               child: LayoutBuilder(
                 builder: (context, constraints) {
@@ -255,7 +253,6 @@ class _VideoItemState extends State<VideoItem> {
                   );
                 },
               ),
-            ),
           ),
         ),
       ),
