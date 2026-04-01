@@ -2,9 +2,9 @@ import 'dart:math';
 
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
+import 'package:wurp/logic/repositories/user_repository.dart';
 import 'package:wurp/logic/users/user_model.dart';
 import 'package:wurp/logic/repositories/chat_repository.dart';
-import 'package:wurp/logic/repositories/user_repository.dart';
 import 'package:wurp/ui/misc/avatar.dart';
 
 import '../../../base_logic.dart';

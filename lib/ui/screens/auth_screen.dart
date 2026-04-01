@@ -2,6 +2,8 @@ import 'package:flutter/foundation.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter_login/flutter_login.dart';
 import 'package:supabase_flutter/supabase_flutter.dart';
+import 'package:wurp/logic/repositories/user_repository.dart';
+import 'package:wurp/ui/misc/ban_appeal_screen.dart';
 import 'package:wurp/ui/router.dart';
 
 import '../../base_logic.dart';
@@ -17,44 +19,86 @@ class LoginScreen extends StatefulWidget {
 class _LoginScreenState extends State<LoginScreen> {
   Duration get loginTime => const Duration(milliseconds: 2250);
   bool enteredPasswordIncorrectly = false;
-  
+
   UserProfile? user;
 
   Future<String?> _authUser(LoginData data) async {
+    String? signedInUser = "";
     try {
-      final response = await auth.signInWithPassword(
-        email: data.name,
-        password: data.password,
-      );
-      final signedInUser = response.user;
-      if (signedInUser == null) return "Unable to sign in.";
+      final response = await auth.signInWithPassword(email: data.name, password: data.password);
+      signedInUser = response.user?.id;
+    } catch (e) {
+      print("Error during sign in: $e");
+      return "Unable to sign in. ${e is AuthException ? e.message : ''}";
+    }
 
-      user = await userRepository.getUserSupabase(signedInUser.id) ?? await userRepository.getOrCreateCurrentUser();
-      if(user == null){
+    if (signedInUser == null) {
+      print("Sign in failed: No user returned from auth.");
+      return "Unable to sign in.";
+    }
+
+    try {
+      user = await userRepository.getUserSupabase(signedInUser) ?? await userRepository.getOrCreateCurrentUser();
+      if (user == null) {
         await auth.signOut();
         return "You are banned from this app.";
       }
       return null;
+    } on BanAuthException catch (e) {
+      print("User is banned: ${e.message}");
+
+      if (!mounted) return e.message;
+      await showDialog(
+        context: context,
+        builder: (context) {
+          return AlertDialog(
+            title: const Text("You are banned"),
+            content: Text(e.message),
+            actions: [
+              TextButton(
+                onPressed: () {
+                  Navigator.of(context).pop();
+                  showDialog(
+                    context: context,
+                    builder: (context) => BanAppealScreen(
+                      userId: signedInUser!,
+                      onAppealSuccess: () {
+                        print("=========== Ban appeal successful for user $signedInUser");
+                        ScaffoldMessenger.of(this.context).showSnackBar(
+                          const SnackBar(
+                            content: Text(
+                              "Your appeal was successful, you are now unbanned. Please make sure to follow the community guidelines and do less shit to avoid future bans.",
+                            ),
+                          ),
+                        );
+                      },
+                    ),
+                  );
+                },
+                child: const Text("Appeal Ban"),
+              ),
+              TextButton(onPressed: () => Navigator.of(context).pop(), child: const Text("OK")),
+            ],
+          );
+        },
+      ); //ask if user wants to appeal ban, if yes open ban appeal screen
+
+      return e.message;
     } on AuthException catch (e) {
       return e.message;
     } catch (e) {
       return "An unknown error occurred!";
     }
   }
-  
+
   Future<String?> _signupUser(SignupData data) async {
     if (data.password == null || data.name == null) return "Please enter credentials!";
     try {
-      final response = await auth.signUp(
-        email: data.name!,
-        password: data.password!,
-      );
+      final response = await auth.signUp(email: data.name!, password: data.password!);
 
       if (response.user == null) return "Unable to create user.";
 
-      user = await userRepository.createCurrentUser(
-        username: currentAuthUsername(),
-      );
+      user = await userRepository.createCurrentUser(username: currentAuthUsername());
       return null;
     } on AuthException catch (e) {
       return e.message;
@@ -80,7 +124,7 @@ class _LoginScreenState extends State<LoginScreen> {
     print("completing login...");
     try {
       await onUserLogin(user!);
-      if(mounted) {
+      if (mounted) {
         routerConfig.push('/feed');
       }
     } catch (e, st) {
@@ -97,7 +141,10 @@ class _LoginScreenState extends State<LoginScreen> {
       onConfirmRecover: null,
       onResendCode: null,
       theme: LoginTheme(primaryColor: Colors.blueAccent),
-      messages: LoginMessages(recoverPasswordDescription: "Enter your email to receive a password reset link.", recoverPasswordSuccess: "Password reset email sent!"),
+      messages: LoginMessages(
+        recoverPasswordDescription: "Enter your email to receive a password reset link.",
+        recoverPasswordSuccess: "Password reset email sent!",
+      ),
       onSubmitAnimationCompleted: completeLogin,
     );
   }

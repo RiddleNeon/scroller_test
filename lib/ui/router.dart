@@ -3,6 +3,7 @@ import 'package:flutter/material.dart';
 import 'package:go_router/go_router.dart';
 import 'package:wurp/main.dart';
 import 'package:wurp/transcription/uploading/video_upload_screen.dart';
+import 'package:wurp/ui/misc/ban_appeal_screen.dart';
 import 'package:wurp/ui/screens/auth_screen.dart';
 import 'package:wurp/ui/screens/chat/chat_managing_screen.dart';
 import 'package:wurp/ui/screens/profile_screen.dart';
@@ -27,7 +28,7 @@ void initRouter() {
       }
 
       final onLogin = state.matchedLocation == '/login';
-
+      
       if (!userLoggedIn && !onLogin) return '/login';
       if (userLoggedIn && onLogin) return '/profile';
       if (userLoggedIn && state.matchedLocation == '/') return '/profile';

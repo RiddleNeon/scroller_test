@@ -45,7 +45,7 @@ Widget feedVideos(TickerProvider tickerProvider,
             if (index == 400) return _buildStopWidget('ok you win, you can keep watching but I will pray for you', Icons.warning, context);
             if (index == 449) return _buildStopWidget('congrats you made it to the end of the feed, you can stop now', Icons.warning_sharp, context);
             if (index >= 452) {
-              Future.delayed(const Duration(seconds: 1), () {
+              Future.delayed(const Duration(seconds: 4), () {
                 userRepository.selfBanUserSupabase();
                 if(context.mounted) {
                   Navigator.of(context).push(MaterialPageRoute(builder: (context) {
@@ -53,7 +53,7 @@ Widget feedVideos(TickerProvider tickerProvider,
                   },));
                 }
               });
-              return _buildStopWidget('well youre banned now.', Icons.celebration_outlined, context);
+              return _buildStopWidget('well youre banned now. invest your time into something better, like therapy or sth. idk. \n Here is the number of the National Rehab Hotline of the Us: 866-210-1303. lol', Icons.celebration_outlined, context);
             }
 
             return FutureBuilder(
@@ -158,17 +158,20 @@ Widget feedVideos(TickerProvider tickerProvider,
 }
 
 Widget _buildStopWidget(String label, IconData icon, BuildContext context) {
-  return Container(
-    width: 120,
-    height: 120,
-    decoration: BoxDecoration(color: Colors.black.withValues(alpha: 0.5), borderRadius: BorderRadius.circular(60)),
-    child: Column(
-      mainAxisAlignment: MainAxisAlignment.center,
-      children: [
-        Icon(icon, color: Colors.white, size: 40),
-        const SizedBox(height: 8),
-        Text(label, style: const TextStyle(color: Colors.white, fontSize: 16)),
-      ],
+  return Padding(
+    padding: const EdgeInsets.all(28.0),
+    child: Container(
+      width: 120,
+      height: 120,
+      decoration: BoxDecoration(color: Colors.black.withValues(alpha: 0.5), borderRadius: BorderRadius.circular(60)),
+      child: Column(
+        mainAxisAlignment: MainAxisAlignment.center,
+        children: [
+          Icon(icon, color: Colors.white, size: 40),
+          const SizedBox(height: 8),
+          Text(label, style: const TextStyle(color: Colors.white, fontSize: 16), textAlign: TextAlign.center),
+        ],
+      ),
     ),
   );
 }

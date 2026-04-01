@@ -1,4 +1,5 @@
 import 'package:flutter/material.dart';
+import 'package:wurp/base_logic.dart';
 
 class BottomNavBar extends StatefulWidget {
   final void Function(String) onSelectionChange;
@@ -37,6 +38,8 @@ class BottomNavBarState extends State<BottomNavBar> {
 
   @override
   Widget build(BuildContext context) {
+    if(!userLoggedIn) return const SizedBox.shrink();
+    
     final bottomPad = MediaQuery.of(context).padding.bottom;
 
     return Container(

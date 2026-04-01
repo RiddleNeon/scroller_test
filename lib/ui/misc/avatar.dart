@@ -1,6 +1,5 @@
 import 'package:flutter/material.dart';
-
-import '../../logic/repositories/user_repository.dart';
+import 'package:wurp/logic/repositories/user_repository.dart';
 
 class Avatar extends StatelessWidget {
   final ColorScheme colorScheme;

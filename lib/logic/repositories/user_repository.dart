@@ -1,4 +1,3 @@
-import 'package:flutter/cupertino.dart';
 import 'package:supabase_flutter/supabase_flutter.dart';
 import 'package:wurp/tools/supabase_tests/supabase_login_test.dart';
 
@@ -6,15 +5,19 @@ import '../../base_logic.dart';
 import '../users/user_model.dart';
 import '../video/video.dart';
 
+class BanAuthException extends AuthException{
+  const BanAuthException(super.message);
+}
+
 class UserRepository {
   Future<UserProfile> getUser(String userId) async => (await getUserSupabase(userId)) ?? (throw StateError('User $userId not found'));
 
   Future<UserProfile?> getUserSupabase(String userId) async {
     final supabaseResult = await supabaseClient.from('profiles').select().eq('id', userId).maybeSingle();
-    if(supabaseResult == null) return null;
-    
-    if(supabaseResult['is_banned'] && (!userLoggedIn || userId == currentUser.id)) {
-      throw const AuthException("You are banned from this app");
+    if (supabaseResult == null) return null;
+
+    if (supabaseResult['is_banned'] && (!userLoggedIn || userId == currentUser.id)) {
+      throw const BanAuthException("You are banned from this app");
     }
 
     return UserProfile.fromSupabase(supabaseResult);
@@ -23,11 +26,7 @@ class UserRepository {
   Future<UserProfile> getOrCreateCurrentUser() async {
     final userId = currentAuthUserId();
 
-    final supabaseResult = await supabaseClient
-        .from('profiles')
-        .select()
-        .eq('id', userId)
-        .maybeSingle();
+    final supabaseResult = await supabaseClient.from('profiles').select().eq('id', userId).maybeSingle();
 
     if (supabaseResult != null) {
       return UserProfile.fromSupabase(supabaseResult);
@@ -41,22 +40,9 @@ class UserRepository {
     final name = username ?? currentAuthUsername();
     final avatar = profileImageUrl ?? createUserProfileImageUrl(name);
 
-    await supabaseClient.from("profiles").insert({
-      "id": userId,
-      "username": name,
-      "display_name": name,
-      "avatar_url": avatar,
-      "bio": bio,
-    });
+    await supabaseClient.from("profiles").insert({"id": userId, "username": name, "display_name": name, "avatar_url": avatar, "bio": bio});
 
-    return UserProfile(
-      id: userId,
-      username: name,
-      profileImageUrl: avatar,
-      bio: bio,
-      createdAt: DateTime.now(),
-      followersCount: 0,
-    );
+    return UserProfile(id: userId, username: name, profileImageUrl: avatar, bio: bio, createdAt: DateTime.now(), followersCount: 0);
   }
 
   Future<void> upsertCurrentUserProfile(UserProfile user) async {
@@ -77,7 +63,7 @@ class UserRepository {
       "avatar_url": profileImageUrl ?? createUserProfileImageUrl(username),
       "bio": bio,
     });
-    
+
     return UserProfile(
       id: id,
       username: username,
@@ -87,7 +73,6 @@ class UserRepository {
       followersCount: 0,
     );
   }
-  
 
   ///returns if the user is followed after the operation
   Future<bool> toggleFollowUser(String followingId) async {
@@ -124,11 +109,7 @@ class UserRepository {
   }
 
   Future<void> _followUserSupabase(String currentId, String followingId) async {
-    await supabaseClient.from('follows').insert({
-      "follower_id": currentId,
-      "following_id": followingId,
-      "created_at": DateTime.now().toIso8601String()
-    });
+    await supabaseClient.from('follows').insert({"follower_id": currentId, "following_id": followingId, "created_at": DateTime.now().toIso8601String()});
     await _adjustProfileMetric(currentId, 'following_count', 1);
     await _adjustProfileMetric(followingId, 'followers_count', 1);
   }
@@ -139,32 +120,21 @@ class UserRepository {
   }
 
   Future<Iterable<UserProfile>> searchUsersSupabase(String query, {int limit = 20, int offset = 0}) async {
-    final result = await supabaseClient
-        .rpc('search_profiles', params: {
-      'search_query': query,
-      'p_limit': limit,
-      'p_offset': offset,
-    });
+    final result = await supabaseClient.rpc('search_profiles', params: {'search_query': query, 'p_limit': limit, 'p_offset': offset});
 
     return (result as List).map((e) => UserProfile.fromSupabase(e));
   }
 
   /// returns the total length of the search result of the search query, without pagination. Useful for showing total result count in the UI.
   Future<int> countSearchUsers(String query) async {
-    final result = await supabaseClient
-        .rpc('count_search_profiles', params: {
-      'search_query': query,
-    });
+    final result = await supabaseClient.rpc('count_search_profiles', params: {'search_query': query});
     return result as int;
   }
 
   Future<List<String>> getFollowingIds(String userId) async => getFollowingIdsSupabase(userId);
 
   Future<List<String>> getFollowingIdsSupabase(String userId) async {
-    final response = await supabaseClient
-        .from('follows')
-        .select('following_id')
-        .eq('follower_id', userId);
+    final response = await supabaseClient.from('follows').select('following_id').eq('follower_id', userId);
     return response.map<String>((e) => e['following_id'] as String).toList();
   }
 
@@ -193,9 +163,7 @@ class UserRepository {
       return response.map<Video>((e) {
         final profile = e['profiles'] as Map<String, dynamic>;
         final authorName = profile['display_name'] ?? profile['username'] ?? '';
-        final tags = (e['video_tags'] as List)
-            .map((vt) => vt['tags']['name'] as String)
-            .toList();
+        final tags = (e['video_tags'] as List).map((vt) => vt['tags']['name'] as String).toList();
 
         return Video.fromSupabase(e, authorName, tags);
       }).toList();
@@ -207,11 +175,7 @@ class UserRepository {
 
   Future<int> getPublishedVideosCount(String userId) async {
     try {
-      final response = await supabaseClient
-          .from('profiles')
-          .select('total_videos_count')
-          .eq('id', userId)
-          .maybeSingle();
+      final response = await supabaseClient.from('profiles').select('total_videos_count').eq('id', userId).maybeSingle();
 
       return (response ?? 0) as int;
     } catch (e) {
@@ -219,7 +183,7 @@ class UserRepository {
       return 0;
     }
   }
-  
+
   Future<List<Video>> getLikedVideos(String userId, {int limit = 20}) async {
     return getLikedVideosSupabase(userId, limit: limit);
   }
@@ -251,9 +215,7 @@ class UserRepository {
         final video = e['videos'] as Map<String, dynamic>;
         final profile = video['profiles'] as Map<String, dynamic>;
         final authorName = profile['display_name'] ?? profile['username'] ?? '';
-        final tags = (video['video_tags'] as List)
-            .map((vt) => vt['tags']['name'] as String)
-            .toList();
+        final tags = (video['video_tags'] as List).map((vt) => vt['tags']['name'] as String).toList();
 
         return Video.fromSupabase(video, authorName, tags);
       }).toList();
@@ -294,9 +256,7 @@ class UserRepository {
         final video = e['videos'] as Map<String, dynamic>;
         final profile = video['profiles'] as Map<String, dynamic>;
         final authorName = profile['display_name'] ?? profile['username'] ?? '';
-        final tags = (video['video_tags'] as List)
-            .map((vt) => vt['tags']['name'] as String)
-            .toList();
+        final tags = (video['video_tags'] as List).map((vt) => vt['tags']['name'] as String).toList();
 
         return Video.fromSupabase(video, authorName, tags);
       }).toList();
@@ -305,7 +265,7 @@ class UserRepository {
       return [];
     }
   }
-  
+
   Future<List<UserProfile>> getFollowers(String userId, {int limit = 50, int offset = 0}) async {
     try {
       final response = await supabaseClient
@@ -324,8 +284,7 @@ class UserRepository {
 
   Future<int> getFollowersCount(String userId) async {
     try {
-      final response = await supabaseClient
-          .rpc('get_followers_count', params: {'user_id': userId});
+      final response = await supabaseClient.rpc('get_followers_count', params: {'user_id': userId});
 
       return response as int;
     } catch (e) {
@@ -352,8 +311,7 @@ class UserRepository {
 
   Future<int> getFollowingCount(String userId) async {
     try {
-      final response = await supabaseClient
-          .rpc('get_following_count', params: {'user_id': userId});
+      final response = await supabaseClient.rpc('get_following_count', params: {'user_id': userId});
 
       return response as int;
     } catch (e) {
@@ -374,8 +332,6 @@ class UserRepository {
       return false;
     }
   }
-  
-  
 
   Future<bool> isFollowing(String user1, String user2) async {
     return isFollowingSupabase(user1, user2);
@@ -406,10 +362,27 @@ class UserRepository {
     await supabaseClient.rpc('increment_profile_metric', params: {'p_user_id': userId, 'p_column': column, 'p_delta': delta});
   }
   
+  bool _currentlySelfBanning = false;
   Future<void> selfBanUserSupabase() async {
+    if(_currentlySelfBanning) return;
+    _currentlySelfBanning = true;
     await supabaseClient.from('profiles').update({"is_banned": true}).eq('id', currentUser.id);
     await onUserLogout();
     await auth.signOut();
+    _currentlySelfBanning = false;
+  }
+
+  Future<void> unbanSelfSupabase(String currentUserId) async {
+    // Only for testing purposes, in a real app this should be handled by admins
+    await supabaseClient.from('profiles').update({"is_banned": false}).eq('id', currentUserId);
+  }
+
+  Future<void> appealBanSupabase(String id, String reason) async {
+    await supabaseClient.from('ban_appeals').insert({"user_id": id, "appeal_message": reason, "created_at": DateTime.now().toIso8601String()});
+    await Future.delayed(const Duration(seconds: 5), () async {
+      await unbanSelfSupabase(id);
+      print("Simulating ban appeal review for user $id. In a real app, this would be handled by admins. Unbanning user.");
+    });
   }
 }
 
