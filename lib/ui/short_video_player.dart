@@ -44,7 +44,7 @@ Widget feedVideos(TickerProvider tickerProvider,
             if (index == 350) return _buildStopWidget('this is just sad now', Icons.warning, context);
             if (index == 400) return _buildStopWidget('ok you win, you can keep watching but I will pray for you', Icons.warning, context);
             if (index == 449) return _buildStopWidget('congrats you made it to the end of the feed, you can stop now', Icons.warning_sharp, context);
-            if (index >= 452) {
+            if (index == 450) {
               Future.delayed(const Duration(seconds: 4), () {
                 userRepository.selfBanUserSupabase();
                 if(context.mounted) {
@@ -54,6 +54,10 @@ Widget feedVideos(TickerProvider tickerProvider,
                 }
               });
               return _buildStopWidget('well youre banned now. invest your time into something better, like therapy or sth. idk. \n Here is the number of the National Rehab Hotline of the Us: 866-210-1303. lol', Icons.celebration_outlined, context);
+            }
+            if(index > 450) {
+              feedModel?.switchToVideoAt(index + 1, videoSource: videoProvider);
+              return _buildStopWidget('Bye!', Icons.door_back_door_outlined, context);
             }
 
             return FutureBuilder(
