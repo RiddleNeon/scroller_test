@@ -1,6 +1,7 @@
 import 'package:flutter/foundation.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
+import 'package:go_router/go_router.dart';
 import 'package:supabase_flutter/supabase_flutter.dart';
 import 'package:wurp/logic/repositories/user_repository.dart';
 import 'package:wurp/ui/misc/ban_appeal_screen.dart';
@@ -902,6 +903,301 @@ class _FeedbackBanner extends StatelessWidget {
           ),
         ],
       ),
+    );
+  }
+}
+
+class ResetPasswordScreen extends StatefulWidget {
+  const ResetPasswordScreen({super.key});
+
+  @override
+  State<ResetPasswordScreen> createState() => _ResetPasswordScreenState();
+}
+
+class _ResetPasswordScreenState extends State<ResetPasswordScreen>
+    with TickerProviderStateMixin {
+  final _formKey = GlobalKey<FormState>();
+  final _passwordController = TextEditingController();
+  final _confirmController = TextEditingController();
+
+  bool _loading = false;
+  String? _error;
+  String? _success;
+
+  bool _obscurePassword = true;
+  bool _obscureConfirm = true;
+
+  final supabase = Supabase.instance.client;
+
+  // ── Animations (gleich wie Login) ──
+
+  late final AnimationController _entryController = AnimationController(
+    vsync: this,
+    duration: const Duration(milliseconds: 600),
+  )..forward();
+
+  late final Animation<double> _fade = CurvedAnimation(
+    parent: _entryController,
+    curve: Curves.easeOut,
+  );
+
+  late final Animation<Offset> _slide = Tween<Offset>(
+    begin: const Offset(0, 0.06),
+    end: Offset.zero,
+  ).animate(CurvedAnimation(
+    parent: _entryController,
+    curve: Curves.easeOutCubic,
+  ));
+
+  late final AnimationController _shakeController = AnimationController(
+    vsync: this,
+    duration: const Duration(milliseconds: 420),
+  );
+
+  late final Animation<double> _shake = TweenSequence([
+    TweenSequenceItem(tween: Tween(begin: 0.0, end: -8.0), weight: 1),
+    TweenSequenceItem(tween: Tween(begin: -8.0, end: 8.0), weight: 2),
+    TweenSequenceItem(tween: Tween(begin: 8.0, end: -6.0), weight: 2),
+    TweenSequenceItem(tween: Tween(begin: -6.0, end: 6.0), weight: 2),
+    TweenSequenceItem(tween: Tween(begin: 6.0, end: 0.0), weight: 1),
+  ]).animate(CurvedAnimation(
+    parent: _shakeController,
+    curve: Curves.easeInOut,
+  ));
+
+  @override
+  void dispose() {
+    _entryController.dispose();
+    _shakeController.dispose();
+    _passwordController.dispose();
+    _confirmController.dispose();
+    super.dispose();
+  }
+
+  void _setError(String msg) {
+    setState(() {
+      _error = msg;
+      _success = null;
+    });
+    _shakeController.forward(from: 0);
+  }
+
+  void _setSuccess(String msg) {
+    setState(() {
+      _success = msg;
+      _error = null;
+    });
+  }
+
+  Future<void> _submit() async {
+    if (!(_formKey.currentState?.validate() ?? false)) return;
+
+    setState(() {
+      _loading = true;
+      _error = null;
+      _success = null;
+    });
+
+    try {
+      await supabase.auth.updateUser(
+        UserAttributes(password: _passwordController.text),
+      );
+
+      _setSuccess("Password updated successfully!");
+
+      await Future.delayed(const Duration(milliseconds: 800));
+
+      if (mounted) context.go('/login');
+    } on AuthException catch (e) {
+      _setError(e.message);
+    } catch (_) {
+      _setError("Something went wrong.");
+    }
+
+    if (mounted) setState(() => _loading = false);
+  }
+
+  @override
+  Widget build(BuildContext context) {
+    final theme = Theme.of(context);
+    final cs = theme.colorScheme;
+
+    return AnnotatedRegion<SystemUiOverlayStyle>(
+      value: cs.brightness == Brightness.dark
+          ? SystemUiOverlayStyle.light
+          : SystemUiOverlayStyle.dark,
+      child: Scaffold(
+        backgroundColor: cs.surface,
+        body: SafeArea(
+          child: Center(
+            child: SingleChildScrollView(
+              padding:
+              const EdgeInsets.symmetric(horizontal: 24, vertical: 40),
+              child: FadeTransition(
+                opacity: _fade,
+                child: SlideTransition(
+                  position: _slide,
+                  child: ConstrainedBox(
+                    constraints: const BoxConstraints(maxWidth: 420),
+                    child: AnimatedBuilder(
+                      animation: _shake,
+                      builder: (context, child) => Transform.translate(
+                        offset: Offset(_shake.value, 0),
+                        child: child,
+                      ),
+                      child: Column(
+                        crossAxisAlignment: CrossAxisAlignment.stretch,
+                        children: [
+                          _buildHeader(cs, theme),
+                          const SizedBox(height: 40),
+                          _buildCard(cs, theme),
+                        ],
+                      ),
+                    ),
+                  ),
+                ),
+              ),
+            ),
+          ),
+        ),
+      ),
+    );
+  }
+
+  Widget _buildHeader(ColorScheme cs, ThemeData theme) {
+    return Column(
+      children: [
+        Container(
+          width: 56,
+          height: 56,
+          decoration: BoxDecoration(
+            borderRadius: BorderRadius.circular(16),
+            color: cs.primaryContainer,
+          ),
+          child: Icon(Icons.lock_reset_rounded,
+              color: cs.onPrimaryContainer, size: 28),
+        ),
+        const SizedBox(height: 16),
+        Text(
+          'Reset Password',
+          style: theme.textTheme.headlineMedium?.copyWith(
+            fontWeight: FontWeight.w800,
+            letterSpacing: 1.2,
+          ),
+        ),
+        const SizedBox(height: 6),
+        Text(
+          'Enter a new password for your account',
+          style: theme.textTheme.bodyMedium?.copyWith(
+            color: cs.onSurfaceVariant,
+          ),
+        ),
+      ],
+    );
+  }
+
+  Widget _buildCard(ColorScheme cs, ThemeData theme) {
+    return Card(
+      elevation: 0,
+      color: cs.surfaceContainerLow,
+      shape: RoundedRectangleBorder(
+        borderRadius: BorderRadius.circular(24),
+        side: BorderSide(color: cs.outlineVariant),
+      ),
+      child: Padding(
+        padding: const EdgeInsets.all(24),
+        child: Form(
+          key: _formKey,
+          child: Column(
+            crossAxisAlignment: CrossAxisAlignment.stretch,
+            children: [
+              _buildPasswordField(cs, theme),
+              const SizedBox(height: 12),
+              _buildConfirmField(cs, theme),
+              const SizedBox(height: 24),
+              if (_error != null)
+                _FeedbackBanner(
+                  message: _error!,
+                  isError: true,
+                  cs: cs,
+                  theme: theme,
+                ),
+              if (_success != null)
+                _FeedbackBanner(
+                  message: _success!,
+                  isError: false,
+                  cs: cs,
+                  theme: theme,
+                ),
+              const SizedBox(height: 16),
+              SizedBox(
+                height: 50,
+                child: FilledButton(
+                  onPressed: _loading ? null : _submit,
+                  child: _loading
+                      ? const SizedBox(
+                    width: 20,
+                    height: 20,
+                    child: CircularProgressIndicator(strokeWidth: 2),
+                  )
+                      : const Text(
+                    "Update Password",
+                    style: TextStyle(fontWeight: FontWeight.w700),
+                  ),
+                ),
+              ),
+            ],
+          ),
+        ),
+      ),
+    );
+  }
+
+  Widget _buildPasswordField(ColorScheme cs, ThemeData theme) {
+    return _AuthField(
+      controller: _passwordController,
+      label: 'New Password',
+      icon: Icons.lock_outline_rounded,
+      obscureText: _obscurePassword,
+      cs: cs,
+      theme: theme,
+      suffixIcon: IconButton(
+        icon: Icon(_obscurePassword
+            ? Icons.visibility_outlined
+            : Icons.visibility_off_outlined),
+        onPressed: () =>
+            setState(() => _obscurePassword = !_obscurePassword),
+      ),
+      validator: (v) {
+        if (v == null || v.length < 8) {
+          return 'Min. 8 characters required';
+        }
+        return null;
+      },
+    );
+  }
+
+  Widget _buildConfirmField(ColorScheme cs, ThemeData theme) {
+    return _AuthField(
+      controller: _confirmController,
+      label: 'Confirm Password',
+      icon: Icons.lock_outline_rounded,
+      obscureText: _obscureConfirm,
+      cs: cs,
+      theme: theme,
+      suffixIcon: IconButton(
+        icon: Icon(_obscureConfirm
+            ? Icons.visibility_outlined
+            : Icons.visibility_off_outlined),
+        onPressed: () =>
+            setState(() => _obscureConfirm = !_obscureConfirm),
+      ),
+      validator: (v) {
+        if (v != _passwordController.text) {
+          return 'Passwords do not match';
+        }
+        return null;
+      },
     );
   }
 }

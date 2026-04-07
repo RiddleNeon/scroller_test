@@ -7,7 +7,6 @@ import 'package:wurp/ui/screens/auth_screen.dart';
 import 'package:wurp/ui/screens/chat/chat_managing_screen.dart';
 import 'package:wurp/ui/screens/profile_screen.dart';
 import 'package:wurp/ui/screens/quests/test_quest_screen.dart';
-import 'package:wurp/ui/screens/reset_password_screen.dart';
 import 'package:wurp/ui/screens/search_screen/search_screen.dart';
 import 'package:wurp/ui/short_video_player.dart';
 import 'package:wurp/ui/widgets/bottom_navigation_bar.dart';
