@@ -6,17 +6,6 @@ import 'base_logic.dart';
 
 void startApp() async {
   print("starting app");
-
-  Supabase.instance.client.auth.onAuthStateChange.listen((data) {
-    final event = data.event;
-    final session = data.session;
-
-    print("Auth event: $event");
-
-    if (event == AuthChangeEvent.passwordRecovery) {
-      routerConfig.go('/reset-password');
-    }
-  });
   
   final session = auth.currentSession;
   if (session != null) {

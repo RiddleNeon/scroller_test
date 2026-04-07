@@ -20,14 +20,9 @@ void initRouter() {
     navigatorKey: appNavigatorKey,
     observers: [RouteObserver()],
     redirect: (context, state) {
+      print("navigating to ${state.uri.path}");
       
-      print("REDIRECT");
-      
-      print("redirecting from ${state.uri.path}, user logged in: $userLoggedIn");
-
-      final navBarItem = _navigationBarItems
-          .where((element) => element.id == state.uri.path)
-          .firstOrNull;
+      final navBarItem = _navigationBarItems.where((element) => element.id == state.uri.path).firstOrNull;
       if (navBarItem != null) {
         int navBarIndex = _navigationBarItems.indexOf(navBarItem);
         if (navBarIndex != -1) navBarKey.currentState?.switchToIndex(navBarIndex);
@@ -37,20 +32,14 @@ void initRouter() {
 
       final onLogin = path == '/login';
       final onResetPassword = path == '/reset-password';
-      
-      print("on login: $onLogin");
-      final hasAccessToken = state.uri.fragment.contains('token');
 
-      print("has access token (newwwww): $hasAccessToken, fragments: ${state.uri.fragment}");
-      if (hasAccessToken) {
-        final accessToken = state.uri.fragment.split('token=')[1].split('&')[0];
-        print("access token: $accessToken");
-      }
-
-      if (!userLoggedIn && !onLogin && !onResetPassword) {
+      if (!userLoggedIn && !onResetPassword) {
         return '/login';
       }
-      if (userLoggedIn && onLogin) return '/profile';
+      if (userLoggedIn && onLogin) {
+        print("user is already logged in, redirecting to profile");
+        return '/profile';
+      }
       if (userLoggedIn && state.matchedLocation == '/') return '/profile';
       return null;
     },
@@ -81,14 +70,20 @@ void initRouter() {
           ),
         ],
       ),
-      GoRoute(path: '/login', builder: (context, state) => const LoginScreen()),
+      GoRoute(
+        path: '/login',
+        builder: (context, state) {
+          print("login!");
+          return const LoginScreen();
+        },
+      ),
       GoRoute(path: '/', builder: (context, state) => const SizedBox.shrink()),
       GoRoute(
-          path: '/reset-password',
-          builder: (context, state) {
-            print("navigating to reset password screen");
-            return const ResetPasswordScreen();
-          }
+        path: '/reset-password',
+        builder: (context, state) {
+          print("navigating to reset password screen");
+          return const ResetPasswordScreen();
+        },
       ),
     ],
   );

@@ -928,9 +928,7 @@ class _ResetPasswordScreenState extends State<ResetPasswordScreen>
   bool _obscureConfirm = true;
 
   final supabase = Supabase.instance.client;
-
-  // ── Animations (gleich wie Login) ──
-
+  
   late final AnimationController _entryController = AnimationController(
     vsync: this,
     duration: const Duration(milliseconds: 600),
@@ -1009,6 +1007,14 @@ class _ResetPasswordScreenState extends State<ResetPasswordScreen>
 
       if (mounted) context.go('/login');
     } on AuthException catch (e) {
+      if(e.message == "Auth session missing!") {
+        _setError("Auth session is missing! Please use this link on the same device and browser where you requested the password reset. Redirecting to login. you can request the code again from there.");
+        Future.delayed(const Duration(seconds: 5), () {
+          if (mounted) context.go('/login');
+        });
+        return;
+      }
+      
       _setError(e.message);
     } catch (_) {
       _setError("Something went wrong.");

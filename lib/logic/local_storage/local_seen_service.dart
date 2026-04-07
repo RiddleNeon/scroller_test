@@ -84,7 +84,7 @@ class LocalSeenService {
     _chatCursorBox = await Hive.openBox<DateTime>('${userId}_$_chatCursorBoxName');
     _conversationBox = await Hive.openBox('${userId}_$_conversationBoxName');
     _authorBox = await Hive.openBox('${userId}_$_authorBoxName');
-    await _seenBox.clear();
+/*    await _seenBox.clear();
     await _settingsBox.clear();
     await _cursorBox.clear();
     await _cursorDirtyBox.clear();
@@ -96,7 +96,7 @@ class LocalSeenService {
     await _likeValsBox.clear();
     await _chatBox.clear();
     await _chatCursorBox.clear();
-    await _conversationBox.clear();
+    await _conversationBox.clear();*/
 
     DateTime? lastAuthorUpdate = (_settingsBox.get(_lastUpdateAuthorsKey) as DateTime?);
 
@@ -169,12 +169,12 @@ class LocalSeenService {
   // ---------------------------------------------------------------------------
 
   Future<void> syncWithSupabase({bool onlyLoad = true}) async {
-    final lastSyncSeen = _settingsBox.get(_lastSyncSeenKey) as DateTime? ?? DateTime.now().subtract(const Duration(days: 7));
-    final lastSyncLikes = _settingsBox.get(_lastSyncLikesKey) as DateTime? ?? DateTime.now().subtract(const Duration(days: 7));
-    final lastSyncDislikes = _settingsBox.get(_lastSyncDislikesKey) as DateTime? ?? DateTime.now().subtract(const Duration(days: 7));
-    final lastSyncPreferences = _settingsBox.get(_lastSyncPreferencesKey) as DateTime? ?? DateTime.now().subtract(const Duration(days: 7));
-    final lastSyncFollowing = _settingsBox.get(_lastSyncFollowingKey) as DateTime? ?? DateTime.now().subtract(const Duration(days: 7));
-    final lastSyncConversation = _settingsBox.get(_lastSyncConversationKey) as DateTime? ?? DateTime.now().subtract(const Duration(days: 7));
+    final lastSyncSeen = _settingsBox.get(_lastSyncSeenKey) as DateTime? ?? DateTime.utc(2024, 1, 1); // if the key doesn't exist, assume we have never synced and use a very old date
+    final lastSyncLikes = _settingsBox.get(_lastSyncLikesKey) as DateTime? ?? DateTime.utc(2024, 1, 1);
+    final lastSyncDislikes = _settingsBox.get(_lastSyncDislikesKey) as DateTime? ?? DateTime.utc(2024, 1, 1);
+    final lastSyncPreferences = _settingsBox.get(_lastSyncPreferencesKey) as DateTime? ?? DateTime.utc(2024, 1, 1);
+    final lastSyncFollowing = _settingsBox.get(_lastSyncFollowingKey) as DateTime? ?? DateTime.utc(2024, 1, 1);
+    final lastSyncConversation = _settingsBox.get(_lastSyncConversationKey) as DateTime? ?? DateTime.utc(2024, 1, 1);
 
     await Future.wait([
       _syncSeenInteractions(lastSyncSeen, onlyLoad: onlyLoad),
@@ -383,6 +383,7 @@ class LocalSeenService {
       if (local == null || followedAt.isAfter(local)) {
         toWrite[followedUserId] = followedAt;
       }
+      print("following sync: found new follow for user $followedUserId at $followedAt, local followedAt: $local");
     }
 
     if (toWrite.isNotEmpty) {

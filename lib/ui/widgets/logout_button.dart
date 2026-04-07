@@ -1,5 +1,5 @@
 import 'package:flutter/material.dart';
-import 'package:wurp/ui/screens/auth_screen.dart';
+import 'package:wurp/ui/router.dart';
 
 import '../../base_logic.dart';
 
@@ -17,12 +17,9 @@ class _LogoutButtonState extends State<LogoutButton> {
       message: "logout",
       child: InkWell(onTap: () async {
         await onUserLogout();
-        await auth.signOut();
-        if(context.mounted) {
-          Navigator.of(context).push(MaterialPageRoute(builder: (context) {
-            return const LoginScreen();
-          },));
-        }
+        
+        print("logged out, navigating to login screen");
+        routerConfig.go('/login');
       }, child: const Icon(Icons.logout_rounded)),
     );
   }

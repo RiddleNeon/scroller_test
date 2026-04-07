@@ -75,6 +75,7 @@ Future<void> onUserLogout() async {
   await auth.signOut();
   UserPreferenceManager.reset();
   await feedViewModel.dispose();
+  _currentUser = null;
 }
 
 bool runningOnMobile = defaultTargetPlatform == TargetPlatform.iOS || defaultTargetPlatform == TargetPlatform.android;
