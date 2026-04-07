@@ -242,7 +242,9 @@ class _LoginScreenState extends State<LoginScreen>
       await auth.resetPasswordForEmail(
         _emailController.text.trim(),
         redirectTo:
-        kIsWeb ? null : 'de.riddleneon.wurp://reset-callback/',
+          kIsWeb
+      ? 'https://riddleneon.github.io/scroller_test/reset-password'
+          : 'myapp://reset-password'
       );
       _setSuccess("Password reset email sent! Check your inbox.");
     } on AuthException catch (e) {
@@ -493,7 +495,7 @@ class _LoginScreenState extends State<LoginScreen>
                   borderRadius: BorderRadius.circular(14),
                   color: cs.errorContainer,
                   border: Border.all(
-                      color: cs.error.withOpacity(0.3)),
+                      color: cs.error.withValues(alpha: 0.3)),
                 ),
                 child: Column(
                   crossAxisAlignment: CrossAxisAlignment.stretch,
@@ -518,14 +520,14 @@ class _LoginScreenState extends State<LoginScreen>
                       'Your account has been suspended. You can submit an appeal below.',
                       style: theme.textTheme.bodySmall?.copyWith(
                         color:
-                        cs.onErrorContainer.withOpacity(0.8),
+                        cs.onErrorContainer.withValues(alpha: 0.8),
                       ),
                     ),
                     const SizedBox(height: 10),
                     FilledButton.tonal(
                       style: FilledButton.styleFrom(
                         backgroundColor:
-                        cs.error.withOpacity(0.15),
+                        cs.error.withValues(alpha: 0.15),
                         foregroundColor: cs.onErrorContainer,
                         padding: const EdgeInsets.symmetric(
                             vertical: 10),
@@ -825,7 +827,7 @@ class _AuthFieldState extends State<_AuthField> {
         suffixIcon: widget.suffixIcon,
         filled: true,
         fillColor: _focused
-            ? cs.primaryContainer.withOpacity(0.25)
+            ? cs.primaryContainer.withValues(alpha: 0.25)
             : cs.surfaceContainerHighest,
         enabledBorder: OutlineInputBorder(
           borderRadius: BorderRadius.circular(12),

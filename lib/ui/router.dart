@@ -7,6 +7,7 @@ import 'package:wurp/ui/screens/auth_screen.dart';
 import 'package:wurp/ui/screens/chat/chat_managing_screen.dart';
 import 'package:wurp/ui/screens/profile_screen.dart';
 import 'package:wurp/ui/screens/quests/test_quest_screen.dart';
+import 'package:wurp/ui/screens/reset_password_screen.dart';
 import 'package:wurp/ui/screens/search_screen/search_screen.dart';
 import 'package:wurp/ui/short_video_player.dart';
 import 'package:wurp/ui/widgets/bottom_navigation_bar.dart';
@@ -27,8 +28,18 @@ void initRouter() {
       }
 
       final onLogin = state.matchedLocation == '/login';
+      final onResetPassword = state.matchedLocation == '/reset-password';
+      final hasAccessToken = state.uri.fragment.contains('access_token');
       
-      if (!userLoggedIn && !onLogin) return '/login';
+      print("has access token: $hasAccessToken");
+      if (hasAccessToken) {
+        final accessToken = state.uri.fragment.split('access_token=')[1].split('&')[0];
+        print("access token: $accessToken");
+      }
+
+      if (!userLoggedIn && !onLogin && !onResetPassword && !hasAccessToken) {
+        return '/login';
+      }
       if (userLoggedIn && onLogin) return '/profile';
       if (userLoggedIn && state.matchedLocation == '/') return '/profile';
       return null;
@@ -62,6 +73,10 @@ void initRouter() {
       ),
       GoRoute(path: '/login', builder: (context, state) => const LoginScreen()),
       GoRoute(path: '/', builder: (context, state) => const SizedBox.shrink()),
+      GoRoute(
+        path: '/reset-password',
+        builder: (context, state) => const ResetPasswordScreen(),
+      ),
     ],
   );
 }
