@@ -11,5 +11,7 @@ void main() async {
   await initLogic();
   await setupMessaging();
   //?await publishTest();
+  
+  
   startApp();
 }

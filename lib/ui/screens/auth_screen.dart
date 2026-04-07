@@ -243,8 +243,8 @@ class _LoginScreenState extends State<LoginScreen>
         _emailController.text.trim(),
         redirectTo:
           kIsWeb
-      ? 'https://riddleneon.github.io/scroller_test/reset-password'
-          : 'myapp://reset-password'
+      ? 'https://riddleneon.github.io/scroller_test/#/reset-password' // Web doesn't support custom schemes, use localhost with a path instead
+          : 'https://riddleneon.github.io/scroller_test/#/reset-password'
       );
       _setSuccess("Password reset email sent! Check your inbox.");
     } on AuthException catch (e) {

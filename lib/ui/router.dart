@@ -21,23 +21,34 @@ void initRouter() {
     navigatorKey: appNavigatorKey,
     observers: [RouteObserver()],
     redirect: (context, state) {
-      final navBarItem = _navigationBarItems.where((element) => element.id == state.matchedLocation).firstOrNull;
+      
+      print("REDIRECT");
+      
+      print("redirecting from ${state.uri.path}, user logged in: $userLoggedIn");
+
+      final navBarItem = _navigationBarItems
+          .where((element) => element.id == state.uri.path)
+          .firstOrNull;
       if (navBarItem != null) {
         int navBarIndex = _navigationBarItems.indexOf(navBarItem);
         if (navBarIndex != -1) navBarKey.currentState?.switchToIndex(navBarIndex);
       }
 
-      final onLogin = state.matchedLocation == '/login';
-      final onResetPassword = state.matchedLocation == '/reset-password';
-      final hasAccessToken = state.uri.fragment.contains('access_token');
+      final path = state.uri.path;
+
+      final onLogin = path == '/login';
+      final onResetPassword = path == '/reset-password';
       
-      print("has access token: $hasAccessToken");
+      print("on login: $onLogin");
+      final hasAccessToken = state.uri.fragment.contains('token');
+
+      print("has access token (newwwww): $hasAccessToken, fragments: ${state.uri.fragment}");
       if (hasAccessToken) {
-        final accessToken = state.uri.fragment.split('access_token=')[1].split('&')[0];
+        final accessToken = state.uri.fragment.split('token=')[1].split('&')[0];
         print("access token: $accessToken");
       }
 
-      if (!userLoggedIn && !onLogin && !onResetPassword && !hasAccessToken) {
+      if (!userLoggedIn && !onLogin && !onResetPassword) {
         return '/login';
       }
       if (userLoggedIn && onLogin) return '/profile';
@@ -74,8 +85,11 @@ void initRouter() {
       GoRoute(path: '/login', builder: (context, state) => const LoginScreen()),
       GoRoute(path: '/', builder: (context, state) => const SizedBox.shrink()),
       GoRoute(
-        path: '/reset-password',
-        builder: (context, state) => const ResetPasswordScreen(),
+          path: '/reset-password',
+          builder: (context, state) {
+            print("navigating to reset password screen");
+            return const ResetPasswordScreen();
+          }
       ),
     ],
   );
