@@ -13,6 +13,7 @@ import 'package:wurp/ui/screens/quests/core/quest_detail_screen.dart';
 
 import '../../../../logic/quests/quest.dart';
 import '../debug_panel.dart';
+import 'bezier_helper.dart';
 import 'pan_background.dart';
 import 'quest_bubble.dart';
 
@@ -261,6 +262,58 @@ class PanWidgetState extends State<PanWidget> {
       ..scale(newScale)
       ..setTranslation(Vector3(tx, ty, 0));
   }
+  
+  ({int fromId, int toId, Offset midpoint})? _hoveredConnection;
+
+  void _onPointerHover(PointerHoverEvent event) {
+    if (_isConnecting || _draggingQuest != null) return;
+    int? currentDraggedQuestId = _draggingQuest?.id;
+    Offset? currentDraggedQuestPos = _draggingQuest != null ? snap(_dragStartQuestPos) : null;
+
+    final scenePos = _controller.toScene(event.localPosition);
+    final threshold = 15.0 / _currentScale;
+
+    ({int fromId, int toId, Offset midpoint})? closest;
+    double minDistance = double.infinity;
+
+    for (final quest in questSystem.quests) {
+      for (final prereq in questSystem.prerequisitesOf(quest.id)) {
+        final startCenter = getQuestCenter(prereq.id, questSystem, currentDraggedQuestId, currentDraggedQuestPos);
+        final endCenter = getQuestCenter(quest.id, questSystem, currentDraggedQuestId, currentDraggedQuestPos);
+        
+        if(startCenter == null || endCenter == null) continue;
+
+        final anchorStart = getBestAnchor(prereq.id, endCenter, questSystem, currentDraggedQuestId, currentDraggedQuestPos);
+        final anchorEnd = getBestAnchor(quest.id, startCenter, questSystem, currentDraggedQuestId, currentDraggedQuestPos);
+
+        final cps = calculateCubicControlPoints(anchorStart.pos, anchorStart.sideDir, anchorEnd.pos, anchorEnd.sideDir);
+        
+        for (double t = 0.1; t <= 0.9; t += 0.1) {
+          final pointOnCurve = bezierPoint(anchorStart.pos, cps[0], cps[1], anchorEnd.pos, t);
+          final dist = (scenePos - pointOnCurve).distance;
+
+          if (dist < threshold && dist < minDistance) {
+            minDistance = dist;
+            closest = (
+            fromId: prereq.id,
+            toId: quest.id,
+            midpoint: bezierPoint(anchorStart.pos, cps[0], cps[1], anchorEnd.pos, 0.5)
+            );
+          }
+        }
+      }
+    }
+
+    if (closest != _hoveredConnection) {
+      setState(() => _hoveredConnection = closest);
+    }
+  }
+
+  void _removeConnection(int fromId, int toId) {
+    print("Removing connection from $fromId to $toId");
+    changeManager.record(RemoveConnectionChange(fromId: fromId, toId: toId));
+    setState(() => _hoveredConnection = null);
+  }
 
   void _onDoubleTapDown(TapDownDetails details) {
     _lastPointerScenePos = _controller.toScene(details.localPosition);
@@ -276,6 +329,10 @@ class PanWidgetState extends State<PanWidget> {
   }
 
   void _onTap() {
+
+    if(_hoveredConnection != null) _removeConnection(_hoveredConnection!.fromId, _hoveredConnection!.toId);
+    
+    
     final quest = _findQuestAt(_lastPointerScenePos);
     if (quest == null) return;
     showDialog(
@@ -426,6 +483,7 @@ class PanWidgetState extends State<PanWidget> {
         canRequestFocus: true,
       )..requestFocus(),
       child: Listener(
+        onPointerHover: _onPointerHover,
         onPointerSignal: (e) {
           if (e is PointerScrollEvent) {
             final panelBox = _debugPanelKey.currentContext?.findRenderObject() as RenderBox?;
@@ -464,6 +522,35 @@ class PanWidgetState extends State<PanWidget> {
                     child: QuestBubblesOverlay(key: _questBubbleOverlayKey, debugMode: debugMode, questSystem: questSystem),
                   ),
                 ),
+
+                if (_hoveredConnection != null)
+                  AnimatedBuilder(
+                    animation: _controller,
+                    builder: (context, child) {
+                      final screenPos = MatrixUtils.transformPoint(_controller.value, _hoveredConnection!.midpoint);
+
+                      return Positioned(
+                        left: screenPos.dx - 15,
+                        top: screenPos.dy - 15,
+                        child: MouseRegion(
+                          cursor: SystemMouseCursors.click,
+                          child: GestureDetector(
+                            onTap: () => _removeConnection(_hoveredConnection!.fromId, _hoveredConnection!.toId),
+                            child: Container(
+                              decoration: const BoxDecoration(
+                                color: Colors.redAccent,
+                                shape: BoxShape.circle,
+                                boxShadow: [BoxShadow(color: Colors.black26, blurRadius: 4)],
+                              ),
+                              padding: const EdgeInsets.all(4),
+                              child: const Icon(Icons.close, size: 18, color: Colors.white),
+                            ),
+                          ),
+                        ),
+                      );
+                    },
+                  ),
+                
                 Positioned.fill(
                   child: GestureDetector(
                     behavior: HitTestBehavior.opaque,

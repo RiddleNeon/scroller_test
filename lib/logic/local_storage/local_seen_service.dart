@@ -94,7 +94,7 @@ class LocalSeenService {
     await _authorBox.clear();
     
     await _likeValsBox.clear();
-    await _chatBox.clear();
+    await _chatBox.clear(); 
     await _chatCursorBox.clear();
     await _conversationBox.clear();*/
 
