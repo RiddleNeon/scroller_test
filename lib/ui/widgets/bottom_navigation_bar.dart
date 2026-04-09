@@ -13,7 +13,7 @@ class BottomNavBar extends StatefulWidget {
 }
 
 class BottomNavBarState extends State<BottomNavBar> {
-  int currentSelectedIndex = 0;
+  late int currentSelectedIndex;
   List get items => widget.items;
 
   @override
