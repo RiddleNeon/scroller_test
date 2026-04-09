@@ -13,8 +13,14 @@ class BottomNavBar extends StatefulWidget {
 }
 
 class BottomNavBarState extends State<BottomNavBar> {
-  late int currentSelectedIndex = widget.initialIndex;
+  int currentSelectedIndex = 0;
   List get items => widget.items;
+
+  @override
+  void initState() {
+    super.initState();
+    currentSelectedIndex = widget.initialIndex;
+  }
 
   void switchToIndex(int index) {
     WidgetsBinding.instance.addPostFrameCallback((timeStamp) {
