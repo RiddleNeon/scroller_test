@@ -22,11 +22,13 @@ class _TestQuestScreenState extends State<TestQuestScreen> {
   @override
   initState() {
     super.initState();
+    print("Initializing TestQuestScreen with subject: ${widget.subject}");
     questSystemFuture = loadQuestSystem();
   }
 
   Future<QuestSystem> loadQuestSystem() async {
     QuestSystem questSystem = QuestSystem();
+    print("-- Loading quests for subject: ${widget.subject}");
     await questSystem.loadFromServer(widget.subject);
 
     WidgetsBinding.instance.addPostFrameCallback((timeStamp) {
@@ -56,6 +58,8 @@ class _TestQuestScreenState extends State<TestQuestScreen> {
       builder: (context, asyncSnapshot) {
         final loaded = asyncSnapshot.hasData;
         final questSystem = asyncSnapshot.data;
+        
+        print("loaded: $loaded, questSystem: $questSystem");
 
         return Scaffold(
           appBar: AppBar(

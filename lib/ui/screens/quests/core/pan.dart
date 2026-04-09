@@ -10,6 +10,7 @@ import 'package:wurp/logic/quests/quest_system.dart';
 import 'package:wurp/logic/repositories/quest_repository.dart';
 import 'package:wurp/ui/screens/quests/core/quest_bubbles_overlay.dart';
 import 'package:wurp/ui/screens/quests/core/quest_detail_screen.dart';
+import 'package:wurp/util/extensions/offset_distance.dart';
 
 import '../../../../logic/quests/quest.dart';
 import '../debug_panel.dart';
@@ -264,20 +265,36 @@ class PanWidgetState extends State<PanWidget> {
   }
   
   ({int fromId, int toId, Offset midpoint})? _hoveredConnection;
+  
+  
+  Offset lastHoverPositionCheckPos = Offset.zero;
 
   void _onPointerHover(PointerHoverEvent event) {
-    if (_isConnecting || _draggingQuest != null) return;
-    int? currentDraggedQuestId = _draggingQuest?.id;
-    Offset? currentDraggedQuestPos = _draggingQuest != null ? snap(_dragStartQuestPos) : null;
-
+    if (_isConnecting || _draggingQuest != null || event.down) return;
+    
     final scenePos = _controller.toScene(event.localPosition);
     final threshold = 15.0 / _currentScale;
+    
+    if(scenePos.distanceTo(lastHoverPositionCheckPos) < 32.0 / _currentScale) {
+      return; //skip if the mouse hasn't moved much since the last check, to avoid expensive calculations
+    } else {
+      lastHoverPositionCheckPos = scenePos;
+    }
+    
+    int? currentDraggedQuestId = _draggingQuest?.id;
+    Offset? currentDraggedQuestPos = _draggingQuest != null ? snap(_dragStartQuestPos) : null;
 
     ({int fromId, int toId, Offset midpoint})? closest;
     double minDistance = double.infinity;
 
     for (final quest in questSystem.quests) {
       for (final prereq in questSystem.prerequisitesOf(quest.id)) {
+        
+        final middlePos = Offset((quest.posX + prereq.posX) / 2, (quest.posY + prereq.posY) / 2);
+        if ((scenePos - middlePos).distance > 300.0 / _currentScale) {
+          continue; //skip if the mouse is far from the middle point between the quests, as it's unlikely to be close to the curve
+        }
+        
         final startCenter = getQuestCenter(prereq.id, questSystem, currentDraggedQuestId, currentDraggedQuestPos);
         final endCenter = getQuestCenter(quest.id, questSystem, currentDraggedQuestId, currentDraggedQuestPos);
         
@@ -286,18 +303,22 @@ class PanWidgetState extends State<PanWidget> {
         final anchorStart = getBestAnchor(prereq.id, endCenter, questSystem, currentDraggedQuestId, currentDraggedQuestPos);
         final anchorEnd = getBestAnchor(quest.id, startCenter, questSystem, currentDraggedQuestId, currentDraggedQuestPos);
 
-        final cps = calculateCubicControlPoints(anchorStart.pos, anchorStart.sideDir, anchorEnd.pos, anchorEnd.sideDir);
-        
-        for (double t = 0.1; t <= 0.9; t += 0.1) {
+        final cps = calculateCubicControlPointsOffsetting(anchorStart.pos, anchorStart.sideDir, anchorEnd.pos, anchorEnd.sideDir, prereq.id, quest.id, questSystem, null, null);
+
+        for (double t = 0.0; t <= 1.0; t += 0.02) {
           final pointOnCurve = bezierPoint(anchorStart.pos, cps[0], cps[1], anchorEnd.pos, t);
           final dist = (scenePos - pointOnCurve).distance;
+
+          final lut = getLut(anchorStart.pos, cps[0], cps[1], anchorEnd.pos);
+          final midT = lut.tForArcLen(lut.totalLength / 2.0);
+          final midPoint = bezierPoint(anchorStart.pos, cps[0], cps[1], anchorEnd.pos, midT);
 
           if (dist < threshold && dist < minDistance) {
             minDistance = dist;
             closest = (
             fromId: prereq.id,
             toId: quest.id,
-            midpoint: bezierPoint(anchorStart.pos, cps[0], cps[1], anchorEnd.pos, 0.5)
+            midpoint: midPoint
             );
           }
         }
@@ -329,9 +350,7 @@ class PanWidgetState extends State<PanWidget> {
   }
 
   void _onTap() {
-
     if(_hoveredConnection != null) _removeConnection(_hoveredConnection!.fromId, _hoveredConnection!.toId);
-    
     
     final quest = _findQuestAt(_lastPointerScenePos);
     if (quest == null) return;

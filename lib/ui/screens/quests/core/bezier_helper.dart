@@ -63,6 +63,74 @@ List<Offset> calculateCubicControlPoints(Offset pStart, Offset dirStart, Offset 
   ];
 }
 
+const int _kLutSamples = 64;
+const int _kMaxCacheEntries = 256;
+final Map<String, ArcLut> _lutCache = {};
+
+
+ArcLut getLut(Offset p0, Offset p1, Offset p2, Offset p3) {
+  final key = '${p0.dx.round()},${p0.dy.round()},'
+      '${p1.dx.round()},${p1.dy.round()},'
+      '${p2.dx.round()},${p2.dy.round()},'
+      '${p3.dx.round()},${p3.dy.round()}';
+
+  var lut = _lutCache[key];
+  if (lut != null) return lut;
+
+  if (_lutCache.length >= _kMaxCacheEntries) _lutCache.clear();
+
+  lut = ArcLut.build(p0, p1, p2, p3, _kLutSamples, bezierPoint);
+  _lutCache[key] = lut;
+  return lut;
+}
+
+
+class ArcLut {
+  final List<double> _data;
+  double get totalLength => _data[_data.length - 1];
+  const ArcLut._(this._data);
+
+  factory ArcLut.build(
+      Offset p0, Offset p1, Offset p2, Offset p3, int samples,
+      Offset Function(Offset, Offset, Offset, Offset, double) bezierPoint,
+      ) {
+    final data = List<double>.filled((samples + 1) * 2, 0.0);
+    var cumLen = 0.0;
+    var prev = p0;
+    for (int i = 0; i <= samples; i++) {
+      final t = i / samples;
+      final pt = bezierPoint(p0, p1, p2, p3, t);
+      if (i > 0) cumLen += (pt - prev).distance;
+      data[i * 2] = t;
+      data[i * 2 + 1] = cumLen;
+      prev = pt;
+    }
+    return ArcLut._(data);
+  }
+
+  double tForArcLen(double arcLen) {
+    final total = totalLength;
+    if (arcLen <= 0) return 0;
+    if (arcLen >= total) return 1;
+
+    int lo = 0, hi = (_data.length ~/ 2) - 1;
+    while (lo + 1 < hi) {
+      final mid = (lo + hi) >> 1;
+      if (_data[mid * 2 + 1] < arcLen) {
+        lo = mid;
+      } else {
+        hi = mid;
+      }
+    }
+
+    final len0 = _data[lo * 2 + 1];
+    final len1 = _data[hi * 2 + 1];
+    final t0 = _data[lo * 2];
+    final t1 = _data[hi * 2];
+    return t0 + (t1 - t0) * ((arcLen - len0) / (len1 - len0));
+  }
+}
+
 
 class Anchor {
   final Offset pos;

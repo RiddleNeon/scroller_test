@@ -96,17 +96,20 @@ class QuestSystem with ChangeNotifier {
   /// connection data separately (as a [Map<int, Set<int>>]) instead of
   /// populating [Quest.prerequisites] directly.
   Future<void> loadFromServer(String subject) async {
-    final (fetchedQuests, fetchedConnections) =
-    await questRepo.fetchQuestsBySubject(subject);
+    print("Loading quests for subject: $subject");
+    final (fetchedQuests, fetchedConnections) = await questRepo.fetchQuestsBySubject(subject);
 
     for (final quest in fetchedQuests) {
       _quests[quest.id] = quest;
     }
+    
+    print("Fetched quests: ${fetchedQuests.map((q) => q.id).toList()}");
 
     for (final entry in fetchedConnections.entries) {
       _prerequisites[entry.key] = entry.value;
     }
 
+    print("fetched connections: ${fetchedConnections.entries.map((e) => "${e.key} -> ${e.value}").toList()}");
     changeManager = QuestChangeManager(questSystem: this, repo: questRepo);
     
     notifyListeners();
