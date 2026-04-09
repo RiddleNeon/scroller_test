@@ -75,7 +75,7 @@ class AppTheme {
       ),
       cardTheme: CardThemeData(
         elevation: 0,
-        color: cs.surfaceContainerHigh,
+        color: cs.surfaceContainerHighest,
         margin: EdgeInsets.zero,
         shape: RoundedRectangleBorder(
           borderRadius: BorderRadius.circular(20),

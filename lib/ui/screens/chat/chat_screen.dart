@@ -145,6 +145,11 @@ class MessagingScreenState extends State<MessagingScreen> with TickerProviderSta
         if (mounted) {
           setState(() => msg.status = MessageStatus.delivered);
         }
+      }).catchError((e) {
+        if (mounted) {
+          setState(() => msg.status = MessageStatus.sent);
+        }
+        debugPrint('send message failed: $e');
       });
     }
   }
@@ -178,7 +183,7 @@ class MessagingScreenState extends State<MessagingScreen> with TickerProviderSta
       }
     });
 
-    for (var _ in newMessages) {
+    for (var i = 0; i < newMessages.length; i++) {
       _createBubbleController(animate: false);
     }
 

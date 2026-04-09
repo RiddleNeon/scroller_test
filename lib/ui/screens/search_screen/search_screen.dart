@@ -31,6 +31,7 @@ class _SearchScreenState extends State<SearchScreen> with TickerProviderStateMix
   SearchQuery<UserProfile>? _userQuery;
   
   FeedViewModel? _currentSearchViewModel;
+  int _searchRequestId = 0;
   
   static const _kSearchBarHeight = 56.0;
   static const _kPadding = 16.0;
@@ -58,7 +59,7 @@ class _SearchScreenState extends State<SearchScreen> with TickerProviderStateMix
   Future<void> _search([String? val]) async {
     val ??= _controller.text;
     if (val.trim().isEmpty) return;
-    if (_loading) return;
+    final requestId = ++_searchRequestId;
     FocusScope.of(context).unfocus();
 
     setState(() {
@@ -78,10 +79,11 @@ class _SearchScreenState extends State<SearchScreen> with TickerProviderStateMix
     }, () => videoRepo.countSearchVideos(val!));
 
     await Future.wait([_videoQuery!.preloadMore(), _userQuery!.preloadMore()]);
+    if (requestId != _searchRequestId) return;
 
     _currentSearchViewModel = FeedViewModel();
 
-    if (mounted) setState(() => _loading = false);
+    if (mounted && requestId == _searchRequestId) setState(() => _loading = false);
   }
 
   @override
