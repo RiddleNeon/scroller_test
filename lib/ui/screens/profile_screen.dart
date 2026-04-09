@@ -60,6 +60,9 @@ class _ProfileScreenState extends State<ProfileScreen> with TickerProviderStateM
   void initState() {
     super.initState();
     _tabController = TabController(length: 3, vsync: this);
+    _tabController.addListener(() {
+      if (mounted) setState(() {});
+    });
     _currentSearchViewModel = FeedViewModel();
 
     _videoQuery = SearchQuery(
@@ -114,7 +117,7 @@ class _ProfileScreenState extends State<ProfileScreen> with TickerProviderStateM
               elevation: 0,
               title: _buildCollapsedTitle(cs),
               flexibleSpace: FlexibleSpaceBar(collapseMode: CollapseMode.pin, background: _buildProfileHeader(cs)),
-              bottom: PreferredSize(preferredSize: const Size.fromHeight(46), child: _buildTabBar(cs)),
+              bottom: PreferredSize(preferredSize: const Size.fromHeight(60), child: _buildTabBar(cs)),
             ),
           ],
           body: TabBarView(
@@ -473,34 +476,41 @@ class _ProfileScreenState extends State<ProfileScreen> with TickerProviderStateM
 
   Widget _buildTabBar(ColorScheme cs) {
     return Container(
-      height: 46,
+      height: 54,
+      margin: const EdgeInsets.fromLTRB(12, 0, 12, 6),
+      padding: const EdgeInsets.all(4),
       decoration: BoxDecoration(
-        color: cs.surface,
-        border: Border(
-          top: BorderSide(color: cs.outlineVariant.withValues(alpha: 0.5)),
-          bottom: BorderSide(color: cs.outlineVariant.withValues(alpha: 0.5)),
-        ),
+        color: cs.surfaceContainerHigh,
+        borderRadius: BorderRadius.circular(18),
+        border: Border.all(color: cs.outlineVariant.withValues(alpha: 0.65)),
       ),
-      child: TabBar(
-        controller: _tabController,
-        indicatorColor: cs.primary,
-        indicatorWeight: 2.5,
-        indicatorSize: TabBarIndicatorSize.tab,
-        dividerColor: Colors.transparent,
-        labelColor: cs.onSurface,
-        unselectedLabelColor: cs.onSurfaceVariant,
-        tabs: [
-          const Tooltip(
-            message: "published videos",
-            child: Tab(icon: Icon(Icons.grid_on_rounded, size: 22)),
+      child: Row(
+        children: [
+          Expanded(
+            child: _ProfileSegmentButton(
+              icon: Icons.grid_on_rounded,
+              selected: _tabController.index == 0,
+              tooltip: 'published videos',
+              onTap: () => _tabController.animateTo(0),
+            ),
           ),
-          const Tooltip(
-            message: "followers",
-            child: Tab(icon: Icon(FontAwesomeIcons.users, size: 22)),
+          const SizedBox(width: 4),
+          Expanded(
+            child: _ProfileSegmentButton(
+              icon: FontAwesomeIcons.users,
+              selected: _tabController.index == 1,
+              tooltip: 'followers',
+              onTap: () => _tabController.animateTo(1),
+            ),
           ),
-          const Tooltip(
-            message: "following",
-            child: Tab(icon: Icon(Icons.person_add_alt_1, size: 22)),
+          const SizedBox(width: 4),
+          Expanded(
+            child: _ProfileSegmentButton(
+              icon: Icons.person_add_alt_1,
+              selected: _tabController.index == 2,
+              tooltip: 'following',
+              onTap: () => _tabController.animateTo(2),
+            ),
           ),
         ],
       ),
@@ -613,6 +623,51 @@ class _ActionButton extends StatelessWidget {
           child: Text(
             label,
             style: TextStyle(color: filled ? cs.onPrimary : cs.onSurface, fontSize: 14, fontWeight: FontWeight.w700, letterSpacing: 0.2),
+          ),
+        ),
+      ),
+    );
+  }
+}
+
+class _ProfileSegmentButton extends StatelessWidget {
+  const _ProfileSegmentButton({
+    required this.icon,
+    required this.selected,
+    required this.tooltip,
+    required this.onTap,
+  });
+
+  final IconData icon;
+  final bool selected;
+  final String tooltip;
+  final VoidCallback onTap;
+
+  @override
+  Widget build(BuildContext context) {
+    final cs = Theme.of(context).colorScheme;
+    final color = selected ? cs.primary : cs.onSurfaceVariant;
+
+    return Tooltip(
+      message: tooltip,
+      child: InkWell(
+        onTap: onTap,
+        borderRadius: BorderRadius.circular(14),
+        child: AnimatedContainer(
+          duration: const Duration(milliseconds: 220),
+          curve: Curves.easeOutCubic,
+          decoration: BoxDecoration(
+            color: selected ? cs.surface : Colors.transparent,
+            borderRadius: BorderRadius.circular(14),
+            border: selected ? Border.all(color: cs.outlineVariant.withValues(alpha: 0.65)) : null,
+          ),
+          child: Center(
+            child: AnimatedScale(
+              duration: const Duration(milliseconds: 200),
+              curve: Curves.easeOutBack,
+              scale: selected ? 1.06 : 1.0,
+              child: Icon(icon, size: 20, color: color),
+            ),
           ),
         ),
       ),

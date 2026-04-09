@@ -143,11 +143,6 @@ class MessagingScreenState extends State<MessagingScreen> with TickerProviderSta
       if (sendingFuture == null) setState(() => msg.status = MessageStatus.sent);
       sendingFuture?.then((val) {
         if (mounted) {
-          setState(() => msg.status = MessageStatus.sent);
-        }
-      });
-      Future.delayed(const Duration(milliseconds: 100), () {
-        if (mounted) {
           setState(() => msg.status = MessageStatus.delivered);
         }
       });
@@ -155,8 +150,40 @@ class MessagingScreenState extends State<MessagingScreen> with TickerProviderSta
   }
 
   void _addMessages(List<ChatMessage> messages, {bool appendToEnd = true, bool isNewMessage = true}) {
-    for (var element in messages) {
-      _addMessage(text: element.text, isMe: element.isMe, animated: false, appendToEnd: appendToEnd, isNewMessage: isNewMessage, createdAt: element.timestamp, id: element.id);
+    if (messages.isEmpty) return;
+
+    final newMessages = messages
+        .map(
+          (element) => ChatMessage(
+            id: element.id,
+            text: element.text,
+            isMe: element.isMe,
+            timestamp: element.timestamp,
+            status: element.isMe ? MessageStatus.sent : MessageStatus.delivered,
+          ),
+        )
+        .toList();
+
+    if (isNewMessage) {
+      for (final m in newMessages) {
+        widget.onMessageUpdate(m);
+      }
+    }
+
+    setState(() {
+      if (appendToEnd) {
+        _messages.addAll(newMessages);
+      } else {
+        _messages.insertAll(0, newMessages);
+      }
+    });
+
+    for (var _ in newMessages) {
+      _createBubbleController(animate: false);
+    }
+
+    if (appendToEnd) {
+      _scrollToBottom();
     }
   }
 
@@ -384,12 +411,14 @@ class MessagingScreenState extends State<MessagingScreen> with TickerProviderSta
           _InputIconButton(icon: Icons.add_circle_outline_rounded, color: cs.onSurfaceVariant, onTap: () {}),
           const SizedBox(width: 6),
           Expanded(
-            child: Container(
+            child: AnimatedContainer(
+              duration: const Duration(milliseconds: 180),
+              curve: Curves.easeOutCubic,
               constraints: const BoxConstraints(maxHeight: 120),
               decoration: BoxDecoration(
                 color: cs.surfaceContainerHighest.withValues(alpha: 0.6),
-                borderRadius: BorderRadius.circular(24),
-                border: Border.all(color: cs.outlineVariant.withValues(alpha: 0.4), width: 1),
+                borderRadius: BorderRadius.circular(_isTyping ? 22 : 24),
+                border: Border.all(color: cs.outlineVariant.withValues(alpha: _isTyping ? 0.7 : 0.4), width: 1),
               ),
               child: Row(
                 crossAxisAlignment: CrossAxisAlignment.end,

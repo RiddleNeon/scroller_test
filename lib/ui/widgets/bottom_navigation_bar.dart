@@ -52,6 +52,7 @@ class BottomNavBarState extends State<BottomNavBar> {
           builder: (context, constraints) {
             final slotWidth = constraints.maxWidth / items.length;
             final selectorCenterX = currentSelectedIndex * slotWidth + slotWidth / 2;
+            final createCenterX = (2 * slotWidth) + slotWidth / 2;
 
             return Stack(
               children: [
@@ -115,14 +116,17 @@ class BottomNavBarState extends State<BottomNavBar> {
                 ),
                 if (items.length > 2)
                   IgnorePointer(
-                    child: Align(
-                      alignment: Alignment((-1 + (2 * (2 + 0.5) / items.length)), 0),
+                    child: AnimatedPositioned(
+                      duration: const Duration(milliseconds: 220),
+                      curve: Curves.easeOutCubic,
+                      left: createCenterX - 18,
+                      top: (constraints.maxHeight - 36) / 2,
+                      width: 36,
+                      height: 36,
                       child: AnimatedScale(
                         scale: currentSelectedIndex == 2 ? 1.0 : 0.95,
                         duration: const Duration(milliseconds: 180),
-                        child: Container(
-                          width: 36,
-                          height: 36,
+                        child: DecoratedBox(
                           decoration: BoxDecoration(
                             color: cs.tertiary.withValues(alpha: 0.18),
                             shape: BoxShape.circle,

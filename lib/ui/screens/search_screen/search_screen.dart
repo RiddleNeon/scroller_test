@@ -21,7 +21,6 @@ class SearchScreen extends StatefulWidget {
 
 class _SearchScreenState extends State<SearchScreen> with TickerProviderStateMixin {
   final TextEditingController _controller = TextEditingController();
-  final ScrollController _scrollController = ScrollController();
   
   late TabController _tabController;
   
@@ -37,37 +36,20 @@ class _SearchScreenState extends State<SearchScreen> with TickerProviderStateMix
   static const _kPadding = 16.0;
   static const _kSearchBarSlotHeight = _kSearchBarHeight + _kPadding * 2;
   
-  double _lastScrollOffset = 0.0;
   double _searchBarVisibility = 1.0;
   
   @override
   void initState() {
     super.initState();
     _tabController = TabController(length: 2, vsync: this);
-    _scrollController.addListener(_onScroll);
+    _tabController.addListener(() {
+      if (mounted) setState(() {});
+    });
   }
   
-  void _onScroll() {
-    if (!mounted) return;
-    final current = _scrollController.position.pixels;
-    final delta = current - _lastScrollOffset;
-    _lastScrollOffset = current;
-    
-    double newVisibility = _searchBarVisibility;
-    if (current <= 0) {
-      newVisibility = 1.0;
-    } else if (delta != 0) {
-      newVisibility = (_searchBarVisibility - delta / _kSearchBarSlotHeight).clamp(0.0, 1.0);
-    }
-    if (newVisibility != _searchBarVisibility) {
-      setState(() => _searchBarVisibility = newVisibility);
-    }
-  }
-
   @override
   void dispose() {
     disposeThumbnailCache();
-    _scrollController.dispose();
     _tabController.dispose();
     _controller.dispose();
     super.dispose();
@@ -76,13 +58,13 @@ class _SearchScreenState extends State<SearchScreen> with TickerProviderStateMix
   Future<void> _search([String? val]) async {
     val ??= _controller.text;
     if (val.trim().isEmpty) return;
+    if (_loading) return;
     FocusScope.of(context).unfocus();
 
     setState(() {
       _hasSearched = true;
       _loading = true;
       _searchBarVisibility = 1.0;
-      _lastScrollOffset = 0.0;
     });
 
     _userQuery = SearchQuery<UserProfile>((limit, offset) async {
@@ -148,7 +130,20 @@ class _SearchScreenState extends State<SearchScreen> with TickerProviderStateMix
         _buildTabBar(cs),
         Divider(height: 1, thickness: 1, color: cs.outlineVariant.withValues(alpha: 0.3)),
         Expanded(
-          child: _loading ? Center(child: CircularProgressIndicator(color: cs.primary)) : _buildTabContent(),
+          child: AnimatedSwitcher(
+            duration: const Duration(milliseconds: 220),
+            switchInCurve: Curves.easeOutCubic,
+            switchOutCurve: Curves.easeInCubic,
+            child: _loading
+                ? Center(
+                    key: const ValueKey('search_loading'),
+                    child: CircularProgressIndicator(color: cs.primary),
+                  )
+                : KeyedSubtree(
+                    key: ValueKey('tab_${_tabController.index}'),
+                    child: _buildTabContent(),
+                  ),
+          ),
         ),
       ],
     );
@@ -157,34 +152,33 @@ class _SearchScreenState extends State<SearchScreen> with TickerProviderStateMix
   Widget _buildTabBar(ColorScheme cs) {
     return Container(
       margin: const EdgeInsets.fromLTRB(12, 8, 12, 8),
+      padding: const EdgeInsets.all(4),
       decoration: BoxDecoration(
         color: cs.surfaceContainerHigh,
-        borderRadius: BorderRadius.circular(14),
+        borderRadius: BorderRadius.circular(18),
+        border: Border.all(color: cs.outlineVariant.withValues(alpha: 0.65)),
       ),
-      child: TabBar(
-        controller: _tabController,
-        onTap: (_) => setState(() {}),
-        labelColor: cs.primary,
-        unselectedLabelColor: cs.onSurfaceVariant,
-        indicator: BoxDecoration(
-          borderRadius: BorderRadius.circular(12),
-          color: cs.surface,
-          border: Border.all(color: cs.outlineVariant.withValues(alpha: 0.5)),
-        ),
-        indicatorSize: TabBarIndicatorSize.tab,
-        dividerColor: Colors.transparent,
-        labelStyle: const TextStyle(fontWeight: FontWeight.w700, fontSize: 14, letterSpacing: 0.5),
-        tabs: [
-          _buildTab(icon: Icons.play_circle_outline, label: 'Videos', count: _videoQuery?.totalResults),
-          _buildTab(icon: Icons.person_outline, label: 'Creators', count: _userQuery?.totalResults),
+      child: Row(
+        children: [
+          Expanded(
+            child: _SearchSegmentButton(
+              selected: _tabController.index == 0,
+              onTap: () => _tabController.animateTo(0),
+              icon: Icons.play_circle_outline,
+              label: _videoQuery?.totalResults != null ? 'Videos (${_videoQuery!.totalResults})' : 'Videos',
+            ),
+          ),
+          const SizedBox(width: 4),
+          Expanded(
+            child: _SearchSegmentButton(
+              selected: _tabController.index == 1,
+              onTap: () => _tabController.animateTo(1),
+              icon: Icons.person_outline,
+              label: _userQuery?.totalResults != null ? 'Creators (${_userQuery!.totalResults})' : 'Creators',
+            ),
+          ),
         ],
       ),
-    );
-  }
-
-  Tab _buildTab({required IconData icon, required String label, int? count}) {
-    return Tab(
-      child: Row(mainAxisSize: MainAxisSize.min, children: [Icon(icon, size: 18), const SizedBox(width: 6), Text(count != null ? '$label ($count)' : label)]),
     );
   }
 
@@ -245,7 +239,11 @@ class _SearchScreenState extends State<SearchScreen> with TickerProviderStateMix
                 color: cs.primary,
                 borderRadius: BorderRadius.circular(14),
               ),
-              child: Icon(Icons.arrow_forward_rounded, color: cs.onPrimary, size: 20),
+              child: AnimatedScale(
+                duration: const Duration(milliseconds: 180),
+                scale: _loading ? 0.92 : 1,
+                child: Icon(Icons.arrow_forward_rounded, color: cs.onPrimary, size: 20),
+              ),
             ),
           ),
           contentPadding: const EdgeInsets.symmetric(vertical: 18, horizontal: 4),
@@ -321,4 +319,53 @@ Future<int> openVideoPlayer({
     },
   );
   return likes;
+}
+
+class _SearchSegmentButton extends StatelessWidget {
+  const _SearchSegmentButton({
+    required this.selected,
+    required this.onTap,
+    required this.icon,
+    required this.label,
+  });
+
+  final bool selected;
+  final VoidCallback onTap;
+  final IconData icon;
+  final String label;
+
+  @override
+  Widget build(BuildContext context) {
+    final cs = Theme.of(context).colorScheme;
+    return InkWell(
+      onTap: onTap,
+      borderRadius: BorderRadius.circular(14),
+      child: AnimatedContainer(
+        duration: const Duration(milliseconds: 220),
+        curve: Curves.easeOutCubic,
+        padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 10),
+        decoration: BoxDecoration(
+          borderRadius: BorderRadius.circular(14),
+          color: selected ? cs.surface : Colors.transparent,
+          border: selected ? Border.all(color: cs.outlineVariant.withValues(alpha: 0.65)) : null,
+        ),
+        child: AnimatedDefaultTextStyle(
+          duration: const Duration(milliseconds: 180),
+          style: TextStyle(
+            fontWeight: selected ? FontWeight.w700 : FontWeight.w600,
+            fontSize: 13,
+            color: selected ? cs.primary : cs.onSurfaceVariant,
+          ),
+          child: Row(
+            mainAxisAlignment: MainAxisAlignment.center,
+            children: [
+              Icon(icon, size: 18, color: selected ? cs.primary : cs.onSurfaceVariant),
+              const SizedBox(width: 6),
+              Flexible(child: Text(label, overflow: TextOverflow.ellipsis)),
+            ],
+          ),
+        ),
+      ),
+    );
+  }
 }
