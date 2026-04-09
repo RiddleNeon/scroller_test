@@ -54,7 +54,6 @@ class BottomNavBarState extends State<BottomNavBar> {
         color: cs.surfaceContainerHighest.withValues(alpha: 0.98),
         elevation: 10,
         shadowColor: cs.shadow.withValues(alpha: 0.35),
-        borderRadius: BorderRadius.circular(22),
         shape: RoundedRectangleBorder(
           borderRadius: BorderRadius.circular(22),
           side: BorderSide(color: cs.outlineVariant.withValues(alpha: 0.9)),
