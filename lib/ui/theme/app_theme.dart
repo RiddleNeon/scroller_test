@@ -188,62 +188,63 @@ class AppTheme {
     Color? surface,
     Color? surfaceContainerHighest,
   }) {
-    final bool isDark = brightness == Brightness.dark;
-    final base = ColorScheme.fromSeed(seedColor: primary, brightness: brightness);
+    final defaults = brightness == Brightness.dark ? darkScheme : lightScheme;
+    final seeded = ColorScheme.fromSeed(seedColor: primary, brightness: brightness);
+    final cappuccinoBase = _lerpScheme(defaults, seeded, 0.44);
 
-    final derivedSecondary =
-        secondary ?? _transformHsl(primary, hueShift: 18, saturationFactor: 0.6, lightnessDelta: isDark ? 0.06 : -0.05);
-    final derivedTertiary =
-        tertiary ?? _transformHsl(primary, hueShift: -28, saturationFactor: 0.5, lightnessDelta: isDark ? 0.08 : -0.03);
+    final anchoredSecondary = secondary ?? _colorLerp(cappuccinoBase.secondary, primary, 0.22);
+    final anchoredTertiary = tertiary ?? _colorLerp(cappuccinoBase.tertiary, primary, 0.18);
+    final anchoredSurface = surface ?? _colorLerp(cappuccinoBase.surface, primary, 0.08);
+    final anchoredContainer =
+        surfaceContainerHighest ?? _colorLerp(cappuccinoBase.surfaceContainerHighest, anchoredSurface, 0.62);
 
-    final derivedSurface =
-        surface ??
-        _transformHsl(
-          primary,
-          hueShift: 14,
-          saturationFactor: 0.18,
-          lightnessTarget: isDark ? 0.10 : 0.93,
-        );
-    final derivedContainer =
-        surfaceContainerHighest ??
-        _transformHsl(
-          derivedSurface,
-          hueShift: 0,
-          saturationFactor: 0.9,
-          lightnessDelta: isDark ? 0.10 : -0.10,
-        );
-
-    return base.copyWith(
+    final template = cappuccinoBase.copyWith(
       primary: primary,
       onPrimary: _bestOnColor(primary),
-      secondary: derivedSecondary,
-      onSecondary: _bestOnColor(derivedSecondary),
-      tertiary: derivedTertiary,
-      onTertiary: _bestOnColor(derivedTertiary),
-      surface: derivedSurface,
-      onSurface: _bestOnColor(derivedSurface),
-      surfaceContainerHighest: derivedContainer,
-      onSurfaceVariant: _bestOnColor(derivedContainer).withValues(alpha: 0.84),
-      inversePrimary: _transformHsl(primary, hueShift: 0, saturationFactor: 0.85, lightnessTarget: isDark ? 0.42 : 0.76),
+      secondary: anchoredSecondary,
+      onSecondary: _bestOnColor(anchoredSecondary),
+      tertiary: anchoredTertiary,
+      onTertiary: _bestOnColor(anchoredTertiary),
+      surface: anchoredSurface,
+      onSurface: _bestOnColor(anchoredSurface),
+      surfaceContainerHighest: anchoredContainer,
+      onSurfaceVariant: _bestOnColor(anchoredContainer).withValues(alpha: 0.84),
       surfaceTint: primary,
     );
+
+    return _lerpScheme(cappuccinoBase, template, 0.86);
   }
 
   static Color _bestOnColor(Color color) {
     return ThemeData.estimateBrightnessForColor(color) == Brightness.dark ? Colors.white : const Color(0xFF1D1712);
   }
 
-  static Color _transformHsl(
-    Color color, {
-    double hueShift = 0,
-    double saturationFactor = 1,
-    double lightnessDelta = 0,
-    double? lightnessTarget,
-  }) {
-    final hsl = HSLColor.fromColor(color);
-    final hue = (hsl.hue + hueShift) % 360;
-    final saturation = (hsl.saturation * saturationFactor).clamp(0.0, 1.0);
-    final lightness = (lightnessTarget ?? (hsl.lightness + lightnessDelta)).clamp(0.0, 1.0);
-    return hsl.withHue(hue).withSaturation(saturation).withLightness(lightness).toColor();
+  static ColorScheme _lerpScheme(ColorScheme a, ColorScheme b, double t) {
+    return a.copyWith(
+      primary: _colorLerp(a.primary, b.primary, t),
+      onPrimary: _colorLerp(a.onPrimary, b.onPrimary, t),
+      secondary: _colorLerp(a.secondary, b.secondary, t),
+      onSecondary: _colorLerp(a.onSecondary, b.onSecondary, t),
+      tertiary: _colorLerp(a.tertiary, b.tertiary, t),
+      onTertiary: _colorLerp(a.onTertiary, b.onTertiary, t),
+      error: _colorLerp(a.error, b.error, t),
+      onError: _colorLerp(a.onError, b.onError, t),
+      surface: _colorLerp(a.surface, b.surface, t),
+      onSurface: _colorLerp(a.onSurface, b.onSurface, t),
+      surfaceContainerHighest: _colorLerp(a.surfaceContainerHighest, b.surfaceContainerHighest, t),
+      onSurfaceVariant: _colorLerp(a.onSurfaceVariant, b.onSurfaceVariant, t),
+      outline: _colorLerp(a.outline, b.outline, t),
+      outlineVariant: _colorLerp(a.outlineVariant, b.outlineVariant, t),
+      shadow: _colorLerp(a.shadow, b.shadow, t),
+      scrim: _colorLerp(a.scrim, b.scrim, t),
+      inverseSurface: _colorLerp(a.inverseSurface, b.inverseSurface, t),
+      onInverseSurface: _colorLerp(a.onInverseSurface, b.onInverseSurface, t),
+      inversePrimary: _colorLerp(a.inversePrimary, b.inversePrimary, t),
+      surfaceTint: _colorLerp(a.surfaceTint, b.surfaceTint, t),
+    );
+  }
+
+  static Color _colorLerp(Color a, Color b, double t) {
+    return Color.lerp(a, b, t)!;
   }
 }

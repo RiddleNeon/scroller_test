@@ -63,6 +63,8 @@ class BottomNavBarState extends State<BottomNavBar> {
             final slotWidth = constraints.maxWidth / items.length;
             final selectorCenterX = currentSelectedIndex * slotWidth + slotWidth / 2;
             final createCenterX = (2 * slotWidth) + slotWidth / 2;
+            const createCircleSize = 36.0;
+            const createCircleTop = 8.0;
 
             return Stack(
               children: [
@@ -128,10 +130,10 @@ class BottomNavBarState extends State<BottomNavBar> {
                   AnimatedPositioned(
                     duration: const Duration(milliseconds: 220),
                     curve: Curves.easeOutCubic,
-                    left: createCenterX - 18,
-                    top: (constraints.maxHeight - 36) / 2,
-                    width: 36,
-                    height: 36,
+                    left: createCenterX - (createCircleSize / 2),
+                    top: createCircleTop,
+                    width: createCircleSize,
+                    height: createCircleSize,
                     child: IgnorePointer(
                       child: AnimatedScale(
                         scale: currentSelectedIndex == 2 ? 1.0 : 0.95,
