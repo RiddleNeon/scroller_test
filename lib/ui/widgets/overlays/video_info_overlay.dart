@@ -13,10 +13,19 @@ class VideoInfoOverlay extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
+    final cs = Theme.of(context).colorScheme;
     return Container(
       padding: const EdgeInsets.fromLTRB(16, 60, 16, 24),
-      decoration: const BoxDecoration(
-        gradient: LinearGradient(begin: Alignment.bottomCenter, end: Alignment.topCenter, colors: [Colors.black87, Colors.transparent]),
+      decoration: BoxDecoration(
+        gradient: LinearGradient(
+          begin: Alignment.bottomCenter,
+          end: Alignment.topCenter,
+          colors: [
+            cs.scrim.withValues(alpha: 0.75),
+            cs.scrim.withValues(alpha: 0.45),
+            Colors.transparent,
+          ],
+        ),
       ),
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.start,
@@ -42,11 +51,10 @@ class VideoInfoOverlay extends StatelessWidget {
             },
             child: Text(
               '@${video.authorName}',
-              style: const TextStyle(
-                color: Colors.white,
+              style: TextStyle(
+                color: cs.onSurface,
                 fontWeight: FontWeight.bold,
                 fontSize: 16,
-                shadows: [Shadow(blurRadius: 4, color: Colors.black54)],
               ),
             ),
           ),
@@ -54,11 +62,10 @@ class VideoInfoOverlay extends StatelessWidget {
             const SizedBox(height: 4),
             Text(
               video.title,
-              style: const TextStyle(
-                color: Colors.white,
+              style: TextStyle(
+                color: cs.onSurface,
                 fontWeight: FontWeight.w600,
                 fontSize: 14,
-                shadows: [Shadow(blurRadius: 4, color: Colors.black54)],
               ),
             ),
           ],
@@ -68,10 +75,9 @@ class VideoInfoOverlay extends StatelessWidget {
               video.description,
               maxLines: 2,
               overflow: TextOverflow.ellipsis,
-              style: const TextStyle(
-                color: Colors.white,
+              style: TextStyle(
+                color: cs.onSurfaceVariant,
                 fontSize: 13,
-                shadows: [Shadow(blurRadius: 4, color: Colors.black54)],
               ),
             ),
           ],
@@ -84,11 +90,10 @@ class VideoInfoOverlay extends StatelessWidget {
                   .map(
                     (tag) => Text(
                       '#$tag',
-                      style: const TextStyle(
-                        color: Colors.white,
+                      style: TextStyle(
+                        color: cs.tertiary,
                         fontWeight: FontWeight.bold,
                         fontSize: 13,
-                        shadows: [Shadow(blurRadius: 4, color: Colors.black54)],
                       ),
                     ),
                   )
@@ -98,7 +103,7 @@ class VideoInfoOverlay extends StatelessWidget {
           const SizedBox(height: 10),
           Row(
             children: [
-              const Icon(Icons.music_note, color: Colors.white, size: 16),
+              Icon(Icons.music_note, color: cs.onSurface, size: 16),
               const SizedBox(width: 6),
               Expanded(child: ScrollingAudioText(text: 'Original Sound – @${video.authorName}')),
             ],
@@ -140,15 +145,16 @@ class _ScrollingAudioTextState extends State<ScrollingAudioText> with SingleTick
 
   @override
   Widget build(BuildContext context) {
+    final cs = Theme.of(context).colorScheme;
     return FractionallySizedBox(
       alignment: AlignmentGeometry.bottomLeft,
       widthFactor: 0.5,
       child: ShaderMask(
         shaderCallback: (Rect bounds) {
-          return const LinearGradient(
+          return LinearGradient(
             begin: Alignment.centerLeft,
             end: Alignment.centerRight,
-            colors: [Colors.transparent, Colors.white, Colors.white, Colors.transparent],
+            colors: [Colors.transparent, cs.onSurface, cs.onSurface, Colors.transparent],
             stops: [0.0, 0.1, 0.9, 1.0],
           ).createShader(bounds);
         },
@@ -159,10 +165,9 @@ class _ScrollingAudioTextState extends State<ScrollingAudioText> with SingleTick
             position: _offset,
             child: Text(
               widget.text,
-              style: const TextStyle(
-                color: Colors.white,
+              style: TextStyle(
+                color: cs.onSurface,
                 fontSize: 13,
-                shadows: [Shadow(blurRadius: 4, color: Colors.black54)],
               ),
               maxLines: 1,
               overflow: TextOverflow.visible,

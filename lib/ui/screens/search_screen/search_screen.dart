@@ -115,11 +115,16 @@ class _SearchScreenState extends State<SearchScreen> with TickerProviderStateMix
         child: Column(
           mainAxisSize: MainAxisSize.min,
           children: [
-            ShaderMask(
-              shaderCallback: (bounds) => LinearGradient(colors: [cs.primary, cs.secondary]).createShader(bounds),
+            TweenAnimationBuilder<double>(
+              duration: const Duration(milliseconds: 560),
+              tween: Tween(begin: 0.94, end: 1),
+              curve: Curves.easeOutCubic,
+              builder: (context, value, child) {
+                return Transform.scale(scale: value, child: child);
+              },
               child: Text(
                 'Discover',
-                style: TextStyle(fontSize: 48, fontWeight: FontWeight.w900, letterSpacing: -1, color: cs.onSurface),
+                style: TextStyle(fontSize: 48, fontWeight: FontWeight.w900, letterSpacing: -1, color: cs.primary),
               ),
             ),
             const SizedBox(height: 8),
@@ -151,15 +156,23 @@ class _SearchScreenState extends State<SearchScreen> with TickerProviderStateMix
 
   Widget _buildTabBar(ColorScheme cs) {
     return Container(
-      color: cs.surface,
+      margin: const EdgeInsets.fromLTRB(12, 8, 12, 8),
+      decoration: BoxDecoration(
+        color: cs.surfaceContainerHigh,
+        borderRadius: BorderRadius.circular(14),
+      ),
       child: TabBar(
         controller: _tabController,
         onTap: (_) => setState(() {}),
         labelColor: cs.primary,
         unselectedLabelColor: cs.onSurfaceVariant,
-        indicatorColor: cs.primary,
-        indicatorWeight: 3,
-        indicatorSize: TabBarIndicatorSize.label,
+        indicator: BoxDecoration(
+          borderRadius: BorderRadius.circular(12),
+          color: cs.surface,
+          border: Border.all(color: cs.outlineVariant.withValues(alpha: 0.5)),
+        ),
+        indicatorSize: TabBarIndicatorSize.tab,
+        dividerColor: Colors.transparent,
         labelStyle: const TextStyle(fontWeight: FontWeight.w700, fontSize: 14, letterSpacing: 0.5),
         tabs: [
           _buildTab(icon: Icons.play_circle_outline, label: 'Videos', count: _videoQuery?.totalResults),
@@ -206,12 +219,13 @@ class _SearchScreenState extends State<SearchScreen> with TickerProviderStateMix
   }
   
   Widget _buildSearchField(ColorScheme cs) {
-    return Container(
+    return AnimatedContainer(
+      duration: const Duration(milliseconds: 280),
       height: _kSearchBarHeight,
       decoration: BoxDecoration(
-        color: cs.surfaceContainer,
-        borderRadius: BorderRadius.circular(28),
-        boxShadow: [BoxShadow(color: cs.primary.withValues(alpha: 0.15), blurRadius: 20)],
+        color: cs.surfaceContainerHigh,
+        borderRadius: BorderRadius.circular(20),
+        border: Border.all(color: cs.outlineVariant.withValues(alpha: 0.9)),
       ),
       child: TextField(
         controller: _controller,
@@ -228,8 +242,8 @@ class _SearchScreenState extends State<SearchScreen> with TickerProviderStateMix
             child: Container(
               margin: const EdgeInsets.all(8),
               decoration: BoxDecoration(
-                gradient: LinearGradient(colors: [cs.primary, cs.primaryContainer]),
-                borderRadius: BorderRadius.circular(20),
+                color: cs.primary,
+                borderRadius: BorderRadius.circular(14),
               ),
               child: Icon(Icons.arrow_forward_rounded, color: cs.onPrimary, size: 20),
             ),
@@ -254,7 +268,7 @@ Future<int> openVideoPlayer({
     context: context,
     barrierDismissible: true,
     barrierLabel: 'VideoOverlay',
-    barrierColor: Colors.black87,
+    barrierColor: Theme.of(context).colorScheme.scrim.withValues(alpha: 0.6),
     transitionDuration: const Duration(milliseconds: 280),
     pageBuilder: (context, _, _) => SafeArea(
       child: Center(
@@ -263,7 +277,11 @@ Future<int> openVideoPlayer({
           child: Container(
             width: MediaQuery.of(context).size.width * 0.95,
             height: MediaQuery.of(context).size.height * 0.88,
-            decoration: BoxDecoration(color: Colors.black, borderRadius: BorderRadius.circular(20)),
+            decoration: BoxDecoration(
+              color: Theme.of(context).colorScheme.surfaceContainerHigh,
+              borderRadius: BorderRadius.circular(20),
+              border: Border.all(color: Theme.of(context).colorScheme.outlineVariant),
+            ),
             clipBehavior: Clip.hardEdge,
             child: Stack(
               children: [
@@ -283,8 +301,8 @@ Future<int> openVideoPlayer({
                     onTap: () => Navigator.pop(context),
                     child: Container(
                       padding: const EdgeInsets.all(8),
-                      decoration: const BoxDecoration(color: Colors.black54, shape: BoxShape.circle),
-                      child: const Icon(Icons.close_rounded, color: Colors.white, size: 20),
+                      decoration: BoxDecoration(color: Theme.of(context).colorScheme.surface.withValues(alpha: 0.9), shape: BoxShape.circle),
+                      child: Icon(Icons.close_rounded, color: Theme.of(context).colorScheme.onSurface, size: 20),
                     ),
                   ),
                 ),

@@ -63,10 +63,7 @@ class _ChatManagingScreenState extends State<ChatManagingScreen> {
     return Scaffold(
       backgroundColor: theme.colorScheme.surface,
       appBar: AppBar(
-        title: const Align(
-          alignment: AlignmentGeometry.center,
-          child: Text("Chats", textAlign: TextAlign.center),
-        ),
+        title: const Text("Chats"),
         backgroundColor: theme.colorScheme.surface,
         elevation: 0,
       ),
@@ -107,61 +104,69 @@ class _ChatManagingScreenState extends State<ChatManagingScreen> {
     final lastMessageTime = chat.lastMessageAt ?? chat.createdAt;
     final timeString = formatTime(lastMessageTime);
 
-    return Card(
-      elevation: 4,
-      shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(16)),
-      color: theme.colorScheme.surfaceContainerHighest,
-      child: InkWell(
-        borderRadius: BorderRadius.circular(16),
-        onTap: () => _openChat(chat, onMessageUpdate),
-        child: Padding(
-          padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 14),
-          child: Row(
-            crossAxisAlignment: CrossAxisAlignment.center,
-            children: [
-              Avatar(imageUrl: chat.partnerProfileImageUrl, name: chat.partnerName, colorScheme: theme.colorScheme),
-              const SizedBox(width: 16),
+    return AnimatedContainer(
+      duration: const Duration(milliseconds: 220),
+      curve: Curves.easeOutCubic,
+      decoration: BoxDecoration(
+        borderRadius: BorderRadius.circular(18),
+        color: theme.colorScheme.surfaceContainerHigh,
+        border: Border.all(color: theme.colorScheme.outlineVariant.withValues(alpha: 0.7)),
+      ),
+      clipBehavior: Clip.antiAlias,
+      child: Material(
+        color: Colors.transparent,
+        child: InkWell(
+          borderRadius: BorderRadius.circular(18),
+          onTap: () => _openChat(chat, onMessageUpdate),
+          child: Padding(
+            padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 14),
+            child: Row(
+              crossAxisAlignment: CrossAxisAlignment.center,
+              children: [
+                Avatar(imageUrl: chat.partnerProfileImageUrl, name: chat.partnerName, colorScheme: theme.colorScheme),
+                const SizedBox(width: 16),
 
-              Expanded(
-                child: Column(
-                  crossAxisAlignment: CrossAxisAlignment.start,
-                  children: [
-                    Text(
-                      chat.partnerName,
-                      style: theme.textTheme.titleMedium?.copyWith(fontWeight: FontWeight.w600, color: theme.colorScheme.onSurface),
-                      overflow: TextOverflow.ellipsis,
-                    ),
-                    const SizedBox(height: 4),
-
-                    Text(
-                      "${chat.lastMessageByMe ? "You: " : ""}${chat.lastMessage}",
-                      style: theme.textTheme.bodyMedium?.copyWith(
-                        color: theme.colorScheme.onSurfaceVariant,
-                        fontWeight: chat.lastMessageByMe ? FontWeight.w400 : FontWeight.w500,
+                Expanded(
+                  child: Column(
+                    crossAxisAlignment: CrossAxisAlignment.start,
+                    children: [
+                      Text(
+                        chat.partnerName,
+                        style: theme.textTheme.titleMedium?.copyWith(fontWeight: FontWeight.w600, color: theme.colorScheme.onSurface),
+                        overflow: TextOverflow.ellipsis,
                       ),
-                      overflow: TextOverflow.ellipsis,
-                    ),
+                      const SizedBox(height: 4),
+
+                      Text(
+                        "${chat.lastMessageByMe ? "You: " : ""}${chat.lastMessage}",
+                        style: theme.textTheme.bodyMedium?.copyWith(
+                          color: theme.colorScheme.onSurfaceVariant,
+                          fontWeight: chat.lastMessageByMe ? FontWeight.w400 : FontWeight.w500,
+                        ),
+                        overflow: TextOverflow.ellipsis,
+                      ),
+                    ],
+                  ),
+                ),
+
+                const SizedBox(width: 12),
+
+                Column(
+                  crossAxisAlignment: CrossAxisAlignment.end,
+                  children: [
+                    Text(timeString, style: theme.textTheme.bodySmall?.copyWith(color: theme.colorScheme.primary)),
+                    const SizedBox(height: 6),
+
+                    if (!chat.lastMessageByMe)
+                      Container(
+                        width: 8,
+                        height: 8,
+                        decoration: BoxDecoration(color: theme.colorScheme.primary, shape: BoxShape.circle),
+                      ),
                   ],
                 ),
-              ),
-
-              const SizedBox(width: 12),
-
-              Column(
-                crossAxisAlignment: CrossAxisAlignment.end,
-                children: [
-                  Text(timeString, style: theme.textTheme.bodySmall?.copyWith(color: theme.colorScheme.primary)),
-                  const SizedBox(height: 6),
-
-                  if (!chat.lastMessageByMe)
-                    Container(
-                      width: 8,
-                      height: 8,
-                      decoration: BoxDecoration(color: theme.colorScheme.primary, shape: BoxShape.circle),
-                    ),
-                ],
-              ),
-            ],
+              ],
+            ),
           ),
         ),
       ),

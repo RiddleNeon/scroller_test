@@ -54,7 +54,6 @@ class _VideoCardState extends State<VideoCard> {
             color: _hovered ? cs.surfaceContainerHigh : cs.surfaceContainer,
             borderRadius: BorderRadius.circular(16),
             border: Border.all(color: _hovered ? cs.primary.withValues(alpha: 0.35) : cs.outlineVariant.withValues(alpha: 0.3)),
-            boxShadow: _hovered ? [BoxShadow(color: cs.primary.withValues(alpha: 0.08), blurRadius: 12, offset: const Offset(0, 4))] : [],
           ),
           child: Column(
             crossAxisAlignment: CrossAxisAlignment.start,
@@ -75,15 +74,15 @@ class _VideoCardState extends State<VideoCard> {
                             Positioned(
                               bottom: 5,
                               right: 5,
-                              child: Container(
-                                padding: const EdgeInsets.symmetric(horizontal: 5, vertical: 2),
-                                decoration: BoxDecoration(color: Colors.black.withValues(alpha: 0.72), borderRadius: BorderRadius.circular(5)),
-                                child: Text(
-                                  _formatDuration(video.duration),
-                                  style: const TextStyle(color: Colors.white, fontSize: 10, fontWeight: FontWeight.w600),
+                                child: Container(
+                                  padding: const EdgeInsets.symmetric(horizontal: 5, vertical: 2),
+                                  decoration: BoxDecoration(color: cs.scrim.withValues(alpha: 0.7), borderRadius: BorderRadius.circular(5)),
+                                  child: Text(
+                                    _formatDuration(video.duration),
+                                    style: TextStyle(color: cs.onSurface, fontSize: 10, fontWeight: FontWeight.w600),
+                                  ),
                                 ),
                               ),
-                            ),
                         ],
                       ),
                     ),
@@ -183,8 +182,8 @@ class _VideoCardState extends State<VideoCard> {
               Image.memory(snapshot.data!, fit: BoxFit.cover),
               if (_hovered)
                 Container(
-                  color: Colors.black.withValues(alpha: 0.2),
-                  child: const Center(child: Icon(Icons.play_circle_fill_rounded, color: Colors.white, size: 36)),
+                  color: cs.scrim.withValues(alpha: 0.2),
+                  child: Center(child: Icon(Icons.play_circle_fill_rounded, color: cs.onSurface, size: 36)),
                 ),
             ],
           );

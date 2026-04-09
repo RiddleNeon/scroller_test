@@ -565,7 +565,7 @@ class _BubbleBody extends StatelessWidget {
         decoration: BoxDecoration(
           color: isMe ? cs.primary : cs.secondary,
           borderRadius: borderRadius,
-          boxShadow: [BoxShadow(color: (isMe ? cs.primary : cs.shadow).withValues(alpha: 0.12), blurRadius: 8, offset: const Offset(0, 2))],
+          border: Border.all(color: cs.outlineVariant.withValues(alpha: 0.45)),
         ),
         child: Text(message.text, style: TextStyle(color: isMe ? cs.onPrimary : cs.onSurface, fontSize: 15, height: 1.4)),
       ),
@@ -717,9 +717,9 @@ class _SendButtonState extends State<_SendButton> with SingleTickerProviderState
           width: 42,
           height: 42,
           decoration: BoxDecoration(
-            gradient: LinearGradient(colors: [cs.primary, cs.tertiary], begin: Alignment.topLeft, end: Alignment.bottomRight),
+            color: cs.primary,
             shape: BoxShape.circle,
-            boxShadow: [BoxShadow(color: cs.primary.withValues(alpha: 0.4), blurRadius: 12, offset: const Offset(0, 4))],
+            border: Border.all(color: cs.outlineVariant.withValues(alpha: 0.45)),
           ),
           child: Icon(Icons.send_rounded, color: cs.onPrimary, size: 20),
         ),
@@ -746,7 +746,6 @@ class _ScrollDownButton extends StatelessWidget {
           color: cs.surfaceContainerHigh,
           shape: BoxShape.circle,
           border: Border.all(color: cs.outlineVariant, width: 1),
-          boxShadow: [BoxShadow(color: cs.shadow.withValues(alpha: 0.15), blurRadius: 8, offset: const Offset(0, 2))],
         ),
         child: Icon(Icons.keyboard_arrow_down_rounded, color: cs.onSurface, size: 20),
       ),

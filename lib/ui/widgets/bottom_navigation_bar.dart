@@ -13,9 +13,9 @@ class BottomNavBar extends StatefulWidget {
 }
 
 class BottomNavBarState extends State<BottomNavBar> {
-  late int currentSelectedIndex = widget.initialIndex;  
+  late int currentSelectedIndex = widget.initialIndex;
   List get items => widget.items;
-  
+
   void switchToIndex(int index) {
     WidgetsBinding.instance.addPostFrameCallback((timeStamp) {
       setState(() {
@@ -23,132 +23,119 @@ class BottomNavBarState extends State<BottomNavBar> {
       });
     });
   }
-  
+
   void switchToId(String id) {
     final index = items.indexWhere((item) => item.id == id);
     if (index != -1) {
       switchToIndex(index);
     }
   }
-  
-  @override
-  void initState() {
-    super.initState();
-  }
 
   @override
   Widget build(BuildContext context) {
-    if(!userLoggedIn) return const SizedBox.shrink();
-    
+    if (!userLoggedIn) return const SizedBox.shrink();
+
+    final cs = Theme.of(context).colorScheme;
     final bottomPad = MediaQuery.of(context).padding.bottom;
 
-    return Container(
-      height: 56 + bottomPad,
-      padding: EdgeInsets.only(bottom: bottomPad),
-      color: Colors.black,
-      child: LayoutBuilder(
-        builder: (context, constraints) {
-          final slotWidth = constraints.maxWidth / items.length;
+    return AnimatedContainer(
+      duration: const Duration(milliseconds: 280),
+      curve: Curves.easeOutCubic,
+      height: 66 + bottomPad,
+      padding: EdgeInsets.fromLTRB(10, 8, 10, bottomPad + 6),
+      color: Colors.transparent,
+      child: Material(
+        color: cs.surfaceContainerHigh.withValues(alpha: 0.95),
+        elevation: 0,
+        borderRadius: BorderRadius.circular(22),
+        child: LayoutBuilder(
+          builder: (context, constraints) {
+            final slotWidth = constraints.maxWidth / items.length;
+            final selectorCenterX = currentSelectedIndex * slotWidth + slotWidth / 2;
 
-          final selectorCenterX = currentSelectedIndex * slotWidth + slotWidth / 2;
-
-          double selectorW = slotWidth;
-          double selectorH = constraints.maxHeight;
-
-          return Stack(
-            children: [
-              AnimatedPositioned(
-                duration: const Duration(milliseconds: 300),
-                curve: Curves.easeInOut,
-                left: selectorCenterX - selectorW / 2,
-                top: (56 - selectorH) / 2,
-                width: selectorW,
-                height: selectorH,
-                child: Container(
-                  decoration: BoxDecoration(
-                    color: Colors.white.withValues(alpha: 0.12),
-                    borderRadius: BorderRadius.circular(14),
+            return Stack(
+              children: [
+                AnimatedPositioned(
+                  duration: const Duration(milliseconds: 280),
+                  curve: Curves.easeOutCubic,
+                  left: selectorCenterX - (slotWidth - 8) / 2,
+                  top: 4,
+                  width: slotWidth - 8,
+                  height: constraints.maxHeight - 8,
+                  child: DecoratedBox(
+                    decoration: BoxDecoration(
+                      color: cs.surface.withValues(alpha: 0.92),
+                      borderRadius: BorderRadius.circular(16),
+                      border: Border.all(color: cs.outlineVariant.withValues(alpha: 0.7)),
+                    ),
                   ),
                 ),
-              ),
-              Row(
-                mainAxisAlignment: MainAxisAlignment.spaceAround,
-                children: List.generate(items.length, (i) {
-                  final item = items[i];
+                Row(
+                  children: List.generate(items.length, (i) {
+                    final item = items[i];
+                    final selected = currentSelectedIndex == i;
+                    final iconColor = selected ? cs.primary : cs.onSurfaceVariant;
 
-                  if (i == 2) {
                     return GestureDetector(
                       onTap: () {
                         setState(() => currentSelectedIndex = i);
                         widget.onSelectionChange(items[currentSelectedIndex].id);
                       },
+                      behavior: HitTestBehavior.opaque,
                       child: SizedBox(
                         width: slotWidth,
-                        height: 56,
-                        child: Center(
-                          child: Container(
-                            width: 42,
-                            height: 28,
-                            decoration: BoxDecoration(
-                              borderRadius: BorderRadius.circular(6),
-                              gradient: const LinearGradient(
-                                colors: [Color(0xFF69C9D0), Color(0xFFEE1D52)],
+                        child: Column(
+                          mainAxisAlignment: MainAxisAlignment.center,
+                          children: [
+                            AnimatedScale(
+                              duration: const Duration(milliseconds: 200),
+                              curve: Curves.easeOutBack,
+                              scale: selected ? 1.08 : 1.0,
+                              child: Icon(
+                                i == 2 ? Icons.add_rounded : item.icon,
+                                color: i == 2 ? cs.onTertiary : iconColor,
+                                size: i == 2 ? 22 : 24,
                               ),
                             ),
-                            child: const Icon(
-                              Icons.add,
-                              color: Colors.white,
-                              size: 22,
+                            const SizedBox(height: 2),
+                            AnimatedDefaultTextStyle(
+                              duration: const Duration(milliseconds: 180),
+                              style: TextStyle(
+                                color: selected ? cs.onSurface : cs.onSurfaceVariant,
+                                fontSize: 10,
+                                fontWeight: selected ? FontWeight.w700 : FontWeight.w500,
+                              ),
+                              child: Text(item.label.isEmpty ? 'Create' : item.label),
                             ),
-                          ),
+                          ],
                         ),
                       ),
                     );
-                  }
-
-                  final selected = currentSelectedIndex == i;
-
-                  return GestureDetector(
-                    onTap: () {
-                      setState(() => currentSelectedIndex = i);
-                      widget.onSelectionChange(items[currentSelectedIndex].id);
-                    },
-                    behavior: HitTestBehavior.opaque,
-                    child: SizedBox(
-                      width: slotWidth,
-                      height: 56,
-                      child: Column(
-                        mainAxisAlignment: MainAxisAlignment.center,
-                        children: [
-                          AnimatedScale(
-                            scale: selected ? 1.15 : 1.0,
-                            duration: const Duration(milliseconds: 250),
-                            curve: Curves.easeOut,
-                            child: Icon(
-                              item.icon,
-                              color: selected ? Colors.white : Colors.grey,
-                              size: 26,
-                            ),
+                  }),
+                ),
+                if (items.length > 2)
+                  IgnorePointer(
+                    child: Align(
+                      alignment: Alignment((-1 + (2 * (2 + 0.5) / items.length)), 0),
+                      child: AnimatedScale(
+                        scale: currentSelectedIndex == 2 ? 1.0 : 0.95,
+                        duration: const Duration(milliseconds: 180),
+                        child: Container(
+                          width: 36,
+                          height: 36,
+                          decoration: BoxDecoration(
+                            color: cs.tertiary.withValues(alpha: 0.18),
+                            shape: BoxShape.circle,
+                            border: Border.all(color: cs.tertiary.withValues(alpha: 0.45)),
                           ),
-                          const SizedBox(height: 2),
-                          AnimatedDefaultTextStyle(
-                            duration: const Duration(milliseconds: 200),
-                            style: TextStyle(
-                              color: selected ? Colors.white : Colors.grey,
-                              fontSize: 10,
-                              fontWeight: selected ? FontWeight.w600 : FontWeight.normal,
-                            ),
-                            child: Text(item.label),
-                          ),
-                        ],
+                        ),
                       ),
                     ),
-                  );
-                }),
-              ),
-            ],
-          );
-        },
+                  ),
+              ],
+            );
+          },
+        ),
       ),
     );
   }

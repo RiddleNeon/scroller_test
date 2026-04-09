@@ -162,18 +162,23 @@ Widget feedVideos(TickerProvider tickerProvider,
 }
 
 Widget _buildStopWidget(String label, IconData icon, BuildContext context) {
+  final cs = Theme.of(context).colorScheme;
   return Padding(
     padding: const EdgeInsets.all(28.0),
     child: Container(
-      width: 120,
-      height: 120,
-      decoration: BoxDecoration(color: Colors.black.withValues(alpha: 0.5), borderRadius: BorderRadius.circular(60)),
+      width: 190,
+      padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 16),
+      decoration: BoxDecoration(
+        color: cs.surfaceContainerHigh.withValues(alpha: 0.94),
+        borderRadius: BorderRadius.circular(24),
+        border: Border.all(color: cs.outlineVariant.withValues(alpha: 0.75)),
+      ),
       child: Column(
         mainAxisAlignment: MainAxisAlignment.center,
         children: [
-          Icon(icon, color: Colors.white, size: 40),
+          Icon(icon, color: cs.primary, size: 32),
           const SizedBox(height: 8),
-          Text(label, style: const TextStyle(color: Colors.white, fontSize: 16), textAlign: TextAlign.center),
+          Text(label, style: TextStyle(color: cs.onSurface, fontSize: 14, fontWeight: FontWeight.w600), textAlign: TextAlign.center),
         ],
       ),
     ),

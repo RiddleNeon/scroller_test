@@ -1,6 +1,6 @@
 import 'package:flutter/material.dart';
 import 'package:wurp/logic/users/user_model.dart';
-import 'package:wurp/logic/repositories/user_repository.dart';
+import 'package:wurp/ui/misc/avatar.dart';
 import 'package:wurp/ui/screens/profile_screen.dart';
 import 'package:wurp/ui/widgets/overlays/follow_button.dart';
 
@@ -30,7 +30,7 @@ class _UserCardState extends State<UserCard> {
       decoration: BoxDecoration(
         color: widget.cs.surfaceContainer,
         borderRadius: BorderRadius.circular(14),
-        border: Border.all(color: Colors.white.withValues(alpha: 0.05)),
+        border: Border.all(color: widget.cs.outlineVariant.withValues(alpha: 0.65)),
       ),
       child: InkWell(
         onTap: () {
@@ -58,20 +58,7 @@ class _UserCardState extends State<UserCard> {
         },
         child: Row(
           children: [
-            Container(
-              padding: const EdgeInsets.all(2),
-              decoration: BoxDecoration(
-                shape: BoxShape.circle,
-                gradient: LinearGradient(colors: [widget.cs.primary, widget.cs.secondary], begin: Alignment.topLeft, end: Alignment.bottomRight),
-              ),
-              child: CircleAvatar(
-                radius: 26,
-                backgroundColor: widget.cs.surfaceContainer,
-                backgroundImage: (user.profileImageUrl.isNotEmpty)
-                    ? NetworkImage(user.profileImageUrl)
-                    : NetworkImage(createUserProfileImageUrl(user.username)),
-              ),
-            ),
+            Avatar(name: user.username, imageUrl: user.profileImageUrl, colorScheme: widget.cs),
             const SizedBox(width: 14),
             Expanded(
               child: Column(

@@ -10,10 +10,11 @@ class Avatar extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     return Container(
-      padding: const EdgeInsets.all(2),
+      padding: const EdgeInsets.all(3),
       decoration: BoxDecoration(
         shape: BoxShape.circle,
-        gradient: LinearGradient(colors: [colorScheme.primary, colorScheme.secondary], begin: Alignment.topLeft, end: Alignment.bottomRight),
+        color: colorScheme.surfaceContainerHigh,
+        border: Border.all(color: colorScheme.outlineVariant.withValues(alpha: 0.9)),
       ),
       child: CircleAvatar(
         radius: 26,
