@@ -197,6 +197,12 @@ class AppTheme {
     final anchoredSurface = surface ?? _colorLerp(cappuccinoBase.surface, primary, 0.08);
     final anchoredContainer =
         surfaceContainerHighest ?? _colorLerp(cappuccinoBase.surfaceContainerHighest, anchoredSurface, 0.62);
+    final surfaceContainerHigh = _colorLerp(anchoredSurface, anchoredContainer, 0.72);
+    final surfaceContainer = _colorLerp(anchoredSurface, anchoredContainer, 0.52);
+    final surfaceContainerLow = _colorLerp(anchoredSurface, anchoredContainer, 0.34);
+    final surfaceContainerLowest = _colorLerp(anchoredSurface, anchoredContainer, 0.18);
+    final surfaceBright = _colorLerp(anchoredSurface, Colors.white, brightness == Brightness.dark ? 0.06 : 0.18);
+    final surfaceDim = _colorLerp(anchoredSurface, Colors.black, brightness == Brightness.dark ? 0.16 : 0.06);
 
     final template = cappuccinoBase.copyWith(
       primary: primary,
@@ -207,6 +213,12 @@ class AppTheme {
       onTertiary: _bestOnColor(anchoredTertiary),
       surface: anchoredSurface,
       onSurface: _bestOnColor(anchoredSurface),
+      surfaceBright: surfaceBright,
+      surfaceDim: surfaceDim,
+      surfaceContainerLowest: surfaceContainerLowest,
+      surfaceContainerLow: surfaceContainerLow,
+      surfaceContainer: surfaceContainer,
+      surfaceContainerHigh: surfaceContainerHigh,
       surfaceContainerHighest: anchoredContainer,
       onSurfaceVariant: _bestOnColor(anchoredContainer).withValues(alpha: 0.84),
       surfaceTint: primary,
@@ -231,6 +243,12 @@ class AppTheme {
       onError: _colorLerp(a.onError, b.onError, t),
       surface: _colorLerp(a.surface, b.surface, t),
       onSurface: _colorLerp(a.onSurface, b.onSurface, t),
+      surfaceBright: _colorLerp(a.surfaceBright, b.surfaceBright, t),
+      surfaceDim: _colorLerp(a.surfaceDim, b.surfaceDim, t),
+      surfaceContainerLowest: _colorLerp(a.surfaceContainerLowest, b.surfaceContainerLowest, t),
+      surfaceContainerLow: _colorLerp(a.surfaceContainerLow, b.surfaceContainerLow, t),
+      surfaceContainer: _colorLerp(a.surfaceContainer, b.surfaceContainer, t),
+      surfaceContainerHigh: _colorLerp(a.surfaceContainerHigh, b.surfaceContainerHigh, t),
       surfaceContainerHighest: _colorLerp(a.surfaceContainerHighest, b.surfaceContainerHighest, t),
       onSurfaceVariant: _colorLerp(a.onSurfaceVariant, b.onSurfaceVariant, t),
       outline: _colorLerp(a.outline, b.outline, t),
