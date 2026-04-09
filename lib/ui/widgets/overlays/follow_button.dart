@@ -65,9 +65,9 @@ class FollowButtonState extends State<FollowButton> with SingleTickerProviderSta
   Widget build(BuildContext context) {
     final theme = Theme.of(context);
 
-    final backgroundColor = _subscribed ? theme.colorScheme.secondaryContainer : theme.colorScheme.primary;
+    final backgroundColor = _subscribed ? theme.colorScheme.secondary : theme.colorScheme.primary;
 
-    final foregroundColor = _subscribed ? theme.colorScheme.onSecondaryContainer : theme.colorScheme.onPrimary;
+    final foregroundColor = _subscribed ? theme.colorScheme.onSecondary : theme.colorScheme.onPrimary;
 
     return GestureDetector(
       onTap: _toggle,

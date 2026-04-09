@@ -28,8 +28,8 @@ void startApp() async {
   runApp(
     MaterialApp.router(
       debugShowCheckedModeBanner: false,
-      theme: AppTheme.light(),
-      darkTheme: AppTheme.dark(),
+      theme: AppTheme.light,
+      darkTheme: AppTheme.dark,
       themeMode: ThemeMode.system,
       routerConfig: routerConfig,
     ),

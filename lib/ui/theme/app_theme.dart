@@ -1,3 +1,5 @@
+import 'dart:ui';
+
 import 'package:flutter/material.dart';
 
 class AppTheme {
@@ -49,11 +51,15 @@ class AppTheme {
     surfaceTint: Color(0xFFD2B89F),
   );
 
-  static ThemeData light() => _build(lightScheme);
-  static ThemeData dark() => _build(darkScheme);
+  static ThemeData light = _build(lightScheme);
+  static ThemeData dark = cappuccinoFromPrimary(primary: const Color(0xFF2CB484), secondary: const Color(0xFF31C4A9), ).dark;
 
   /// Builds cappuccino-styled light and dark themes from a primary color.
-  /// Optional colors can override the auto-derived palette.
+  ///
+  /// The [primary] color is automatically nudged to be warmer and more muted
+  /// unless [rawPrimary] is set to true. Secondary and tertiary colors are
+  /// auto-derived as analogous + split-complementary hues if not provided,
+  /// giving a naturally varied but harmonious palette instead of a monochrome look.
   static ({ThemeData light, ThemeData dark}) cappuccinoFromPrimary({
     required Color primary,
     Color? secondary,
@@ -62,6 +68,7 @@ class AppTheme {
     Color? darkSurface,
     Color? lightSurfaceContainerHighest,
     Color? darkSurfaceContainerHighest,
+    bool rawPrimary = false,
   }) {
     final schemes = cappuccinoSchemesFromPrimary(
       primary: primary,
@@ -71,6 +78,7 @@ class AppTheme {
       darkSurface: darkSurface,
       lightSurfaceContainerHighest: lightSurfaceContainerHighest,
       darkSurfaceContainerHighest: darkSurfaceContainerHighest,
+      rawPrimary: rawPrimary,
     );
 
     return (light: _build(schemes.light), dark: _build(schemes.dark));
@@ -85,10 +93,15 @@ class AppTheme {
     Color? darkSurface,
     Color? lightSurfaceContainerHighest,
     Color? darkSurfaceContainerHighest,
+    bool rawPrimary = false,
   }) {
+    // Nudge the primary toward a warmer, more muted cappuccino tone
+    // unless the caller explicitly opted out.
+    final effectivePrimary = rawPrimary ? primary : _nudgeToCappuccino(primary);
+
     final light = _buildCappuccinoScheme(
       brightness: Brightness.light,
-      primary: primary,
+      primary: effectivePrimary,
       secondary: secondary,
       tertiary: tertiary,
       surface: lightSurface,
@@ -96,7 +109,7 @@ class AppTheme {
     );
     final dark = _buildCappuccinoScheme(
       brightness: Brightness.dark,
-      primary: primary,
+      primary: effectivePrimary,
       secondary: secondary,
       tertiary: tertiary,
       surface: darkSurface,
@@ -104,6 +117,59 @@ class AppTheme {
     );
     return (light: light, dark: dark);
   }
+
+  // ---------------------------------------------------------------------------
+  // Color derivation helpers
+  // ---------------------------------------------------------------------------
+
+  /// Nudges [color] toward a warmer, more muted, "cappuccino-friendly" tone.
+  ///
+  /// - Desaturates moderately so the colour feels earthy rather than vivid.
+  /// - Pulls lightness into a comfortable midrange (not too dark, not pastel).
+  /// - For strongly cool hues (blues / purples, ~180–280°) it reduces saturation
+  ///   a little more so they blend naturally with the warm cappuccino base.
+  static Color _nudgeToCappuccino(Color color) {
+    final hsl = HSLColor.fromColor(color);
+
+    // Determine how "cool" the hue is (180–280° is the blue-purple range).
+    final hue = hsl.hue;
+    final isCool = hue >= 175 && hue <= 285;
+    final satFactor = isCool ? 0.68 : 0.78;
+
+    final newSat = (hsl.saturation * satFactor).clamp(0.12, 0.60);
+    // Pull lightness toward a midrange sweet-spot (≈ 0.35–0.55).
+    final newLight = (hsl.lightness * 0.84 + 0.08).clamp(0.25, 0.65);
+
+    return hsl.withSaturation(newSat).withLightness(newLight).toColor();
+  }
+
+  /// Derives a secondary colour as an *analogous* neighbour of [primary]:
+  /// a gentle +22° hue shift, slightly more muted and a touch lighter.
+  /// This keeps the palette feeling related but avoids the monochrome look.
+  static Color _deriveAnalogousSecondary(Color primary) {
+    final hsl = HSLColor.fromColor(primary);
+    return hsl
+        .withHue((hsl.hue + 22) % 360)
+        .withSaturation((hsl.saturation * 0.74).clamp(0.08, 0.50))
+        .withLightness((hsl.lightness + 0.04).clamp(0.20, 0.72))
+        .toColor();
+  }
+
+  /// Derives a tertiary colour as a *muted split-complementary* of [primary],
+  /// biased toward the sage / teal range — the earthy accent you find in
+  /// most good café interiors.
+  static Color _deriveEarthyTertiary(Color primary) {
+    final hsl = HSLColor.fromColor(primary);
+    return hsl
+        .withHue((hsl.hue + 148) % 360)
+        .withSaturation((hsl.saturation * 0.58).clamp(0.07, 0.42))
+        .withLightness((hsl.lightness * 0.90 + 0.05).clamp(0.22, 0.62))
+        .toColor();
+  }
+
+  // ---------------------------------------------------------------------------
+  // Theme / scheme builders
+  // ---------------------------------------------------------------------------
 
   static ThemeData _build(ColorScheme cs) {
     return ThemeData(
@@ -192,8 +258,11 @@ class AppTheme {
     final seeded = ColorScheme.fromSeed(seedColor: primary, brightness: brightness);
     final cappuccinoBase = _lerpScheme(defaults, seeded, 0.44);
 
-    final anchoredSecondary = secondary ?? _colorLerp(cappuccinoBase.secondary, primary, 0.22);
-    final anchoredTertiary = tertiary ?? _colorLerp(cappuccinoBase.tertiary, primary, 0.18);
+    // Use the new derivation helpers when the caller didn't supply colours,
+    // giving a naturally varied palette instead of a near-monochrome one.
+    final anchoredSecondary = secondary ?? _deriveAnalogousSecondary(primary);
+    final anchoredTertiary = tertiary ?? _deriveEarthyTertiary(primary);
+
     final anchoredSurface = surface ?? _colorLerp(cappuccinoBase.surface, primary, 0.08);
     final anchoredContainer =
         surfaceContainerHighest ?? _colorLerp(cappuccinoBase.surfaceContainerHighest, anchoredSurface, 0.62);
@@ -226,6 +295,10 @@ class AppTheme {
 
     return _lerpScheme(cappuccinoBase, template, 0.86);
   }
+
+  // ---------------------------------------------------------------------------
+  // Low-level colour utilities
+  // ---------------------------------------------------------------------------
 
   static Color _bestOnColor(Color color) {
     return ThemeData.estimateBrightnessForColor(color) == Brightness.dark ? Colors.white : const Color(0xFF1D1712);

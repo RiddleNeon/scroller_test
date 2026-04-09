@@ -105,9 +105,9 @@ class BottomNavBarState extends State<BottomNavBar> {
                               curve: Curves.easeOutBack,
                               scale: selected ? 1.08 : 1.0,
                               child: Icon(
-                                i == 2 ? Icons.add_rounded : item.icon,
-                                color: i == 2 ? cs.onTertiary : iconColor,
-                                size: i == 2 ? 22 : 24,
+                                item.icon,
+                                color: iconColor,
+                                size: 24,
                               ),
                             ),
                             const SizedBox(height: 2),
@@ -118,7 +118,7 @@ class BottomNavBarState extends State<BottomNavBar> {
                                 fontSize: 10,
                                 fontWeight: selected ? FontWeight.w700 : FontWeight.w500,
                               ),
-                              child: Text(item.label.isEmpty ? 'Create' : item.label),
+                              child: Text(item.label),
                             ),
                           ],
                         ),
@@ -126,28 +126,6 @@ class BottomNavBarState extends State<BottomNavBar> {
                     );
                   }),
                 ),
-                if (items.length > 2)
-                  AnimatedPositioned(
-                    duration: const Duration(milliseconds: 220),
-                    curve: Curves.easeOutCubic,
-                    left: createCenterX - (createCircleSize / 2),
-                    top: createCircleTop,
-                    width: createCircleSize,
-                    height: createCircleSize,
-                    child: IgnorePointer(
-                      child: AnimatedScale(
-                        scale: currentSelectedIndex == 2 ? 1.0 : 0.95,
-                        duration: const Duration(milliseconds: 180),
-                        child: DecoratedBox(
-                          decoration: BoxDecoration(
-                            color: cs.tertiary.withValues(alpha: 0.24),
-                            shape: BoxShape.circle,
-                            border: Border.all(color: cs.tertiary.withValues(alpha: 0.68)),
-                          ),
-                        ),
-                      ),
-                    ),
-                  ),
               ],
             );
           },

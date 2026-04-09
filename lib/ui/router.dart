@@ -102,7 +102,7 @@ BottomNavBar _bottomNavBar = BottomNavBar(
 List<({IconData icon, String label, String id})> _navigationBarItems = [
   (icon: Icons.home, label: 'Home', id: '/feed'),
   (icon: Icons.search, label: 'Discover', id: '/search_screen'),
-  (icon: Icons.add_box_outlined, label: '', id: '/create'),
+  //(icon: Icons.add_box_outlined, label: '', id: '/create'),
   (icon: Icons.person_outline, label: 'Profile', id: '/profile'),
   (icon: Icons.chat, label: 'Chat', id: '/chat'),
   (icon: CupertinoIcons.map, label: 'Quests', id: '/quests'),
