@@ -51,9 +51,14 @@ class BottomNavBarState extends State<BottomNavBar> {
       padding: EdgeInsets.fromLTRB(10, 8, 10, bottomPad + 6),
       color: Colors.transparent,
       child: Material(
-        color: cs.surfaceContainerHigh.withValues(alpha: 0.95),
-        elevation: 0,
+        color: cs.surfaceContainerHighest.withValues(alpha: 0.98),
+        elevation: 10,
+        shadowColor: cs.shadow.withValues(alpha: 0.35),
         borderRadius: BorderRadius.circular(22),
+        shape: RoundedRectangleBorder(
+          borderRadius: BorderRadius.circular(22),
+          side: BorderSide(color: cs.outlineVariant.withValues(alpha: 0.9)),
+        ),
         child: LayoutBuilder(
           builder: (context, constraints) {
             final slotWidth = constraints.maxWidth / items.length;
@@ -121,22 +126,22 @@ class BottomNavBarState extends State<BottomNavBar> {
                   }),
                 ),
                 if (items.length > 2)
-                  IgnorePointer(
-                    child: AnimatedPositioned(
-                      duration: const Duration(milliseconds: 220),
-                      curve: Curves.easeOutCubic,
-                      left: createCenterX - 18,
-                      top: (constraints.maxHeight - 36) / 2,
-                      width: 36,
-                      height: 36,
+                  AnimatedPositioned(
+                    duration: const Duration(milliseconds: 220),
+                    curve: Curves.easeOutCubic,
+                    left: createCenterX - 18,
+                    top: (constraints.maxHeight - 36) / 2,
+                    width: 36,
+                    height: 36,
+                    child: IgnorePointer(
                       child: AnimatedScale(
                         scale: currentSelectedIndex == 2 ? 1.0 : 0.95,
                         duration: const Duration(milliseconds: 180),
                         child: DecoratedBox(
                           decoration: BoxDecoration(
-                            color: cs.tertiary.withValues(alpha: 0.18),
+                            color: cs.tertiary.withValues(alpha: 0.24),
                             shape: BoxShape.circle,
-                            border: Border.all(color: cs.tertiary.withValues(alpha: 0.45)),
+                            border: Border.all(color: cs.tertiary.withValues(alpha: 0.68)),
                           ),
                         ),
                       ),

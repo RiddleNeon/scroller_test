@@ -52,6 +52,59 @@ class AppTheme {
   static ThemeData light() => _build(lightScheme);
   static ThemeData dark() => _build(darkScheme);
 
+  /// Builds cappuccino-styled light and dark themes from a primary color.
+  /// Optional colors can override the auto-derived palette.
+  static ({ThemeData light, ThemeData dark}) cappuccinoFromPrimary({
+    required Color primary,
+    Color? secondary,
+    Color? tertiary,
+    Color? lightSurface,
+    Color? darkSurface,
+    Color? lightSurfaceContainerHighest,
+    Color? darkSurfaceContainerHighest,
+  }) {
+    final schemes = cappuccinoSchemesFromPrimary(
+      primary: primary,
+      secondary: secondary,
+      tertiary: tertiary,
+      lightSurface: lightSurface,
+      darkSurface: darkSurface,
+      lightSurfaceContainerHighest: lightSurfaceContainerHighest,
+      darkSurfaceContainerHighest: darkSurfaceContainerHighest,
+    );
+
+    return (light: _build(schemes.light), dark: _build(schemes.dark));
+  }
+
+  /// Builds cappuccino-like color schemes for both brightness modes.
+  static ({ColorScheme light, ColorScheme dark}) cappuccinoSchemesFromPrimary({
+    required Color primary,
+    Color? secondary,
+    Color? tertiary,
+    Color? lightSurface,
+    Color? darkSurface,
+    Color? lightSurfaceContainerHighest,
+    Color? darkSurfaceContainerHighest,
+  }) {
+    final light = _buildCappuccinoScheme(
+      brightness: Brightness.light,
+      primary: primary,
+      secondary: secondary,
+      tertiary: tertiary,
+      surface: lightSurface,
+      surfaceContainerHighest: lightSurfaceContainerHighest,
+    );
+    final dark = _buildCappuccinoScheme(
+      brightness: Brightness.dark,
+      primary: primary,
+      secondary: secondary,
+      tertiary: tertiary,
+      surface: darkSurface,
+      surfaceContainerHighest: darkSurfaceContainerHighest,
+    );
+    return (light: light, dark: dark);
+  }
+
   static ThemeData _build(ColorScheme cs) {
     return ThemeData(
       useMaterial3: true,
@@ -125,5 +178,72 @@ class AppTheme {
         contentTextStyle: TextStyle(color: cs.onInverseSurface),
       ),
     );
+  }
+
+  static ColorScheme _buildCappuccinoScheme({
+    required Brightness brightness,
+    required Color primary,
+    Color? secondary,
+    Color? tertiary,
+    Color? surface,
+    Color? surfaceContainerHighest,
+  }) {
+    final bool isDark = brightness == Brightness.dark;
+    final base = ColorScheme.fromSeed(seedColor: primary, brightness: brightness);
+
+    final derivedSecondary =
+        secondary ?? _transformHsl(primary, hueShift: 18, saturationFactor: 0.6, lightnessDelta: isDark ? 0.06 : -0.05);
+    final derivedTertiary =
+        tertiary ?? _transformHsl(primary, hueShift: -28, saturationFactor: 0.5, lightnessDelta: isDark ? 0.08 : -0.03);
+
+    final derivedSurface =
+        surface ??
+        _transformHsl(
+          primary,
+          hueShift: 14,
+          saturationFactor: 0.18,
+          lightnessTarget: isDark ? 0.10 : 0.93,
+        );
+    final derivedContainer =
+        surfaceContainerHighest ??
+        _transformHsl(
+          derivedSurface,
+          hueShift: 0,
+          saturationFactor: 0.9,
+          lightnessDelta: isDark ? 0.10 : -0.10,
+        );
+
+    return base.copyWith(
+      primary: primary,
+      onPrimary: _bestOnColor(primary),
+      secondary: derivedSecondary,
+      onSecondary: _bestOnColor(derivedSecondary),
+      tertiary: derivedTertiary,
+      onTertiary: _bestOnColor(derivedTertiary),
+      surface: derivedSurface,
+      onSurface: _bestOnColor(derivedSurface),
+      surfaceContainerHighest: derivedContainer,
+      onSurfaceVariant: _bestOnColor(derivedContainer).withValues(alpha: 0.84),
+      inversePrimary: _transformHsl(primary, hueShift: 0, saturationFactor: 0.85, lightnessTarget: isDark ? 0.42 : 0.76),
+      surfaceTint: primary,
+    );
+  }
+
+  static Color _bestOnColor(Color color) {
+    return ThemeData.estimateBrightnessForColor(color) == Brightness.dark ? Colors.white : const Color(0xFF1D1712);
+  }
+
+  static Color _transformHsl(
+    Color color, {
+    double hueShift = 0,
+    double saturationFactor = 1,
+    double lightnessDelta = 0,
+    double? lightnessTarget,
+  }) {
+    final hsl = HSLColor.fromColor(color);
+    final hue = (hsl.hue + hueShift) % 360;
+    final saturation = (hsl.saturation * saturationFactor).clamp(0.0, 1.0);
+    final lightness = (lightnessTarget ?? (hsl.lightness + lightnessDelta)).clamp(0.0, 1.0);
+    return hsl.withHue(hue).withSaturation(saturation).withLightness(lightness).toColor();
   }
 }
