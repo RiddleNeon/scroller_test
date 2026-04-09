@@ -88,7 +88,7 @@ class AppTheme {
       ),
       inputDecorationTheme: InputDecorationTheme(
         filled: true,
-        fillColor: cs.surfaceContainer,
+        fillColor: cs.surfaceContainerHighest,
         hintStyle: TextStyle(color: cs.onSurfaceVariant),
         prefixIconColor: cs.onSurfaceVariant,
         suffixIconColor: cs.onSurfaceVariant,
