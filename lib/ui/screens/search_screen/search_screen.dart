@@ -82,15 +82,14 @@ class _SearchScreenState extends State<SearchScreen> with TickerProviderStateMix
 
     await Future.wait([nextVideoQuery.preloadMore(), nextUserQuery.preloadMore()]);
     if (requestId != _searchRequestId) return;
+    if (!mounted) return;
 
-    if (mounted && requestId == _searchRequestId) {
-      setState(() {
-        _videoQuery = nextVideoQuery;
-        _userQuery = nextUserQuery;
-        _currentSearchViewModel = FeedViewModel();
-        _loading = false;
-      });
-    }
+    setState(() {
+      _videoQuery = nextVideoQuery;
+      _userQuery = nextUserQuery;
+      _currentSearchViewModel = FeedViewModel();
+      _loading = false;
+    });
   }
 
   @override

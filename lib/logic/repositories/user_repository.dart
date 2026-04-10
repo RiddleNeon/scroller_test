@@ -451,7 +451,9 @@ class UserRepository {
       if (page.length < limit) {
         cache.exhausted = true;
       }
-      cache.newestCreatedAt ??= page.isEmpty ? cache.newestCreatedAt : page.first.createdAt;
+      if (cache.newestCreatedAt == null && page.isNotEmpty) {
+        cache.newestCreatedAt = page.first.createdAt;
+      }
     }
 
     if (offset >= cache.items.length) return [];
