@@ -1,6 +1,5 @@
 // ignore_for_file: unused_element_parameter
 
-import 'dart:math';
 import 'dart:ui';
 
 import 'package:flutter/material.dart';
@@ -365,7 +364,7 @@ class _CommentsOverlayState extends State<CommentsOverlay> {
   // ── Header ────────────────────────────────────────────────────
 
   Widget _buildHeader() {
-    final count = max(widget.initialCommentCount ?? _vms.length, _vms.length) + newOwnComments;
+    final count = (widget.initialCommentCount ?? _vms.length) + newOwnComments;
     return Padding(
       padding: const EdgeInsets.fromLTRB(20, 16, 12, 12),
       child: Row(
