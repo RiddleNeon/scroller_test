@@ -67,6 +67,7 @@ class _CommentButtonState extends State<CommentButton>
 
   @override
   Widget build(BuildContext context) {
+    final cs = Theme.of(context).colorScheme;
     return Padding(
       padding: const EdgeInsets.all(4),
       child: InkWell(
@@ -79,7 +80,11 @@ class _CommentButtonState extends State<CommentButton>
               angle: _rotate.value,
               child: Transform.scale(
                 scale: _scale.value,
-                child: Icon(CupertinoIcons.ellipses_bubble_fill, size: 28, color: Colors.grey.shade700)
+                child: Icon(
+                  CupertinoIcons.ellipses_bubble_fill,
+                  size: 28,
+                  color: cs.onSurface.withValues(alpha: 0.9),
+                ),
               ),
             );
           },

@@ -1,5 +1,6 @@
 // ignore_for_file: unused_element_parameter
 
+import 'dart:math';
 import 'dart:ui';
 
 import 'package:flutter/material.dart';
@@ -92,7 +93,7 @@ void showCommentsOverlay({
     context: context,
     isScrollControlled: true,
     backgroundColor: Colors.transparent,
-    barrierColor: Colors.black54,
+    barrierColor: Theme.of(context).colorScheme.scrim.withValues(alpha: 0.6),
     builder: (_) => CommentsOverlay(
       comments: comments,
       currentUserId: currentUserId,
@@ -154,12 +155,14 @@ class _CommentsOverlayState extends State<CommentsOverlay> {
   /// When non-null the input bar is in "reply" mode for this VM.
   _CommentVM? _replyTarget;
 
-  static const _bgColor = Color(0xFF141414);
-  static const _surfaceColor = Color(0xFF1E1E1E);
-  static const _accentColor = Color(0xFF1356B9);
-  static const _subtleText = Color(0xFF888888);
-  static const _dividerColor = Color(0xFF2A2A2A);
-  static const _likedColor = Color(0xFFFF4D6D);
+  ColorScheme get _cs => Theme.of(context).colorScheme;
+  Color get _bgColor => _cs.surface.withValues(alpha: 0.95);
+  Color get _surfaceColor => _cs.surfaceContainerHigh;
+  Color get _accentColor => _cs.primary;
+  Color get _subtleText => _cs.onSurfaceVariant;
+  Color get _dividerColor => _cs.outlineVariant.withValues(alpha: 0.65);
+  Color get _likedColor => _cs.error;
+  Color get _bodyTextColor => _cs.onSurface.withValues(alpha: 0.92);
 
   static const int _maxIndentDepth = 5;
   static const double _indentPerDepth = 20.0;
@@ -340,15 +343,15 @@ class _CommentsOverlayState extends State<CommentsOverlay> {
       borderRadius: const BorderRadius.vertical(top: Radius.circular(24)),
       child: BackdropFilter(
         filter: ImageFilter.blur(sigmaX: 20, sigmaY: 20),
-        child: Container(
-          height: MediaQuery.of(context).size.height * 0.80,
-          color: _bgColor,
-          child: Column(
+          child: Container(
+            height: MediaQuery.of(context).size.height * 0.80,
+            color: _bgColor,
+            child: Column(
             children: [
               _buildHeader(),
-              const Divider(color: _dividerColor, height: 1),
+              Divider(color: _dividerColor, height: 1),
               Expanded(child: _buildList()),
-              const Divider(color: _dividerColor, height: 1),
+              Divider(color: _dividerColor, height: 1),
               if (_replyTarget != null) _buildReplyBanner(),
               _buildInputBar(bottomPadding),
             ],
@@ -361,6 +364,7 @@ class _CommentsOverlayState extends State<CommentsOverlay> {
   // ── Header ────────────────────────────────────────────────────
 
   Widget _buildHeader() {
+    final count = max(widget.initialCommentCount ?? _vms.length, _vms.length) + newOwnComments;
     return Padding(
       padding: const EdgeInsets.fromLTRB(20, 16, 12, 12),
       child: Row(
@@ -380,10 +384,10 @@ class _CommentsOverlayState extends State<CommentsOverlay> {
                     ),
                   ),
                 ),
-                const Text(
-                  'Comments',
+                Text(
+                  'Comments • $count',
                   style: TextStyle(
-                    color: Colors.white,
+                    color: _cs.onSurface,
                     fontSize: 17,
                     fontWeight: FontWeight.w700,
                     letterSpacing: -0.3,
@@ -394,7 +398,7 @@ class _CommentsOverlayState extends State<CommentsOverlay> {
           ),
           IconButton(
             onPressed: () => Navigator.pop(context),
-            icon: const Icon(Icons.close_rounded, color: _subtleText),
+            icon: Icon(Icons.close_rounded, color: _subtleText),
           ),
         ],
       ),
@@ -405,12 +409,12 @@ class _CommentsOverlayState extends State<CommentsOverlay> {
 
   Widget _buildList() {
     if (_vms.isEmpty) {
-      return const Center(
+      return Center(
         child: Column(
           mainAxisAlignment: MainAxisAlignment.center,
           children: [
             Icon(Icons.chat_bubble_outline_rounded, color: _subtleText, size: 48),
-            SizedBox(height: 12),
+            const SizedBox(height: 12),
             Text(
               'No comments yet.\nBe the first!',
               textAlign: TextAlign.center,
@@ -430,7 +434,7 @@ class _CommentsOverlayState extends State<CommentsOverlay> {
       itemCount: count,
       separatorBuilder: (_, i) {
         if (i >= _vms.length - 1) return const SizedBox.shrink();
-        return const Divider(color: _dividerColor, height: 1, indent: 68);
+        return Divider(color: _dividerColor, height: 1, indent: 68);
       },
       itemBuilder: (_, i) {
         if (i == _vms.length) return _buildFooter();
@@ -455,16 +459,18 @@ class _CommentsOverlayState extends State<CommentsOverlay> {
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.start,
         children: [
-          _CommentTile(
-            vm: vm,
-            timeAgo: _timeAgo(vm.comment.date),
-            isOwn: vm.comment.userId == widget.currentUserId,
-            accentColor: _accentColor,
-            likedColor: _likedColor,
-            subtleText: _subtleText,
-            isReply: isReply,
-            depth: depth,
-            onLike: () => _toggleLike(vm),
+            _CommentTile(
+              vm: vm,
+              timeAgo: _timeAgo(vm.comment.date),
+              isOwn: vm.comment.userId == widget.currentUserId,
+              accentColor: _accentColor,
+              likedColor: _likedColor,
+              subtleText: _subtleText,
+              textColor: _cs.onSurface,
+              bodyTextColor: _bodyTextColor,
+              isReply: isReply,
+              depth: depth,
+              onLike: () => _toggleLike(vm),
             onReply: () => _startReply(vm),
           ),
 
@@ -487,7 +493,7 @@ class _CommentsOverlayState extends State<CommentsOverlay> {
                         ),
                       ),
                       const SizedBox(width: 8),
-                      const Text(
+                      Text(
                         'Loading replies…',
                         style: TextStyle(
                           color: _subtleText,
@@ -506,7 +512,7 @@ class _CommentsOverlayState extends State<CommentsOverlay> {
                         vm.showReplies
                             ? 'Hide replies'
                             : 'View ${vm.replyCount} repl${vm.replyCount == 1 ? 'y' : 'ies'}',
-                        style: const TextStyle(
+                        style: TextStyle(
                           color: _subtleText,
                           fontSize: 12.5,
                           fontWeight: FontWeight.w600,
@@ -524,7 +530,7 @@ class _CommentsOverlayState extends State<CommentsOverlay> {
               children: vm.replies.map((reply) {
                 return Column(
                   children: [
-                    const Divider(color: _dividerColor, height: 1, indent: 16),
+                    Divider(color: _dividerColor, height: 1, indent: 16),
                     _buildCommentBlock(reply, depth: depth + 1),
                   ],
                 );
@@ -537,7 +543,7 @@ class _CommentsOverlayState extends State<CommentsOverlay> {
 
   Widget _buildFooter() {
     if (_isLoadingMore) {
-      return const Padding(
+      return Padding(
         padding: EdgeInsets.symmetric(vertical: 20),
         child: Center(
           child: SizedBox(
@@ -549,7 +555,7 @@ class _CommentsOverlayState extends State<CommentsOverlay> {
       );
     }
     if (!_hasMore) {
-      return const Padding(
+      return Padding(
         padding: EdgeInsets.symmetric(vertical: 16),
         child: Center(
           child: Text('— no more comments —', style: TextStyle(color: _subtleText, fontSize: 12)),
@@ -563,22 +569,22 @@ class _CommentsOverlayState extends State<CommentsOverlay> {
 
   Widget _buildReplyBanner() {
     return Container(
-      color: const Color(0xFF1A1A1A),
+      color: _cs.surfaceContainer,
       padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 8),
       child: Row(
         children: [
-          const Icon(Icons.reply_rounded, size: 15, color: _accentColor),
+          Icon(Icons.reply_rounded, size: 15, color: _accentColor),
           const SizedBox(width: 6),
           Expanded(
             child: Text(
               'Replying to @${_replyTarget!.comment.username}',
-              style: const TextStyle(color: _accentColor, fontSize: 12.5, fontWeight: FontWeight.w500),
+              style: TextStyle(color: _accentColor, fontSize: 12.5, fontWeight: FontWeight.w500),
               overflow: TextOverflow.ellipsis,
             ),
           ),
           GestureDetector(
             onTap: _cancelReply,
-            child: const Icon(Icons.close_rounded, size: 16, color: _subtleText),
+            child: Icon(Icons.close_rounded, size: 16, color: _subtleText),
           ),
         ],
       ),
@@ -601,6 +607,7 @@ class _CommentsOverlayState extends State<CommentsOverlay> {
               decoration: BoxDecoration(
                 color: _surfaceColor,
                 borderRadius: BorderRadius.circular(24),
+                border: Border.all(color: _dividerColor),
               ),
               child: TextField(
                 controller: _textController,
@@ -608,10 +615,10 @@ class _CommentsOverlayState extends State<CommentsOverlay> {
                 maxLines: null,
                 textInputAction: TextInputAction.send,
                 onSubmitted: (_) => _sendComment(),
-                style: const TextStyle(color: Colors.white, fontSize: 15),
+                style: TextStyle(color: _cs.onSurface, fontSize: 15),
                 decoration: InputDecoration(
                   hintText: _replyTarget != null ? 'Reply to @${_replyTarget!.comment.username}…' : 'Write a comment…',
-                  hintStyle: const TextStyle(color: _subtleText, fontSize: 15),
+                  hintStyle: TextStyle(color: _subtleText, fontSize: 15),
                   contentPadding: const EdgeInsets.symmetric(horizontal: 16, vertical: 12),
                   border: InputBorder.none,
                 ),
@@ -638,12 +645,12 @@ class _CommentsOverlayState extends State<CommentsOverlay> {
                           padding: EdgeInsets.all(10),
                           child: CircularProgressIndicator(
                             strokeWidth: 2,
-                            color: Colors.black,
+                            color: _cs.onPrimary,
                           ),
                         )
                       : Icon(
                           Icons.arrow_upward_rounded,
-                          color: hasText ? Colors.black : _subtleText,
+                          color: hasText ? _cs.onPrimary : _subtleText,
                           size: 20,
                         ),
                 ),
@@ -666,6 +673,8 @@ class _CommentTile extends StatelessWidget {
   final Color accentColor;
   final Color likedColor;
   final Color subtleText;
+  final Color textColor;
+  final Color bodyTextColor;
   final VoidCallback onLike;
   final VoidCallback onReply;
 
@@ -676,6 +685,8 @@ class _CommentTile extends StatelessWidget {
     required this.accentColor,
     required this.likedColor,
     required this.subtleText,
+    required this.textColor,
+    required this.bodyTextColor,
     required this.onLike,
     required this.onReply,
     this.isReply = false,
@@ -704,7 +715,7 @@ class _CommentTile extends StatelessWidget {
                     Text(
                       vm.comment.username,
                       style: TextStyle(
-                        color: isOwn ? accentColor : Colors.white,
+                        color: isOwn ? accentColor : textColor,
                         fontWeight: FontWeight.w600,
                         fontSize: nameFontSize,
                       ),
@@ -722,7 +733,7 @@ class _CommentTile extends StatelessWidget {
                 Text(
                   vm.comment.message,
                   style: TextStyle(
-                    color: const Color(0xFFE0E0E0),
+                    color: bodyTextColor,
                     fontSize: fontSize,
                     height: 1.45,
                   ),
