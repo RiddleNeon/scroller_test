@@ -418,7 +418,21 @@ class ChatRepository {
   ({int? newCurrent, List<Chat> result}) _cloneChatPage(({int? newCurrent, List<Chat> result}) page) {
     return (
       newCurrent: page.newCurrent,
-      result: List<Chat>.from(page.result),
+      result: page.result.map(_cloneChat).toList(),
+    );
+  }
+
+  Chat _cloneChat(Chat chat) {
+    return Chat(
+      conversationId: chat.conversationId,
+      currentUserReplacementId: chat.currentUserId,
+      partnerId: chat.partnerId,
+      partnerProfileImageUrl: chat.partnerProfileImageUrl,
+      partnerName: chat.partnerName,
+      lastMessage: chat.lastMessage,
+      lastMessageAt: chat.lastMessageAt,
+      lastMessageByMe: chat.lastMessageByMe,
+      createdAt: chat.createdAt,
     );
   }
 }

@@ -64,8 +64,8 @@ class _SearchScreenState extends State<SearchScreen> with TickerProviderStateMix
 
   Future<void> _search([String? val]) async {
     val ??= _controller.text;
-    final normalizedQuery = val.trim();
-    if (normalizedQuery.isEmpty) return;
+    final trimmedQuery = val.trim();
+    if (trimmedQuery.isEmpty) return;
     final requestId = ++_searchRequestId;
     FocusScope.of(context).unfocus();
 
@@ -84,14 +84,14 @@ class _SearchScreenState extends State<SearchScreen> with TickerProviderStateMix
     });
 
     final nextUserQuery = SearchQuery<UserProfile>((limit, offset) async {
-      final result = await userRepository.searchUsers(normalizedQuery, limit: limit, offset: offset);
+      final result = await userRepository.searchUsers(trimmedQuery, limit: limit, offset: offset);
       return result.users;
-    }, () => userRepository.countSearchUsers(normalizedQuery));
+    }, () => userRepository.countSearchUsers(trimmedQuery));
 
     final nextVideoQuery = SearchQuery<Video>((limit, offset) async {
-      final result = await videoRepo.searchVideos(normalizedQuery, limit: limit, offset: offset, withAuthor: true);
+      final result = await videoRepo.searchVideos(trimmedQuery, limit: limit, offset: offset, withAuthor: true);
       return result.videos;
-    }, () => videoRepo.countSearchVideos(normalizedQuery));
+    }, () => videoRepo.countSearchVideos(trimmedQuery));
 
     await Future.wait([nextVideoQuery.preloadMore(), nextUserQuery.preloadMore()]);
     if (requestId != _searchRequestId) return;
