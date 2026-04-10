@@ -10,6 +10,7 @@ import 'package:wurp/ui/screens/quests/test_quest_screen.dart';
 import 'package:wurp/ui/screens/search_screen/search_screen.dart';
 import 'package:wurp/ui/short_video_player.dart';
 import 'package:wurp/ui/animations/slide_morph_transitions.dart';
+import 'package:wurp/ui/theme/theme_creation_screen.dart';
 import 'package:wurp/ui/widgets/bottom_navigation_bar.dart';
 
 import '../base_logic.dart';
@@ -102,6 +103,15 @@ void initRouter() {
             pageBuilder: (context, state) => SlideMorphTransitions.page<void>(
               key: state.pageKey,
               child: const TestQuestScreen(subject: 'General'),
+              beginOffset: const Offset(0.03, 0.0),
+              beginScale: 0.993,
+            ),
+          ),
+          GoRoute(
+            path: '/themes',
+            pageBuilder: (context, state) => SlideMorphTransitions.page<void>(
+              key: state.pageKey,
+              child: const ThemeManagerScreen(),
               beginOffset: const Offset(0.03, 0.0),
               beginScale: 0.993,
             ),

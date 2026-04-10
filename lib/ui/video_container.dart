@@ -6,6 +6,7 @@ import 'package:wurp/logic/video/video.dart';
 class VideoContainer {
   Video? video;
   VideoPlayerController? controller;
+  DateTime? loadedAt;
 
   VideoContainer({required this.video});
 
@@ -20,7 +21,8 @@ class VideoContainer {
     );
 
     await controller!.initialize();
-
+    
+    loadedAt = DateTime.now();
     return controller!.setLooping(true);
   }
 }

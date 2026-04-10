@@ -6,6 +6,7 @@ import 'package:wurp/logic/chat/chat.dart';
 import 'package:wurp/logic/users/user_model.dart';
 import 'package:wurp/logic/video/video.dart';
 import 'package:wurp/ui/misc/avatar.dart';
+import 'package:wurp/ui/router.dart';
 import 'package:wurp/ui/screens/search_screen/search_query.dart';
 import 'package:wurp/ui/screens/search_screen/search_screen.dart';
 import 'package:wurp/ui/screens/search_screen/widgets/preloading_list.dart';
@@ -282,6 +283,9 @@ class _ProfileScreenState extends State<ProfileScreen> with TickerProviderStateM
               icon: Icon(Icons.settings, color: cs.onSurface),
               onPressed: () {
                 showRickDialog(context);
+              },
+              onLongPress: () {
+                routerConfig.push("/themes");
               },
             ),
             const SizedBox(width: 16),

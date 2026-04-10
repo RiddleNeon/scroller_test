@@ -159,15 +159,15 @@ class _ChatManagingScreenState extends State<ChatManagingScreen> {
                     ],
                   ),
                 ),
-
+                
                 const SizedBox(width: 12),
-
+                
                 Column(
                   crossAxisAlignment: CrossAxisAlignment.end,
                   children: [
                     Text(timeString, style: theme.textTheme.bodySmall?.copyWith(color: theme.colorScheme.primary)),
                     const SizedBox(height: 6),
-
+                    
                     if (!chat.lastMessageByMe)
                       Container(
                         width: 8,
@@ -185,14 +185,11 @@ class _ChatManagingScreenState extends State<ChatManagingScreen> {
   }
 
   void reSortChats() {
-    print("re-sorting chats!! chat timestamps and last messages: \n${chats.map((c) => "lastMessage: ${c.lastMessage}, lastMessageAt: ${c.lastMessageAt}").join(" | \n")}");
     chats.sort((a, b) {
       final aTime = (a.lastMessageAt ?? a.createdAt).toLocal();
       final bTime = (b.lastMessageAt ?? b.createdAt).toLocal();
       return bTime.compareTo(aTime);
     });
-    print("sorted timestamps: \n${chats.map((c) => "lastMessage: ${c.lastMessage}, lastMessageAt: ${c.lastMessageAt}").join(" | \n")}");
-    print("--------------");
   }
 
   void _openChat(Chat chat, void Function(ChatMessage) onMessageUpdate) async {

@@ -1,3 +1,5 @@
+import 'dart:ui';
+
 import 'package:flutter/material.dart';
 import 'package:wurp/ui/animations/slide_morph_transitions.dart';
 
@@ -51,7 +53,7 @@ class AppTheme {
   );
 
   static ThemeData light = _build(lightScheme);
-  static ThemeData dark = cappuccinoFromPrimary(primary: const Color(0xFF6C5443)).dark;
+  static ThemeData dark = cappuccinoFromPrimary(primary: const Color(0xFF466C7C)).dark;
 
   /// Builds cappuccino-styled light and dark themes from a primary color.
   ///
