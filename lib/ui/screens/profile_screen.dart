@@ -115,6 +115,7 @@ class _ProfileScreenState extends State<ProfileScreen> with TickerProviderStateM
               backgroundColor: cs.surface,
               surfaceTintColor: Colors.transparent,
               elevation: 0,
+              titleSpacing: 0,
               title: _buildCollapsedTitle(cs),
               flexibleSpace: FlexibleSpaceBar(collapseMode: CollapseMode.pin, background: _buildProfileHeader(cs)),
               bottom: PreferredSize(preferredSize: const Size.fromHeight(60), child: _buildTabBar(cs)),
@@ -180,7 +181,7 @@ class _ProfileScreenState extends State<ProfileScreen> with TickerProviderStateM
                               final currentIndex = _followingListKey.currentState?.items.indexOf(itemUser) ?? -1;
                               if (currentIndex != -1) {
                                 _followingListKey.currentState?.removeItem(currentIndex, (context, anim) => _buildSqueezeItem(itemUser, anim, cs));
-                                //_followingListKey.currentState?.preloadMore(limit: 1); //fixme 
+                                //_followingListKey.currentState?.preloadMore(limit: 1); //fixme
                                 print('Removed user ${itemUser.username} from following list');
                               } else {
                                 print('Tried to remove user ${itemUser.username} from following list, but they were not found in the list');
@@ -251,29 +252,33 @@ class _ProfileScreenState extends State<ProfileScreen> with TickerProviderStateM
   }
 
   Widget _buildCollapsedTitle(ColorScheme cs) {
-    return ClipRect(
-      child: Container(
-        color: cs.surfaceContainer.withValues(alpha: 0.95),
-        height: kToolbarHeight,
-        padding: const EdgeInsets.symmetric(horizontal: 4),
-        child: Row(
-          mainAxisAlignment: MainAxisAlignment.spaceBetween,
-          children: [
-            if (widget.ownProfile) const LogoutButton() else Container(),
-            Text(
+    return Container(
+      decoration: BoxDecoration(color: cs.surfaceContainer.withValues(alpha: 0.95), borderRadius: const BorderRadius.only(bottomLeft: Radius.circular(16), bottomRight: Radius.circular(16))),
+      height: kToolbarHeight,
+      padding: const EdgeInsets.symmetric(horizontal: 4),
+      child: Row(
+        mainAxisSize: MainAxisSize.max,
+        mainAxisAlignment: MainAxisAlignment.spaceEvenly,
+        children: [
+          if (widget.ownProfile) ...[const SizedBox(width: 16), const LogoutButton()] else const SizedBox(width: 48),
+          Expanded(
+            child: Text(
               user.username,
               style: TextStyle(color: cs.onSurface, fontSize: 15, fontWeight: FontWeight.w700, letterSpacing: 0.2),
+              textAlign: TextAlign.center,
             ),
-            widget.ownProfile
-                ? IconButton(
-                    icon: Icon(Icons.settings, color: cs.onSurface),
-                    onPressed: () {
-                      showRickDialog(context);
-                    },
-                  )
-                : Container(width: 48),
-          ],
-        ),
+          ),
+          if (widget.ownProfile) ...[
+            IconButton(
+              icon: Icon(Icons.settings, color: cs.onSurface),
+              onPressed: () {
+                showRickDialog(context);
+              },
+            ),
+            const SizedBox(width: 16),
+          ] else
+            const SizedBox(width: 48),
+        ],
       ),
     );
   }
@@ -631,12 +636,7 @@ class _ActionButton extends StatelessWidget {
 }
 
 class _ProfileSegmentButton extends StatelessWidget {
-  const _ProfileSegmentButton({
-    required this.icon,
-    required this.selected,
-    required this.tooltip,
-    required this.onTap,
-  });
+  const _ProfileSegmentButton({required this.icon, required this.selected, required this.tooltip, required this.onTap});
 
   final IconData icon;
   final bool selected;
