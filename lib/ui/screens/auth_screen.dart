@@ -33,6 +33,8 @@ class _LoginScreenState extends State<LoginScreen>
   // ── State ──────────────────────────────────
 
   _AuthMode _mode = _AuthMode.login;
+  int _modeDirection = 1;
+  int _modeVersion = 0;
   bool _isLoading = false;
   String? _errorMessage;
   String? _successMessage;
@@ -69,12 +71,6 @@ class _LoginScreenState extends State<LoginScreen>
     parent: _entryController,
     curve: Curves.easeOutCubic,
   ));
-
-  // Mode switch: fade between form states
-  late final AnimationController _modeController = AnimationController(
-    vsync: this,
-    duration: const Duration(milliseconds: 180),
-  )..value = 1.0;
 
   // Shake on error
   late final AnimationController _shakeController = AnimationController(
@@ -115,7 +111,6 @@ class _LoginScreenState extends State<LoginScreen>
   @override
   void dispose() {
     _entryController.dispose();
-    _modeController.dispose();
     _shakeController.dispose();
     _banController.dispose();
     _emailController.dispose();
@@ -143,15 +138,20 @@ class _LoginScreenState extends State<LoginScreen>
 
   Future<void> _switchMode(_AuthMode mode) async {
     if (_mode == mode) return;
-    await _modeController.reverse();
-    if (!mounted) return;
     setState(() {
+      _modeDirection = _modeIndex(mode) > _modeIndex(_mode) ? 1 : -1;
       _mode = mode;
+      _modeVersion++;
       _errorMessage = null;
       _successMessage = null;
     });
-    _modeController.forward();
   }
+
+  int _modeIndex(_AuthMode mode) => switch (mode) {
+    _AuthMode.login => 0,
+    _AuthMode.signup => 1,
+    _AuthMode.recover => 2,
+  };
 
   // ── Auth logic ─────────────────────────────
 
@@ -361,15 +361,13 @@ class _LoginScreenState extends State<LoginScreen>
         const SizedBox(height: 6),
         AnimatedSwitcher(
           duration: const Duration(milliseconds: 200),
-          transitionBuilder: (child, animation) => SlideMorphTransitions.switcher(
-            child,
-            animation,
-            beginOffset: const Offset(0, 0.12),
-            beginScale: 0.95,
+          transitionBuilder: (child, animation) => _buildHorizontalClipTransition(
+            child: child,
+            animation: animation,
           ),
           child: Text(
             _modeSubtitle,
-            key: ValueKey(_mode),
+            key: ValueKey('subtitle-${_mode.name}-$_modeVersion'),
             style: theme.textTheme.bodyMedium?.copyWith(
               color: cs.onSurfaceVariant,
             ),
@@ -397,46 +395,85 @@ class _LoginScreenState extends State<LoginScreen>
         padding: const EdgeInsets.all(24),
         child: Form(
           key: _formKey,
-          child: SlideMorphTransitions.build(
-            _modeController,
-            Column(
-              crossAxisAlignment: CrossAxisAlignment.stretch,
+          child: AnimatedSwitcher(
+            duration: const Duration(milliseconds: 300),
+            reverseDuration: const Duration(milliseconds: 250),
+            transitionBuilder: (child, animation) => _buildHorizontalClipTransition(
+              child: child,
+              animation: animation,
+            ),
+            layoutBuilder: (currentChild, previousChildren) => Stack(
+              clipBehavior: Clip.hardEdge,
               children: [
-                if (_mode != _AuthMode.recover)
-                  _buildModeTabs(cs, theme),
-                if (_mode != _AuthMode.recover)
-                  const SizedBox(height: 24),
-                _buildBanBanner(cs, theme),
-                _buildEmailField(cs, theme),
-                if (_mode != _AuthMode.recover) ...[
-                  const SizedBox(height: 12),
-                  _buildPasswordField(cs, theme),
-                ],
-                if (_mode == _AuthMode.signup) ...[
-                  const SizedBox(height: 12),
-                  _buildConfirmPasswordField(cs, theme),
-                ],
-                if (_mode == _AuthMode.login) ...[
-                  const SizedBox(height: 8),
-                  _buildForgotLink(cs),
-                ],
-                const SizedBox(height: 24),
-                AnimatedSize(
-                  duration: const Duration(milliseconds: 250),
-                  curve: Curves.easeOut,
-                  child: _buildFeedback(cs, theme),
-                ),
-                _buildSubmitButton(cs, theme),
-                if (_mode == _AuthMode.recover) ...[
-                  const SizedBox(height: 16),
-                  _buildBackToLogin(cs),
-                ],
+                ...previousChildren,
+                if (currentChild != null) currentChild,
               ],
             ),
-            beginOffset: const Offset(0, 0.04),
-            beginScale: 0.99,
+            child: _buildModeFormContent(cs, theme),
           ),
         ),
+      ),
+    );
+  }
+
+  Widget _buildModeFormContent(ColorScheme cs, ThemeData theme) {
+    return KeyedSubtree(
+      key: ValueKey('mode-${_mode.name}-$_modeVersion'),
+      child: Column(
+        crossAxisAlignment: CrossAxisAlignment.stretch,
+        children: [
+          if (_mode != _AuthMode.recover) _buildModeTabs(cs, theme),
+          if (_mode != _AuthMode.recover) const SizedBox(height: 24),
+          _buildBanBanner(cs, theme),
+          _buildEmailField(cs, theme),
+          if (_mode != _AuthMode.recover) ...[
+            const SizedBox(height: 12),
+            _buildPasswordField(cs, theme),
+          ],
+          if (_mode == _AuthMode.signup) ...[
+            const SizedBox(height: 12),
+            _buildConfirmPasswordField(cs, theme),
+          ],
+          if (_mode == _AuthMode.login) ...[
+            const SizedBox(height: 8),
+            _buildForgotLink(cs),
+          ],
+          const SizedBox(height: 24),
+          AnimatedSize(
+            duration: const Duration(milliseconds: 250),
+            curve: Curves.easeOut,
+            child: _buildFeedback(cs, theme),
+          ),
+          _buildSubmitButton(cs, theme),
+          if (_mode == _AuthMode.recover) ...[
+            const SizedBox(height: 16),
+            _buildBackToLogin(cs),
+          ],
+        ],
+      ),
+    );
+  }
+
+  Widget _buildHorizontalClipTransition({
+    required Widget child,
+    required Animation<double> animation,
+  }) {
+    final isCurrent = child.key == ValueKey('mode-${_mode.name}-$_modeVersion') ||
+        child.key == ValueKey('subtitle-${_mode.name}-$_modeVersion');
+    final enteringOffset = Offset(_modeDirection.toDouble(), 0);
+    final exitingOffset = Offset(-_modeDirection.toDouble(), 0);
+    final tween = Tween<Offset>(
+      begin: isCurrent ? enteringOffset : Offset.zero,
+      end: isCurrent ? Offset.zero : exitingOffset,
+    );
+    return ClipRect(
+      child: SlideTransition(
+        position: tween.animate(CurvedAnimation(
+          parent: animation,
+          curve: Curves.easeOutCubic,
+          reverseCurve: Curves.easeInCubic,
+        )),
+        child: child,
       ),
     );
   }
@@ -448,10 +485,32 @@ class _LoginScreenState extends State<LoginScreen>
         color: cs.surfaceContainerHighest,
         borderRadius: BorderRadius.circular(10),
       ),
-      child: Row(
+      child: Stack(
         children: [
-          _modeTab('Sign in', _AuthMode.login, cs, theme),
-          _modeTab('Sign up', _AuthMode.signup, cs, theme),
+          AnimatedAlign(
+            duration: const Duration(milliseconds: 260),
+            curve: Curves.easeOutCubic,
+            alignment: _mode == _AuthMode.signup
+                ? Alignment.centerRight
+                : Alignment.centerLeft,
+            child: FractionallySizedBox(
+              widthFactor: 0.5,
+              child: Container(
+                margin: const EdgeInsets.all(3),
+                decoration: BoxDecoration(
+                  borderRadius: BorderRadius.circular(8),
+                  color: cs.surface,
+                  border: Border.all(color: cs.outlineVariant),
+                ),
+              ),
+            ),
+          ),
+          Row(
+            children: [
+              _modeTab('Sign in', _AuthMode.login, cs, theme),
+              _modeTab('Sign up', _AuthMode.signup, cs, theme),
+            ],
+          ),
         ],
       ),
     );
@@ -463,17 +522,8 @@ class _LoginScreenState extends State<LoginScreen>
     return Expanded(
       child: GestureDetector(
         onTap: () => _switchMode(mode),
-        child: AnimatedContainer(
-          duration: const Duration(milliseconds: 200),
-          curve: Curves.easeOut,
+        child: Container(
           margin: const EdgeInsets.all(3),
-          decoration: BoxDecoration(
-            borderRadius: BorderRadius.circular(8),
-            color: active ? cs.surface : Colors.transparent,
-            border: active
-                ? Border.all(color: cs.outlineVariant)
-                : null,
-          ),
           alignment: Alignment.center,
           child: AnimatedDefaultTextStyle(
             duration: const Duration(milliseconds: 200),

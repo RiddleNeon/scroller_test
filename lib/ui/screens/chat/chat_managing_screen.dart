@@ -186,8 +186,26 @@ class _ChatManagingScreenState extends State<ChatManagingScreen> {
 
   void _openChat(Chat chat, void Function(ChatMessage) onMessageUpdate) async {
     await Navigator.of(context).push(
-      MaterialPageRoute(
-        builder: (context) => buildMessagingScreen(chat, onMessageUpdate),
+      PageRouteBuilder(
+        transitionDuration: const Duration(milliseconds: 320),
+        reverseTransitionDuration: const Duration(milliseconds: 260),
+        pageBuilder: (context, animation, secondaryAnimation) => buildMessagingScreen(chat, onMessageUpdate),
+        transitionsBuilder: (context, animation, secondaryAnimation, child) {
+          final curved = CurvedAnimation(
+            parent: animation,
+            curve: Curves.easeOutCubic,
+            reverseCurve: Curves.easeInCubic,
+          );
+          return ClipRect(
+            child: SlideTransition(
+              position: Tween<Offset>(
+                begin: const Offset(1, 0),
+                end: Offset.zero,
+              ).animate(curved),
+              child: child,
+            ),
+          );
+        },
       ),
     );
 
