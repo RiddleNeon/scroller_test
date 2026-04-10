@@ -7,6 +7,7 @@ import 'package:flutter/material.dart';
 import 'package:http/http.dart' as http;
 import 'package:file_picker/file_picker.dart';
 import 'package:wurp/logic/repositories/user_repository.dart';
+import 'package:wurp/ui/animations/slide_morph_transitions.dart';
 
 import '../../base_logic.dart';
 import '../widgets/camera/camera_dialog.dart';
@@ -144,9 +145,9 @@ class _ProfileImagePickerSheetState extends State<_ProfileImagePickerSheet>
   @override
   Widget build(BuildContext context) {
     final cs = Theme.of(context).colorScheme;
-    return FadeTransition(
-      opacity: _fadeAnim,
-      child: DraggableScrollableSheet(
+    return SlideMorphTransitions.build(
+      _fadeAnim,
+      DraggableScrollableSheet(
         initialChildSize: 0.72,
         minChildSize: 0.5,
         maxChildSize: 0.92,
@@ -185,6 +186,12 @@ class _ProfileImagePickerSheetState extends State<_ProfileImagePickerSheet>
                   padding: const EdgeInsets.symmetric(horizontal: 24),
                   child: AnimatedSwitcher(
                     duration: const Duration(milliseconds: 250),
+                    transitionBuilder: (child, animation) => SlideMorphTransitions.switcher(
+                      child,
+                      animation,
+                      beginOffset: const Offset(0, 0.1),
+                      beginScale: 0.95,
+                    ),
                     child: _buildTabContent(cs),
                   ),
                 ),
@@ -195,6 +202,8 @@ class _ProfileImagePickerSheetState extends State<_ProfileImagePickerSheet>
           ),
         ),
       ),
+      beginOffset: const Offset(0, 0.08),
+      beginScale: 0.98,
     );
   }
 
@@ -388,6 +397,12 @@ class _ProfileImagePickerSheetState extends State<_ProfileImagePickerSheet>
         child: ClipOval(
           child: AnimatedSwitcher(
             duration: const Duration(milliseconds: 300),
+            transitionBuilder: (child, animation) => SlideMorphTransitions.switcher(
+              child,
+              animation,
+              beginOffset: const Offset(0, 0.1),
+              beginScale: 0.95,
+            ),
             child: child != null
                 ? SizedBox.expand(key: const ValueKey('img'), child: child)
                 : Center(key: const ValueKey('ph'), child: placeholder),
@@ -403,33 +418,40 @@ class _ProfileImagePickerSheetState extends State<_ProfileImagePickerSheet>
 
     return Padding(
       padding: const EdgeInsets.symmetric(horizontal: 24),
-      child: AnimatedOpacity(
+      child: AnimatedSlide(
         duration: const Duration(milliseconds: 200),
-        opacity: canConfirm ? 1.0 : 0.35,
+        curve: Curves.easeOutCubic,
+        offset: canConfirm ? Offset.zero : const Offset(0, 0.04),
         child: GestureDetector(
           onTap: canConfirm && !_uploading ? _confirm : null,
-          child: Container(
-            width: double.infinity,
-            height: 54,
-            decoration: BoxDecoration(
-              color: cs.primary,
-              borderRadius: BorderRadius.circular(16),
-            ),
-            child: Center(
-              child: _uploading
-                  ? SizedBox(
-                width: 22,
-                height: 22,
-                child: CircularProgressIndicator(
-                    color: cs.onPrimary, strokeWidth: 2.5),
-              )
-                  : Text(
-                'Save',
-                style: TextStyle(
-                  color: cs.onPrimary,
-                  fontSize: 16,
-                  fontWeight: FontWeight.w700,
-                  letterSpacing: 0.2,
+          child: AnimatedScale(
+            duration: const Duration(milliseconds: 200),
+            curve: Curves.easeOutCubic,
+            scale: canConfirm ? 1.0 : 0.96,
+            child: Container(
+              width: double.infinity,
+              height: 54,
+              decoration: BoxDecoration(
+                color: cs.primary.withValues(alpha: canConfirm ? 1 : 0.6),
+                borderRadius: BorderRadius.circular(16),
+              ),
+              child: Center(
+                child: _uploading
+                    ? SizedBox(
+                        width: 22,
+                        height: 22,
+                        child: CircularProgressIndicator(
+                            color: cs.onPrimary, strokeWidth: 2.5),
+                      )
+                    : Text(
+                        'Save',
+                        style: TextStyle(
+                          color: cs.onPrimary,
+                          fontSize: 16,
+                          fontWeight: FontWeight.w700,
+                          letterSpacing: 0.2,
+                        ),
+                      ),
                 ),
               ),
             ),

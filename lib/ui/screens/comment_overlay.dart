@@ -6,6 +6,7 @@ import 'dart:ui';
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
 import 'package:wurp/ui/misc/avatar.dart';
+import 'package:wurp/ui/animations/slide_morph_transitions.dart';
 
 import '../../base_logic.dart';
 import '../../logic/comments/comment.dart';
@@ -833,7 +834,12 @@ class _LikeButtonState extends State<_LikeButton> with SingleTickerProviderState
           const SizedBox(width: 4),
           AnimatedSwitcher(
             duration: const Duration(milliseconds: 200),
-            transitionBuilder: (child, anim) => FadeTransition(opacity: anim, child: child),
+            transitionBuilder: (child, anim) => SlideMorphTransitions.switcher(
+              child,
+              anim,
+              beginOffset: const Offset(0, 0.16),
+              beginScale: 0.9,
+            ),
             child: Text(
               widget.count > 0 ? '${widget.count}' : 'Like',
               key: ValueKey(widget.count),

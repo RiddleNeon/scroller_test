@@ -1,6 +1,7 @@
 import 'dart:async';
 
 import 'package:flutter/material.dart';
+import 'package:wurp/ui/animations/slide_morph_transitions.dart';
 import 'package:flutter/services.dart';
 import 'package:wurp/logic/quests/quest.dart';
 import 'package:wurp/logic/quests/quest_change_manager.dart';
@@ -604,12 +605,11 @@ class _ApplyButton extends StatelessWidget {
           padding: const EdgeInsets.symmetric(vertical: 10),
           child: AnimatedSwitcher(
             duration: const Duration(milliseconds: 220),
-            transitionBuilder: (child, anim) => FadeTransition(
-              opacity: anim,
-              child: SlideTransition(
-                position: Tween<Offset>(begin: const Offset(0, 0.35), end: Offset.zero).animate(anim),
-                child: child,
-              ),
+            transitionBuilder: (child, anim) => SlideMorphTransitions.switcher(
+              child,
+              anim,
+              beginOffset: const Offset(0, 0.35),
+              beginScale: 0.9,
             ),
             child: isSaved
                 ? const Row(

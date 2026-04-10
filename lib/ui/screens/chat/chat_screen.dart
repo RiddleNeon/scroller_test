@@ -5,6 +5,7 @@ import 'package:flutter/services.dart';
 import 'package:wurp/logic/repositories/user_repository.dart';
 import 'package:wurp/logic/users/user_model.dart';
 import 'package:wurp/logic/repositories/chat_repository.dart';
+import 'package:wurp/ui/animations/slide_morph_transitions.dart';
 import 'package:wurp/ui/misc/avatar.dart';
 
 import '../../../base_logic.dart';
@@ -511,11 +512,9 @@ class _MessageBubble extends StatelessWidget {
       begin: Offset(isMe ? 0.3 : -0.3, 0.1),
       end: Offset.zero,
     ).animate(CurvedAnimation(parent: animationController, curve: Curves.easeOutCubic));
-    final fade = CurvedAnimation(parent: animationController, curve: Curves.easeOut);
-
-    return FadeTransition(
-      opacity: fade,
-      child: SlideTransition(
+    return SlideMorphTransitions.build(
+      animationController,
+      SlideTransition(
         position: slide,
         child: Padding(
           padding: EdgeInsets.only(top: isFirst ? 8 : 2, bottom: isLast ? 6 : 2),
@@ -558,6 +557,8 @@ class _MessageBubble extends StatelessWidget {
           ),
         ),
       ),
+      beginOffset: Offset(isMe ? 0.08 : -0.08, 0.06),
+      beginScale: 0.97,
     );
   }
 

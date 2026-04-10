@@ -24,12 +24,12 @@ class PauseIndicatorState extends State<PauseIndicator> {
   @override
   Widget build(BuildContext context) {
     final cs = Theme.of(context).colorScheme;
-    return AnimatedOpacity(
-      opacity: visible ? 1 : 0,
+    return AnimatedSlide(
+      offset: visible ? Offset.zero : const Offset(0, 0.08),
       duration: const Duration(milliseconds: 400),
       curve: Curves.easeInOut,
       child: AnimatedScale(
-        scale: visible ? 1 : 0.9,
+        scale: visible ? 1 : 0.0,
         duration: const Duration(milliseconds: 240),
         curve: Curves.easeOutBack,
         child: Container(

@@ -1,4 +1,5 @@
 import 'package:flutter/material.dart';
+import 'package:wurp/ui/animations/slide_morph_transitions.dart';
 import 'package:wurp/logic/local_storage/local_seen_service.dart';
 import 'package:wurp/logic/users/user_model.dart';
 
@@ -87,12 +88,11 @@ class FollowButtonState extends State<FollowButton> with SingleTickerProviderSta
           child: AnimatedSwitcher(
             duration: const Duration(milliseconds: 250),
             transitionBuilder: (child, animation) {
-              return FadeTransition(
-                opacity: animation,
-                child: SlideTransition(
-                  position: Tween<Offset>(begin: const Offset(0.0, 0.3), end: Offset.zero).animate(animation),
-                  child: child,
-                ),
+              return SlideMorphTransitions.switcher(
+                child,
+                animation,
+                beginOffset: const Offset(0, 0.3),
+                beginScale: 0.92,
               );
             },
             child: Row(

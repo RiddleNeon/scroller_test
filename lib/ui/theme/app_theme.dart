@@ -1,4 +1,5 @@
 import 'package:flutter/material.dart';
+import 'package:wurp/ui/animations/slide_morph_transitions.dart';
 
 class AppTheme {
   static const ColorScheme lightScheme = ColorScheme(
@@ -176,11 +177,11 @@ class AppTheme {
       scaffoldBackgroundColor: cs.surface,
       pageTransitionsTheme: const PageTransitionsTheme(
         builders: {
-          TargetPlatform.android: FadeForwardsPageTransitionsBuilder(),
-          TargetPlatform.iOS: CupertinoPageTransitionsBuilder(),
-          TargetPlatform.linux: FadeForwardsPageTransitionsBuilder(),
-          TargetPlatform.macOS: CupertinoPageTransitionsBuilder(),
-          TargetPlatform.windows: FadeForwardsPageTransitionsBuilder(),
+          TargetPlatform.android: SlideMorphPageTransitionsBuilder(),
+          TargetPlatform.iOS: SlideMorphPageTransitionsBuilder(),
+          TargetPlatform.linux: SlideMorphPageTransitionsBuilder(),
+          TargetPlatform.macOS: SlideMorphPageTransitionsBuilder(),
+          TargetPlatform.windows: SlideMorphPageTransitionsBuilder(),
         },
       ),
       appBarTheme: AppBarTheme(

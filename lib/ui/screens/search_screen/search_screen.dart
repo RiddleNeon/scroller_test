@@ -10,6 +10,7 @@ import 'package:wurp/ui/screens/search_screen/widgets/animated_search_bar.dart';
 import 'package:wurp/ui/screens/search_screen/widgets/preloading_list.dart';
 import 'package:wurp/ui/screens/search_screen/widgets/search_user_card.dart';
 import 'package:wurp/ui/screens/search_screen/widgets/search_video_card.dart';
+import 'package:wurp/ui/animations/slide_morph_transitions.dart';
 import 'package:wurp/ui/short_video_player.dart';
 
 class SearchScreen extends StatefulWidget {
@@ -313,10 +314,11 @@ Future<int> openVideoPlayer({
       ),
     ),
     transitionBuilder: (context, animation, _, child) {
-      final curved = CurvedAnimation(parent: animation, curve: Curves.easeOutCubic);
-      return FadeTransition(
-        opacity: curved,
-        child: ScaleTransition(scale: Tween(begin: 0.88, end: 1.0).animate(curved), child: child),
+      return SlideMorphTransitions.build(
+        animation,
+        child,
+        beginOffset: const Offset(0, 0.08),
+        beginScale: 0.88,
       );
     },
   );

@@ -95,11 +95,16 @@ class _TestQuestScreenState extends State<TestQuestScreen> {
                         Positioned(
                           top: -kFloatingActionButtonMargin*1.5,
                           right: -kFloatingActionButtonMargin*1.5,
-                          child: AnimatedOpacity(
-                            opacity: questSystem!.changeManager.hasPendingChanges ? 0.8 : 0,
-                            duration: const Duration(seconds: 1),
-                            curve: Curves.easeInOutCirc,
-                            child: const Icon(Icons.circle, color: Colors.red), //red dot
+                          child: AnimatedScale(
+                            scale: questSystem!.changeManager.hasPendingChanges ? 1 : 0,
+                            duration: const Duration(milliseconds: 420),
+                            curve: Curves.easeOutBack,
+                            child: AnimatedSlide(
+                              offset: questSystem!.changeManager.hasPendingChanges ? Offset.zero : const Offset(0, 0.35),
+                              duration: const Duration(milliseconds: 420),
+                              curve: Curves.easeOutCubic,
+                              child: const Icon(Icons.circle, color: Colors.red), //red dot
+                            ),
                           ), //red dot to indicate changes
                         ),
                     ],

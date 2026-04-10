@@ -9,6 +9,7 @@ import 'package:wurp/ui/screens/profile_screen.dart';
 import 'package:wurp/ui/screens/quests/test_quest_screen.dart';
 import 'package:wurp/ui/screens/search_screen/search_screen.dart';
 import 'package:wurp/ui/short_video_player.dart';
+import 'package:wurp/ui/animations/slide_morph_transitions.dart';
 import 'package:wurp/ui/widgets/bottom_navigation_bar.dart';
 
 import '../base_logic.dart';
@@ -49,40 +50,92 @@ void initRouter() {
           return Scaffold(body: child, bottomNavigationBar: _bottomNavBar);
         },
         routes: [
-          GoRoute(path: '/feed', builder: (context, state) => const VideoFeed()),
-          GoRoute(path: '/search_screen', builder: (context, state) => const SearchScreen()),
+          GoRoute(
+            path: '/feed',
+            pageBuilder: (context, state) => SlideMorphTransitions.page<void>(
+              key: state.pageKey,
+              child: const VideoFeed(),
+              beginOffset: const Offset(0.02, 0.0),
+              beginScale: 0.995,
+            ),
+          ),
+          GoRoute(
+            path: '/search_screen',
+            pageBuilder: (context, state) => SlideMorphTransitions.page<void>(
+              key: state.pageKey,
+              child: const SearchScreen(),
+              beginOffset: const Offset(0.03, 0.0),
+              beginScale: 0.993,
+            ),
+          ),
           GoRoute(
             path: '/profile',
-            builder: (context, state) => ProfileScreen(initialProfile: currentUser, ownProfile: true, onFollowChange: (bool followed) {}),
+            pageBuilder: (context, state) => SlideMorphTransitions.page<void>(
+              key: state.pageKey,
+              child: ProfileScreen(initialProfile: currentUser, ownProfile: true, onFollowChange: (bool followed) {}),
+              beginOffset: const Offset(0.03, 0.0),
+              beginScale: 0.993,
+            ),
           ),
           GoRoute(
             path: '/chat',
-            builder: (context, state) =>
-                ChatManagingScreen(preloadMoreChats: (current) => chatRepository.getChats(currentUser.id, offset: current ?? 0, limit: 15)),
+            pageBuilder: (context, state) => SlideMorphTransitions.page<void>(
+              key: state.pageKey,
+              child: ChatManagingScreen(
+                preloadMoreChats: (current) => chatRepository.getChats(currentUser.id, offset: current ?? 0, limit: 15),
+              ),
+              beginOffset: const Offset(0.03, 0.0),
+              beginScale: 0.993,
+            ),
           ),
           GoRoute(
             path: '/create',
-            builder: (context, state) => const Scaffold(body: VideoUploadWidget()),
+            pageBuilder: (context, state) => SlideMorphTransitions.page<void>(
+              key: state.pageKey,
+              child: const Scaffold(body: VideoUploadWidget()),
+              beginOffset: const Offset(0.03, 0.0),
+              beginScale: 0.993,
+            ),
           ),
           GoRoute(
             path: '/quests',
-            builder: (context, state) => const TestQuestScreen(subject: 'General'),
+            pageBuilder: (context, state) => SlideMorphTransitions.page<void>(
+              key: state.pageKey,
+              child: const TestQuestScreen(subject: 'General'),
+              beginOffset: const Offset(0.03, 0.0),
+              beginScale: 0.993,
+            ),
           ),
         ],
       ),
       GoRoute(
         path: '/login',
-        builder: (context, state) {
+        pageBuilder: (context, state) {
           print("login!");
-          return const LoginScreen();
+          return SlideMorphTransitions.page<void>(
+            key: state.pageKey,
+            child: const LoginScreen(),
+            beginOffset: const Offset(0.0, 0.07),
+            beginScale: 0.985,
+          );
         },
       ),
-      GoRoute(path: '/', builder: (context, state) => const SizedBox.shrink()),
+      GoRoute(
+        path: '/',
+        pageBuilder: (context, state) => const NoTransitionPage(
+          child: SizedBox.shrink(),
+        ),
+      ),
       GoRoute(
         path: '/reset-password',
-        builder: (context, state) {
+        pageBuilder: (context, state) {
           print("navigating to reset password screen");
-          return const ResetPasswordScreen();
+          return SlideMorphTransitions.page<void>(
+            key: state.pageKey,
+            child: const ResetPasswordScreen(),
+            beginOffset: const Offset(0.0, 0.07),
+            beginScale: 0.985,
+          );
         },
       ),
     ],

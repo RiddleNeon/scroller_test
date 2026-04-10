@@ -13,6 +13,7 @@ import 'package:wurp/ui/screens/search_screen/widgets/search_user_card.dart';
 import 'package:wurp/ui/screens/search_screen/widgets/search_video_card.dart';
 import 'package:wurp/ui/widgets/logout_button.dart';
 import 'package:wurp/ui/widgets/overlays/follow_button.dart';
+import 'package:wurp/ui/animations/slide_morph_transitions.dart';
 
 import '../../base_logic.dart';
 import '../../logic/local_storage/local_seen_service.dart';
@@ -132,9 +133,9 @@ class _ProfileScreenState extends State<ProfileScreen> with TickerProviderStateM
                   return SizeTransition(
                     sizeFactor: CurvedAnimation(parent: animation, curve: Curves.easeOutQuart),
                     axisAlignment: -1.0,
-                    child: FadeTransition(
-                      opacity: animation,
-                      child: VideoCard(
+                    child: SlideMorphTransitions.build(
+                      animation,
+                      VideoCard(
                         video: video,
                         onTap: () async {
                           int likesChanged = await openVideoPlayer(
@@ -152,6 +153,8 @@ class _ProfileScreenState extends State<ProfileScreen> with TickerProviderStateM
                         },
                         cs: cs,
                       ),
+                      beginOffset: const Offset(0, 0.08),
+                      beginScale: 0.98,
                     ),
                   );
                 },
@@ -164,9 +167,9 @@ class _ProfileScreenState extends State<ProfileScreen> with TickerProviderStateM
                   return SizeTransition(
                     sizeFactor: CurvedAnimation(parent: animation, curve: Curves.easeOutQuart),
                     axisAlignment: -1.0,
-                    child: FadeTransition(
-                      opacity: animation,
-                      child: UserCard(
+                    child: SlideMorphTransitions.build(
+                      animation,
+                      UserCard(
                         initialUser: itemUser,
                         cs: cs,
                         key: ValueKey(itemUser.id),
@@ -190,6 +193,8 @@ class _ProfileScreenState extends State<ProfileScreen> with TickerProviderStateM
                           });
                         },
                       ),
+                      beginOffset: const Offset(0, 0.08),
+                      beginScale: 0.98,
                     ),
                   );
                 },
@@ -202,9 +207,9 @@ class _ProfileScreenState extends State<ProfileScreen> with TickerProviderStateM
                   return SizeTransition(
                     sizeFactor: CurvedAnimation(parent: animation, curve: Curves.easeOutQuart),
                     axisAlignment: -1.0,
-                    child: FadeTransition(
-                      opacity: animation,
-                      child: UserCard(
+                    child: SlideMorphTransitions.build(
+                      animation,
+                      UserCard(
                         initialUser: itemUser,
                         cs: cs,
                         key: ValueKey(itemUser.id),
@@ -225,6 +230,8 @@ class _ProfileScreenState extends State<ProfileScreen> with TickerProviderStateM
                           });
                         },
                       ),
+                      beginOffset: const Offset(0, 0.08),
+                      beginScale: 0.98,
                     ),
                   );
                 },
@@ -243,9 +250,11 @@ class _ProfileScreenState extends State<ProfileScreen> with TickerProviderStateM
       child: SizeTransition(
         sizeFactor: CurvedAnimation(parent: animation, curve: Curves.easeInOutQuart),
         axis: Axis.horizontal,
-        child: FadeTransition(
-          opacity: animation,
-          child: UserCard(initialUser: user, cs: cs),
+        child: SlideMorphTransitions.build(
+          animation,
+          UserCard(initialUser: user, cs: cs),
+          beginOffset: const Offset(-0.08, 0),
+          beginScale: 0.98,
         ),
       ),
     );
@@ -560,9 +569,9 @@ class _ProfileScreenState extends State<ProfileScreen> with TickerProviderStateM
         sizeFactor: curvedAnimation,
         axis: Axis.horizontal,
         axisAlignment: 0.0,
-        child: FadeTransition(
-          opacity: curvedAnimation,
-          child: UserCard(
+        child: SlideMorphTransitions.build(
+          curvedAnimation,
+          UserCard(
             key: ValueKey(item.id),
             initialUser: item,
             cs: cs,
@@ -572,6 +581,8 @@ class _ProfileScreenState extends State<ProfileScreen> with TickerProviderStateM
               }
             },
           ),
+          beginOffset: const Offset(-0.08, 0),
+          beginScale: 0.98,
         ),
       ),
     );

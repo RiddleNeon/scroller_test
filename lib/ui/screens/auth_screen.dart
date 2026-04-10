@@ -4,6 +4,7 @@ import 'package:flutter/services.dart';
 import 'package:go_router/go_router.dart';
 import 'package:supabase_flutter/supabase_flutter.dart';
 import 'package:wurp/logic/repositories/user_repository.dart';
+import 'package:wurp/ui/animations/slide_morph_transitions.dart';
 import 'package:wurp/ui/misc/ban_appeal_screen.dart';
 import 'package:wurp/ui/router.dart';
 
@@ -301,9 +302,9 @@ class _LoginScreenState extends State<LoginScreen>
             child: SingleChildScrollView(
               padding: const EdgeInsets.symmetric(
                   horizontal: 24, vertical: 40),
-              child: FadeTransition(
-                opacity: _entryFade,
-                child: SlideTransition(
+              child: SlideMorphTransitions.build(
+                _entryFade,
+                SlideTransition(
                   position: _entrySlide,
                   child: ConstrainedBox(
                     constraints: const BoxConstraints(maxWidth: 420),
@@ -325,6 +326,8 @@ class _LoginScreenState extends State<LoginScreen>
                     ),
                   ),
                 ),
+                beginOffset: const Offset(0, 0.06),
+                beginScale: 0.985,
               ),
             ),
           ),
@@ -358,6 +361,12 @@ class _LoginScreenState extends State<LoginScreen>
         const SizedBox(height: 6),
         AnimatedSwitcher(
           duration: const Duration(milliseconds: 200),
+          transitionBuilder: (child, animation) => SlideMorphTransitions.switcher(
+            child,
+            animation,
+            beginOffset: const Offset(0, 0.12),
+            beginScale: 0.95,
+          ),
           child: Text(
             _modeSubtitle,
             key: ValueKey(_mode),
@@ -388,9 +397,9 @@ class _LoginScreenState extends State<LoginScreen>
         padding: const EdgeInsets.all(24),
         child: Form(
           key: _formKey,
-          child: FadeTransition(
-            opacity: _modeController,
-            child: Column(
+          child: SlideMorphTransitions.build(
+            _modeController,
+            Column(
               crossAxisAlignment: CrossAxisAlignment.stretch,
               children: [
                 if (_mode != _AuthMode.recover)
@@ -424,6 +433,8 @@ class _LoginScreenState extends State<LoginScreen>
                 ],
               ],
             ),
+            beginOffset: const Offset(0, 0.04),
+            beginScale: 0.99,
           ),
         ),
       ),
@@ -482,9 +493,9 @@ class _LoginScreenState extends State<LoginScreen>
     return ClipRect(
       child: SlideTransition(
         position: _banSlide,
-        child: FadeTransition(
-          opacity: _banFade,
-          child: AnimatedSize(
+        child: SlideMorphTransitions.build(
+          _banFade,
+          AnimatedSize(
             duration: const Duration(milliseconds: 300),
             curve: Curves.easeOut,
             child: _isBanned
@@ -554,6 +565,8 @@ class _LoginScreenState extends State<LoginScreen>
             )
                 : const SizedBox.shrink(),
           ),
+          beginOffset: const Offset(0, -0.08),
+          beginScale: 0.97,
         ),
       ),
     );
@@ -704,6 +717,12 @@ class _LoginScreenState extends State<LoginScreen>
         onPressed: _isLoading ? null : _submit,
         child: AnimatedSwitcher(
           duration: const Duration(milliseconds: 180),
+          transitionBuilder: (child, animation) => SlideMorphTransitions.switcher(
+            child,
+            animation,
+            beginOffset: const Offset(0, 0.14),
+            beginScale: 0.9,
+          ),
           child: _isLoading
               ? SizedBox(
             key: const ValueKey('loader'),
@@ -1039,9 +1058,9 @@ class _ResetPasswordScreenState extends State<ResetPasswordScreen>
             child: SingleChildScrollView(
               padding:
               const EdgeInsets.symmetric(horizontal: 24, vertical: 40),
-              child: FadeTransition(
-                opacity: _fade,
-                child: SlideTransition(
+              child: SlideMorphTransitions.build(
+                _fade,
+                SlideTransition(
                   position: _slide,
                   child: ConstrainedBox(
                     constraints: const BoxConstraints(maxWidth: 420),
@@ -1062,6 +1081,8 @@ class _ResetPasswordScreenState extends State<ResetPasswordScreen>
                     ),
                   ),
                 ),
+                beginOffset: const Offset(0, 0.06),
+                beginScale: 0.985,
               ),
             ),
           ),
