@@ -1,4 +1,5 @@
 import 'package:flutter/material.dart';
+import 'package:vector_math/vector_math_64.dart' hide Colors;
 import 'package:wurp/base_logic.dart';
 
 class BottomNavBar extends StatefulWidget {
@@ -121,13 +122,14 @@ class BottomNavBarState extends State<BottomNavBar> with SingleTickerProviderSta
                                   builder: (context, child) {
                                     final val = 1 - _selectionSizeAnimationController.value;
                                     final scale = 1 + (val * 0.2);
+                                    final scaleY = 1 + (val * 0.01);
                                     final rotation = val * 0.02;
 
                                     final transform = Matrix4.identity()
-                                      ..translate(0, -4 * val)
+                                      ..translateByVector3(Vector3(0, -4 * val, 0))
                                       ..rotateZ(rotation)
-                                      ..scale(scale)
-                                      ..translate(0, 4 * val);
+                                      ..scaleByVector3(Vector3(scaleY, scale, scale))
+                                      ..translateByVector3(Vector3(0, 4 * val, 0));
 
                                     return Transform(
                                       alignment: Alignment.center,
