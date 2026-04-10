@@ -66,6 +66,7 @@ class _ChatManagingScreenState extends State<ChatManagingScreen> {
         title: const Text("Chats"),
         backgroundColor: theme.colorScheme.surfaceContainer,
         elevation: 0,
+        shape: const RoundedRectangleBorder(borderRadius: BorderRadiusGeometry.only(bottomLeft: Radius.circular(18), bottomRight: Radius.circular(18))),
       ),
       body: Padding(padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 12), child: _buildChatList(chats)),
     );

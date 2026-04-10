@@ -307,9 +307,9 @@ class _ProfileScreenState extends State<ProfileScreen> with TickerProviderStateM
           ),
           const SizedBox(height: 16),
           _buildStatsRow(cs),
-          const SizedBox(height: 16),
+          const SizedBox(height: 8),
           _buildActionRow(cs),
-          const SizedBox(height: 20),
+          const SizedBox(height: 18),
         ],
       ),
     );

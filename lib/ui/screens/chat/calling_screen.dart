@@ -95,13 +95,6 @@ class _CallingScreenState extends State<CallingScreen> with TickerProviderStateM
                     begin: Alignment.topLeft,
                     end: Alignment.bottomRight,
                   ),
-                  boxShadow: [
-                    BoxShadow(
-                      color: bg.withValues(alpha: 0.35),
-                      blurRadius: 12,
-                      offset: const Offset(0, 6),
-                    )
-                  ],
                 ),
                 child: Icon(icon, color: Colors.white, size: 28),
               ),
@@ -151,7 +144,6 @@ class _CallingScreenState extends State<CallingScreen> with TickerProviderStateM
                         ? BoxDecoration(
                             shape: BoxShape.circle,
                             gradient: LinearGradient(colors: [primary, secondary]),
-                            boxShadow: [BoxShadow(color: Colors.black.withValues(alpha: 0.5), blurRadius: 8, offset: const Offset(0, 4))],
                           )
                         : null,
                     child: widget.profileImageUrl == null
@@ -233,7 +225,6 @@ class _CallingScreenState extends State<CallingScreen> with TickerProviderStateM
                           end: Alignment.bottomCenter,
                         ),
                         border: Border.all(color: Colors.white12),
-                        boxShadow: [BoxShadow(color: Colors.black.withValues(alpha: 0.55), blurRadius: 18, offset: const Offset(0, 12))],
                       ),
                       child: Transform.scale(scale: 2, child: FittedBox(
                           fit: BoxFit.fitHeight,
@@ -286,7 +277,6 @@ class _CallingScreenState extends State<CallingScreen> with TickerProviderStateM
                                   decoration: BoxDecoration(
                                     shape: BoxShape.circle,
                                     gradient: LinearGradient(colors: [redAccent, redAccent.withValues(alpha: 0.9)]),
-                                    boxShadow: [BoxShadow(color: redAccent.withValues(alpha: 0.35), blurRadius: 18, offset: const Offset(0, 10))],
                                   ),
                                   child: const Icon(Icons.call_end, color: Colors.white, size: 32),
                                 ),

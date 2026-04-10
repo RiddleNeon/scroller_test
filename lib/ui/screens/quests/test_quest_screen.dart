@@ -100,7 +100,7 @@ class _TestQuestScreenState extends State<TestQuestScreen> {
                             duration: const Duration(milliseconds: 420),
                             curve: Curves.easeOutBack,
                             child: AnimatedSlide(
-                              offset: questSystem!.changeManager.hasPendingChanges ? Offset.zero : const Offset(0, 0.35),
+                              offset: questSystem.changeManager.hasPendingChanges ? Offset.zero : const Offset(0, 0.35),
                               duration: const Duration(milliseconds: 420),
                               curve: Curves.easeOutCubic,
                               child: const Icon(Icons.circle, color: Colors.red), //red dot

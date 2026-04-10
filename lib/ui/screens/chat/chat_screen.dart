@@ -276,6 +276,7 @@ class MessagingScreenState extends State<MessagingScreen> with TickerProviderSta
     return AppBar(
       backgroundColor: cs.surfaceContainer,
       elevation: 0,
+      shape: const RoundedRectangleBorder(borderRadius: BorderRadiusGeometry.only(bottomLeft: Radius.circular(18), bottomRight: Radius.circular(18))),
       scrolledUnderElevation: 0,
       toolbarHeight: kToolbarHeight,
       systemOverlayStyle: SystemUiOverlayStyle(statusBarBrightness: theme.brightness == Brightness.dark ? Brightness.dark : Brightness.light),

@@ -544,7 +544,7 @@ class _CommentsOverlayState extends State<CommentsOverlay> {
   Widget _buildFooter() {
     if (_isLoadingMore) {
       return Padding(
-        padding: EdgeInsets.symmetric(vertical: 20),
+        padding: const EdgeInsets.symmetric(vertical: 20),
         child: Center(
           child: SizedBox(
             width: 22,
@@ -556,7 +556,7 @@ class _CommentsOverlayState extends State<CommentsOverlay> {
     }
     if (!_hasMore) {
       return Padding(
-        padding: EdgeInsets.symmetric(vertical: 16),
+        padding: const EdgeInsets.symmetric(vertical: 16),
         child: Center(
           child: Text('— no more comments —', style: TextStyle(color: _subtleText, fontSize: 12)),
         ),

@@ -183,7 +183,8 @@ class _ProfileImagePickerSheetState extends State<_ProfileImagePickerSheet>
               Expanded(
                 child: SingleChildScrollView(
                   controller: scrollController,
-                  padding: const EdgeInsets.symmetric(horizontal: 24),
+                  padding: const EdgeInsets.symmetric(horizontal: 4),
+                  keyboardDismissBehavior: ScrollViewKeyboardDismissBehavior.onDrag,
                   child: AnimatedSwitcher(
                     duration: const Duration(milliseconds: 250),
                     transitionBuilder: (child, animation) => SlideMorphTransitions.switcher(
@@ -457,8 +458,7 @@ class _ProfileImagePickerSheetState extends State<_ProfileImagePickerSheet>
             ),
           ),
         ),
-      ),
-    );
+      );
   }
 }
 
