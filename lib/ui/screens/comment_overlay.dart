@@ -484,7 +484,7 @@ class _CommentsOverlayState extends State<CommentsOverlay> {
                   mainAxisSize: MainAxisSize.min,
                   children: [
                     if (vm.isLoadingReplies) ...[
-                      const SizedBox(
+                      SizedBox(
                         width: 14,
                         height: 14,
                         child: CircularProgressIndicator(
@@ -641,8 +641,8 @@ class _CommentsOverlayState extends State<CommentsOverlay> {
                     color: hasText ? _accentColor : _surfaceColor,
                   ),
                   child: _isSending
-                      ? const Padding(
-                          padding: EdgeInsets.all(10),
+                      ? Padding(
+                          padding: const EdgeInsets.all(10),
                           child: CircularProgressIndicator(
                             strokeWidth: 2,
                             color: _cs.onPrimary,

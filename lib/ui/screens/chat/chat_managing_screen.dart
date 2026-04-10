@@ -64,7 +64,7 @@ class _ChatManagingScreenState extends State<ChatManagingScreen> {
       backgroundColor: theme.colorScheme.surface,
       appBar: AppBar(
         title: const Text("Chats"),
-        backgroundColor: theme.colorScheme.surface,
+        backgroundColor: theme.colorScheme.surfaceContainer,
         elevation: 0,
       ),
       body: Padding(padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 12), child: _buildChatList(chats)),

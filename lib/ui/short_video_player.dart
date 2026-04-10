@@ -31,7 +31,7 @@ Widget feedVideos(TickerProvider tickerProvider,
           itemCount: itemCount,
           scrollDirection: Axis.vertical,
           itemBuilder: (context, index) {
-            if (index == 50) return _buildStopWidget('why are you still watching?', CupertinoIcons.question_diamond_fill, context);
+            if (index == 50) return _buildStopWidget('why are you still watching? Is it really THAT interesting???', CupertinoIcons.question_diamond_fill, context);
             if (index == 100) return _buildStopWidget('come on man, are you still doing this?', CupertinoIcons.exclamationmark, context);
             if (index == 150) {
               return _buildStopWidget('dont you have better things to do???', CupertinoIcons.exclamationmark_circle_fill, context); //

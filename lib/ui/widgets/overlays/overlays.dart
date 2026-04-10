@@ -64,13 +64,13 @@ class _PageOverlayState extends State<PageOverlay> {
           child: const SizedBox.expand(),
         ),
         Positioned.fill(
-          child:  Center(
-              child: PauseIndicator(
-                key: pauseIndicatorKey,
-                onToggle: (val) {
-                  widget.onPauseChanged(val);
-                },
-              ),
+          child: Center(
+            child: PauseIndicator(
+              key: pauseIndicatorKey,
+              onToggle: (val) {
+                widget.onPauseChanged(val);
+              },
+            ),
           ),
         ),
         Align(
@@ -86,15 +86,13 @@ class _PageOverlayState extends State<PageOverlay> {
             ],
           ),
         ),
-        Transform.translate(
-          offset: const Offset(0, 0),
-          child: Transform.scale(
-            scaleX: 1.005,
-            child: Align(
-              alignment: AlignmentGeometry.bottomCenter,
-              child: VideoInfoOverlay(video: widget.video),
-            ),
-          ),
+        Positioned.fill(
+          child: FractionallySizedBox(
+                heightFactor: 0.3,
+                alignment: Alignment.bottomCenter,
+                child: Transform.scale(
+                    scale: 1.005,
+                    child: VideoInfoOverlay(video: widget.video))),
         ),
       ],
     );

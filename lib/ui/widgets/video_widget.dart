@@ -221,7 +221,7 @@ class _VideoItemState extends State<VideoItem> {
       child: Center(
         child: RepaintBoundary(
           child: AspectRatio(
-              aspectRatio: 9 / 16,
+              aspectRatio: widget.controller.value.aspectRatio,
               child: LayoutBuilder(
                 builder: (context, constraints) {
                   return Stack(
