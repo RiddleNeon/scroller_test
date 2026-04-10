@@ -343,10 +343,10 @@ class _CommentsOverlayState extends State<CommentsOverlay> {
       borderRadius: const BorderRadius.vertical(top: Radius.circular(24)),
       child: BackdropFilter(
         filter: ImageFilter.blur(sigmaX: 20, sigmaY: 20),
-          child: Container(
-            height: MediaQuery.of(context).size.height * 0.80,
-            color: _bgColor,
-            child: Column(
+        child: Container(
+          height: MediaQuery.of(context).size.height * 0.80,
+          color: _bgColor,
+          child: Column(
             children: [
               _buildHeader(),
               Divider(color: _dividerColor, height: 1),
@@ -459,18 +459,18 @@ class _CommentsOverlayState extends State<CommentsOverlay> {
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.start,
         children: [
-            _CommentTile(
-              vm: vm,
-              timeAgo: _timeAgo(vm.comment.date),
-              isOwn: vm.comment.userId == widget.currentUserId,
-              accentColor: _accentColor,
-              likedColor: _likedColor,
-              subtleText: _subtleText,
-              textColor: _cs.onSurface,
-              bodyTextColor: _bodyTextColor,
-              isReply: isReply,
-              depth: depth,
-              onLike: () => _toggleLike(vm),
+          _CommentTile(
+            vm: vm,
+            timeAgo: _timeAgo(vm.comment.date),
+            isOwn: vm.comment.userId == widget.currentUserId,
+            accentColor: _accentColor,
+            likedColor: _likedColor,
+            subtleText: _subtleText,
+            textColor: _cs.onSurface,
+            bodyTextColor: _bodyTextColor,
+            isReply: isReply,
+            depth: depth,
+            onLike: () => _toggleLike(vm),
             onReply: () => _startReply(vm),
           ),
 
