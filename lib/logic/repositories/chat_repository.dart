@@ -7,9 +7,12 @@ import '../users/user_model.dart';
 
 class ChatRepository {
   static const Duration _chatPageCacheTtl = Duration(seconds: 20);
+  static const Duration _conversationSyncMinInterval = Duration(seconds: 4);
   final Map<String, _CachedChatsPage> _chatPageCache = {};
   final Map<String, Future<({int? newCurrent, List<Chat> result})>> _inFlightChatPages = {};
   final Map<String, _CachedConversationId> _conversationIdCache = {};
+  Future<void>? _conversationSyncTask;
+  DateTime? _lastConversationSyncAt;
 
   Future<void> sendNotification({required Chat chat, required ChatMessage message}) async {
     final receiverUid = chat.partnerId;
@@ -181,7 +184,7 @@ class ChatRepository {
       return _cloneChatPage(await inFlight);
     }
 
-    final fetch = _getChatsUncached(userId, limit: limit, offset: offset).then((value) {
+    final fetch = _getChatsFromLocalWithIncrementalSync(userId, limit: limit, offset: offset).then((value) {
       _chatPageCache[cacheKey] = _CachedChatsPage(value);
       return value;
     }).whenComplete(() {
@@ -191,121 +194,34 @@ class ChatRepository {
     return _cloneChatPage(await fetch);
   }
 
-  Future<({int? newCurrent, List<Chat> result})> _getChatsUncached(
+  Future<({int? newCurrent, List<Chat> result})> _getChatsFromLocalWithIncrementalSync(
     String userId, {
     int limit = 10,
     int offset = 0,
   }) async {
-    try {
-      final membershipRows =
-      await supabaseClient.from('conversation_members').select('conversation_id').eq('profile_id', userId);
-
-      final membershipList = (membershipRows as List).map<Map<String, dynamic>>((row) => Map<String, dynamic>.from(row)).toList();
-      final conversationIds = membershipList.map<int>((row) => row['conversation_id'] as int).toSet().toList();
-      if (conversationIds.isEmpty) {
-        final localChats = localSeenService.getChats();
-        final page = localChats.skip(offset).take(limit).toList();
-        return (
-        result: page,
-        newCurrent: localChats.length > offset + page.length ? offset + page.length : null,
-        );
-      }
-
-      final conversationsResponse = await supabaseClient
-          .from('conversations')
-          .select('id, type, created_by, title, created_at, updated_at, last_message')
-          .inFilter('id', conversationIds);
-
-      final conversations = (conversationsResponse as List)
-          .map<Map<String, dynamic>>((row) => Map<String, dynamic>.from(row))
-          .toList()
-        ..sort((a, b) => _parseDateTime(b['updated_at']).compareTo(_parseDateTime(a['updated_at'])));
-
-      final page = conversations.skip(offset).take(limit).toList();
-      if (page.isEmpty) {
-        final localChats = localSeenService.getChats();
-        final localPage = localChats.skip(offset).take(limit).toList();
-        return (
-        result: localPage,
-        newCurrent: localChats.length > offset + localPage.length ? offset + localPage.length : null,
-        );
-      }
-
-      final pagedConversationIds = page.map<int>((row) => row['id'] as int).toList();
-      final membersResponse = await supabaseClient
-          .from('conversation_members')
-          .select('conversation_id, profile_id, profiles!conversation_members_profile_id_fkey(id, username, display_name, avatar_url, bio, created_at)')
-          .inFilter('conversation_id', pagedConversationIds);
-      final membersByConversation = <int, List<Map<String, dynamic>>>{};
-      for (final rawMember in membersResponse as List) {
-        final member = Map<String, dynamic>.from(rawMember);
-        final conversationId = member['conversation_id'] as int;
-        membersByConversation.putIfAbsent(conversationId, () => []).add(member);
-      }
-
-      final chats = <Chat>[];
-      for (final conversation in page) {
-        final conversationId = conversation['id'] as int;
-        final members = membersByConversation[conversationId] ?? const [];
-        Map<String, dynamic>? partnerMember;
-        for (final member in members) {
-          if (member['profile_id'] != userId) {
-            partnerMember = member;
-            break;
-          }
-        }
-        if (partnerMember == null) {
-          continue;
-        }
-
-        final profileData = Map<String, dynamic>.from(
-          (partnerMember['profiles'] as Map?)?.cast<String, dynamic>() ?? <String, dynamic>{},
-        );
-        final partnerProfile = UserProfile.fromJson({
-          'id': partnerMember['profile_id'],
-          'username': profileData['display_name'] ?? profileData['username'] ?? partnerMember['profile_id'],
-          ...profileData,
-        });
-
-        String lastMessageRaw = conversation['last_message'] as String? ?? '';
-        String lastMessageContent = '';
-        if (lastMessageRaw.contains(': ')) {
-          lastMessageContent = lastMessageRaw.split(': ').sublist(1).join(': ');
-        }
-        String lastMessageSenderId = '';
-        if (lastMessageRaw.contains(': ')) {
-          lastMessageSenderId = lastMessageRaw.split(': ').first;
-        }
-        bool sentByMe = lastMessageSenderId == userId;
-
-        print("Fetched conversation ${conversation['id']} with partner ${partnerProfile.username}, last message: $lastMessageContent, sentByMe: $sentByMe");
-
-        chats.add(
-          Chat.fromSupabase(
-            conversation: conversation,
-            partner: partnerProfile,
-            currentUserId: userId,
-            lastMessage: lastMessageContent,
-            lastMessageByMe: sentByMe,
-          ),
-        );
-      }
-
-      await localSeenService.saveChatsLocal(chats);
-
-      return (
-      result: chats,
-      newCurrent: conversations.length > offset + page.length ? offset + page.length : null,
-      );
-    } catch (e) {
-      print('Error fetching chats from Supabase: $e');
-      final localChats = localSeenService.getChats();
-      final page = localChats.skip(offset).take(limit).toList();
-      return (
+    await _syncConversationsIncrementalIfNeeded();
+    final localChats = localSeenService.getChats()
+      ..sort((a, b) => (b.lastMessageAt ?? b.createdAt).compareTo(a.lastMessageAt ?? a.createdAt));
+    final page = localChats.skip(offset).take(limit).toList();
+    return (
       result: page,
       newCurrent: localChats.length > offset + page.length ? offset + page.length : null,
-      );
+    );
+  }
+
+  Future<void> _syncConversationsIncrementalIfNeeded() async {
+    final now = DateTime.now();
+    if (_lastConversationSyncAt != null && now.difference(_lastConversationSyncAt!) < _conversationSyncMinInterval) {
+      return;
     }
+    if (_conversationSyncTask != null) {
+      return _conversationSyncTask;
+    }
+    _conversationSyncTask = localSeenService.syncConversationsIncremental().whenComplete(() {
+      _lastConversationSyncAt = DateTime.now();
+      _conversationSyncTask = null;
+    });
+    return _conversationSyncTask;
   }
 
   Future<int?> _findDirectConversationId(String receiverId) async {

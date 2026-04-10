@@ -186,6 +186,11 @@ class LocalSeenService {
     ]);
   }
 
+  Future<void> syncConversationsIncremental() async {
+    final lastSyncConversation = _settingsBox.get(_lastSyncConversationKey) as DateTime? ?? DateTime.utc(2024, 1, 1);
+    await _syncConversations(lastSyncConversation);
+  }
+
   // ---------------------------------------------------------------------------
   // seen / interactions
   // ---------------------------------------------------------------------------
@@ -403,7 +408,7 @@ class LocalSeenService {
 
     final conversations = await supabaseClient
         .from('conversations')
-        .select('id, created_at, updated_at')
+        .select('id, created_at, updated_at, last_message')
         .inFilter('id', conversationIds)
         .gt('updated_at', lastSync.toIso8601String())
         .order('updated_at', ascending: false);
@@ -435,6 +440,14 @@ class LocalSeenService {
       final existingLocal = _conversationBox.get(partnerId) as Map?;
       final lastMessageAt = DateTime.parse(conversation['updated_at'] as String).toLocal();
       final localLastMessageAt = existingLocal != null ? (existingLocal['lastMessageAt']) : null;
+      final rawLastMessage = (conversation['last_message'] as String?) ?? '';
+      String lastMessageContent = existingLocal?['lastMessage'] ?? '';
+      bool lastMessageByMe = existingLocal?['lastMessageByMe'] ?? false;
+      if (rawLastMessage.contains(': ')) {
+        lastMessageContent = rawLastMessage.split(': ').skip(1).join(': ');
+        final senderId = rawLastMessage.split(': ').first;
+        lastMessageByMe = senderId == userId;
+      }
 
       if (localLastMessageAt == null || lastMessageAt.isAfter(localLastMessageAt)) {
         final partnerProfile = Map<String, dynamic>.from((partner['profiles'] as Map?)?.cast<String, dynamic>() ?? {});
@@ -442,12 +455,12 @@ class LocalSeenService {
           'conversationId': conversationId,
           'partnerId': partnerId,
           'lastMessageAt': lastMessageAt,
-          'lastMessage': existingLocal?['lastMessage'] ?? '',
+          'lastMessage': lastMessageContent,
           'createdAt': DateTime.parse(conversation['created_at'] as String).toLocal(),
           'currentUserId': userId,
           'partnerName': partnerProfile['display_name'] ?? partnerProfile['username'] ?? partnerId,
           'partnerProfileImageUrl': partnerProfile['avatar_url'] ?? '',
-          'lastMessageByMe': existingLocal?['lastMessageByMe'] ?? false,
+          'lastMessageByMe': lastMessageByMe,
         };
 
         final cursor = _chatCursorBox.get(_conversationId(partnerId));

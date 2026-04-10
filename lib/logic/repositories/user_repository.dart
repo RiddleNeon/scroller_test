@@ -13,6 +13,9 @@ class UserRepository {
   static const Duration _userCacheTtl = Duration(minutes: 2);
   final Map<String, _CachedUserProfile> _userCache = {};
   final Map<String, Future<UserProfile?>> _inFlightUserFetches = {};
+  final Map<String, _IncrementalVideoCache> _publishedVideosCache = {};
+  final Map<String, _IncrementalUserListCache> _followersCache = {};
+  final Map<String, _IncrementalUserListCache> _followingCache = {};
 
   Future<UserProfile> getUser(String userId) async => (await getUserSupabase(userId)) ?? (throw StateError('User $userId not found'));
 
@@ -20,6 +23,12 @@ class UserRepository {
     final cached = _userCache[userId];
     if (cached != null && !cached.isExpired) {
       return cached.profile;
+    }
+
+    final localCached = _safeLocalAuthor(userId);
+    if (localCached != null) {
+      _userCache[userId] = _CachedUserProfile(localCached);
+      return localCached;
     }
 
     final inFlight = _inFlightUserFetches[userId];
@@ -47,6 +56,7 @@ class UserRepository {
 
     final profile = UserProfile.fromSupabase(supabaseResult);
     _userCache[userId] = _CachedUserProfile(profile);
+    _safeSaveLocalAuthor(profile);
     return profile;
   }
 
@@ -171,41 +181,12 @@ class UserRepository {
   }
 
   Future<List<Video>> getPublishedVideos(String userId, {int limit = 20, int offset = 0}) async {
-    print("Fetching published videos for user $userId with limit $limit and offset $offset");
-    try {
-      final response = await supabaseClient
-          .from('videos')
-          .select('''
-          *,
-          profiles!videos_author_id_fkey (
-            display_name,
-            username
-          ),
-          video_tags (
-            tags (
-              name
-            )
-          )
-        ''')
-          .eq('author_id', userId)
-          .eq('is_published', true)
-          .order('created_at', ascending: false)
-          .range(offset, offset + limit - 1);
-
-      return response.map<Video>((e) {
-        final profile = e['profiles'] as Map<String, dynamic>;
-        final authorName = profile['display_name'] ?? profile['username'] ?? '';
-        final tags = (e['video_tags'] as List).map((vt) => vt['tags']['name'] as String).toList();
-
-        return Video.fromSupabase(e, authorName, tags);
-      }).toList();
-    } catch (e) {
-      print('Error fetching published videos: $e');
-      return [];
-    }
+    return _getPublishedVideosIncremental(userId, limit: limit, offset: offset);
   }
 
   Future<int> getPublishedVideosCount(String userId) async {
+    final cache = _publishedVideosCache[userId];
+    if (cache != null && cache.initialized) return cache.items.length;
     try {
       final response = await supabaseClient.from('profiles').select('total_videos_count').eq('id', userId).maybeSingle();
 
@@ -299,22 +280,12 @@ class UserRepository {
   }
 
   Future<List<UserProfile>> getFollowers(String userId, {int limit = 50, int offset = 0}) async {
-    try {
-      final response = await supabaseClient
-          .from('follows')
-          .select('profiles!follower_id(*)')
-          .eq('following_id', userId)
-          .order('created_at', ascending: false)
-          .range(offset, offset + limit - 1);
-
-      return response.map<UserProfile>((e) => UserProfile.fromJson(e['profiles'])).toList();
-    } catch (e) {
-      print('Error fetching following: $e');
-      return [];
-    }
+    return _getFollowersIncremental(userId, limit: limit, offset: offset);
   }
 
   Future<int> getFollowersCount(String userId) async {
+    final cache = _followersCache[userId];
+    if (cache != null && cache.initialized) return cache.items.length;
     try {
       final response = await supabaseClient.rpc('get_followers_count', params: {'user_id': userId});
 
@@ -326,22 +297,12 @@ class UserRepository {
   }
 
   Future<List<UserProfile>> getFollowing(String userId, {int limit = 50, int offset = 0}) async {
-    try {
-      final response = await supabaseClient
-          .from('follows')
-          .select('profiles!following_id(*)')
-          .eq('follower_id', userId)
-          .order('created_at', ascending: false)
-          .range(offset, offset + limit - 1);
-
-      return response.map<UserProfile>((e) => UserProfile.fromJson(e['profiles'])).toList();
-    } catch (e) {
-      print('Error fetching following: $e');
-      return [];
-    }
+    return _getFollowingIncremental(userId, limit: limit, offset: offset);
   }
 
   Future<int> getFollowingCount(String userId) async {
+    final cache = _followingCache[userId];
+    if (cache != null && cache.initialized) return cache.items.length;
     try {
       final response = await supabaseClient.rpc('get_following_count', params: {'user_id': userId});
 
@@ -392,6 +353,296 @@ class UserRepository {
     return null;
   }
 
+  Future<List<Video>> _getPublishedVideosIncremental(String userId, {required int limit, required int offset}) async {
+    final cache = _publishedVideosCache.putIfAbsent(userId, _IncrementalVideoCache.new);
+
+    if (!cache.initialized) {
+      final firstPage = await _fetchPublishedVideosPage(userId, offset: 0, limit: limit);
+      cache.items
+        ..clear()
+        ..addAll(firstPage);
+      cache.initialized = true;
+      cache.exhausted = firstPage.length < limit;
+      cache.newestCreatedAt = cache.items.isEmpty ? null : cache.items.first.createdAt;
+    } else if (offset == 0 && cache.newestCreatedAt != null) {
+      final newRows = await _fetchNewPublishedVideos(userId, after: cache.newestCreatedAt!);
+      if (newRows.isNotEmpty) {
+        _prependUniqueVideos(cache.items, newRows);
+        cache.newestCreatedAt = cache.items.first.createdAt;
+      }
+    }
+
+    if (!cache.exhausted && offset + limit > cache.items.length) {
+      final fetchOffset = cache.items.length;
+      final nextPage = await _fetchPublishedVideosPage(userId, offset: fetchOffset, limit: limit);
+      if (nextPage.isNotEmpty) {
+        _appendUniqueVideos(cache.items, nextPage);
+      }
+      if (nextPage.length < limit) {
+        cache.exhausted = true;
+      }
+      cache.newestCreatedAt ??= cache.items.isEmpty ? null : cache.items.first.createdAt;
+    }
+
+    if (offset >= cache.items.length) return [];
+    final end = (offset + limit).clamp(offset, cache.items.length);
+    return cache.items.sublist(offset, end);
+  }
+
+  Future<List<UserProfile>> _getFollowersIncremental(String userId, {required int limit, required int offset}) async {
+    final cache = _followersCache.putIfAbsent(userId, _IncrementalUserListCache.new);
+    return _getRelationUsersIncremental(
+      cache: cache,
+      limit: limit,
+      offset: offset,
+      loadPage: (pageOffset, pageLimit) => _fetchFollowersPage(userId, offset: pageOffset, limit: pageLimit),
+      loadNew: (after) => _fetchNewFollowers(userId, after: after),
+    );
+  }
+
+  Future<List<UserProfile>> _getFollowingIncremental(String userId, {required int limit, required int offset}) async {
+    final cache = _followingCache.putIfAbsent(userId, _IncrementalUserListCache.new);
+    return _getRelationUsersIncremental(
+      cache: cache,
+      limit: limit,
+      offset: offset,
+      loadPage: (pageOffset, pageLimit) => _fetchFollowingPage(userId, offset: pageOffset, limit: pageLimit),
+      loadNew: (after) => _fetchNewFollowing(userId, after: after),
+    );
+  }
+
+  Future<List<UserProfile>> _getRelationUsersIncremental({
+    required _IncrementalUserListCache cache,
+    required int limit,
+    required int offset,
+    required Future<List<_TimedUserProfile>> Function(int offset, int limit) loadPage,
+    required Future<List<_TimedUserProfile>> Function(DateTime after) loadNew,
+  }) async {
+    if (!cache.initialized) {
+      final firstPage = await loadPage(0, limit);
+      cache.items
+        ..clear()
+        ..addAll(firstPage.map((e) => e.profile));
+      cache.initialized = true;
+      cache.exhausted = firstPage.length < limit;
+      cache.newestCreatedAt = firstPage.isEmpty ? null : firstPage.first.createdAt;
+      for (final item in firstPage) {
+        _safeSaveLocalAuthor(item.profile);
+      }
+    } else if (offset == 0 && cache.newestCreatedAt != null) {
+      final newRows = await loadNew(cache.newestCreatedAt!);
+      if (newRows.isNotEmpty) {
+        _prependUniqueUsers(cache.items, newRows.map((e) => e.profile).toList());
+        cache.newestCreatedAt = newRows.first.createdAt;
+        for (final item in newRows) {
+          _safeSaveLocalAuthor(item.profile);
+        }
+      }
+    }
+
+    if (!cache.exhausted && offset + limit > cache.items.length) {
+      final page = await loadPage(cache.items.length, limit);
+      if (page.isNotEmpty) {
+        _appendUniqueUsers(cache.items, page.map((e) => e.profile).toList());
+        for (final item in page) {
+          _safeSaveLocalAuthor(item.profile);
+        }
+      }
+      if (page.length < limit) {
+        cache.exhausted = true;
+      }
+      cache.newestCreatedAt ??= page.isEmpty ? cache.newestCreatedAt : page.first.createdAt;
+    }
+
+    if (offset >= cache.items.length) return [];
+    final end = (offset + limit).clamp(offset, cache.items.length);
+    return cache.items.sublist(offset, end);
+  }
+
+  Future<List<Video>> _fetchPublishedVideosPage(String userId, {required int offset, required int limit}) async {
+    try {
+      final response = await supabaseClient
+          .from('videos')
+          .select('''
+          *,
+          profiles!videos_author_id_fkey (
+            display_name,
+            username
+          ),
+          video_tags (
+            tags (
+              name
+            )
+          )
+        ''')
+          .eq('author_id', userId)
+          .eq('is_published', true)
+          .order('created_at', ascending: false)
+          .range(offset, offset + limit - 1);
+      return response.map<Video>((e) {
+        final profile = e['profiles'] as Map<String, dynamic>;
+        final authorName = profile['display_name'] ?? profile['username'] ?? '';
+        final tags = (e['video_tags'] as List).map((vt) => vt['tags']['name'] as String).toList();
+        return Video.fromSupabase(e, authorName, tags);
+      }).toList();
+    } catch (e) {
+      print('Error fetching published videos page: $e');
+      return [];
+    }
+  }
+
+  Future<List<Video>> _fetchNewPublishedVideos(String userId, {required DateTime after}) async {
+    try {
+      final response = await supabaseClient
+          .from('videos')
+          .select('''
+          *,
+          profiles!videos_author_id_fkey (
+            display_name,
+            username
+          ),
+          video_tags (
+            tags (
+              name
+            )
+          )
+        ''')
+          .eq('author_id', userId)
+          .eq('is_published', true)
+          .gt('created_at', after.toUtc().toIso8601String())
+          .order('created_at', ascending: false);
+      return response.map<Video>((e) {
+        final profile = e['profiles'] as Map<String, dynamic>;
+        final authorName = profile['display_name'] ?? profile['username'] ?? '';
+        final tags = (e['video_tags'] as List).map((vt) => vt['tags']['name'] as String).toList();
+        return Video.fromSupabase(e, authorName, tags);
+      }).toList();
+    } catch (e) {
+      print('Error fetching new published videos: $e');
+      return [];
+    }
+  }
+
+  Future<List<_TimedUserProfile>> _fetchFollowersPage(String userId, {required int offset, required int limit}) async {
+    try {
+      final response = await supabaseClient
+          .from('follows')
+          .select('created_at, profiles!follower_id(*)')
+          .eq('following_id', userId)
+          .order('created_at', ascending: false)
+          .range(offset, offset + limit - 1);
+      return response.map<_TimedUserProfile>((e) {
+        final profile = UserProfile.fromJson(Map<String, dynamic>.from(e['profiles']));
+        final createdAt = DateTime.parse(e['created_at'] as String).toLocal();
+        return _TimedUserProfile(profile: profile, createdAt: createdAt);
+      }).toList();
+    } catch (e) {
+      print('Error fetching followers page: $e');
+      return [];
+    }
+  }
+
+  Future<List<_TimedUserProfile>> _fetchNewFollowers(String userId, {required DateTime after}) async {
+    try {
+      final response = await supabaseClient
+          .from('follows')
+          .select('created_at, profiles!follower_id(*)')
+          .eq('following_id', userId)
+          .gt('created_at', after.toUtc().toIso8601String())
+          .order('created_at', ascending: false);
+      return response.map<_TimedUserProfile>((e) {
+        final profile = UserProfile.fromJson(Map<String, dynamic>.from(e['profiles']));
+        final createdAt = DateTime.parse(e['created_at'] as String).toLocal();
+        return _TimedUserProfile(profile: profile, createdAt: createdAt);
+      }).toList();
+    } catch (e) {
+      print('Error fetching new followers: $e');
+      return [];
+    }
+  }
+
+  Future<List<_TimedUserProfile>> _fetchFollowingPage(String userId, {required int offset, required int limit}) async {
+    try {
+      final response = await supabaseClient
+          .from('follows')
+          .select('created_at, profiles!following_id(*)')
+          .eq('follower_id', userId)
+          .order('created_at', ascending: false)
+          .range(offset, offset + limit - 1);
+      return response.map<_TimedUserProfile>((e) {
+        final profile = UserProfile.fromJson(Map<String, dynamic>.from(e['profiles']));
+        final createdAt = DateTime.parse(e['created_at'] as String).toLocal();
+        return _TimedUserProfile(profile: profile, createdAt: createdAt);
+      }).toList();
+    } catch (e) {
+      print('Error fetching following page: $e');
+      return [];
+    }
+  }
+
+  Future<List<_TimedUserProfile>> _fetchNewFollowing(String userId, {required DateTime after}) async {
+    try {
+      final response = await supabaseClient
+          .from('follows')
+          .select('created_at, profiles!following_id(*)')
+          .eq('follower_id', userId)
+          .gt('created_at', after.toUtc().toIso8601String())
+          .order('created_at', ascending: false);
+      return response.map<_TimedUserProfile>((e) {
+        final profile = UserProfile.fromJson(Map<String, dynamic>.from(e['profiles']));
+        final createdAt = DateTime.parse(e['created_at'] as String).toLocal();
+        return _TimedUserProfile(profile: profile, createdAt: createdAt);
+      }).toList();
+    } catch (e) {
+      print('Error fetching new following: $e');
+      return [];
+    }
+  }
+
+  void _prependUniqueVideos(List<Video> target, List<Video> incoming) {
+    final existing = target.map((e) => e.id).toSet();
+    final toInsert = incoming.where((e) => !existing.contains(e.id)).toList();
+    target.insertAll(0, toInsert);
+  }
+
+  void _appendUniqueVideos(List<Video> target, List<Video> incoming) {
+    final existing = target.map((e) => e.id).toSet();
+    for (final video in incoming) {
+      if (!existing.contains(video.id)) {
+        target.add(video);
+      }
+    }
+  }
+
+  void _prependUniqueUsers(List<UserProfile> target, List<UserProfile> incoming) {
+    final existing = target.map((e) => e.id).toSet();
+    final toInsert = incoming.where((e) => !existing.contains(e.id)).toList();
+    target.insertAll(0, toInsert);
+  }
+
+  void _appendUniqueUsers(List<UserProfile> target, List<UserProfile> incoming) {
+    final existing = target.map((e) => e.id).toSet();
+    for (final user in incoming) {
+      if (!existing.contains(user.id)) {
+        target.add(user);
+      }
+    }
+  }
+
+  UserProfile? _safeLocalAuthor(String userId) {
+    try {
+      return localSeenService.getAuthorFromCache(userId);
+    } catch (_) {
+      return null;
+    }
+  }
+
+  void _safeSaveLocalAuthor(UserProfile profile) {
+    try {
+      localSeenService.saveAuthor(profile);
+    } catch (_) {}
+  }
+
   Future<void> _adjustProfileMetric(String userId, String column, int delta) async {
     await supabaseClient.rpc('increment_profile_metric', params: {'p_user_id': userId, 'p_column': column, 'p_delta': delta});
   }
@@ -430,4 +681,25 @@ class _CachedUserProfile {
   _CachedUserProfile(this.profile) : cachedAt = DateTime.now();
 
   bool get isExpired => DateTime.now().difference(cachedAt) > UserRepository._userCacheTtl;
+}
+
+class _IncrementalVideoCache {
+  final List<Video> items = [];
+  DateTime? newestCreatedAt;
+  bool initialized = false;
+  bool exhausted = false;
+}
+
+class _IncrementalUserListCache {
+  final List<UserProfile> items = [];
+  DateTime? newestCreatedAt;
+  bool initialized = false;
+  bool exhausted = false;
+}
+
+class _TimedUserProfile {
+  final UserProfile profile;
+  final DateTime createdAt;
+
+  _TimedUserProfile({required this.profile, required this.createdAt});
 }

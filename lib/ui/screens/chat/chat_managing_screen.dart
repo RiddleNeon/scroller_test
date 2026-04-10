@@ -1,5 +1,3 @@
-import 'dart:async';
-
 import 'package:flutter/material.dart';
 import 'package:wurp/logic/chat/chat_message.dart';
 import 'package:wurp/ui/misc/avatar.dart';
@@ -23,8 +21,6 @@ class _ChatManagingScreenState extends State<ChatManagingScreen> {
   final List<Chat> chats = [];
 
   int? currentLastIndex;
-  Timer? _loaderDelayTimer;
-  bool _showInitialLoader = false;
 
   @override
   void initState() {
@@ -46,16 +42,6 @@ class _ChatManagingScreenState extends State<ChatManagingScreen> {
   void _preload() async {
     if (loading) return;
     loading = true;
-    if (chats.isEmpty) {
-      _showInitialLoader = false;
-      _loaderDelayTimer?.cancel();
-      _loaderDelayTimer = Timer(const Duration(milliseconds: 180), () {
-        if (mounted && loading && chats.isEmpty) {
-          setState(() => _showInitialLoader = true);
-        }
-      });
-      if (mounted) setState(() {});
-    }
 
     try {
       final preloadedChatsResult = await widget.preloadMoreChats(currentLastIndex);
@@ -71,14 +57,11 @@ class _ChatManagingScreenState extends State<ChatManagingScreen> {
       }
     } finally {
       loading = false;
-      _loaderDelayTimer?.cancel();
-      _showInitialLoader = false;
     }
   }
 
   @override
   void dispose() {
-    _loaderDelayTimer?.cancel();
     _scrollController.dispose();
     super.dispose();
   }
@@ -109,9 +92,7 @@ class _ChatManagingScreenState extends State<ChatManagingScreen> {
 
   Widget _buildChatList(List<Chat> chats) {
     if (loading && chats.isEmpty) {
-      return _showInitialLoader
-          ? const Center(child: CircularProgressIndicator())
-          : const SizedBox.shrink();
+      return const SizedBox.shrink();
     }
     
     if (chats.isEmpty) {
@@ -254,7 +235,7 @@ Widget buildMessagingScreen(Chat chat, void Function(ChatMessage) onMessageUpdat
   return FutureBuilder(
     future: userRepository.getUser(chat.partnerId),
     builder: (context, asyncSnapshot) {
-      if(!asyncSnapshot.hasData) return const Scaffold(body: Center(child: CircularProgressIndicator()));
+      if (!asyncSnapshot.hasData) return const SizedBox.shrink();
       
       return MessagingScreen(
         key: currentOpenChatScreenKey,

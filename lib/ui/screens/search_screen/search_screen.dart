@@ -1,5 +1,3 @@
-import 'dart:async';
-
 import 'package:flutter/material.dart';
 import 'package:wurp/base_logic.dart';
 import 'package:wurp/logic/feed_recommendation/search_video_result_recommender.dart';
@@ -29,8 +27,6 @@ class _SearchScreenState extends State<SearchScreen> with TickerProviderStateMix
   
   bool _hasSearched = false;
   bool _loading = false;
-  bool _showLoadingIndicator = false;
-  Timer? _loadingIndicatorTimer;
   
   SearchQuery<Video>? _videoQuery;
   SearchQuery<UserProfile>? _userQuery;
@@ -55,7 +51,6 @@ class _SearchScreenState extends State<SearchScreen> with TickerProviderStateMix
   
   @override
   void dispose() {
-    _loadingIndicatorTimer?.cancel();
     disposeThumbnailCache();
     _tabController.dispose();
     _controller.dispose();
@@ -72,15 +67,7 @@ class _SearchScreenState extends State<SearchScreen> with TickerProviderStateMix
     setState(() {
       _hasSearched = true;
       _loading = true;
-      _showLoadingIndicator = false;
       _searchBarVisibility = 1.0;
-    });
-    _loadingIndicatorTimer?.cancel();
-    _loadingIndicatorTimer = Timer(const Duration(milliseconds: 180), () {
-      if (!mounted) return;
-      if (_loading) {
-        setState(() => _showLoadingIndicator = true);
-      }
     });
 
     final nextUserQuery = SearchQuery<UserProfile>((limit, offset) async {
@@ -97,13 +84,11 @@ class _SearchScreenState extends State<SearchScreen> with TickerProviderStateMix
     if (requestId != _searchRequestId) return;
 
     if (mounted && requestId == _searchRequestId) {
-      _loadingIndicatorTimer?.cancel();
       setState(() {
         _videoQuery = nextVideoQuery;
         _userQuery = nextUserQuery;
         _currentSearchViewModel = FeedViewModel();
         _loading = false;
-        _showLoadingIndicator = false;
       });
     }
   }
@@ -158,15 +143,10 @@ class _SearchScreenState extends State<SearchScreen> with TickerProviderStateMix
             duration: const Duration(milliseconds: 220),
             switchInCurve: Curves.easeOutCubic,
             switchOutCurve: Curves.easeInCubic,
-            child: _loading && _showLoadingIndicator
-                ? Center(
-                    key: const ValueKey('search_loading'),
-                    child: CircularProgressIndicator(color: cs.primary),
-                  )
-                : KeyedSubtree(
-                    key: ValueKey('tab_${_tabController.index}'),
-                    child: _buildTabContent(),
-                  ),
+            child: KeyedSubtree(
+              key: ValueKey('tab_${_tabController.index}'),
+              child: _buildTabContent(),
+            ),
           ),
         ),
       ],

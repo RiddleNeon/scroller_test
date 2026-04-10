@@ -90,7 +90,7 @@ class _PreloadingListState<T> extends State<PreloadingList<T>> {
     final cs = Theme.of(context).colorScheme;
 
     if (_loading) {
-      return Center(child: CircularProgressIndicator(color: cs.primary));
+      return const SizedBox.shrink();
     }
 
     return ScrollConfiguration(
@@ -107,16 +107,9 @@ class _PreloadingListState<T> extends State<PreloadingList<T>> {
             itemCount: widget.query.results.length,
             itemBuilder: (context, index) {
               if (widget.query.results.isEmpty) return EmptyState(label: widget.emptyStateLabel ?? 'Nothing found', cs: cs);
-              if (index == _currentLoadedCount) {
-                return _preloading
-                    ? Padding(
-                        padding: const EdgeInsets.symmetric(vertical: 16),
-                        child: Center(
-                          child: LinearProgressIndicator(color: cs.primary, backgroundColor: cs.surfaceContainerHighest),
-                        ),
-                      )
-                    : const SizedBox.shrink();
-              }
+                if (index == _currentLoadedCount) {
+                 return const SizedBox.shrink();
+               }
               if (index < widget.query.results.length) {
                 return widget.itemBuilder(context, widget.query.results[index]);
               }
@@ -135,7 +128,7 @@ class _SliverPreloadingListState<T> extends _PreloadingListState<T> {
     final cs = Theme.of(context).colorScheme;
 
     if (_loading) {
-      return Center(child: CircularProgressIndicator(color: cs.primary));
+      return const SizedBox.shrink();
     }
 
     return ScrollConfiguration(
@@ -164,14 +157,7 @@ class _SliverPreloadingListState<T> extends _PreloadingListState<T> {
       sliver: SliverList(
         delegate: SliverChildBuilderDelegate((context, index) {
           if (index == _currentLoadedCount) {
-            return _preloading
-                ? Padding(
-                    padding: const EdgeInsets.symmetric(vertical: 16),
-                    child: Center(
-                      child: LinearProgressIndicator(color: cs.primary, backgroundColor: cs.surfaceContainerHighest),
-                    ),
-                  )
-                : const SizedBox.shrink();
+            return const SizedBox.shrink();
           }
           return widget.itemBuilder(context, items[index]);
         }, childCount: _currentLoadedCount + 1),
@@ -285,7 +271,7 @@ class AnimatedPreloadingListState<T> extends State<AnimatedPreloadingList<T>>
     final cs = Theme.of(context).colorScheme;
 
     if (_loading) {
-      return Center(child: CircularProgressIndicator(color: cs.primary));
+      return const SizedBox.shrink();
     }
 
     if (items.isEmpty) {
@@ -299,12 +285,7 @@ class AnimatedPreloadingListState<T> extends State<AnimatedPreloadingList<T>>
       initialItemCount: items.length,
       itemBuilder: (context, index, animation) {
         if (index == items.length) {
-          return _preloading
-              ? const Padding(
-            padding: EdgeInsets.all(16),
-            child: LinearProgressIndicator(),
-          )
-              : const SizedBox.shrink();
+          return const SizedBox.shrink();
         }
 
         return widget.itemBuilder(
