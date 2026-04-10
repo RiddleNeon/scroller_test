@@ -26,7 +26,7 @@ class _ChatManagingScreenState extends State<ChatManagingScreen> {
   void initState() {
     _scrollController = ScrollController();
     _scrollController.addListener(_onScroll);
-    Future.delayed(const Duration(milliseconds: 50), _preload);
+    WidgetsBinding.instance.addPostFrameCallback((timeStamp) => _preload());
     super.initState();
   }
 
