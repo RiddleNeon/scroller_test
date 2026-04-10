@@ -367,7 +367,7 @@ class _LoginScreenState extends State<LoginScreen>
           ),
           child: Text(
             _modeSubtitle,
-            key: ValueKey('subtitle-${_mode.name}-$_modeVersion'),
+            key: _subtitleKey(),
             style: theme.textTheme.bodyMedium?.copyWith(
               color: cs.onSurfaceVariant,
             ),
@@ -418,7 +418,7 @@ class _LoginScreenState extends State<LoginScreen>
 
   Widget _buildModeFormContent(ColorScheme cs, ThemeData theme) {
     return KeyedSubtree(
-      key: ValueKey('mode-${_mode.name}-$_modeVersion'),
+      key: _modeContentKey(),
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.stretch,
         children: [
@@ -458,8 +458,7 @@ class _LoginScreenState extends State<LoginScreen>
     required Widget child,
     required Animation<double> animation,
   }) {
-    final isCurrent = child.key == ValueKey('mode-${_mode.name}-$_modeVersion') ||
-        child.key == ValueKey('subtitle-${_mode.name}-$_modeVersion');
+    final isCurrent = child.key == _modeContentKey() || child.key == _subtitleKey();
     final enteringOffset = Offset(_modeDirection.toDouble(), 0);
     final exitingOffset = Offset(-_modeDirection.toDouble(), 0);
     final tween = Tween<Offset>(
@@ -477,6 +476,10 @@ class _LoginScreenState extends State<LoginScreen>
       ),
     );
   }
+
+  ValueKey<String> _modeContentKey() => ValueKey('mode-${_mode.name}-$_modeVersion');
+
+  ValueKey<String> _subtitleKey() => ValueKey('subtitle-${_mode.name}-$_modeVersion');
 
   Widget _buildModeTabs(ColorScheme cs, ThemeData theme) {
     return Container(
