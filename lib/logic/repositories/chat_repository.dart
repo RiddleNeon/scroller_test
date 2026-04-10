@@ -339,17 +339,7 @@ class ChatRepository {
   }
 
   Chat _cloneChat(Chat chat) {
-    return Chat(
-      conversationId: chat.conversationId,
-      currentUserReplacementId: chat.currentUserId,
-      partnerId: chat.partnerId,
-      partnerProfileImageUrl: chat.partnerProfileImageUrl,
-      partnerName: chat.partnerName,
-      lastMessage: chat.lastMessage,
-      lastMessageAt: chat.lastMessageAt,
-      lastMessageByMe: chat.lastMessageByMe,
-      createdAt: chat.createdAt,
-    );
+    return Chat.fromJson(chat.toJson(), customPartnerId: chat.partnerId);
   }
 }
 
