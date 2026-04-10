@@ -12,20 +12,29 @@ class BottomNavBar extends StatefulWidget {
   State<BottomNavBar> createState() => BottomNavBarState();
 }
 
-class BottomNavBarState extends State<BottomNavBar> {
+class BottomNavBarState extends State<BottomNavBar> with SingleTickerProviderStateMixin {
   late int currentSelectedIndex;
+
   List get items => widget.items;
+
+  late final AnimationController _selectionSizeAnimationController = AnimationController(vsync: this, duration: const Duration(milliseconds: 580));
+
+  // Track hover state per item
+  late List<bool> _hovered;
 
   @override
   void initState() {
     super.initState();
     currentSelectedIndex = widget.initialIndex;
+    _hovered = List.filled(widget.items.length, false);
   }
 
   void switchToIndex(int index) {
     WidgetsBinding.instance.addPostFrameCallback((timeStamp) {
       setState(() {
         currentSelectedIndex = index;
+        _selectionSizeAnimationController.reset();
+        _selectionSizeAnimationController.animateTo(1.5, curve: Curves.easeOutBack);
       });
     });
   }
@@ -62,9 +71,6 @@ class BottomNavBarState extends State<BottomNavBar> {
           builder: (context, constraints) {
             final slotWidth = constraints.maxWidth / items.length;
             final selectorCenterX = currentSelectedIndex * slotWidth + slotWidth / 2;
-            final createCenterX = (2 * slotWidth) + slotWidth / 2;
-            const createCircleSize = 36.0;
-            const createCircleTop = 8.0;
 
             return Stack(
               children: [
@@ -88,39 +94,63 @@ class BottomNavBarState extends State<BottomNavBar> {
                     final item = items[i];
                     final selected = currentSelectedIndex == i;
                     final iconColor = selected ? cs.primary : cs.onSurfaceVariant;
+                    final isHovered = _hovered[i];
 
-                    return GestureDetector(
-                      onTap: () {
-                        setState(() => currentSelectedIndex = i);
-                        widget.onSelectionChange(items[currentSelectedIndex].id);
-                      },
-                      behavior: HitTestBehavior.opaque,
-                      child: SizedBox(
-                        width: slotWidth,
-                        child: Column(
-                          mainAxisAlignment: MainAxisAlignment.center,
-                          children: [
-                            AnimatedScale(
-                              duration: const Duration(milliseconds: 200),
-                              curve: Curves.easeOutBack,
-                              scale: selected ? 1.08 : 1.0,
-                              child: Icon(
-                                item.icon,
-                                color: iconColor,
-                                size: 24,
-                              ),
+                    return MouseRegion(
+                      onEnter: (_) => setState(() => _hovered[i] = true),
+                      onExit: (_) => setState(() => _hovered[i] = false),
+                      child: GestureDetector(
+                        onTapDown: (_) => setState(() => _hovered[i] = false),
+                        onTap: () {
+                          setState(() => currentSelectedIndex = i);
+                          widget.onSelectionChange(items[currentSelectedIndex].id);
+                        },
+                        behavior: HitTestBehavior.opaque,
+                        child: AnimatedScale(
+                          scale: isHovered ? 1.12 : 1.0,
+                          duration: const Duration(milliseconds: 200),
+                          curve: Curves.easeOutCubic,
+                          child: SizedBox(
+                            width: slotWidth,
+                            child: Column(
+                              mainAxisAlignment: MainAxisAlignment.center,
+                              children: [
+                                selected
+                                    ? AnimatedBuilder(
+                                        animation: _selectionSizeAnimationController,
+                                  builder: (context, child) {
+                                    final val = 1 - _selectionSizeAnimationController.value;
+                                    final scale = 1 + (val * 0.2);
+                                    final rotation = val * 0.02;
+
+                                    final transform = Matrix4.identity()
+                                      ..translate(0, -4 * val)
+                                      ..rotateZ(rotation)
+                                      ..scale(scale)
+                                      ..translate(0, 4 * val);
+
+                                    return Transform(
+                                      alignment: Alignment.center,
+                                      transform: transform,
+                                      child: child,
+                                    );
+                                  },
+                                        child: Icon(item.icon, color: iconColor, size: 24),
+                                      )
+                                    : Icon(item.icon, color: iconColor, size: 24),
+                                const SizedBox(height: 2),
+                                AnimatedDefaultTextStyle(
+                                  duration: const Duration(milliseconds: 180),
+                                  style: TextStyle(
+                                    color: selected ? cs.onSurface : cs.onSurfaceVariant,
+                                    fontSize: 10,
+                                    fontWeight: selected ? FontWeight.w700 : FontWeight.w500,
+                                  ),
+                                  child: Text(item.label),
+                                ),
+                              ],
                             ),
-                            const SizedBox(height: 2),
-                            AnimatedDefaultTextStyle(
-                              duration: const Duration(milliseconds: 180),
-                              style: TextStyle(
-                                color: selected ? cs.onSurface : cs.onSurfaceVariant,
-                                fontSize: 10,
-                                fontWeight: selected ? FontWeight.w700 : FontWeight.w500,
-                              ),
-                              child: Text(item.label),
-                            ),
-                          ],
+                          ),
                         ),
                       ),
                     );
