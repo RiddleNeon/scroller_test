@@ -6,6 +6,7 @@ class SearchQuery<T> {
   int totalResults = 0;
   int _offset = 0;
   bool _hasMoreContent = true;
+  bool _didLoadTotalCount = false;
   bool get isCompleted => currentLoadingTask == null;
 
   SearchQuery(this.executeQuery, this.countQuery);
@@ -34,6 +35,9 @@ class SearchQuery<T> {
     _offset += queryResult.length;
     _hasMoreContent = queryResult.length == limit;
 
-    totalResults = await countQuery();
+    if (!_didLoadTotalCount) {
+      totalResults = await countQuery();
+      _didLoadTotalCount = true;
+    }
   }
 }

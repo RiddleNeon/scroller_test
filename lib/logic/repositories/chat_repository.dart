@@ -6,6 +6,11 @@ import '../local_storage/local_seen_service.dart';
 import '../users/user_model.dart';
 
 class ChatRepository {
+  static const Duration _chatPageCacheTtl = Duration(seconds: 20);
+  final Map<String, _CachedChatsPage> _chatPageCache = {};
+  final Map<String, Future<({int? newCurrent, List<Chat> result})>> _inFlightChatPages = {};
+  final Map<String, _CachedConversationId> _conversationIdCache = {};
+
   Future<void> sendNotification({required Chat chat, required ChatMessage message}) async {
     final receiverUid = chat.partnerId;
     final conversationId = await _getOrCreateDirectConversation(
@@ -35,6 +40,7 @@ class ChatRepository {
     chat.lastMessage = message.text;
     chat.lastMessageAt = message.timestamp;
     chat.lastMessageByMe = true;
+    _invalidateChatPagesForUser(currentUser.id);
     print("updated timestamps");
   }
 
@@ -164,6 +170,32 @@ class ChatRepository {
         int limit = 10,
         int offset = 0,
       }) async {
+    final cacheKey = _getChatsCacheKey(userId: userId, limit: limit, offset: offset);
+    final cachedPage = _chatPageCache[cacheKey];
+    if (cachedPage != null && !cachedPage.isExpired) {
+      return _cloneChatPage(cachedPage.value);
+    }
+
+    final inFlight = _inFlightChatPages[cacheKey];
+    if (inFlight != null) {
+      return _cloneChatPage(await inFlight);
+    }
+
+    final fetch = _getChatsUncached(userId, limit: limit, offset: offset).then((value) {
+      _chatPageCache[cacheKey] = _CachedChatsPage(value);
+      return value;
+    }).whenComplete(() {
+      _inFlightChatPages.remove(cacheKey);
+    });
+    _inFlightChatPages[cacheKey] = fetch;
+    return _cloneChatPage(await fetch);
+  }
+
+  Future<({int? newCurrent, List<Chat> result})> _getChatsUncached(
+    String userId, {
+    int limit = 10,
+    int offset = 0,
+  }) async {
     try {
       final membershipRows =
       await supabaseClient.from('conversation_members').select('conversation_id').eq('profile_id', userId);
@@ -277,9 +309,15 @@ class ChatRepository {
   }
 
   Future<int?> _findDirectConversationId(String receiverId) async {
+    final cached = _conversationIdCache[receiverId];
+    if (cached != null && !cached.isExpired) {
+      return cached.value;
+    }
+
     final cachedChat = localSeenService.getChatWith(receiverId);
     if (cachedChat?.conversationId != null) {
-      return cachedChat!.conversationId;
+      _conversationIdCache[receiverId] = _CachedConversationId(cachedChat!.conversationId);
+      return cachedChat.conversationId;
     }
 
     final currentMembershipRows =
@@ -314,9 +352,12 @@ class ChatRepository {
 
     final directConversationList = (directConversations as List).map<Map<String, dynamic>>((row) => Map<String, dynamic>.from(row)).toList();
     if (directConversationList.isEmpty) {
+      _conversationIdCache[receiverId] = _CachedConversationId(null);
       return null;
     }
-    return directConversationList.first['id'] as int;
+    final conversationId = directConversationList.first['id'] as int;
+    _conversationIdCache[receiverId] = _CachedConversationId(conversationId);
+    return conversationId;
   }
 
   Future<int> _getOrCreateDirectConversation(
@@ -326,6 +367,7 @@ class ChatRepository {
       }) async {
     final existingConversationId = await _findDirectConversationId(receiverId);
     if (existingConversationId != null) {
+      _conversationIdCache[receiverId] = _CachedConversationId(existingConversationId);
       return existingConversationId;
     }
 
@@ -354,8 +396,30 @@ class ChatRepository {
         createdAt: now,
       ),
     ]);
+    _conversationIdCache[receiverId] = _CachedConversationId(conversationId);
+    _invalidateChatPagesForUser(currentUser.id);
 
     return conversationId;
+  }
+
+  void _invalidateChatPagesForUser(String userId) {
+    final prefix = '$userId:';
+    _chatPageCache.removeWhere((key, _) => key.startsWith(prefix));
+  }
+
+  String _getChatsCacheKey({
+    required String userId,
+    required int limit,
+    required int offset,
+  }) {
+    return '$userId:$offset:$limit';
+  }
+
+  ({int? newCurrent, List<Chat> result}) _cloneChatPage(({int? newCurrent, List<Chat> result}) page) {
+    return (
+      newCurrent: page.newCurrent,
+      result: List<Chat>.from(page.result),
+    );
   }
 }
 
@@ -369,4 +433,23 @@ DateTime _parseDateTime(Object? value) {
   if (value is DateTime) return value;
   if (value is String) return DateTime.parse(value);
   return DateTime.now();
+}
+
+class _CachedChatsPage {
+  final ({int? newCurrent, List<Chat> result}) value;
+  final DateTime cachedAt;
+
+  _CachedChatsPage(this.value) : cachedAt = DateTime.now();
+
+  bool get isExpired => DateTime.now().difference(cachedAt) > ChatRepository._chatPageCacheTtl;
+}
+
+class _CachedConversationId {
+  static const Duration _ttl = Duration(minutes: 5);
+  final int? value;
+  final DateTime cachedAt;
+
+  _CachedConversationId(this.value) : cachedAt = DateTime.now();
+
+  bool get isExpired => DateTime.now().difference(cachedAt) > _ttl;
 }

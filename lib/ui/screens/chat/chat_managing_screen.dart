@@ -1,3 +1,5 @@
+import 'dart:async';
+
 import 'package:flutter/material.dart';
 import 'package:wurp/logic/chat/chat_message.dart';
 import 'package:wurp/ui/misc/avatar.dart';
@@ -21,6 +23,8 @@ class _ChatManagingScreenState extends State<ChatManagingScreen> {
   final List<Chat> chats = [];
 
   int? currentLastIndex;
+  Timer? _loaderDelayTimer;
+  bool _showInitialLoader = false;
 
   @override
   void initState() {
@@ -31,7 +35,7 @@ class _ChatManagingScreenState extends State<ChatManagingScreen> {
   }
 
   bool noMoreChats = false;
-  bool loading = true;
+  bool loading = false;
 
   void _onScroll() async {
     if (_scrollController.offset >= _scrollController.position.maxScrollExtent - 60 && !loading && !noMoreChats) {
@@ -40,20 +44,43 @@ class _ChatManagingScreenState extends State<ChatManagingScreen> {
   }
 
   void _preload() async {
+    if (loading) return;
     loading = true;
+    if (chats.isEmpty) {
+      _showInitialLoader = false;
+      _loaderDelayTimer?.cancel();
+      _loaderDelayTimer = Timer(const Duration(milliseconds: 180), () {
+        if (mounted && loading && chats.isEmpty) {
+          setState(() => _showInitialLoader = true);
+        }
+      });
+      if (mounted) setState(() {});
+    }
 
-    final preloadedChatsResult = await widget.preloadMoreChats(currentLastIndex);
-    currentLastIndex = preloadedChatsResult.newCurrent;
-    final preloadedChats = preloadedChatsResult.result;
-    chats.addAll(preloadedChats);
-    reSortChats();
-    if (mounted) {
-      setState(() {});
+    try {
+      final preloadedChatsResult = await widget.preloadMoreChats(currentLastIndex);
+      currentLastIndex = preloadedChatsResult.newCurrent;
+      final preloadedChats = preloadedChatsResult.result;
+      chats.addAll(preloadedChats);
+      reSortChats();
+      if (mounted) {
+        setState(() {});
+      }
+      if (preloadedChats.isEmpty || currentLastIndex == null) {
+        noMoreChats = true;
+      }
+    } finally {
+      loading = false;
+      _loaderDelayTimer?.cancel();
+      _showInitialLoader = false;
     }
-    if (preloadedChats.isEmpty || currentLastIndex == null) {
-      noMoreChats = true;
-    }
-    loading = false;
+  }
+
+  @override
+  void dispose() {
+    _loaderDelayTimer?.cancel();
+    _scrollController.dispose();
+    super.dispose();
   }
 
   @override
@@ -81,8 +108,10 @@ class _ChatManagingScreenState extends State<ChatManagingScreen> {
   }
 
   Widget _buildChatList(List<Chat> chats) {
-    if(loading && chats.isEmpty) {
-      return const Center(child: CircularProgressIndicator());
+    if (loading && chats.isEmpty) {
+      return _showInitialLoader
+          ? const Center(child: CircularProgressIndicator())
+          : const SizedBox.shrink();
     }
     
     if (chats.isEmpty) {

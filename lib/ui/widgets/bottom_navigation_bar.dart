@@ -103,6 +103,7 @@ class BottomNavBarState extends State<BottomNavBar> with SingleTickerProviderSta
                       child: GestureDetector(
                         onTapDown: (_) => setState(() => _hovered[i] = false),
                         onTap: () {
+                          if (currentSelectedIndex == i) return;
                           setState(() => currentSelectedIndex = i);
                           widget.onSelectionChange(items[currentSelectedIndex].id);
                         },

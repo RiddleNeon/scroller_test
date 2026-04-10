@@ -10,17 +10,44 @@ class BanAuthException extends AuthException{
 }
 
 class UserRepository {
+  static const Duration _userCacheTtl = Duration(minutes: 2);
+  final Map<String, _CachedUserProfile> _userCache = {};
+  final Map<String, Future<UserProfile?>> _inFlightUserFetches = {};
+
   Future<UserProfile> getUser(String userId) async => (await getUserSupabase(userId)) ?? (throw StateError('User $userId not found'));
 
   Future<UserProfile?> getUserSupabase(String userId) async {
+    final cached = _userCache[userId];
+    if (cached != null && !cached.isExpired) {
+      return cached.profile;
+    }
+
+    final inFlight = _inFlightUserFetches[userId];
+    if (inFlight != null) {
+      return inFlight;
+    }
+
+    final fetch = _getUserSupabaseUncached(userId).whenComplete(() {
+      _inFlightUserFetches.remove(userId);
+    });
+    _inFlightUserFetches[userId] = fetch;
+    return fetch;
+  }
+
+  Future<UserProfile?> _getUserSupabaseUncached(String userId) async {
     final supabaseResult = await supabaseClient.from('profiles').select().eq('id', userId).maybeSingle();
-    if (supabaseResult == null) return null;
+    if (supabaseResult == null) {
+      _userCache.remove(userId);
+      return null;
+    }
 
     if (supabaseResult['is_banned'] && (!userLoggedIn || userId == currentUser.id)) {
       throw const BanAuthException("You are banned from this app");
     }
 
-    return UserProfile.fromSupabase(supabaseResult);
+    final profile = UserProfile.fromSupabase(supabaseResult);
+    _userCache[userId] = _CachedUserProfile(profile);
+    return profile;
   }
 
   Future<UserProfile> getOrCreateCurrentUser() async {
@@ -42,7 +69,9 @@ class UserRepository {
 
     await supabaseClient.from("profiles").insert({"id": userId, "username": name, "display_name": name, "avatar_url": avatar, "bio": bio});
 
-    return UserProfile(id: userId, username: name, profileImageUrl: avatar, bio: bio, createdAt: DateTime.now(), followersCount: 0);
+    final created = UserProfile(id: userId, username: name, profileImageUrl: avatar, bio: bio, createdAt: DateTime.now(), followersCount: 0);
+    _userCache[userId] = _CachedUserProfile(created);
+    return created;
   }
 
   Future<void> upsertCurrentUserProfile(UserProfile user) async {
@@ -53,6 +82,7 @@ class UserRepository {
       "avatar_url": user.profileImageUrl,
       "bio": user.bio,
     });
+    _userCache[user.id] = _CachedUserProfile(user);
   }
 
   Future<UserProfile> createUser({required String id, required String username, String? profileImageUrl, String bio = ''}) async {
@@ -64,7 +94,7 @@ class UserRepository {
       "bio": bio,
     });
 
-    return UserProfile(
+    final created = UserProfile(
       id: id,
       username: username,
       profileImageUrl: profileImageUrl ?? createUserProfileImageUrl(username),
@@ -72,6 +102,8 @@ class UserRepository {
       createdAt: DateTime.now(),
       followersCount: 0,
     );
+    _userCache[id] = _CachedUserProfile(created);
+    return created;
   }
 
   ///returns if the user is followed after the operation
@@ -347,7 +379,9 @@ class UserRepository {
 
   Future<UserProfile> updateProfileImageUrlSupabase(UserProfile user, String? newUrl) async {
     await supabaseClient.from('profiles').update({"avatar_url": newUrl}).eq('id', user.id);
-    return user.copyWith(profileImageUrl: newUrl);
+    final updated = user.copyWith(profileImageUrl: newUrl);
+    _userCache[user.id] = _CachedUserProfile(updated);
+    return updated;
   }
 
   Future<void> updateFcmTokenSupabase(String userId, String? token) async {
@@ -367,6 +401,7 @@ class UserRepository {
     if(_currentlySelfBanning) return;
     _currentlySelfBanning = true;
     await supabaseClient.from('profiles').update({"is_banned": true}).eq('id', currentUser.id);
+    _userCache.remove(currentUser.id);
     await onUserLogout();
     await auth.signOut();
     _currentlySelfBanning = false;
@@ -387,3 +422,12 @@ class UserRepository {
 }
 
 String createUserProfileImageUrl(String? seed) => "https://api.dicebear.com/7.x/miniavs/png?seed=${seed ?? "_"}";
+
+class _CachedUserProfile {
+  final UserProfile profile;
+  final DateTime cachedAt;
+
+  _CachedUserProfile(this.profile) : cachedAt = DateTime.now();
+
+  bool get isExpired => DateTime.now().difference(cachedAt) > UserRepository._userCacheTtl;
+}

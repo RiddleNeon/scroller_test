@@ -1,3 +1,5 @@
+import 'dart:async';
+
 import 'package:flutter/material.dart';
 import 'package:wurp/base_logic.dart';
 import 'package:wurp/logic/feed_recommendation/search_video_result_recommender.dart';
@@ -27,6 +29,8 @@ class _SearchScreenState extends State<SearchScreen> with TickerProviderStateMix
   
   bool _hasSearched = false;
   bool _loading = false;
+  bool _showLoadingIndicator = false;
+  Timer? _loadingIndicatorTimer;
   
   SearchQuery<Video>? _videoQuery;
   SearchQuery<UserProfile>? _userQuery;
@@ -51,6 +55,7 @@ class _SearchScreenState extends State<SearchScreen> with TickerProviderStateMix
   
   @override
   void dispose() {
+    _loadingIndicatorTimer?.cancel();
     disposeThumbnailCache();
     _tabController.dispose();
     _controller.dispose();
@@ -59,32 +64,48 @@ class _SearchScreenState extends State<SearchScreen> with TickerProviderStateMix
 
   Future<void> _search([String? val]) async {
     val ??= _controller.text;
-    if (val.trim().isEmpty) return;
+    final normalizedQuery = val.trim();
+    if (normalizedQuery.isEmpty) return;
     final requestId = ++_searchRequestId;
     FocusScope.of(context).unfocus();
 
     setState(() {
       _hasSearched = true;
       _loading = true;
+      _showLoadingIndicator = false;
       _searchBarVisibility = 1.0;
     });
+    _loadingIndicatorTimer?.cancel();
+    _loadingIndicatorTimer = Timer(const Duration(milliseconds: 180), () {
+      if (!mounted) return;
+      if (_loading) {
+        setState(() => _showLoadingIndicator = true);
+      }
+    });
 
-    _userQuery = SearchQuery<UserProfile>((limit, offset) async {
-      final result = await userRepository.searchUsers(val!, limit: limit, offset: offset);
+    final nextUserQuery = SearchQuery<UserProfile>((limit, offset) async {
+      final result = await userRepository.searchUsers(normalizedQuery, limit: limit, offset: offset);
       return result.users;
-    }, () => userRepository.countSearchUsers(val!));
+    }, () => userRepository.countSearchUsers(normalizedQuery));
 
-    _videoQuery = SearchQuery<Video>((limit, offset) async {
-      final result = await videoRepo.searchVideos(val!, limit: limit, offset: offset, withAuthor: true);
+    final nextVideoQuery = SearchQuery<Video>((limit, offset) async {
+      final result = await videoRepo.searchVideos(normalizedQuery, limit: limit, offset: offset, withAuthor: true);
       return result.videos;
-    }, () => videoRepo.countSearchVideos(val!));
+    }, () => videoRepo.countSearchVideos(normalizedQuery));
 
-    await Future.wait([_videoQuery!.preloadMore(), _userQuery!.preloadMore()]);
+    await Future.wait([nextVideoQuery.preloadMore(), nextUserQuery.preloadMore()]);
     if (requestId != _searchRequestId) return;
 
-    _currentSearchViewModel = FeedViewModel();
-
-    if (mounted && requestId == _searchRequestId) setState(() => _loading = false);
+    if (mounted && requestId == _searchRequestId) {
+      _loadingIndicatorTimer?.cancel();
+      setState(() {
+        _videoQuery = nextVideoQuery;
+        _userQuery = nextUserQuery;
+        _currentSearchViewModel = FeedViewModel();
+        _loading = false;
+        _showLoadingIndicator = false;
+      });
+    }
   }
 
   @override
@@ -137,7 +158,7 @@ class _SearchScreenState extends State<SearchScreen> with TickerProviderStateMix
             duration: const Duration(milliseconds: 220),
             switchInCurve: Curves.easeOutCubic,
             switchOutCurve: Curves.easeInCubic,
-            child: _loading
+            child: _loading && _showLoadingIndicator
                 ? Center(
                     key: const ValueKey('search_loading'),
                     child: CircularProgressIndicator(color: cs.primary),
