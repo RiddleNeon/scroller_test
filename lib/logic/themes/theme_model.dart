@@ -54,14 +54,14 @@ class CustomThemeColors {
   }) {
     final hsl = HSLColor.fromColor(primary);
 
-    Color _deriveAccent(double hueShift) => hsl
+    Color deriveAccent(double hueShift) => hsl
         .withHue((hsl.hue + hueShift) % 360)
         .withLightness(hsl.lightness.clamp(0.35, 0.65))
         .withSaturation(hsl.saturation.clamp(0.3, 0.8))
         .toColor();
 
-    final resolvedSecondary = secondary ?? _deriveAccent(30);
-    final resolvedTertiary = tertiary ?? _deriveAccent(60);
+    final resolvedSecondary = secondary ?? deriveAccent(30);
+    final resolvedTertiary = tertiary ?? deriveAccent(60);
 
     final bgHsl = hsl.withSaturation(0.08);
     final Color background;
@@ -81,16 +81,16 @@ class CustomThemeColors {
       onSurface    = const Color(0xFF1A1A1A);
     }
 
-    Color _contrast(Color c) =>
+    Color contrast(Color c) =>
         c.computeLuminance() > 0.45 ? const Color(0xFF1A1A1A) : Colors.white;
 
     return CustomThemeColors(
       primary:      primary,
-      onPrimary:    _contrast(primary),
+      onPrimary:    contrast(primary),
       secondary:    resolvedSecondary,
-      onSecondary:  _contrast(resolvedSecondary),
+      onSecondary:  contrast(resolvedSecondary),
       tertiary:     resolvedTertiary,
-      onTertiary:   _contrast(resolvedTertiary),
+      onTertiary:   contrast(resolvedTertiary),
       background:   background,
       onBackground: onBackground,
       surface:      surface,
@@ -105,39 +105,39 @@ class CustomThemeColors {
 
   factory CustomThemeColors.fromJson(Map<String, dynamic> json) {
     // toUnsigned(32) safely handles values stored as signed ints (legacy bug)
-    int _c(String key, int fallback) =>
+    int c(String key, int fallback) =>
         (json[key] as int? ?? fallback).toUnsigned(32);
 
     return CustomThemeColors(
-      primary:      Color(_c('primary',       0xFF6C5443)),
-      onPrimary:    Color(_c('on_primary',    0xFFFFFFFF)),
-      secondary:    Color(_c('secondary',     0xFF8C7460)),
-      onSecondary:  Color(_c('on_secondary',  0xFFFFFFFF)),
-      tertiary:     Color(_c('tertiary',      0xFF6C8C54)),
-      onTertiary:   Color(_c('on_tertiary',   0xFFFFFFFF)),
-      background:   Color(_c('background',    0xFFF8F4F0)),
-      onBackground: Color(_c('on_background', 0xFF1A1A1A)),
-      surface:      Color(_c('surface',       0xFFF2EDE8)),
-      onSurface:    Color(_c('on_surface',    0xFF1A1A1A)),
-      error:        Color(_c('error',         0xFFB00020)),
-      onError:      Color(_c('on_error',      0xFFFFFFFF)),
+      primary:      Color(c('primary',       0xFF6C5443)),
+      onPrimary:    Color(c('on_primary',    0xFFFFFFFF)),
+      secondary:    Color(c('secondary',     0xFF8C7460)),
+      onSecondary:  Color(c('on_secondary',  0xFFFFFFFF)),
+      tertiary:     Color(c('tertiary',      0xFF6C8C54)),
+      onTertiary:   Color(c('on_tertiary',   0xFFFFFFFF)),
+      background:   Color(c('background',    0xFFF8F4F0)),
+      onBackground: Color(c('on_background', 0xFF1A1A1A)),
+      surface:      Color(c('surface',       0xFFF2EDE8)),
+      onSurface:    Color(c('on_surface',    0xFF1A1A1A)),
+      error:        Color(c('error',         0xFFB00020)),
+      onError:      Color(c('on_error',      0xFFFFFFFF)),
       isDark:       json['is_dark'] as bool? ?? false,
     );
   }
 
   Map<String, dynamic> toJson() => {
-    'primary':       primary.value,
-    'on_primary':    onPrimary.value,
-    'secondary':     secondary.value,
-    'on_secondary':  onSecondary.value,
-    'tertiary':      tertiary.value,
-    'on_tertiary':   onTertiary.value,
-    'background':    background.value,
-    'on_background': onBackground.value,
-    'surface':       surface.value,
-    'on_surface':    onSurface.value,
-    'error':         error.value,
-    'on_error':      onError.value,
+    'primary':       primary.toARGB32(),
+    'on_primary':    onPrimary.toARGB32(),
+    'secondary':     secondary.toARGB32(),
+    'on_secondary':  onSecondary.toARGB32(),
+    'tertiary':      tertiary.toARGB32(),
+    'on_tertiary':   onTertiary.toARGB32(),
+    'background':    background.toARGB32(),
+    'on_background': onBackground.toARGB32(),
+    'surface':       surface.toARGB32(),
+    'on_surface':    onSurface.toARGB32(),
+    'error':         error.toARGB32(),
+    'on_error':      onError.toARGB32(),
     'is_dark':       isDark,
   };
 
@@ -233,7 +233,6 @@ class CustomThemeModel {
   });
 
   factory CustomThemeModel.fromJson(Map<String, dynamic> json) {
-    // primary_color is BIGINT after migration; toUnsigned(32) handles legacy data
     final rawPrimary = (json['primary_color'] as int? ?? 0xFF6C5443).toUnsigned(32);
 
     CustomThemeColors colors;
@@ -267,7 +266,7 @@ class CustomThemeModel {
   Map<String, dynamic> toJson() => {
     if (id.length > 20) 'id': id,
     'name':          name,
-    'primary_color': colors.primary.value, // BIGINT in DB — no overflow
+    'primary_color': colors.primary.toARGB32(), // BIGINT in DB — no overflow
     'theme_data':    jsonEncode(colors.toJson()),
     'is_public':     isPublic,
     'created_by':    createdBy ?? currentUser.id,

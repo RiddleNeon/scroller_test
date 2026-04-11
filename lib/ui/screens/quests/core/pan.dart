@@ -54,6 +54,7 @@ class PanWidgetState extends State<PanWidget> {
   double get _currentScale => _controller.value.getMaxScaleOnAxis();
 
   QuestSystem get questSystem => widget.questSystem;
+
   QuestChangeManager get changeManager => widget.questSystem.changeManager;
 
   Quest? _findQuestAt(Offset scenePos) {
@@ -255,32 +256,31 @@ class PanWidgetState extends State<PanWidget> {
 
     var tx = focal.dx - newScale * (focal.dx - currentTx) / currentScale;
     var ty = focal.dy - newScale * (focal.dy - currentTy) / currentScale;
-    
+
     final viewportRect = Rect.fromLTWH(-tx / newScale, -ty / newScale, context.size!.width / newScale, context.size!.height / newScale);
     _questBubbleOverlayKey.currentState?.onScaleChange(newScale, viewportRect);
-    
+
     _controller.value = Matrix4.identity()
       ..scale(newScale)
       ..setTranslation(Vector3(tx, ty, 0));
   }
-  
+
   ({int fromId, int toId, Offset midpoint})? _hoveredConnection;
-  
-  
+
   Offset lastHoverPositionCheckPos = Offset.zero;
 
   void _onPointerHover(PointerHoverEvent event) {
     if (_isConnecting || _draggingQuest != null || event.down) return;
-    
+
     final scenePos = _controller.toScene(event.localPosition);
     final threshold = 15.0 / _currentScale;
-    
-    if(scenePos.distanceTo(lastHoverPositionCheckPos) < 32.0 / _currentScale) {
+
+    if (scenePos.distanceTo(lastHoverPositionCheckPos) < 32.0 / _currentScale) {
       return; //skip if the mouse hasn't moved much since the last check, to avoid expensive calculations
     } else {
       lastHoverPositionCheckPos = scenePos;
     }
-    
+
     int? currentDraggedQuestId = _draggingQuest?.id;
     Offset? currentDraggedQuestPos = _draggingQuest != null ? snap(_dragStartQuestPos) : null;
 
@@ -289,21 +289,30 @@ class PanWidgetState extends State<PanWidget> {
 
     for (final quest in questSystem.quests) {
       for (final prereq in questSystem.prerequisitesOf(quest.id)) {
-        
         final middlePos = Offset((quest.posX + prereq.posX) / 2, (quest.posY + prereq.posY) / 2);
         if ((scenePos - middlePos).distance > 300.0 / _currentScale) {
           continue; //skip if the mouse is far from the middle point between the quests, as it's unlikely to be close to the curve
         }
-        
+
         final startCenter = getQuestCenter(prereq.id, questSystem, currentDraggedQuestId, currentDraggedQuestPos);
         final endCenter = getQuestCenter(quest.id, questSystem, currentDraggedQuestId, currentDraggedQuestPos);
-        
-        if(startCenter == null || endCenter == null) continue;
+
+        if (startCenter == null || endCenter == null) continue;
 
         final anchorStart = getBestAnchor(prereq.id, endCenter, questSystem, currentDraggedQuestId, currentDraggedQuestPos);
         final anchorEnd = getBestAnchor(quest.id, startCenter, questSystem, currentDraggedQuestId, currentDraggedQuestPos);
 
-        final cps = calculateCubicControlPointsOffsetting(anchorStart.pos, anchorStart.sideDir, anchorEnd.pos, anchorEnd.sideDir, prereq.id, quest.id, questSystem, null, null);
+        final cps = calculateCubicControlPointsOffsetting(
+          anchorStart.pos,
+          anchorStart.sideDir,
+          anchorEnd.pos,
+          anchorEnd.sideDir,
+          prereq.id,
+          quest.id,
+          questSystem,
+          null,
+          null,
+        );
 
         for (double t = 0.0; t <= 1.0; t += 0.02) {
           final pointOnCurve = bezierPoint(anchorStart.pos, cps[0], cps[1], anchorEnd.pos, t);
@@ -315,11 +324,7 @@ class PanWidgetState extends State<PanWidget> {
 
           if (dist < threshold && dist < minDistance) {
             minDistance = dist;
-            closest = (
-            fromId: prereq.id,
-            toId: quest.id,
-            midpoint: midPoint
-            );
+            closest = (fromId: quest.id, toId: prereq.id, midpoint: midPoint);
           }
         }
       }
@@ -331,7 +336,7 @@ class PanWidgetState extends State<PanWidget> {
   }
 
   void _removeConnection(int fromId, int toId) {
-    print("Removing connection from $fromId to $toId");
+    print("Removing connection (pan) from $fromId to $toId");
     changeManager.record(RemoveConnectionChange(fromId: fromId, toId: toId));
     setState(() => _hoveredConnection = null);
   }
@@ -350,8 +355,8 @@ class PanWidgetState extends State<PanWidget> {
   }
 
   void _onTap() {
-    if(_hoveredConnection != null) _removeConnection(_hoveredConnection!.fromId, _hoveredConnection!.toId);
-    
+    if (_hoveredConnection != null) _removeConnection(_hoveredConnection!.fromId, _hoveredConnection!.toId);
+
     final quest = _findQuestAt(_lastPointerScenePos);
     if (quest == null) return;
     showDialog(
@@ -553,23 +558,20 @@ class PanWidgetState extends State<PanWidget> {
                         top: screenPos.dy - 15,
                         child: MouseRegion(
                           cursor: SystemMouseCursors.click,
-                          child: GestureDetector(
-                            onTap: () => _removeConnection(_hoveredConnection!.fromId, _hoveredConnection!.toId),
-                            child: Container(
-                              decoration: const BoxDecoration(
-                                color: Colors.redAccent,
-                                shape: BoxShape.circle,
-                                boxShadow: [BoxShadow(color: Colors.black26, blurRadius: 4)],
-                              ),
-                              padding: const EdgeInsets.all(4),
-                              child: const Icon(Icons.close, size: 18, color: Colors.white),
+                          child: Container(
+                            decoration: const BoxDecoration(
+                              color: Colors.redAccent,
+                              shape: BoxShape.circle,
+                              boxShadow: [BoxShadow(color: Colors.black26, blurRadius: 4)],
                             ),
+                            padding: const EdgeInsets.all(4),
+                            child: const Icon(Icons.close, size: 18, color: Colors.white),
                           ),
                         ),
                       );
                     },
                   ),
-                
+
                 Positioned.fill(
                   child: GestureDetector(
                     behavior: HitTestBehavior.opaque,

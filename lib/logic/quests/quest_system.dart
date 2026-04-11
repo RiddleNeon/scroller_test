@@ -56,7 +56,9 @@ class QuestSystem with ChangeNotifier {
   }
 
   void removeConnection(int fromId, int toId) {
-    _prerequisites[fromId]?.remove(toId);
+    print("Attempting to remove connection from $fromId to $toId. Current connections from $fromId: ${_prerequisites[fromId]} and from $toId: ${_prerequisites[toId]}");
+    _prerequisites[fromId]!.remove(toId);
+    print("Removed connection from $fromId to $toId. Remaining connections from $fromId: ${_prerequisites[fromId]}");
     notifyListeners();
   }
 
@@ -106,7 +108,7 @@ class QuestSystem with ChangeNotifier {
     print("Fetched quests: ${fetchedQuests.map((q) => q.id).toList()}");
 
     for (final entry in fetchedConnections.entries) {
-      _prerequisites[entry.key] = entry.value;
+      _prerequisites[entry.key] = entry.value.toSet();
     }
 
     print("fetched connections: ${fetchedConnections.entries.map((e) => "${e.key} -> ${e.value}").toList()}");

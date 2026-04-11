@@ -2,12 +2,14 @@ import 'dart:convert';
 import 'dart:io';
 import 'package:flutter/material.dart';
 import 'package:supabase_flutter/supabase_flutter.dart';
+import 'package:wurp/base_ui.dart';
 import 'package:wurp/logic/themes/theme_model.dart';
 import 'package:wurp/ui/theme/theme_editor_screen.dart';
 
 import 'package:file_picker/file_picker.dart';
 import 'package:path_provider/path_provider.dart';
 
+import 'app_theme.dart';
 
 class ThemeManagerScreen extends StatefulWidget {
   const ThemeManagerScreen({super.key});
@@ -40,7 +42,7 @@ class _ThemeManagerScreenState extends State<ThemeManagerScreen> with TickerProv
     _loadCommunityThemes();
     _loadLikedIds();
   }
-  
+
   String? get _uid => _supabase.auth.currentUser?.id;
 
   Future<void> _loadMyThemes() async {
@@ -61,11 +63,7 @@ class _ThemeManagerScreenState extends State<ThemeManagerScreen> with TickerProv
 
   Future<void> _loadCommunityThemes() async {
     try {
-      final res = await _supabase
-          .from('themes')
-          .select()
-          .eq('is_public', true)
-          .order('likes_count', ascending: false);
+      final res = await _supabase.from('themes').select().eq('is_public', true).order('likes_count', ascending: false);
       if (mounted) {
         setState(() {
           _communityThemes = (res as List).map((e) => CustomThemeModel.fromJson(e)).toList();
@@ -95,12 +93,11 @@ class _ThemeManagerScreenState extends State<ThemeManagerScreen> with TickerProv
       await _supabase.from('themes').upsert(theme.toJson());
       await _loadMyThemes();
       if (!mounted) return;
-      ScaffoldMessenger.of(context).showSnackBar(const SnackBar(content: Text('Theme Saved!'), duration: Duration(seconds: 2)), snackBarAnimationStyle: const AnimationStyle(curve: Curves.ease, duration: Duration(milliseconds: 400)));
+      showSnackBar(context, 'Theme Saved!');
     } catch (e) {
       debugPrint('Error saving theme: $e');
       if (!mounted) return;
-      ScaffoldMessenger.of(context)
-          .showSnackBar(SnackBar(content: Text('Error when saving: $e')));
+      showSnackBar(context, 'Error when saving: $e');
     }
   }
 
@@ -143,26 +140,20 @@ class _ThemeManagerScreenState extends State<ThemeManagerScreen> with TickerProv
         _likedIds.remove(themeId);
         final idx = _communityThemes.indexWhere((t) => t.id == themeId);
         if (idx != -1) {
-          _communityThemes[idx] = _communityThemes[idx].copyWith(
-              likesCount: (_communityThemes[idx].likesCount - 1).clamp(0, 999999));
+          _communityThemes[idx] = _communityThemes[idx].copyWith(likesCount: (_communityThemes[idx].likesCount - 1).clamp(0, 999999));
         }
       } else {
         _likedIds.add(themeId);
         final idx = _communityThemes.indexWhere((t) => t.id == themeId);
         if (idx != -1) {
-          _communityThemes[idx] =
-              _communityThemes[idx].copyWith(likesCount: _communityThemes[idx].likesCount + 1);
+          _communityThemes[idx] = _communityThemes[idx].copyWith(likesCount: _communityThemes[idx].likesCount + 1);
         }
       }
     });
 
     try {
       if (isLiked) {
-        await _supabase
-            .from('theme_likes')
-            .delete()
-            .eq('theme_id', themeId)
-            .eq('user_id', _uid!);
+        await _supabase.from('theme_likes').delete().eq('theme_id', themeId).eq('user_id', _uid!);
       } else {
         await _supabase.from('theme_likes').insert({'theme_id': themeId, 'user_id': _uid!});
       }
@@ -172,72 +163,56 @@ class _ThemeManagerScreenState extends State<ThemeManagerScreen> with TickerProv
       await _loadLikedIds();
     }
   }
-  
+
   void _applyTheme(String id) {
     setState(() => _selectedThemeId = id);
-    // TODO: propagate to your app root via Provider/Riverpod/Bloc so the whole
-    // app rebuilds with the new ThemeData. Example:
-    //   context.read<ThemeNotifier>().apply(theme.colors.toThemeData());
-    ScaffoldMessenger.of(context).showSnackBar(
-      const SnackBar(content: Text('Theme angewendet! (Root-Theme-Propagation noch verbinden)')),
-    );
+    appThemeNotifier.value = id == 'default' ? AppTheme.light : _myThemes.firstWhere((t) => t.id == id, orElse: () => _defaultTheme).colors.toThemeData();
+    showSnackBar(context, 'Theme applied!');
   }
-  
+
   Future<void> _openEditor({CustomThemeModel? existing}) async {
-    final result = await Navigator.push<CustomThemeModel>(
-      context,
-      MaterialPageRoute(builder: (_) => ThemeEditorScreen(existingTheme: existing)),
-    );
+    final result = await Navigator.push<CustomThemeModel>(context, MaterialPageRoute(builder: (_) => ThemeEditorScreen(existingTheme: existing)));
     if (result != null) await _saveTheme(result);
   }
-  
+
   Future<void> _exportTheme() async {
     if (_selectedThemeId == null) {
-      ScaffoldMessenger.of(context)
-          .showSnackBar(const SnackBar(content: Text('Choose a theme first.')));
+      showSnackBar(context, 'Choose a theme first.');
+
       return;
     }
-    final theme = [_defaultTheme, ..._myThemes]
-        .firstWhere((t) => t.id == _selectedThemeId!, orElse: () => _defaultTheme);
+    final theme = [_defaultTheme, ..._myThemes].firstWhere((t) => t.id == _selectedThemeId!, orElse: () => _defaultTheme);
     final jsonStr = const JsonEncoder.withIndent('  ').convert(theme.toJson());
     final dir = await getApplicationDocumentsDirectory();
     final file = File('${dir.path}/${theme.name.replaceAll(' ', '_')}.json');
     await file.writeAsString(jsonStr);
     if (!mounted) return;
-    ScaffoldMessenger.of(context)
-        .showSnackBar(SnackBar(content: Text('Export: ${file.path}')));
+    showSnackBar(context, 'Export: ${file.path}');
   }
 
   Future<void> _importTheme() async {
     try {
-      final result = await FilePicker.platform
-          .pickFiles(type: FileType.custom, allowedExtensions: ['json']);
+      final result = await FilePicker.platform.pickFiles(type: FileType.custom, allowedExtensions: ['json']);
       if (result == null) return;
 
       final file = File(result.files.single.path!);
       final json = jsonDecode(await file.readAsString()) as Map<String, dynamic>;
-      final imported = CustomThemeModel.fromJson(json).copyWith(
-        id: UniqueKey().toString(),
-        isPublic: false,
-      );
+      final imported = CustomThemeModel.fromJson(json).copyWith(id: UniqueKey().toString(), isPublic: false);
       await _saveTheme(imported);
       if (!mounted) return;
-      ScaffoldMessenger.of(context)
-          .showSnackBar(SnackBar(content: Text('"${imported.name}" imported!')));
+      showSnackBar(context, '"${imported.name}" imported!');
+
     } catch (e) {
       if (!mounted) return;
-      ScaffoldMessenger.of(context)
-          .showSnackBar(SnackBar(content: Text('Import failed: $e')));
+      showSnackBar(context, 'Import failed: $e');
     }
   }
-  
+
   void _showThemeDetails(CustomThemeModel theme) {
     showModalBottomSheet(
       context: context,
       isScrollControlled: true,
-      shape: const RoundedRectangleBorder(
-        borderRadius: BorderRadius.vertical(top: Radius.circular(24)),
-      ),
+      shape: const RoundedRectangleBorder(borderRadius: BorderRadius.vertical(top: Radius.circular(24))),
       builder: (ctx) {
         final c = theme.colors;
         return DraggableScrollableSheet(
@@ -251,15 +226,15 @@ class _ThemeManagerScreenState extends State<ThemeManagerScreen> with TickerProv
             children: [
               Center(
                 child: Container(
-                  width: 40, height: 4,
+                  width: 40,
+                  height: 4,
                   decoration: BoxDecoration(color: Colors.grey[300], borderRadius: BorderRadius.circular(2)),
                 ),
               ),
               const SizedBox(height: 16),
               Text(theme.name, style: Theme.of(ctx).textTheme.titleLarge?.copyWith(fontWeight: FontWeight.bold)),
               const SizedBox(height: 4),
-              Text('Created by: ${theme.createdBy?.substring(0, 6) ?? "Unknown"}',
-                  style: Theme.of(ctx).textTheme.bodySmall),
+              Text('Created by: ${theme.createdBy?.substring(0, 6) ?? "Unknown"}', style: Theme.of(ctx).textTheme.bodySmall),
               Text('Likes: ${theme.likesCount}', style: Theme.of(ctx).textTheme.bodySmall),
               const SizedBox(height: 20),
               Text('Palette', style: Theme.of(ctx).textTheme.titleMedium),
@@ -293,30 +268,17 @@ class _ThemeManagerScreenState extends State<ThemeManagerScreen> with TickerProv
         appBar: AppBar(
           title: const Text('Theme Manager'),
           actions: [
-            IconButton(
-              icon: const Icon(Icons.file_upload_outlined),
-              onPressed: _importTheme,
-              tooltip: 'import theme from file',
-            ),
-            IconButton(
-              icon: const Icon(Icons.file_download_outlined),
-              onPressed: _exportTheme,
-              tooltip: 'export selected theme to file',
-            ),
+            IconButton(icon: const Icon(Icons.file_upload_outlined), onPressed: _importTheme, tooltip: 'import theme from file'),
+            IconButton(icon: const Icon(Icons.file_download_outlined), onPressed: _exportTheme, tooltip: 'export selected theme to file'),
           ],
           bottom: const TabBar(
             tabs: [
-              Tab(icon: Icon(Icons.palette_outlined), text: 'Meine Themes'),
+              Tab(icon: Icon(Icons.palette_outlined), text: 'My Themes'),
               Tab(icon: Icon(Icons.public), text: 'Community'),
             ],
           ),
         ),
-        body: TabBarView(
-          children: [
-            _buildMyThemesTab(),
-            _buildCommunityTab(),
-          ],
-        ),
+        body: TabBarView(children: [_buildMyThemesTab(), _buildCommunityTab()]),
         floatingActionButton: FloatingActionButton.extended(
           onPressed: () => _openEditor(),
           icon: const Icon(Icons.color_lens_outlined),
@@ -325,7 +287,7 @@ class _ThemeManagerScreenState extends State<ThemeManagerScreen> with TickerProv
       ),
     );
   }
-  
+
   Widget _buildMyThemesTab() {
     if (_loadingMine) return const Center(child: CircularProgressIndicator());
 
@@ -333,12 +295,7 @@ class _ThemeManagerScreenState extends State<ThemeManagerScreen> with TickerProv
 
     return GridView.builder(
       padding: const EdgeInsets.fromLTRB(16, 16, 16, 96),
-      gridDelegate: const SliverGridDelegateWithFixedCrossAxisCount(
-        crossAxisCount: 2,
-        crossAxisSpacing: 14,
-        mainAxisSpacing: 14,
-        childAspectRatio: 0.85,
-      ),
+      gridDelegate: const SliverGridDelegateWithFixedCrossAxisCount(crossAxisCount: 2, crossAxisSpacing: 14, mainAxisSpacing: 14, childAspectRatio: 0.85),
       itemCount: all.length,
       itemBuilder: (context, i) {
         final theme = all[i];
@@ -353,14 +310,8 @@ class _ThemeManagerScreenState extends State<ThemeManagerScreen> with TickerProv
             duration: const Duration(milliseconds: 200),
             decoration: BoxDecoration(
               borderRadius: BorderRadius.circular(20),
-              border: Border.all(
-                color: isSelected ? c.primary : Colors.transparent,
-                width: 2.5,
-              ),
-              boxShadow: [
-                if (isSelected)
-                  BoxShadow(color: c.primary.withValues(alpha: 0.3), blurRadius: 12, spreadRadius: 1),
-              ],
+              border: Border.all(color: isSelected ? c.primary : Colors.transparent, width: 2.5),
+              boxShadow: [if (isSelected) BoxShadow(color: c.primary.withValues(alpha: 0.3), blurRadius: 12, spreadRadius: 1)],
             ),
             child: Card(
               margin: EdgeInsets.zero,
@@ -374,30 +325,30 @@ class _ThemeManagerScreenState extends State<ThemeManagerScreen> with TickerProv
                         gradient: LinearGradient(
                           begin: Alignment.topLeft,
                           end: Alignment.bottomRight,
-                          colors: [
-                            c.primary.withValues(alpha: 0.15),
-                            c.secondary.withValues(alpha: 0.10),
-                            c.tertiary.withValues(alpha: 0.12),
-                          ],
+                          colors: [c.primary.withValues(alpha: 0.15), c.secondary.withValues(alpha: 0.10), c.tertiary.withValues(alpha: 0.12)],
                         ),
                       ),
                     ),
                   ),
 
                   Positioned(
-                    top: 12, right: 12,
-                    child: Row( 
+                    top: 12,
+                    right: 12,
+                    child: Row(
                       children: [c.primary, c.secondary, c.tertiary]
-                          .map((col) => Container(
-                        width: 12,
-                        height: 12,
-                        margin: const EdgeInsets.only(left: 4),
-                        decoration: BoxDecoration(
-                          color: col,
-                          shape: BoxShape.circle,
-                          border: Border.all(color: Colors.white, width: 1.5),
-                        ),
-                      )).toList(),
+                          .map(
+                            (col) => Container(
+                              width: 12,
+                              height: 12,
+                              margin: const EdgeInsets.only(left: 4),
+                              decoration: BoxDecoration(
+                                color: col,
+                                shape: BoxShape.circle,
+                                border: Border.all(color: Colors.white, width: 1.5),
+                              ),
+                            ),
+                          )
+                          .toList(),
                     ),
                   ),
 
@@ -424,24 +375,18 @@ class _ThemeManagerScreenState extends State<ThemeManagerScreen> with TickerProv
                         if (isDefault)
                           Padding(
                             padding: const EdgeInsets.only(top: 4),
-                            child: Text(
-                              'Standard',
-                              style: TextStyle(fontSize: 10, color: Colors.grey[600]),
-                            ),
+                            child: Text('Standard', style: TextStyle(fontSize: 10, color: Colors.grey[600])),
                           ),
                       ],
                     ),
                   ),
 
-                  if (isSelected)
-                    const Positioned(
-                      top: 10, left: 10,
-                      child: Icon(Icons.check_circle_rounded, color: Colors.green, size: 20),
-                    ),
+                  if (isSelected) const Positioned(top: 10, left: 10, child: Icon(Icons.check_circle_rounded, color: Colors.green, size: 20)),
 
                   if (!isDefault)
                     Positioned(
-                      bottom: 0, right: 0,
+                      bottom: 0,
+                      right: 0,
                       child: PopupMenuButton<String>(
                         icon: const Icon(Icons.more_horiz, size: 18),
                         onSelected: (val) async {
@@ -451,9 +396,7 @@ class _ThemeManagerScreenState extends State<ThemeManagerScreen> with TickerProv
                             case 'share':
                               await _saveTheme(theme.copyWith(isPublic: true));
                               if (context.mounted) {
-                                ScaffoldMessenger.of(context).showSnackBar(
-                                  const SnackBar(content: Text('Shared with the Community!')),
-                                );
+                                showSnackBar(context, 'Shared with the Community!');
                               }
                             case 'details':
                               _showThemeDetails(theme);
@@ -462,10 +405,26 @@ class _ThemeManagerScreenState extends State<ThemeManagerScreen> with TickerProv
                           }
                         },
                         itemBuilder: (_) => [
-                          const PopupMenuItem(value: 'edit', child: ListTile(leading: Icon(Icons.edit), title: Text('Edit'), dense: true)),
-                          const PopupMenuItem(value: 'share', child: ListTile(leading: Icon(Icons.public), title: Text('share with Community'), dense: true)),
-                          const PopupMenuItem(value: 'details', child: ListTile(leading: Icon(Icons.info_outline), title: Text('Details'), dense: true)),
-                          const PopupMenuItem(value: 'delete', child: ListTile(leading: Icon(Icons.delete_outline, color: Colors.red), title: Text('Delete', style: TextStyle(color: Colors.red)), dense: true)),
+                          const PopupMenuItem(
+                            value: 'edit',
+                            child: ListTile(leading: Icon(Icons.edit), title: Text('Edit'), dense: true),
+                          ),
+                          const PopupMenuItem(
+                            value: 'share',
+                            child: ListTile(leading: Icon(Icons.public), title: Text('share with Community'), dense: true),
+                          ),
+                          const PopupMenuItem(
+                            value: 'details',
+                            child: ListTile(leading: Icon(Icons.info_outline), title: Text('Details'), dense: true),
+                          ),
+                          const PopupMenuItem(
+                            value: 'delete',
+                            child: ListTile(
+                              leading: Icon(Icons.delete_outline, color: Colors.red),
+                              title: Text('Delete', style: TextStyle(color: Colors.red)),
+                              dense: true,
+                            ),
+                          ),
                         ],
                       ),
                     ),
@@ -509,8 +468,9 @@ class _ThemeManagerScreenState extends State<ThemeManagerScreen> with TickerProv
                 Text('by: ${theme.createdBy?.substring(0, 6) ?? "Unknown"}'),
                 const SizedBox(width: 8),
                 ...([c.primary, c.secondary, c.tertiary].map(
-                      (col) => Container(
-                    width: 10, height: 10,
+                  (col) => Container(
+                    width: 10,
+                    height: 10,
                     margin: const EdgeInsets.only(left: 2),
                     decoration: BoxDecoration(color: col, shape: BoxShape.circle),
                   ),
@@ -539,10 +499,7 @@ class _ThemeManagerScreenState extends State<ThemeManagerScreen> with TickerProv
                   icon: const Icon(Icons.download_rounded, size: 20),
                   tooltip: 'To my themes',
                   onPressed: () {
-                    final cloned = theme.copyWith(
-                      id: UniqueKey().toString(),
-                      isPublic: false,
-                    );
+                    final cloned = theme.copyWith(id: UniqueKey().toString(), isPublic: false);
                     _saveTheme(cloned);
                   },
                 ),
@@ -564,7 +521,7 @@ class _DetailSwatch extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    final hex = '#${color.value.toRadixString(16).padLeft(8, '0').substring(2).toUpperCase()}';
+    final hex = '#${color.toARGB32().toRadixString(16).padLeft(8, '0').substring(2).toUpperCase()}';
     final isLight = color.computeLuminance() > 0.45;
     return Column(
       children: [
@@ -579,20 +536,26 @@ class _DetailSwatch extends StatelessWidget {
           ),
           child: Center(
             child: Text(
-              hex.substring(1, 3), // first two hex digits as preview
-              style: TextStyle(
-                color: isLight ? Colors.black54 : Colors.white70,
-                fontSize: 10,
-                fontWeight: FontWeight.bold,
-                fontFamily: 'monospace',
-              ),
+              hex.substring(1, 3),
+              style: TextStyle(color: isLight ? Colors.black54 : Colors.white70, fontSize: 10, fontWeight: FontWeight.bold, fontFamily: 'monospace'),
             ),
           ),
         ),
         const SizedBox(height: 4),
         Text(label, style: const TextStyle(fontSize: 10)),
-        Text(hex, style: const TextStyle(fontSize: 9, color: Colors.grey, fontFamily: 'monospace')),
+        Text(
+          hex,
+          style: const TextStyle(fontSize: 9, color: Colors.grey, fontFamily: 'monospace'),
+        ),
       ],
     );
   }
 }
+
+void showSnackBar(BuildContext context, String message, {Duration duration = const Duration(seconds: 2)}) {
+  ScaffoldMessenger.of(context).showSnackBar(
+    SnackBar(content: Text(message), duration: duration),
+    snackBarAnimationStyle: const AnimationStyle(curve: Curves.ease, duration: Duration(milliseconds: 400)),
+  );
+}
+

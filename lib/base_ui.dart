@@ -26,12 +26,20 @@ void startApp() async {
 
   print("running");
   runApp(
-    MaterialApp.router(
-      debugShowCheckedModeBanner: false,
-      theme: AppTheme.light,
-      darkTheme: AppTheme.dark,
-      themeMode: ThemeMode.system,
-      routerConfig: routerConfig,
+    ValueListenableBuilder<ThemeData>(
+      valueListenable: appThemeNotifier,
+      builder: (context, value, child) {
+        print("building app with theme: ${value.brightness}");
+        return MaterialApp.router(
+          debugShowCheckedModeBanner: false,
+          theme: value,
+          themeMode: value.brightness == Brightness.dark ? ThemeMode.dark : ThemeMode.light,
+          routerConfig: routerConfig,
+        );
+      }
     ),
   );
 }
+
+
+final ValueNotifier<ThemeData> appThemeNotifier = ValueNotifier(AppTheme.light);
