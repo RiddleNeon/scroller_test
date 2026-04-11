@@ -1,5 +1,4 @@
 import 'dart:convert';
-import 'dart:ui';
 import 'package:flutter/material.dart';
 import 'package:flutter_web_file_saver/flutter_web_file_saver.dart';
 import 'package:supabase_flutter/supabase_flutter.dart';
@@ -108,6 +107,7 @@ class _ThemeManagerScreenState extends State<ThemeManagerScreen> with TickerProv
       }
       await _loadMyThemes();
       await _loadCommunityThemes();
+      if(_selectedThemeId == theme.id) await applyTheme(theme.id, false);
       if (!mounted) return;
       showSnackBar(context, 'Theme Uploaded!');
     } catch (e) {

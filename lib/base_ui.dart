@@ -6,8 +6,6 @@ import 'package:wurp/ui/theme/app_theme.dart';
 import 'base_logic.dart';
 
 void startApp() async {
-  print("starting app");
-  
   final session = auth.currentSession;
   if (session != null) {
     final authUser = session.user;
@@ -21,10 +19,8 @@ void startApp() async {
   }
   
   initRouter();
-  print("initialized router");
   routerConfig.refresh();
 
-  print("running");
   runApp(
     ValueListenableBuilder<(ThemeData, String)>(
       valueListenable: appThemeNotifier,

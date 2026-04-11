@@ -15,16 +15,13 @@ class SearchQuery<T> {
 
   Future<void> preloadMore({int limit = 20}) async {
     if (currentLoadingTask != null) {
-      print("already loading, returning existing task");
       return currentLoadingTask;
     }
     if(!_hasMoreContent) {
       return Future.value();
     }
-    print("started new loading task with offset $_offset");
     currentLoadingTask = _preloadMore(limit: limit).whenComplete(() {
       currentLoadingTask = null;
-      print("loading task completed, offset is now $_offset");
     });
     return currentLoadingTask;
   }

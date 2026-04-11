@@ -1,8 +1,5 @@
 import 'package:flutter/material.dart';
-import 'package:wurp/base_logic.dart';
 import 'package:wurp/ui/animations/slide_morph_transitions.dart';
-
-import '../../tools/supabase_tests/supabase_login_test.dart';
 
 class AppTheme {
   static const ColorScheme lightScheme = ColorScheme(

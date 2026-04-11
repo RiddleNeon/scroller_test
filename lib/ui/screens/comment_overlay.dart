@@ -341,21 +341,18 @@ class _CommentsOverlayState extends State<CommentsOverlay> {
 
     return ClipRRect(
       borderRadius: const BorderRadius.vertical(top: Radius.circular(24)),
-      child: BackdropFilter(
-        filter: ImageFilter.blur(sigmaX: 20, sigmaY: 20),
-        child: Container(
-          height: MediaQuery.of(context).size.height * 0.80,
-          color: _bgColor,
-          child: Column(
-            children: [
-              _buildHeader(),
-              Divider(color: _dividerColor, height: 1),
-              Expanded(child: _buildList()),
-              Divider(color: _dividerColor, height: 1),
-              if (_replyTarget != null) _buildReplyBanner(),
-              _buildInputBar(bottomPadding),
-            ],
-          ),
+      child: Container(
+        height: MediaQuery.of(context).size.height * 0.80,
+        color: _bgColor,
+        child: Column(
+          children: [
+            _buildHeader(),
+            Divider(color: _dividerColor, height: 1),
+            Expanded(child: _buildList()),
+            Divider(color: _dividerColor, height: 1),
+            if (_replyTarget != null) _buildReplyBanner(),
+            _buildInputBar(bottomPadding),
+          ],
         ),
       ),
     );
