@@ -4,26 +4,27 @@ import 'package:flutter/cupertino.dart';
 import 'package:flutter/services.dart';
 import 'package:wurp/logic/quests/quest.dart';
 import 'package:wurp/logic/quests/quest_change_manager.dart';
+import 'package:wurp/logic/quests/quest_connection.dart';
 import 'package:wurp/logic/repositories/quest_repository.dart';
 
 class QuestSystem with ChangeNotifier {
   late QuestChangeManager changeManager;
 
   final Map<int, Quest> _quests = {};
-  final Map<int, Set<int>> _prerequisites = {};
+  final List<QuestConnection> _prerequisites = [];
 
   List<Quest> get quests => _quests.values.toList();
 
   // ── Prerequisites ──────────────────────────────────────────────────────────
 
   /// Returns the IDs of all prerequisites for [questId].
-  Set<int> prerequisiteIds(int questId) => _prerequisites[questId] ?? const {};
+  Set<int> prerequisiteIds(int questId) => _prerequisites.where((element) => element.toQuestId == questId).map((e) => e.fromQuestId).toSet();
 
   /// Returns the [Quest] objects for all prerequisites of [questId].
   /// Silently skips IDs that no longer exist in the system.
   List<Quest> prerequisitesOf(int questId) => prerequisiteIds(questId).map((id) => _quests[id]).whereType<Quest>().toList();
 
-  bool isConnected(int fromId, int toId) => _prerequisites[fromId]?.contains(toId) ?? false;
+  bool isConnected(int fromId, int toId) => _prerequisites.any((element) => element.fromQuestId == fromId && element.toQuestId == toId);
 
   // ── Quest mutations ────────────────────────────────────────────────────────
 
@@ -35,11 +36,7 @@ class QuestSystem with ChangeNotifier {
   /// Removes the quest and all connections to/from it.
   void removeQuest(int id) {
     _quests.remove(id);
-    _prerequisites.remove(id); // outgoing connections
-    for (final deps in _prerequisites.values) {
-      // incoming connections
-      deps.remove(id);
-    }
+    _prerequisites.removeWhere((element) => element.fromQuestId == id || element.toQuestId == id);
     notifyListeners();
   }
 
@@ -50,16 +47,16 @@ class QuestSystem with ChangeNotifier {
   // ── Connection mutations ───────────────────────────────────────────────────
 
   void addConnection(int fromId, int toId) {
-    _prerequisites.putIfAbsent(fromId, () => {}).add(toId);
+    if (isConnected(fromId, toId)) return;
+
+    _prerequisites.add(QuestConnection(fromQuestId: fromId, toQuestId: toId));
     notifyListeners();
   }
 
   void removeConnection(int fromId, int toId) {
-    print(
-      "Attempting to remove connection from $fromId to $toId. Current connections from $fromId: ${_prerequisites[fromId]} and from $toId: ${_prerequisites[toId]}",
-    );
-    _prerequisites[fromId]!.remove(toId);
-    print("Removed connection from $fromId to $toId. Remaining connections from $fromId: ${_prerequisites[fromId]}");
+    print("Removing connection from $fromId to $toId. before: ${_prerequisites.length} connections");
+    _prerequisites.removeWhere((element) => element.fromQuestId == fromId && element.toQuestId == toId);
+    print("after: ${_prerequisites.length} connections");
     notifyListeners();
   }
 
@@ -82,7 +79,9 @@ class QuestSystem with ChangeNotifier {
 
       assert(prereqIds.every(_quests.containsKey), 'All prerequisite IDs must reference existing quests.');
 
-      _prerequisites[data['id'] as int] = prereqIds.toSet();
+      for (final prereqId in prereqIds) {
+        _prerequisites.add(QuestConnection(fromQuestId: prereqId, toQuestId: data['id'] as int));
+      }
     }
 
     notifyListeners();
@@ -105,7 +104,14 @@ class QuestSystem with ChangeNotifier {
     print("Fetched quests: ${fetchedQuests.map((q) => q.id).toList()}");
 
     for (final entry in fetchedConnections.entries) {
-      _prerequisites[entry.key] = entry.value.toSet();
+      final toId = entry.key;
+      final fromIds = entry.value;
+
+      for (final fromId in fromIds) {
+        if (!isConnected(fromId, toId)) {
+          _prerequisites.add(QuestConnection(fromQuestId: fromId, toQuestId: toId));
+        }
+      }
     }
 
     print("fetched connections: ${fetchedConnections.entries.map((e) => "${e.key} -> ${e.value}").toList()}");
@@ -132,7 +138,7 @@ class QuestSystem with ChangeNotifier {
                 'sizeY': q.sizeY,
                 'difficulty': q.difficulty,
                 'isCompleted': q.isCompleted,
-                'prerequisites': (_prerequisites[q.id] ?? {}).toList(),
+                'prerequisites': prerequisitesOf(q.id),
               },
             )
             .toList(),

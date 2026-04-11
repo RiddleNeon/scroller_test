@@ -270,7 +270,7 @@ class PanWidgetState extends State<PanWidget> {
   Offset lastHoverPositionCheckPos = Offset.zero;
 
   void _onPointerHover(PointerHoverEvent event) {
-    if (_isConnecting || _draggingQuest != null || event.down) return;
+    if (!debugMode || _isConnecting || _draggingQuest != null || event.down) return;
 
     final scenePos = _controller.toScene(event.localPosition);
     final threshold = 15.0 / _currentScale;
@@ -324,7 +324,7 @@ class PanWidgetState extends State<PanWidget> {
 
           if (dist < threshold && dist < minDistance) {
             minDistance = dist;
-            closest = (fromId: quest.id, toId: prereq.id, midpoint: midPoint);
+            closest = (fromId: prereq.id, toId: quest.id, midpoint: midPoint);
           }
         }
       }
@@ -355,7 +355,7 @@ class PanWidgetState extends State<PanWidget> {
   }
 
   void _onTap() {
-    if (_hoveredConnection != null) _removeConnection(_hoveredConnection!.fromId, _hoveredConnection!.toId);
+    if (_hoveredConnection != null && debugMode) _removeConnection(_hoveredConnection!.fromId, _hoveredConnection!.toId);
 
     final quest = _findQuestAt(_lastPointerScenePos);
     if (quest == null) return;
@@ -547,7 +547,7 @@ class PanWidgetState extends State<PanWidget> {
                   ),
                 ),
 
-                if (_hoveredConnection != null)
+                if (_hoveredConnection != null && debugMode)
                   AnimatedBuilder(
                     animation: _controller,
                     builder: (context, child) {
