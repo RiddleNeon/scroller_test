@@ -31,7 +31,13 @@ class _ThemeManagerScreenState extends State<ThemeManagerScreen> with TickerProv
   static final CustomThemeModel _defaultTheme = CustomThemeModel(
     id: 'default',
     name: 'Default Cappuccino',
-    colors: CustomThemeColors.fromPrimary(const Color(0xFF6C5443)),
+    colors: CustomThemeColors.fromPrimary(const Color(0xFF6C5443), dark: false),
+  );
+
+  static final CustomThemeModel _defaultThemeDark = CustomThemeModel(
+    id: 'default-dark',
+    name: 'Default Cappuccino - Dark',
+    colors: CustomThemeColors.fromPrimary(const Color(0xFF6C5443), dark: true),
   );
 
   @override
@@ -91,10 +97,13 @@ class _ThemeManagerScreenState extends State<ThemeManagerScreen> with TickerProv
     try {
       await _supabase.from('themes').upsert(theme.toJson());
       await _loadMyThemes();
+      setState(() {
+        _communityThemes.add(theme);
+      });
       if (!mounted) return;
-      showSnackBar(context, 'Theme Saved!');
+      showSnackBar(context, 'Theme Uploaded!');
     } catch (e) {
-      debugPrint('Error saving theme: $e');
+      debugPrint('Error uploading theme: $e');
       if (!mounted) return;
       showSnackBar(context, 'Error when saving: $e');
     }
@@ -164,7 +173,7 @@ class _ThemeManagerScreenState extends State<ThemeManagerScreen> with TickerProv
 
   void _applyTheme(String id) {
     setState(() => _selectedThemeId = id);
-    appThemeNotifier.value = id == 'default' ? AppTheme.light : _myThemes.firstWhere((t) => t.id == id, orElse: () => _defaultTheme).colors.toThemeData();
+    appThemeNotifier.value = getTheme(id);
     showSnackBar(context, 'Theme applied!');
   }
 
@@ -179,7 +188,7 @@ class _ThemeManagerScreenState extends State<ThemeManagerScreen> with TickerProv
 
       return;
     }
-    final theme = [_defaultTheme, ..._myThemes].firstWhere((t) => t.id == _selectedThemeId!, orElse: () => _defaultTheme);
+    final theme = [_defaultTheme, _defaultThemeDark, ..._myThemes].firstWhere((t) => t.id == _selectedThemeId!, orElse: () => _defaultThemeDark);
     final jsonStr = const JsonEncoder.withIndent('  ').convert(theme.toJson());
     await FlutterWebFileSaver.saveText(content: jsonStr, filename: "${theme.name.replaceAll(' ', '_')}.json");
     if (!mounted) return;
@@ -198,11 +207,17 @@ class _ThemeManagerScreenState extends State<ThemeManagerScreen> with TickerProv
       await _saveTheme(imported);
       if (!mounted) return;
       showSnackBar(context, '"${imported.name}" imported!');
-
     } catch (e) {
       if (!mounted) return;
       showSnackBar(context, 'Import failed: $e');
     }
+  }
+
+  ThemeData getTheme(String id) {
+    if (id == 'default') return AppTheme.light;
+    if (id == 'default-dark') return AppTheme.dark;
+    final theme = _myThemes.firstWhere((t) => t.id == id, orElse: () => _defaultTheme);
+    return theme.colors.toThemeData();
   }
 
   void _showThemeDetails(CustomThemeModel theme) {
@@ -255,7 +270,6 @@ class _ThemeManagerScreenState extends State<ThemeManagerScreen> with TickerProv
     );
   }
 
-
   @override
   Widget build(BuildContext context) {
     return DefaultTabController(
@@ -265,8 +279,8 @@ class _ThemeManagerScreenState extends State<ThemeManagerScreen> with TickerProv
           backgroundColor: Theme.of(context).appBarTheme.backgroundColor,
           title: const Text('Theme Manager'),
           actions: [
-            IconButton(icon: const Icon(Icons.file_upload_outlined), onPressed: _importTheme, tooltip: 'import theme from file'),
-            IconButton(icon: const Icon(Icons.file_download_outlined), onPressed: _exportTheme, tooltip: 'export selected theme to file'),
+            IconButton(icon: const Icon(Icons.file_download_outlined), onPressed: _importTheme, tooltip: 'import theme from file'),
+            IconButton(icon: const Icon(Icons.file_upload_outlined), onPressed: _exportTheme, tooltip: 'export selected theme to file'),
           ],
           bottom: const TabBar(
             tabs: [
@@ -288,7 +302,7 @@ class _ThemeManagerScreenState extends State<ThemeManagerScreen> with TickerProv
   Widget _buildMyThemesTab() {
     if (_loadingMine) return const Center(child: CircularProgressIndicator());
 
-    final all = [_defaultTheme, ..._myThemes];
+    final all = [_defaultTheme, _defaultThemeDark, ..._myThemes];
 
     return GridView.builder(
       padding: const EdgeInsets.fromLTRB(16, 16, 16, 96),
@@ -434,7 +448,6 @@ class _ThemeManagerScreenState extends State<ThemeManagerScreen> with TickerProv
     );
   }
 
-
   Widget _buildCommunityTab() {
     if (_loadingCommunity) return const Center(child: CircularProgressIndicator());
     if (_communityThemes.isEmpty) {
@@ -554,4 +567,3 @@ void showSnackBar(BuildContext context, String message, {Duration duration = con
     snackBarAnimationStyle: const AnimationStyle(curve: Curves.ease, duration: Duration(milliseconds: 400)),
   );
 }
-

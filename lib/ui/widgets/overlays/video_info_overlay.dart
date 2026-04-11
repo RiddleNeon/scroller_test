@@ -20,11 +20,7 @@ class VideoInfoOverlay extends StatelessWidget {
         gradient: LinearGradient(
           begin: Alignment.bottomCenter,
           end: Alignment.topCenter,
-          colors: [
-            cs.scrim.withValues(alpha: 0.75),
-            cs.scrim.withValues(alpha: 0.45),
-            Colors.transparent,
-          ],
+          colors: [cs.scrim.withValues(alpha: 0.75), cs.scrim.withValues(alpha: 0.45), Colors.transparent],
         ),
       ),
       child: Align(
@@ -41,13 +37,13 @@ class VideoInfoOverlay extends StatelessWidget {
                 borderRadius: BorderRadius.circular(16),
                 border: Border.all(color: cs.outlineVariant.withValues(alpha: 0.5)),
               ),
-              child: Column(
-                crossAxisAlignment: CrossAxisAlignment.start,
+              child: Wrap(
+                crossAxisAlignment: WrapCrossAlignment.start,
                 children: [
                   InkWell(
                     onTap: () async {
                       UserProfile user = await userRepository.getUser(video.authorId);
-                      if(!context.mounted) return;
+                      if (!context.mounted) return;
                       Navigator.of(context).push(
                         MaterialPageRoute(
                           builder: (context) {
@@ -64,22 +60,14 @@ class VideoInfoOverlay extends StatelessWidget {
                     },
                     child: Text(
                       '@${video.authorName}',
-                      style: TextStyle(
-                        color: cs.onSurface,
-                        fontWeight: FontWeight.w700,
-                        fontSize: 16,
-                      ),
+                      style: TextStyle(color: cs.onSurface, fontWeight: FontWeight.w700, fontSize: 16),
                     ),
                   ),
                   if (video.title.isNotEmpty) ...[
                     const SizedBox(height: 5),
                     Text(
                       video.title,
-                      style: TextStyle(
-                        color: cs.onSurface,
-                        fontWeight: FontWeight.w600,
-                        fontSize: 14,
-                      ),
+                      style: TextStyle(color: cs.onSurface, fontWeight: FontWeight.w600, fontSize: 14),
                     ),
                   ],
                   if (video.description.isNotEmpty) ...[
@@ -88,10 +76,7 @@ class VideoInfoOverlay extends StatelessWidget {
                       video.description,
                       maxLines: 2,
                       overflow: TextOverflow.ellipsis,
-                      style: TextStyle(
-                        color: cs.onSurfaceVariant,
-                        fontSize: 13,
-                      ),
+                      style: TextStyle(color: cs.onSurfaceVariant, fontSize: 13),
                     ),
                   ],
                   if (video.tags.isNotEmpty) ...[
@@ -104,17 +89,10 @@ class VideoInfoOverlay extends StatelessWidget {
                           .map(
                             (tag) => Container(
                               padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 3),
-                              decoration: BoxDecoration(
-                                color: cs.secondaryContainer.withValues(alpha: 0.7),
-                                borderRadius: BorderRadius.circular(999),
-                              ),
+                              decoration: BoxDecoration(color: cs.secondaryContainer.withValues(alpha: 0.7), borderRadius: BorderRadius.circular(999)),
                               child: Text(
                                 '#$tag',
-                                style: TextStyle(
-                                  color: cs.onSecondaryContainer,
-                                  fontWeight: FontWeight.w600,
-                                  fontSize: 12,
-                                ),
+                                style: TextStyle(color: cs.onSecondaryContainer, fontWeight: FontWeight.w600, fontSize: 12),
                               ),
                             ),
                           )
@@ -190,10 +168,7 @@ class _ScrollingAudioTextState extends State<ScrollingAudioText> with SingleTick
             position: _offset,
             child: Text(
               widget.text,
-              style: TextStyle(
-                color: cs.onSurface,
-                fontSize: 13,
-              ),
+              style: TextStyle(color: cs.onSurface, fontSize: 13),
               maxLines: 1,
               overflow: TextOverflow.visible,
               softWrap: false,
