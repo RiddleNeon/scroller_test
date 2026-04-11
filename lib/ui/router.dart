@@ -27,7 +27,16 @@ void initRouter() {
       final navBarItem = _navigationBarItems.where((element) => element.id == state.uri.path).firstOrNull;
       if (navBarItem != null) {
         int navBarIndex = _navigationBarItems.indexOf(navBarItem);
-        if (navBarIndex != -1) navBarKey.currentState?.switchToIndex(navBarIndex);
+        if (navBarIndex != -1 && navBarKey.currentState?.currentSelectedIndex != navBarIndex) {
+          if (navBarKey.currentState == null) {
+            WidgetsBinding.instance.addPostFrameCallback((timeStamp) {
+              navBarKey.currentState?.switchToIndex(navBarIndex);
+            });
+          } else {
+            navBarKey.currentState?.switchToIndex(navBarIndex);
+          }
+        }
+        
       }
 
       final path = state.uri.path;
@@ -153,8 +162,8 @@ void initRouter() {
 }
 
 GlobalObjectKey<BottomNavBarState> navBarKey = const GlobalObjectKey('bottomNavBarKey');
-BottomNavBar _bottomNavBar = BottomNavBar(
-  initialIndex: 3,
+final BottomNavBar _bottomNavBar = BottomNavBar(
+  initialIndex: 2,
   key: navBarKey,
   onSelectionChange: (p0) {
     routerConfig.go(p0);

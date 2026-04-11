@@ -51,7 +51,7 @@ class AppTheme {
   );
 
   static ThemeData light = _build(lightScheme);
-  static ThemeData dark = cappuccinoFromPrimary(primary: const Color(0xFF466C7C)).dark;
+  static ThemeData dark = _build(darkScheme);
 
   /// Builds cappuccino-styled light and dark themes from a primary color.
   ///
