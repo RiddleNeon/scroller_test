@@ -2,8 +2,11 @@ import 'package:flutter/foundation.dart';
 import 'package:flutter/material.dart';
 import 'package:fvp/fvp.dart' as fvp;
 import 'package:supabase_flutter/supabase_flutter.dart';
+import 'package:wurp/base_ui.dart';
+import 'package:wurp/logic/themes/theme_model.dart';
 import 'package:wurp/tools/supabase_tests/supabase_login_test.dart';
 import 'package:wurp/ui/feed_view_model.dart';
+import 'package:wurp/ui/theme/app_theme.dart';
 
 import 'logic/feed_recommendation/user_preference_manager.dart';
 import 'logic/local_storage/local_seen_service.dart';
@@ -50,9 +53,16 @@ Future<void> onUserLogin(UserProfile user) async {
   _currentUser = user;
   await onUserLoginSupabaseTest();
   await initLocalSeenService();
-  if (kIsWeb) {
-    print("Using Supabase persisted auth session on web.");
-  }
+  await applyThemeFromServer();
+}
+
+Future<void> applyThemeFromServer() async {
+  final response = await supabaseClient.from('applied_themes').select().eq('user_id', currentUser.id).single();
+  final themeId = response['theme_id'] as String? ?? defaultDarkThemeId;  
+  final themeData = await supabaseClient.from('themes').select().eq('id', themeId).single();
+  final theme = CustomThemeModel.fromJson(themeData);
+  appThemeNotifier.value = (theme.colors.toThemeData(), themeId);
+  print("Applied theme for user ${currentUser.id}: $themeId, name: ${theme.name}");
 }
 
 String currentAuthUserId() => auth.currentUser?.id ?? currentUser.id;

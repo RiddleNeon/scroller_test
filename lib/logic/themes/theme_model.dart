@@ -2,6 +2,10 @@ import 'dart:convert';
 import 'package:flutter/material.dart';
 import 'package:wurp/base_logic.dart';
 
+
+const defaultLightThemeId = '0f5309f7-0a82-4842-ae06-79a7251afa6f';
+const defaultDarkThemeId = '3c5ec440-64fd-46ad-ac2c-2ea06821a32f';
+
 /// Holds all customizable colors of a theme.
 class CustomThemeColors {
   final Color primary;
@@ -305,34 +309,43 @@ class CustomThemeModel {
   });
 
   factory CustomThemeModel.fromJson(Map<String, dynamic> json) {
-    final rawPrimary = (json['primary_color'] as int? ?? 0xFF6C5443).toUnsigned(32);
-
-    CustomThemeColors colors;
-    final rawThemeData = json['theme_data'];
-    if (rawThemeData != null) {
-      try {
-        final decoded = rawThemeData is String ? jsonDecode(rawThemeData) as Map<String, dynamic> : rawThemeData as Map<String, dynamic>;
-        colors = CustomThemeColors.fromJson(decoded);
-      } catch (_) {
-        colors = CustomThemeColors.fromPrimary(Color(rawPrimary));
-      }
-    } else {
-      colors = CustomThemeColors.fromPrimary(Color(rawPrimary));
-    }
-
     return CustomThemeModel(
       id: json['id'] as String? ?? UniqueKey().toString(),
       name: json['name'] as String? ?? 'Untitled Theme',
-      colors: colors,
+      colors: getColorsFromJson(json),
       createdBy: json['created_by'] as String?,
       likesCount: json['likes_count'] as int? ?? 0,
       isPublic: json['is_public'] as bool? ?? false,
       createdAt: json['created_at'] != null ? DateTime.parse(json['created_at'] as String) : null,
     );
   }
+  
+  static CustomThemeColors getColorsFromJson(Map<String, dynamic> json){
+    final rawPrimary = (json['primary_color'] as int? ?? 0xFF6C5443).toUnsigned(32);
+
+
+    if(json['id'] == defaultLightThemeId) {
+      return CustomThemeColors.fromSeeds(primary: Color(rawPrimary), dark: false);
+    } 
+    if(json['id'] == defaultDarkThemeId) {
+      return CustomThemeColors.fromSeeds(primary: Color(rawPrimary), dark: true);
+    } 
+    
+    final rawThemeData = json['theme_data'];
+    if(rawThemeData == null) {
+      return CustomThemeColors.fromPrimary(Color(rawPrimary));
+    }
+    
+    try {
+      final decoded = rawThemeData is String ? jsonDecode(rawThemeData) as Map<String, dynamic> : rawThemeData as Map<String, dynamic>;
+      return CustomThemeColors.fromJson(decoded);
+    } catch (_) {
+      return CustomThemeColors.fromPrimary(Color(rawPrimary));
+    }
+  }
 
   Map<String, dynamic> toJson() => {
-    if (id.length > 20) 'id': id,
+    'id': id,
     'name': name,
     'primary_color': colors.primary.toARGB32(),
     'theme_data': jsonEncode(colors.toJson()),

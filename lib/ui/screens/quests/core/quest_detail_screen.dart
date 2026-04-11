@@ -294,7 +294,8 @@ class _QuestSliverAppBar extends StatelessWidget {
                   border: InputBorder.none,
                   isDense: true,
                   contentPadding: EdgeInsets.zero,
-                  hintText: 'Quest-Name…',
+                  hintText: 'Quest-Name',
+                  filled: false,
                   hintStyle: TextStyle(color: colorScheme.onPrimaryContainer.withValues(alpha: 0.35), fontSize: 20),
                 ),
               )

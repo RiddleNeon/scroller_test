@@ -1,5 +1,6 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_colorpicker/flutter_colorpicker.dart';
+import 'package:uuid/uuid.dart';
 import 'package:wurp/logic/themes/theme_model.dart';
 
 class ThemeEditorScreen extends StatefulWidget {
@@ -224,7 +225,7 @@ class _ThemeEditorScreenState extends State<ThemeEditorScreen> {
     Navigator.pop(
       context,
       CustomThemeModel(
-        id: widget.existingTheme?.id ?? UniqueKey().toString(),
+        id: widget.existingTheme?.id ?? const Uuid().v4(),
         name: name.isEmpty ? 'Custom Theme' : name,
         colors: _colors,
         createdBy: widget.existingTheme?.createdBy,

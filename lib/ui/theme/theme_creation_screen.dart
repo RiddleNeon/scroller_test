@@ -1,7 +1,9 @@
 import 'dart:convert';
+import 'dart:ui';
 import 'package:flutter/material.dart';
 import 'package:flutter_web_file_saver/flutter_web_file_saver.dart';
 import 'package:supabase_flutter/supabase_flutter.dart';
+import 'package:uuid/uuid.dart';
 import 'package:wurp/base_ui.dart';
 import 'package:wurp/logic/themes/theme_model.dart';
 import 'package:wurp/ui/theme/theme_editor_screen.dart';
@@ -16,6 +18,8 @@ class ThemeManagerScreen extends StatefulWidget {
   @override
   State<ThemeManagerScreen> createState() => _ThemeManagerScreenState();
 }
+
+
 
 class _ThemeManagerScreenState extends State<ThemeManagerScreen> with TickerProviderStateMixin {
   final _supabase = Supabase.instance.client;
@@ -71,7 +75,7 @@ class _ThemeManagerScreenState extends State<ThemeManagerScreen> with TickerProv
       final res = await _supabase.from('themes').select().eq('is_public', true).order('likes_count', ascending: false);
       if (mounted) {
         setState(() {
-          _communityThemes = (res as List).map((e) => CustomThemeModel.fromJson(e)).toList();
+          _communityThemes = (res as List).where((element) => element['id'] != defaultDarkThemeId && element['id'] != defaultLightThemeId,).map((e) => CustomThemeModel.fromJson(e)).toList();
           _loadingCommunity = false;
         });
       }
@@ -95,11 +99,15 @@ class _ThemeManagerScreenState extends State<ThemeManagerScreen> with TickerProv
 
   Future<void> _saveTheme(CustomThemeModel theme) async {
     try {
-      await _supabase.from('themes').upsert(theme.toJson());
+      final existing = await _supabase.from('themes').select().eq('id', theme.id).maybeSingle() != null;
+
+      if (!existing) {
+        await _supabase.from('themes').insert(theme.toJson());
+      } else {
+        await _supabase.from('themes').update(theme.toJson()).eq('id', theme.id);
+      }
       await _loadMyThemes();
-      setState(() {
-        _communityThemes.add(theme);
-      });
+      await _loadCommunityThemes();
       if (!mounted) return;
       showSnackBar(context, 'Theme Uploaded!');
     } catch (e) {
@@ -141,28 +149,28 @@ class _ThemeManagerScreenState extends State<ThemeManagerScreen> with TickerProv
   Future<void> _toggleLike(String themeId) async {
     if (_uid == null) return;
     final isLiked = _likedIds.contains(themeId);
-
-    setState(() {
-      if (isLiked) {
-        _likedIds.remove(themeId);
-        final idx = _communityThemes.indexWhere((t) => t.id == themeId);
-        if (idx != -1) {
-          _communityThemes[idx] = _communityThemes[idx].copyWith(likesCount: (_communityThemes[idx].likesCount - 1).clamp(0, 999999));
-        }
-      } else {
-        _likedIds.add(themeId);
-        final idx = _communityThemes.indexWhere((t) => t.id == themeId);
-        if (idx != -1) {
-          _communityThemes[idx] = _communityThemes[idx].copyWith(likesCount: _communityThemes[idx].likesCount + 1);
-        }
-      }
-    });
-
     try {
+      final currentLikes = _communityThemes.firstWhere((t) => t.id == themeId, orElse: () => _defaultTheme).likesCount;
       if (isLiked) {
         await _supabase.from('theme_likes').delete().eq('theme_id', themeId).eq('user_id', _uid!);
+        await _supabase.from('themes').update({'likes_count': currentLikes - 1}).eq('id', themeId);
+        setState(() {
+          _likedIds.remove(themeId);
+          final idx = _communityThemes.indexWhere((t) => t.id == themeId);
+          if (idx != -1) {
+            _communityThemes[idx] = _communityThemes[idx].copyWith(likesCount: (_communityThemes[idx].likesCount - 1).clamp(0, 999999));
+          }
+        });
       } else {
         await _supabase.from('theme_likes').insert({'theme_id': themeId, 'user_id': _uid!});
+        await _supabase.from('themes').update({'likes_count': currentLikes + 1}).eq('id', themeId);
+        setState(() {
+          _likedIds.add(themeId);
+          final idx = _communityThemes.indexWhere((t) => t.id == themeId);
+          if (idx != -1) {
+            _communityThemes[idx] = _communityThemes[idx].copyWith(likesCount: _communityThemes[idx].likesCount + 1);
+          }
+        });
       }
     } catch (e) {
       debugPrint('Error toggling like: $e');
@@ -171,10 +179,21 @@ class _ThemeManagerScreenState extends State<ThemeManagerScreen> with TickerProv
     }
   }
 
-  void _applyTheme(String id) {
+  Future<void> applyTheme(String id, [bool pushToServer = true]) async {
     setState(() => _selectedThemeId = id);
-    appThemeNotifier.value = getTheme(id);
+    appThemeNotifier.value = (getTheme(id), id);
+    if(id == 'default') {
+      await _supabase.from("applied_themes").upsert({'user_id': _uid, 'theme_id': defaultLightThemeId});
+    } else if(id == 'default-dark') {
+      await _supabase.from("applied_themes").upsert({'user_id': _uid, 'theme_id': defaultDarkThemeId});
+    } else {
+      await _supabase.from("applied_themes").upsert({'user_id': _uid, 'theme_id': id});
+    }
+    
+    if(!mounted) return;
     showSnackBar(context, 'Theme applied!');
+    
+
   }
 
   Future<void> _openEditor({CustomThemeModel? existing}) async {
@@ -203,7 +222,7 @@ class _ThemeManagerScreenState extends State<ThemeManagerScreen> with TickerProv
       final file = result.files.first.bytes!;
       final fileAsString = utf8.decode(file);
       final json = jsonDecode(fileAsString) as Map<String, dynamic>;
-      final imported = CustomThemeModel.fromJson(json).copyWith(id: UniqueKey().toString(), isPublic: false);
+      final imported = CustomThemeModel.fromJson(json).copyWith(id: const Uuid().v4(), isPublic: false);
       await _saveTheme(imported);
       if (!mounted) return;
       showSnackBar(context, '"${imported.name}" imported!');
@@ -218,56 +237,6 @@ class _ThemeManagerScreenState extends State<ThemeManagerScreen> with TickerProv
     if (id == 'default-dark') return AppTheme.dark;
     final theme = _myThemes.firstWhere((t) => t.id == id, orElse: () => _defaultTheme);
     return theme.colors.toThemeData();
-  }
-
-  void _showThemeDetails(CustomThemeModel theme) {
-    showModalBottomSheet(
-      context: context,
-      isScrollControlled: true,
-      shape: const RoundedRectangleBorder(borderRadius: BorderRadius.vertical(top: Radius.circular(24))),
-      builder: (ctx) {
-        final c = theme.colors;
-        return DraggableScrollableSheet(
-          initialChildSize: 0.55,
-          minChildSize: 0.35,
-          maxChildSize: 0.9,
-          expand: false,
-          builder: (_, scrollCtrl) => ListView(
-            controller: scrollCtrl,
-            padding: const EdgeInsets.fromLTRB(24, 12, 24, 32),
-            children: [
-              Center(
-                child: Container(
-                  width: 40,
-                  height: 4,
-                  decoration: BoxDecoration(color: Colors.grey[300], borderRadius: BorderRadius.circular(2)),
-                ),
-              ),
-              const SizedBox(height: 16),
-              Text(theme.name, style: Theme.of(ctx).textTheme.titleLarge?.copyWith(fontWeight: FontWeight.bold)),
-              const SizedBox(height: 4),
-              Text('Created by: ${theme.createdBy?.substring(0, 6) ?? "Unknown"}', style: Theme.of(ctx).textTheme.bodySmall),
-              Text('Likes: ${theme.likesCount}', style: Theme.of(ctx).textTheme.bodySmall),
-              const SizedBox(height: 20),
-              Text('Palette', style: Theme.of(ctx).textTheme.titleMedium),
-              const SizedBox(height: 12),
-              Wrap(
-                spacing: 10,
-                runSpacing: 10,
-                children: [
-                  _DetailSwatch('Primary', c.primary),
-                  _DetailSwatch('Secondary', c.secondary),
-                  _DetailSwatch('Tertiary', c.tertiary),
-                  _DetailSwatch('Background', c.background),
-                  _DetailSwatch('Surface', c.surface),
-                  _DetailSwatch('Error', c.error),
-                ],
-              ),
-            ],
-          ),
-        );
-      },
-    );
   }
 
   @override
@@ -306,141 +275,31 @@ class _ThemeManagerScreenState extends State<ThemeManagerScreen> with TickerProv
 
     return GridView.builder(
       padding: const EdgeInsets.fromLTRB(16, 16, 16, 96),
-      gridDelegate: const SliverGridDelegateWithFixedCrossAxisCount(crossAxisCount: 2, crossAxisSpacing: 14, mainAxisSpacing: 14, childAspectRatio: 0.85),
+      gridDelegate: const SliverGridDelegateWithMaxCrossAxisExtent(maxCrossAxisExtent: 260, crossAxisSpacing: 14, mainAxisSpacing: 14, childAspectRatio: 0.85),
       itemCount: all.length,
       itemBuilder: (context, i) {
         final theme = all[i];
         final isSelected = _selectedThemeId == theme.id;
-        final isDefault = theme.id == 'default';
+        final isDefault = theme.id == 'default' || theme.id == 'default-dark';
         final c = theme.colors;
 
         return GestureDetector(
-          onTap: () => _applyTheme(theme.id),
+          onTap: () => applyTheme(theme.id),
           onLongPress: isDefault ? null : () => _deleteTheme(theme),
           child: AnimatedContainer(
             duration: const Duration(milliseconds: 200),
             decoration: BoxDecoration(
               borderRadius: BorderRadius.circular(20),
               border: Border.all(color: isSelected ? c.primary : Colors.transparent, width: 2.5),
-              boxShadow: [if (isSelected) BoxShadow(color: c.primary.withValues(alpha: 0.3), blurRadius: 12, spreadRadius: 1)],
             ),
-            child: Card(
-              margin: EdgeInsets.zero,
-              shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(18)),
-              clipBehavior: Clip.antiAlias,
-              child: Stack(
-                children: [
-                  Positioned.fill(
-                    child: Container(
-                      decoration: BoxDecoration(
-                        gradient: LinearGradient(
-                          begin: Alignment.topLeft,
-                          end: Alignment.bottomRight,
-                          colors: [c.primary.withValues(alpha: 0.15), c.secondary.withValues(alpha: 0.10), c.tertiary.withValues(alpha: 0.12)],
-                        ),
-                      ),
-                    ),
-                  ),
-
-                  Positioned(
-                    top: 12,
-                    right: 12,
-                    child: Row(
-                      children: [c.primary, c.secondary, c.tertiary]
-                          .map(
-                            (col) => Container(
-                              width: 12,
-                              height: 12,
-                              margin: const EdgeInsets.only(left: 4),
-                              decoration: BoxDecoration(
-                                color: col,
-                                shape: BoxShape.circle,
-                                border: Border.all(color: Colors.white, width: 1.5),
-                              ),
-                            ),
-                          )
-                          .toList(),
-                    ),
-                  ),
-
-                  Center(
-                    child: Column(
-                      mainAxisSize: MainAxisSize.min,
-                      children: [
-                        CircleAvatar(
-                          backgroundColor: c.primary,
-                          radius: 26,
-                          child: Icon(Icons.palette, color: c.onPrimary, size: 22),
-                        ),
-                        const SizedBox(height: 10),
-                        Padding(
-                          padding: const EdgeInsets.symmetric(horizontal: 8),
-                          child: Text(
-                            theme.name,
-                            textAlign: TextAlign.center,
-                            style: const TextStyle(fontWeight: FontWeight.w600, fontSize: 13),
-                            maxLines: 2,
-                            overflow: TextOverflow.ellipsis,
-                          ),
-                        ),
-                        if (isDefault)
-                          Padding(
-                            padding: const EdgeInsets.only(top: 4),
-                            child: Text('Standard', style: TextStyle(fontSize: 10, color: Colors.grey[600])),
-                          ),
-                      ],
-                    ),
-                  ),
-
-                  if (isSelected) const Positioned(top: 10, left: 10, child: Icon(Icons.check_circle_rounded, color: Colors.green, size: 20)),
-
-                  if (!isDefault)
-                    Positioned(
-                      bottom: 0,
-                      right: 0,
-                      child: PopupMenuButton<String>(
-                        icon: const Icon(Icons.more_horiz, size: 18),
-                        onSelected: (val) async {
-                          switch (val) {
-                            case 'edit':
-                              await _openEditor(existing: theme);
-                            case 'share':
-                              await _saveTheme(theme.copyWith(isPublic: true));
-                              if (context.mounted) {
-                                showSnackBar(context, 'Shared with the Community!');
-                              }
-                            case 'details':
-                              _showThemeDetails(theme);
-                            case 'delete':
-                              await _deleteTheme(theme);
-                          }
-                        },
-                        itemBuilder: (_) => [
-                          const PopupMenuItem(
-                            value: 'edit',
-                            child: ListTile(leading: Icon(Icons.edit), title: Text('Edit'), dense: true),
-                          ),
-                          const PopupMenuItem(
-                            value: 'share',
-                            child: ListTile(leading: Icon(Icons.public), title: Text('share with Community'), dense: true),
-                          ),
-                          const PopupMenuItem(
-                            value: 'details',
-                            child: ListTile(leading: Icon(Icons.info_outline), title: Text('Details'), dense: true),
-                          ),
-                          const PopupMenuItem(
-                            value: 'delete',
-                            child: ListTile(
-                              leading: Icon(Icons.delete_outline, color: Colors.red),
-                              title: Text('Delete', style: TextStyle(color: Colors.red)),
-                              dense: true,
-                            ),
-                          ),
-                        ],
-                      ),
-                    ),
-                ],
-              ),
+            child: ThemePreview(
+              c: c,
+              theme: theme,
+              isDefault: isDefault,
+              openEditor: _openEditor,
+              saveTheme: _saveTheme,
+              deleteTheme: _deleteTheme,
+              isSelected: isSelected,
             ),
           ),
         );
@@ -454,72 +313,321 @@ class _ThemeManagerScreenState extends State<ThemeManagerScreen> with TickerProv
       return const Center(child: Text('No public themes yet! Create and share yours with the community.'));
     }
 
-    return ListView.builder(
+    return GridView.builder(
       padding: const EdgeInsets.fromLTRB(16, 16, 16, 96),
+      gridDelegate: const SliverGridDelegateWithMaxCrossAxisExtent(maxCrossAxisExtent: 260, crossAxisSpacing: 14, mainAxisSpacing: 14, childAspectRatio: 0.85),
       itemCount: _communityThemes.length,
       itemBuilder: (context, i) {
         final theme = _communityThemes[i];
         final c = theme.colors;
+        final isSelected = _selectedThemeId == theme.id;
         final isLiked = _likedIds.contains(theme.id);
 
-        return Card(
-          margin: const EdgeInsets.only(bottom: 12),
-          shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(16)),
-          child: ListTile(
-            contentPadding: const EdgeInsets.symmetric(horizontal: 16, vertical: 8),
-            leading: CircleAvatar(
-              backgroundColor: c.primary,
-              child: Icon(Icons.palette, color: c.onPrimary, size: 20),
+        return GestureDetector(
+          onTap: () async {
+            final newId = const Uuid().v4();
+            await _saveTheme(theme.copyWith(name: "${theme.name} - ${theme.createdBy}", id: newId, isPublic: false, likesCount: 0));
+            applyTheme(newId);
+          },
+          child: AnimatedContainer(
+            duration: const Duration(milliseconds: 200),
+            decoration: BoxDecoration(
+              borderRadius: BorderRadius.circular(20),
+              border: Border.all(color: isSelected ? c.primary : Colors.transparent, width: 2.5),
             ),
-            title: Text(theme.name, style: const TextStyle(fontWeight: FontWeight.w600)),
-            subtitle: Row(
-              children: [
-                Text('by: ${theme.createdBy?.substring(0, 6) ?? "Unknown"}'),
-                const SizedBox(width: 8),
-                ...([c.primary, c.secondary, c.tertiary].map(
-                  (col) => Container(
-                    width: 10,
-                    height: 10,
-                    margin: const EdgeInsets.only(left: 2),
-                    decoration: BoxDecoration(color: col, shape: BoxShape.circle),
-                  ),
-                )),
-              ],
+            child: ThemePreview(
+              c: c,
+              theme: theme,
+              isDefault: false,
+              openEditor: null,
+              saveTheme: null,
+              deleteTheme: null,
+              isSelected: isSelected,
+              onLikeToggle: _toggleLike,
+              likesCount: theme.likesCount,
+              initiallyLiked: isLiked,
+              authorName: theme.createdBy,
             ),
-            trailing: Row(
-              mainAxisSize: MainAxisSize.min,
-              children: [
-                GestureDetector(
-                  onTap: () => _toggleLike(theme.id),
-                  child: AnimatedSwitcher(
-                    duration: const Duration(milliseconds: 200),
-                    child: Icon(
-                      isLiked ? Icons.favorite : Icons.favorite_border,
-                      key: ValueKey(isLiked),
-                      color: isLiked ? Colors.redAccent : Colors.grey,
-                      size: 20,
-                    ),
-                  ),
-                ),
-                const SizedBox(width: 2),
-                Text('${theme.likesCount}', style: const TextStyle(fontSize: 12)),
-                const SizedBox(width: 8),
-                IconButton(
-                  icon: const Icon(Icons.download_rounded, size: 20),
-                  tooltip: 'To my themes',
-                  onPressed: () {
-                    final cloned = theme.copyWith(id: UniqueKey().toString(), isPublic: false);
-                    _saveTheme(cloned);
-                  },
-                ),
-              ],
-            ),
-            onTap: () => _showThemeDetails(theme),
           ),
         );
       },
     );
   }
+}
+
+class ThemePreview extends StatefulWidget {
+  final CustomThemeColors c;
+  final CustomThemeModel theme;
+  final bool isDefault;
+  final Future<void> Function({CustomThemeModel existing})? openEditor;
+  final Future<void> Function(CustomThemeModel)? saveTheme;
+  final Future<void> Function(CustomThemeModel)? deleteTheme;
+  final bool isSelected;
+
+  final String? authorName;
+  final int? likesCount;
+  final void Function(String)? onLikeToggle;
+  final bool initiallyLiked;
+
+  const ThemePreview({
+    super.key,
+    required this.c,
+    required this.theme,
+    required this.isDefault,
+    required this.openEditor,
+    required this.saveTheme,
+    required this.deleteTheme,
+    required this.isSelected,
+    this.authorName,
+    this.likesCount,
+    this.onLikeToggle,
+    this.initiallyLiked = false,
+  });
+
+  @override
+  State<ThemePreview> createState() => _ThemePreviewState();
+}
+
+class _ThemePreviewState extends State<ThemePreview> {
+  late bool isLiked = widget.initiallyLiked;
+
+  @override
+  Widget build(BuildContext context) {
+    return Card(
+      color: widget.c.background,
+      margin: EdgeInsets.zero,
+      shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(18)),
+      clipBehavior: Clip.antiAlias,
+      child: Stack(
+        children: [
+          Positioned.fill(child: Container(color: widget.c.background)),
+
+          Positioned(
+            top: 12,
+            right: 12,
+            child: Row(
+              children: [widget.c.primary, widget.c.secondary, widget.c.tertiary]
+                  .map(
+                    (col) => Container(
+                      width: 12,
+                      height: 12,
+                      margin: const EdgeInsets.only(left: 4),
+                      decoration: BoxDecoration(
+                        color: col,
+                        shape: BoxShape.circle,
+                        border: Border.all(color: Colors.white, width: 1.5),
+                      ),
+                    ),
+                  )
+                  .toList(),
+            ),
+          ),
+
+          Padding(
+            padding: const EdgeInsets.all(12),
+            child: Column(
+              crossAxisAlignment: CrossAxisAlignment.start,
+              children: [
+                Container(
+                  height: 20,
+                  decoration: BoxDecoration(color: widget.c.primary, borderRadius: BorderRadius.circular(6)),
+                ),
+
+                const SizedBox(height: 8),
+
+                Container(
+                  height: 8,
+                  width: 80,
+                  decoration: BoxDecoration(color: widget.c.onBackground.withValues(alpha: 0.7), borderRadius: BorderRadius.circular(4)),
+                ),
+                const SizedBox(height: 6),
+                Container(
+                  height: 8,
+                  width: 50,
+                  decoration: BoxDecoration(color: widget.c.onBackground.withValues(alpha: 0.4), borderRadius: BorderRadius.circular(4)),
+                ),
+
+                const Spacer(),
+
+                Container(
+                  height: 26,
+                  decoration: BoxDecoration(color: widget.c.secondary, borderRadius: BorderRadius.circular(8)),
+                  child: Center(
+                    child: Text(
+                      "Button",
+                      style: TextStyle(color: widget.c.onSecondary, fontSize: 10, fontWeight: FontWeight.w600),
+                    ),
+                  ),
+                ),
+
+                const SizedBox(height: 8),
+
+                Text(
+                  widget.theme.name,
+                  maxLines: 1,
+                  overflow: TextOverflow.ellipsis,
+                  style: TextStyle(fontSize: 12, fontWeight: FontWeight.w600, color: widget.c.onBackground),
+                ),
+                if (widget.authorName != null) ...[
+                  const SizedBox(height: 4),
+                  Row(
+                    mainAxisSize: MainAxisSize.max,
+                    mainAxisAlignment: .spaceBetween,
+                    children: [
+                      Flexible(
+                        child: FractionallySizedBox(
+                          widthFactor: 0.75,
+                          alignment: Alignment.centerLeft,
+                          child: Text(
+                            'by ${widget.authorName}',
+                            maxLines: 1,
+                            overflow: TextOverflow.ellipsis,
+                            style: TextStyle(fontSize: 9, color: widget.c.onBackground.withValues(alpha: 0.7)),
+                          ),
+                        ),
+                      ),
+                      if (widget.likesCount != null)
+                        Row(
+                          children: [
+                            GestureDetector(
+                              onTap: () {
+                                widget.onLikeToggle?.call(widget.theme.id);
+                                setState(() {
+                                  isLiked = !isLiked;
+                                });
+                                print("Liked ${widget.theme.name}: $isLiked");
+                              },
+                              child: AnimatedSwitcher(
+                                duration: const Duration(milliseconds: 200),
+                                child: Icon(
+                                  isLiked ? Icons.favorite : Icons.favorite_border,
+                                  key: ValueKey(isLiked),
+                                  color: isLiked ? Colors.redAccent : Colors.grey,
+                                  size: 20,
+                                ),
+                              ),
+                            ),
+                            Text('${widget.likesCount}', style: TextStyle(fontSize: 9, color: widget.c.onBackground.withValues(alpha: 0.7))),
+                            if (!widget.isDefault) const SizedBox(width: 28),
+                          ],
+                        ),
+                    ],
+                  ),
+                ],
+              ],
+            ),
+          ),
+
+          Positioned(
+            top: 13,
+            right: 14,
+            child: Icon(widget.c.isDark ? Icons.dark_mode : Icons.light_mode, size: 16, color: widget.c.isDark ? Colors.white : Colors.black),
+          ),
+
+          if (widget.isSelected) const Positioned(top: 10, left: 10, child: Icon(Icons.check_circle_rounded, color: Colors.green, size: 20)),
+
+          if (!widget.isDefault)
+            Positioned(
+              bottom: 0,
+              right: 0,
+              child: PopupMenuButton<String>(
+                icon: Icon(Icons.more_horiz, size: 18, color: widget.c.isDark ? Colors.white : Colors.black),
+                onSelected: (val) async {
+                  switch (val) {
+                    case 'edit':
+                      await widget.openEditor!(existing: widget.theme);
+                    case 'share':
+                      await widget.saveTheme!(widget.theme.copyWith(isPublic: true));
+                      if (context.mounted) {
+                        showSnackBar(context, 'Shared with the Community!');
+                      }
+                    case 'details':
+                      _showThemeDetails(context, widget.theme);
+                    case 'delete':
+                      await widget.deleteTheme!(widget.theme);
+                  }
+                },
+                itemBuilder: (_) => [
+                  if (widget.openEditor != null)
+                    const PopupMenuItem(
+                      value: 'edit',
+                      child: ListTile(leading: Icon(Icons.edit), title: Text('Edit'), dense: true),
+                    ),
+                  if (widget.saveTheme != null && !widget.theme.isPublic)
+                    const PopupMenuItem(
+                      value: 'share',
+                      child: ListTile(leading: Icon(Icons.public), title: Text('share with Community'), dense: true),
+                    ),
+                  const PopupMenuItem(
+                    value: 'details',
+                    child: ListTile(leading: Icon(Icons.info_outline), title: Text('Details'), dense: true),
+                  ),
+                  if (widget.deleteTheme != null)
+                    const PopupMenuItem(
+                      value: 'delete',
+                      child: ListTile(
+                        leading: Icon(Icons.delete_outline, color: Colors.red),
+                        title: Text('Delete', style: TextStyle(color: Colors.red)),
+                        dense: true,
+                      ),
+                    ),
+                ],
+              ),
+            ),
+        ],
+      ),
+    );
+  }
+}
+
+void _showThemeDetails(BuildContext context, CustomThemeModel theme) {
+  showModalBottomSheet(
+    context: context,
+    isScrollControlled: true,
+    shape: const RoundedRectangleBorder(borderRadius: BorderRadius.vertical(top: Radius.circular(24))),
+    builder: (ctx) {
+      final c = theme.colors;
+      return DraggableScrollableSheet(
+        initialChildSize: 0.55,
+        minChildSize: 0.35,
+        maxChildSize: 0.9,
+        expand: false,
+        builder: (_, scrollCtrl) => ListView(
+          controller: scrollCtrl,
+          padding: const EdgeInsets.fromLTRB(24, 12, 24, 32),
+          children: [
+            Center(
+              child: Container(
+                width: 40,
+                height: 4,
+                decoration: BoxDecoration(color: Colors.grey[300], borderRadius: BorderRadius.circular(2)),
+              ),
+            ),
+            const SizedBox(height: 16),
+            Text(theme.name, style: Theme.of(ctx).textTheme.titleLarge?.copyWith(fontWeight: FontWeight.bold)),
+            const SizedBox(height: 4),
+            Text('Created by: ${theme.createdBy?.substring(0, 6) ?? "Unknown"}', style: Theme.of(ctx).textTheme.bodySmall),
+            Text('Likes: ${theme.likesCount}', style: Theme.of(ctx).textTheme.bodySmall),
+            const SizedBox(height: 20),
+            Text('Palette', style: Theme.of(ctx).textTheme.titleMedium),
+            const SizedBox(height: 12),
+            Wrap(
+              spacing: 10,
+              runSpacing: 10,
+              children: [
+                _DetailSwatch('Primary', c.primary),
+                _DetailSwatch('Secondary', c.secondary),
+                _DetailSwatch('Tertiary', c.tertiary),
+                _DetailSwatch('Background', c.background),
+                _DetailSwatch('Surface', c.surface),
+                _DetailSwatch('Error', c.error),
+              ],
+            ),
+          ],
+        ),
+      );
+    },
+  );
 }
 
 class _DetailSwatch extends StatelessWidget {
@@ -541,7 +649,6 @@ class _DetailSwatch extends StatelessWidget {
             color: color,
             borderRadius: BorderRadius.circular(14),
             border: Border.all(color: Colors.black.withValues(alpha: 0.07)),
-            boxShadow: [BoxShadow(color: color.withValues(alpha: 0.3), blurRadius: 6)],
           ),
           child: Center(
             child: Text(

@@ -1,5 +1,8 @@
 import 'package:flutter/material.dart';
+import 'package:wurp/base_logic.dart';
 import 'package:wurp/ui/animations/slide_morph_transitions.dart';
+
+import '../../tools/supabase_tests/supabase_login_test.dart';
 
 class AppTheme {
   static const ColorScheme lightScheme = ColorScheme(
@@ -32,8 +35,8 @@ class AppTheme {
     onPrimary: Color(0xFF3A2A1F),
     secondary: Color(0xFFC2AA95),
     onSecondary: Color(0xFF3A2D24),
-    tertiary: Color(0xFF9EC5BE),
-    onTertiary: Color(0xFF113A34),
+    tertiary: Color(0xFF9EC59F),
+    onTertiary: Color(0xFF233A11),
     error: Color(0xFFFFB4A9),
     onError: Color(0xFF561E17),
     surface: Color(0xFF181411),
