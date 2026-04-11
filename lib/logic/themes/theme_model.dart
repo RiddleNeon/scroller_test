@@ -55,7 +55,7 @@ class CustomThemeColors {
     final resolvedSecondary = secondary ?? deriveAccent(30);
     final resolvedTertiary = tertiary ?? deriveAccent(60);
 
-    final bgHsl = hsl.withSaturation(0.08);
+    final bgHsl = hsl.withSaturation(0.04);
 
     final Color resolvedSurface;
     final Color resolvedSurfaceContainerHighest;
@@ -66,16 +66,16 @@ class CustomThemeColors {
     final Color resolvedOutlineVariant;
 
     if (dark) {
-      resolvedSurface = bgHsl.withLightness(0.08).toColor();
-      resolvedSurfaceContainerHighest = bgHsl.withLightness(0.22).toColor();
+      resolvedSurface = _surfaceWithContrast(bgHsl, primary, dark: true);
+      resolvedSurfaceContainerHighest = bgHsl.withLightness((HSLColor.fromColor(resolvedSurface).lightness + 0.12).clamp(0.0, 1.0)).toColor();
       resolvedInverseSurface = bgHsl.withLightness(0.92).toColor();
       resolvedOnInverseSurface = const Color(0xFF1A1612);
       resolvedOnSurface = const Color(0xFFECECEC);
       resolvedOnSurfaceVariant = const Color(0xFFC6C6C6);
       resolvedOutlineVariant = hsl.withSaturation((hsl.saturation * 0.25).clamp(0.05, 0.30)).withLightness(0.28).toColor();
     } else {
-      resolvedSurface = bgHsl.withLightness(0.97).toColor();
-      resolvedSurfaceContainerHighest = bgHsl.withLightness(0.87).toColor();
+      resolvedSurface = _surfaceWithContrast(bgHsl, primary, dark: false);
+      resolvedSurfaceContainerHighest = bgHsl.withLightness((HSLColor.fromColor(resolvedSurface).lightness - 0.09).clamp(0.0, 1.0)).toColor();
       resolvedInverseSurface = bgHsl.withLightness(0.14).toColor();
       resolvedOnInverseSurface = const Color(0xFFF2EDE8);
       resolvedOnSurface = const Color(0xFF1A1A1A);
@@ -105,6 +105,27 @@ class CustomThemeColors {
     );
   }
 
+  static Color _surfaceWithContrast(HSLColor bgHsl, Color primary, {required bool dark}) {
+    const minContrast = 0.30;
+
+    final primaryLum = primary.computeLuminance();
+
+    double targetL = dark ? 0.07 : 0.97;
+    Color candidate = bgHsl.withLightness(targetL).toColor();
+
+    if ((candidate.computeLuminance() - primaryLum).abs() >= minContrast) {
+      return candidate;
+    }
+
+    if (dark) {
+      targetL = (primaryLum - minContrast).clamp(0.03, 0.18);
+    } else {
+      targetL = (primaryLum + minContrast + 0.35).clamp(0.80, 0.98);
+    }
+
+    return bgHsl.withLightness(targetL).toColor();
+  }
+  
   factory CustomThemeColors.fromJson(Map<String, dynamic> json) {
     int c(String key, int fallback) => (json[key] as int? ?? fallback).toUnsigned(32);
 
@@ -224,7 +245,6 @@ class CustomThemeColors {
       brightness: isDark ? Brightness.dark : Brightness.light,
       scaffoldBackgroundColor: surface,
       cardColor: surfaceContainerHighest,
-      appBarTheme: AppBarTheme(backgroundColor: primary, foregroundColor: onPrimary, elevation: 0),
       cardTheme: CardThemeData(
         elevation: 0,
         color: surfaceContainerHighest,
@@ -254,7 +274,6 @@ class CustomThemeColors {
           borderSide: BorderSide(color: primary, width: 1.4),
         ),
       ),
-      floatingActionButtonTheme: FloatingActionButtonThemeData(backgroundColor: primary, foregroundColor: onPrimary),
       snackBarTheme: SnackBarThemeData(
         behavior: SnackBarBehavior.floating,
         backgroundColor: inverseSurface,

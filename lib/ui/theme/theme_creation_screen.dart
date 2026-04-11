@@ -133,7 +133,6 @@ class _ThemeManagerScreenState extends State<ThemeManagerScreen> with TickerProv
     if (_uid == null) return;
     final isLiked = _likedIds.contains(themeId);
 
-    // Optimistic update
     setState(() {
       if (isLiked) {
         _likedIds.remove(themeId);
@@ -256,7 +255,6 @@ class _ThemeManagerScreenState extends State<ThemeManagerScreen> with TickerProv
     );
   }
 
-  // ── Build ─────────────────────────────────────────────────────────────────
 
   @override
   Widget build(BuildContext context) {
@@ -264,6 +262,7 @@ class _ThemeManagerScreenState extends State<ThemeManagerScreen> with TickerProv
       length: 2,
       child: Scaffold(
         appBar: AppBar(
+          backgroundColor: Theme.of(context).appBarTheme.backgroundColor,
           title: const Text('Theme Manager'),
           actions: [
             IconButton(icon: const Icon(Icons.file_upload_outlined), onPressed: _importTheme, tooltip: 'import theme from file'),
@@ -435,7 +434,6 @@ class _ThemeManagerScreenState extends State<ThemeManagerScreen> with TickerProv
     );
   }
 
-  // ── Community list ────────────────────────────────────────────────────────
 
   Widget _buildCommunityTab() {
     if (_loadingCommunity) return const Center(child: CircularProgressIndicator());
@@ -550,7 +548,7 @@ class _DetailSwatch extends StatelessWidget {
   }
 }
 
-void showSnackBar(BuildContext context, String message, {Duration duration = const Duration(seconds: 2)}) {
+void showSnackBar(BuildContext context, String message, {Duration duration = const Duration(seconds: 1)}) {
   ScaffoldMessenger.of(context).showSnackBar(
     SnackBar(content: Text(message), duration: duration),
     snackBarAnimationStyle: const AnimationStyle(curve: Curves.ease, duration: Duration(milliseconds: 400)),
