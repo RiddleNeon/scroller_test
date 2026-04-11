@@ -88,11 +88,10 @@ class _PageOverlayState extends State<PageOverlay> {
         ),
         Positioned.fill(
           child: FractionallySizedBox(
-                heightFactor: 0.3,
-                alignment: Alignment.bottomCenter,
-                child: Transform.scale(
-                    scale: 1.005,
-                    child: VideoInfoOverlay(video: widget.video))),
+            heightFactor: 0.3,
+            alignment: Alignment.bottomCenter,
+            child: Transform.scale(scale: 1.005, child: VideoInfoOverlay(video: widget.video)),
+          ),
         ),
       ],
     );

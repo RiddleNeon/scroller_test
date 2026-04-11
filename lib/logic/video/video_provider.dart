@@ -18,8 +18,7 @@ class RecommendationVideoProvider implements VideoProvider {
   static const int _preloadThreshold = 5; // Preload when this many videos left
   static const int _preloadBatchSize = 20;
 
-  RecommendationVideoProvider()
-      : _recommender = VideoRecommender();
+  RecommendationVideoProvider() : _recommender = VideoRecommender();
 
   @override
   Future<Video?> getVideoByIndex(int index, [bool retry = true]) async {
@@ -27,37 +26,35 @@ class RecommendationVideoProvider implements VideoProvider {
     // Preload more videos if we're running low
     if (index >= _videoCache.length - _preloadThreshold) {
       loadingFuture = preloadVideos(_preloadBatchSize);
-      if(index >= _videoCache.length) {
+      if (index >= _videoCache.length) {
         // If requested index is beyond current cache, wait for preload to finish
         await loadingFuture;
       }
     }
-    
 
     // Return video if available
     if (index < _videoCache.length) {
       _currentIndex = index;
       return _videoCache[index];
-    } else if(retry) {
+    } else if (retry) {
       await loadingFuture;
       return getVideoByIndex(index, false);
     }
     return null;
   }
-  
+
   Future<void> _loadInitialVideos() {
     _currentInitVideoLoadingTask ??= _loadInitialVideosInternal();
     return _currentInitVideoLoadingTask!;
   }
 
   Future<void>? _currentInitVideoLoadingTask;
+
   Future<void> _loadInitialVideosInternal() async {
     if (_currentInitVideoLoadingTask != null) return _currentInitVideoLoadingTask;
     try {
       // For new users, use cold start videos
-      final videos = await _recommender.getColdStartVideos(
-        limit: _preloadBatchSize,
-      );
+      final videos = await _recommender.getColdStartVideos(limit: _preloadBatchSize);
 
       _videoCache.addAll(videos);
     } catch (e) {
@@ -66,19 +63,17 @@ class RecommendationVideoProvider implements VideoProvider {
   }
 
   Future<void>? _currentPreloadTask;
+
   @override
   Future<void> preloadVideos(int count) {
     _currentPreloadTask ??= _preloadMoreVideosInternal(count).then((val) => _currentPreloadTask = null);
     return _currentPreloadTask!;
   }
-  
-  Future<void> _preloadMoreVideosInternal(int count) async {
-    try {      
 
-      final newVideos = await _recommender.getRecommendedVideos(
-        limit: count,
-      );
-      
+  Future<void> _preloadMoreVideosInternal(int count) async {
+    try {
+      final newVideos = await _recommender.getRecommendedVideos(limit: count);
+
       _videoCache.addAll(newVideos);
     } catch (e) {
       print('Error preloading videos: $e');
@@ -96,10 +91,10 @@ class RecommendationVideoProvider implements VideoProvider {
     _videoCache.clear();
     _currentIndex = 0;
   }
-  
+
   void appendToCache(List<Video> videos) {
     _videoCache.addAll(videos);
   }
-  
+
   int get currentCacheLength => _videoCache.length;
 }

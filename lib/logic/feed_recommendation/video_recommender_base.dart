@@ -64,10 +64,7 @@ abstract class VideoRecommenderBase {
   }
 
   Future<List<Video>> fetchNewVideos(DateTime? newestSeen, int limit) async {
-    var query = supabaseClient
-        .from('videos')
-        .select(_recommenderVideoSelect)
-        .eq('is_published', true);
+    var query = supabaseClient.from('videos').select(_recommenderVideoSelect).eq('is_published', true);
     if (newestSeen != null) {
       query = query.lt('created_at', newestSeen.toIso8601String());
     }
@@ -79,10 +76,7 @@ abstract class VideoRecommenderBase {
     return fetchNewVideos(oldestSeen, limit);
   }
 
-  Future<Set<Video>> fetchTrendingVideos({
-    DateTime? cursor,
-    required int limit,
-  }) async {
+  Future<Set<Video>> fetchTrendingVideos({DateTime? cursor, required int limit}) async {
     cursor ??= localSeenService.getTrendingCursor();
     var query = supabaseClient
         .from('videos')
@@ -95,8 +89,7 @@ abstract class VideoRecommenderBase {
     }
 
     final snapshot = await query.order('created_at', ascending: false).limit(limit * 3);
-    final videos = snapshot.map<Video>(_mapVideo).where((v) => !localSeenService.hasSeen(v.id)).toList()
-      ..sort((a, b) => a.createdAt.compareTo(b.createdAt));
+    final videos = snapshot.map<Video>(_mapVideo).where((v) => !localSeenService.hasSeen(v.id)).toList()..sort((a, b) => a.createdAt.compareTo(b.createdAt));
 
     if (videos.isNotEmpty) {
       await localSeenService.saveTrendingCursor(videos.first.createdAt);
@@ -160,14 +153,7 @@ Future<void> trackInteraction({
   await UserPreferenceManager().updatePreferences(
     video: video,
     normalizedEngagementScore: calculateNormalizedEngagementScore(
-      calculateEngagementScore(
-        liked: liked,
-        disliked: disliked,
-        shared: shared,
-        commented: commented,
-        saved: saved,
-        completionRate: watchTime / videoDuration,
-      ),
+      calculateEngagementScore(liked: liked, disliked: disliked, shared: shared, commented: commented, saved: saved, completionRate: watchTime / videoDuration),
     ),
   );
 }
@@ -175,10 +161,7 @@ Future<void> trackInteraction({
 Video _mapVideo(Map<String, dynamic> data) {
   final profile = (data['profiles'] as Map<String, dynamic>? ?? const {});
   final authorName = profile['display_name'] ?? profile['username'] ?? '';
-  final tags = (data['video_tags'] as List? ?? const [])
-      .map((vt) => vt['tags']?['name'] as String?)
-      .whereType<String>()
-      .toList();
+  final tags = (data['video_tags'] as List? ?? const []).map((vt) => vt['tags']?['name'] as String?).whereType<String>().toList();
   return Video.fromSupabase(data, authorName, tags);
 }
 

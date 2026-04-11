@@ -1,6 +1,5 @@
 import 'package:wurp/transcription/generation_service/transcription_service.dart';
 
-
 class SubtitleService {
   static String chunksToSrt(List<TranscriptChunk> chunks) {
     final buffer = StringBuffer();
@@ -10,9 +9,7 @@ class SubtitleService {
       if (chunk.text.isEmpty) continue;
 
       buffer.writeln(i + 1);
-      buffer.writeln(
-        '${_formatSrtTime(chunk.start)} --> ${_formatSrtTime(chunk.end)}',
-      );
+      buffer.writeln('${_formatSrtTime(chunk.start)} --> ${_formatSrtTime(chunk.end)}');
       buffer.writeln(chunk.text);
       buffer.writeln();
     }
@@ -32,7 +29,7 @@ class SubtitleService {
         '${s.toString().padLeft(2, '0')},'
         '${millis.toString().padLeft(3, '0')}';
   }
-  
+
   static String chunksToVtt(List<TranscriptChunk> chunks) {
     final buffer = StringBuffer('WEBVTT\n\n');
 
@@ -40,9 +37,7 @@ class SubtitleService {
       final chunk = chunks[i];
       if (chunk.text.isEmpty) continue;
 
-      buffer.writeln(
-        '${_formatVttTime(chunk.start)} --> ${_formatVttTime(chunk.end)}',
-      );
+      buffer.writeln('${_formatVttTime(chunk.start)} --> ${_formatVttTime(chunk.end)}');
       buffer.writeln(chunk.text);
       buffer.writeln();
     }

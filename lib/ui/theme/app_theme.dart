@@ -184,13 +184,7 @@ class AppTheme {
           TargetPlatform.windows: SlideMorphPageTransitionsBuilder(),
         },
       ),
-      appBarTheme: AppBarTheme(
-        backgroundColor: cs.surface,
-        foregroundColor: cs.onSurface,
-        elevation: 0,
-        scrolledUnderElevation: 0,
-        centerTitle: true,
-      ),
+      appBarTheme: AppBarTheme(backgroundColor: cs.surface, foregroundColor: cs.onSurface, elevation: 0, scrolledUnderElevation: 0, centerTitle: true),
       cardTheme: CardThemeData(
         elevation: 0,
         color: cs.surfaceContainerHighest,
@@ -200,10 +194,7 @@ class AppTheme {
           side: BorderSide(color: cs.outlineVariant.withValues(alpha: 0.6)),
         ),
       ),
-      dividerTheme: DividerThemeData(
-        color: cs.outlineVariant.withValues(alpha: 0.6),
-        thickness: 1,
-      ),
+      dividerTheme: DividerThemeData(color: cs.outlineVariant.withValues(alpha: 0.6), thickness: 1),
       inputDecorationTheme: InputDecorationTheme(
         filled: true,
         fillColor: cs.surfaceContainerHighest,
@@ -233,9 +224,7 @@ class AppTheme {
         ),
       ),
       filledButtonTheme: FilledButtonThemeData(
-        style: FilledButton.styleFrom(
-          shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(14)),
-        ),
+        style: FilledButton.styleFrom(shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(14))),
       ),
       snackBarTheme: SnackBarThemeData(
         behavior: SnackBarBehavior.floating,
@@ -263,8 +252,7 @@ class AppTheme {
     final anchoredTertiary = tertiary ?? _deriveEarthyTertiary(primary);
 
     final anchoredSurface = surface ?? _colorLerp(cappuccinoBase.surface, primary, 0.08);
-    final anchoredContainer =
-        surfaceContainerHighest ?? _colorLerp(cappuccinoBase.surfaceContainerHighest, anchoredSurface, 0.62);
+    final anchoredContainer = surfaceContainerHighest ?? _colorLerp(cappuccinoBase.surfaceContainerHighest, anchoredSurface, 0.62);
     final surfaceContainerHigh = _colorLerp(anchoredSurface, anchoredContainer, 0.72);
     final surfaceContainer = _colorLerp(anchoredSurface, anchoredContainer, 0.52);
     final surfaceContainerLow = _colorLerp(anchoredSurface, anchoredContainer, 0.34);

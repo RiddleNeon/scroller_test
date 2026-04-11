@@ -18,12 +18,12 @@ class UserPreferences {
 
     final profile = data['recommendationProfile'] ?? {};
 
-    if(profile['totalInteractions'] != null) {
+    if (profile['totalInteractions'] != null) {
       print("User has ${profile['totalInteractions']} total interactions, avg completion rate: ${profile['avgCompletionRate']}");
     } else {
       print("User has no interactions yet.");
     }
-    
+
     return UserPreferences(
       tagPreferences: Map<String, double>.from(profile['tagVector'] ?? {}),
       authorPreferences: Map<String, double>.from(profile['authorVector'] ?? {}),

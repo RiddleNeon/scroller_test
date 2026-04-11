@@ -1,4 +1,3 @@
-
 import 'package:camera/camera.dart';
 import 'package:flutter/material.dart';
 
@@ -55,11 +54,7 @@ class WebCameraState extends State<WebCamera> {
 
   Future _startCamera(int index) async {
     await controller?.dispose();
-    final newController = CameraController(
-      cameras[index],
-      ResolutionPreset.high,
-      enableAudio: false,
-    );
+    final newController = CameraController(cameras[index], ResolutionPreset.high, enableAudio: false);
     await newController.initialize();
     if (!mounted) return;
     setState(() {
@@ -88,21 +83,25 @@ class WebCameraState extends State<WebCamera> {
     return _loading
         ? const Center(child: CircularProgressIndicator(color: Colors.white))
         : _error != null
-            ? Center(
-                child: Padding(
-                  padding: const EdgeInsets.all(24),
-                  child: Text(_error!, style: const TextStyle(color: Colors.white70), textAlign: TextAlign.center),
-                ),
-              )
-            : controller != null
-                ? FittedBox(
-                    fit: BoxFit.cover,
-                    child: SizedBox(
-                      width: controller!.value.previewSize?.height ?? 380,
-                      height: controller!.value.previewSize?.width ?? 520,
-                      child: CameraPreview(controller!),
-                    ),
-                  )
-                : Container();
+        ? Center(
+            child: Padding(
+              padding: const EdgeInsets.all(24),
+              child: Text(
+                _error!,
+                style: const TextStyle(color: Colors.white70),
+                textAlign: TextAlign.center,
+              ),
+            ),
+          )
+        : controller != null
+        ? FittedBox(
+            fit: BoxFit.cover,
+            child: SizedBox(
+              width: controller!.value.previewSize?.height ?? 380,
+              height: controller!.value.previewSize?.width ?? 520,
+              child: CameraPreview(controller!),
+            ),
+          )
+        : Container();
   }
 }

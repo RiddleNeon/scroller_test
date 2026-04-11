@@ -70,8 +70,10 @@ class Chat {
     final updatedAtValue = conversation['updated_at'];
     final createdAt = _parseDateTime(createdAtValue);
     final updatedAt = _parseDateTime(updatedAtValue);
-    
-    print("Creating chat from supabase data: conversationId=${conversation['id']}, partnerId=${partner.id}, createdAt=$createdAt, updatedAt=$updatedAt, lastMessage=$lastMessage, lastMessageByMe=$lastMessageByMe");
+
+    print(
+      "Creating chat from supabase data: conversationId=${conversation['id']}, partnerId=${partner.id}, createdAt=$createdAt, updatedAt=$updatedAt, lastMessage=$lastMessage, lastMessageByMe=$lastMessageByMe",
+    );
 
     return Chat(
       conversationId: conversation['id'] as int?,
@@ -85,9 +87,10 @@ class Chat {
       createdAt: createdAt,
     );
   }
-  
+
   @override
-  String toString() => 'Chat(conversationId: $conversationId, currentUserId: $currentUserId, partnerId: $partnerId, partnerName: $partnerName, lastMessageAt: $lastMessageAt, lastMessage: $lastMessage, lastMessageByMe: $lastMessageByMe, createdAt: $createdAt)';
+  String toString() =>
+      'Chat(conversationId: $conversationId, currentUserId: $currentUserId, partnerId: $partnerId, partnerName: $partnerName, lastMessageAt: $lastMessageAt, lastMessage: $lastMessage, lastMessageByMe: $lastMessageByMe, createdAt: $createdAt)';
 }
 
 class ChatManager {

@@ -1,4 +1,5 @@
 import 'dart:math' as math;
+
 import 'package:flutter/material.dart';
 import 'package:vector_math/vector_math_64.dart' hide Matrix4;
 
@@ -7,12 +8,7 @@ class RollingDigitCounter extends StatelessWidget {
   final TextStyle style;
   final int visibleNumbers;
 
-  const RollingDigitCounter({
-    super.key,
-    required this.value,
-    required this.style,
-    this.visibleNumbers = 1,
-  });
+  const RollingDigitCounter({super.key, required this.value, required this.style, this.visibleNumbers = 1});
 
   @override
   Widget build(BuildContext context) {
@@ -21,11 +17,7 @@ class RollingDigitCounter extends StatelessWidget {
     return Row(
       mainAxisSize: MainAxisSize.min,
       children: digits.split('').map((digit) {
-        return _DigitWheel(
-          digit: int.parse(digit),
-          style: style,
-          visibleNumbers: visibleNumbers,
-        );
+        return _DigitWheel(digit: int.parse(digit), style: style, visibleNumbers: visibleNumbers);
       }).toList(),
     );
   }
@@ -36,11 +28,7 @@ class _DigitWheel extends StatelessWidget {
   final TextStyle style;
   final int visibleNumbers;
 
-  const _DigitWheel({
-    required this.digit,
-    required this.style,
-    required this.visibleNumbers,
-  });
+  const _DigitWheel({required this.digit, required this.style, required this.visibleNumbers});
 
   @override
   Widget build(BuildContext context) {
@@ -58,13 +46,7 @@ class _DigitWheel extends StatelessWidget {
           duration: const Duration(milliseconds: 600),
           curve: Curves.easeInOutBack,
           builder: (context, value, child) {
-            return Stack(
-              alignment: Alignment.center,
-              children: [
-                for (int i = 0; i <= 9; i++)
-                  _buildAnimatedDigit(i, value, digitHeight),
-              ],
-            );
+            return Stack(alignment: Alignment.center, children: [for (int i = 0; i <= 9; i++) _buildAnimatedDigit(i, value, digitHeight)]);
           },
         ),
       ),
@@ -85,11 +67,7 @@ class _DigitWheel extends StatelessWidget {
       alignment: Alignment.center,
       child: Opacity(
         opacity: opacity,
-        child: Text(
-          '$index',
-          style: style.copyWith(height: 1.0),
-          textAlign: TextAlign.center,
-        ),
+        child: Text('$index', style: style.copyWith(height: 1.0), textAlign: TextAlign.center),
       ),
     );
   }

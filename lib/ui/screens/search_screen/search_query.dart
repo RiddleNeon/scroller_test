@@ -7,17 +7,18 @@ class SearchQuery<T> {
   int _offset = 0;
   bool _hasMoreContent = true;
   bool _didLoadTotalCount = false;
+
   bool get isCompleted => currentLoadingTask == null;
 
   SearchQuery(this.executeQuery, this.countQuery);
-  
+
   Future<void>? currentLoadingTask;
 
   Future<void> preloadMore({int limit = 20}) async {
     if (currentLoadingTask != null) {
       return currentLoadingTask;
     }
-    if(!_hasMoreContent) {
+    if (!_hasMoreContent) {
       return Future.value();
     }
     currentLoadingTask = _preloadMore(limit: limit).whenComplete(() {

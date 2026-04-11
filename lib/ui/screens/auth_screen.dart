@@ -341,18 +341,8 @@ class _LoginScreenState extends State<LoginScreen> with TickerProviderStateMixin
             child: AnimatedSwitcher(
               duration: const Duration(milliseconds: 500),
               reverseDuration: const Duration(milliseconds: 450),
-              transitionBuilder: (child, animation) =>
-                  _buildHorizontalClipTransition(
-                    child: child,
-                    animation: animation,
-                  ),
-              layoutBuilder: (currentChild, previousChildren) => Stack(
-                clipBehavior: Clip.hardEdge,
-                children: [
-                  ...previousChildren,
-                  ?currentChild,
-                ],
-              ),
+              transitionBuilder: (child, animation) => _buildHorizontalClipTransition(child: child, animation: animation),
+              layoutBuilder: (currentChild, previousChildren) => Stack(clipBehavior: Clip.hardEdge, children: [...previousChildren, ?currentChild]),
               child: _buildModeFormContent(cs, theme),
             ),
           ),

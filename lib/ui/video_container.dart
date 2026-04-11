@@ -11,17 +11,12 @@ class VideoContainer {
   VideoContainer({required this.video});
 
   Future<void> loadController() async {
-    if(video == null) return;
-    
-    controller = VideoPlayerController.networkUrl(
-      Uri.parse(video!.videoUrl),
-      videoPlayerOptions: VideoPlayerOptions(
-        mixWithOthers: true,
-      ),
-    );
+    if (video == null) return;
+
+    controller = VideoPlayerController.networkUrl(Uri.parse(video!.videoUrl), videoPlayerOptions: VideoPlayerOptions(mixWithOthers: true));
 
     await controller!.initialize();
-    
+
     loadedAt = DateTime.now();
     return controller!.setLooping(true);
   }

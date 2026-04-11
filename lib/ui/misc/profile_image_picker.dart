@@ -2,10 +2,10 @@ import 'dart:async';
 import 'dart:convert';
 
 import 'package:cached_network_image/cached_network_image.dart';
+import 'package:file_picker/file_picker.dart';
 import 'package:flutter/foundation.dart';
 import 'package:flutter/material.dart';
 import 'package:http/http.dart' as http;
-import 'package:file_picker/file_picker.dart';
 import 'package:wurp/logic/repositories/user_repository.dart';
 import 'package:wurp/ui/animations/slide_morph_transitions.dart';
 
@@ -25,12 +25,10 @@ class _ProfileImagePickerSheet extends StatefulWidget {
   const _ProfileImagePickerSheet();
 
   @override
-  State<_ProfileImagePickerSheet> createState() =>
-      _ProfileImagePickerSheetState();
+  State<_ProfileImagePickerSheet> createState() => _ProfileImagePickerSheetState();
 }
 
-class _ProfileImagePickerSheetState extends State<_ProfileImagePickerSheet>
-    with SingleTickerProviderStateMixin {
+class _ProfileImagePickerSheetState extends State<_ProfileImagePickerSheet> with SingleTickerProviderStateMixin {
   int _selectedTab = 0;
   Uint8List? _pickedBytes;
 
@@ -44,15 +42,13 @@ class _ProfileImagePickerSheetState extends State<_ProfileImagePickerSheet>
   @override
   void initState() {
     super.initState();
-    _fadeCtrl = AnimationController(
-        vsync: this, duration: const Duration(milliseconds: 300));
+    _fadeCtrl = AnimationController(vsync: this, duration: const Duration(milliseconds: 300));
     _fadeAnim = CurvedAnimation(parent: _fadeCtrl, curve: Curves.easeOut);
     _fadeCtrl.forward();
 
     _seedController.addListener(() {
       final seed = _seedController.text.trim();
-      setState(() =>
-      _seedPreviewUrl = seed.isNotEmpty ? createUserProfileImageUrl(seed) : '');
+      setState(() => _seedPreviewUrl = seed.isNotEmpty ? createUserProfileImageUrl(seed) : '');
     });
   }
 
@@ -69,11 +65,7 @@ class _ProfileImagePickerSheetState extends State<_ProfileImagePickerSheet>
       return;
     }
 
-    final result = await FilePicker.platform.pickFiles(
-      type: FileType.image,
-      allowMultiple: false,
-      withData: true,
-    );
+    final result = await FilePicker.platform.pickFiles(type: FileType.image, allowMultiple: false, withData: true);
 
     if (result != null && result.files.first.bytes != null) {
       setState(() {
@@ -83,11 +75,7 @@ class _ProfileImagePickerSheetState extends State<_ProfileImagePickerSheet>
   }
 
   Future<void> _pickImageWebCamera() async {
-    final bytes = await showDialog<Uint8List>(
-      context: context,
-      barrierDismissible: false,
-      builder: (_) => const WebCameraDialog(preferFrontCamera: true),
-    );
+    final bytes = await showDialog<Uint8List>(context: context, barrierDismissible: false, builder: (_) => const WebCameraDialog(preferFrontCamera: true));
     if (bytes != null && mounted) {
       setState(() {
         _pickedBytes = bytes;
@@ -97,13 +85,11 @@ class _ProfileImagePickerSheetState extends State<_ProfileImagePickerSheet>
 
   static const _cloudinaryCloudName = String.fromEnvironment('CLOUDINARY_CLOUD_NAME');
 
-  Future<String> _uploadToCloudinary(Uint8List bytes) async {    
-    final uri = Uri.parse(
-        'https://api.cloudinary.com/v1_1/$_cloudinaryCloudName/image/upload');
+  Future<String> _uploadToCloudinary(Uint8List bytes) async {
+    final uri = Uri.parse('https://api.cloudinary.com/v1_1/$_cloudinaryCloudName/image/upload');
     final request = http.MultipartRequest('POST', uri)
       ..fields['upload_preset'] = 'tmp_profile_imgs'
-      ..files.add(
-          http.MultipartFile.fromBytes('file', bytes, filename: 'profile.jpg'));
+      ..files.add(http.MultipartFile.fromBytes('file', bytes, filename: 'profile.jpg'));
     final response = await request.send();
     final body = await response.stream.bytesToString();
     if (response.statusCode != 200) {
@@ -139,8 +125,7 @@ class _ProfileImagePickerSheetState extends State<_ProfileImagePickerSheet>
     }
   }
 
-  void _showSnack(String msg) =>
-      ScaffoldMessenger.of(context).showSnackBar(SnackBar(content: Text(msg)));
+  void _showSnack(String msg) => ScaffoldMessenger.of(context).showSnackBar(SnackBar(content: Text(msg)));
 
   @override
   Widget build(BuildContext context) {
@@ -162,20 +147,12 @@ class _ProfileImagePickerSheetState extends State<_ProfileImagePickerSheet>
               Container(
                 width: 40,
                 height: 4,
-                decoration: BoxDecoration(
-                  color: cs.outlineVariant,
-                  borderRadius: BorderRadius.circular(2),
-                ),
+                decoration: BoxDecoration(color: cs.outlineVariant, borderRadius: BorderRadius.circular(2)),
               ),
               const SizedBox(height: 20),
               Text(
                 'Change profile picture',
-                style: TextStyle(
-                  color: cs.onSurface,
-                  fontSize: 18,
-                  fontWeight: FontWeight.w700,
-                  letterSpacing: -0.3,
-                ),
+                style: TextStyle(color: cs.onSurface, fontSize: 18, fontWeight: FontWeight.w700, letterSpacing: -0.3),
               ),
               const SizedBox(height: 20),
               _buildTabBar(cs),
@@ -187,12 +164,8 @@ class _ProfileImagePickerSheetState extends State<_ProfileImagePickerSheet>
                   keyboardDismissBehavior: ScrollViewKeyboardDismissBehavior.onDrag,
                   child: AnimatedSwitcher(
                     duration: const Duration(milliseconds: 250),
-                    transitionBuilder: (child, animation) => SlideMorphTransitions.switcher(
-                      child,
-                      animation,
-                      beginOffset: const Offset(0, 0.1),
-                      beginScale: 0.95,
-                    ),
+                    transitionBuilder: (child, animation) =>
+                        SlideMorphTransitions.switcher(child, animation, beginOffset: const Offset(0, 0.1), beginScale: 0.95),
                     child: _buildTabContent(cs),
                   ),
                 ),
@@ -209,19 +182,12 @@ class _ProfileImagePickerSheetState extends State<_ProfileImagePickerSheet>
   }
 
   Widget _buildTabBar(ColorScheme cs) {
-    const tabs = [
-      (Icons.photo_library_outlined, 'Gallery'),
-      (Icons.camera_alt_outlined, 'Camera'),
-      (Icons.auto_awesome_outlined, 'Random'),
-    ];
+    const tabs = [(Icons.photo_library_outlined, 'Gallery'), (Icons.camera_alt_outlined, 'Camera'), (Icons.auto_awesome_outlined, 'Random')];
 
     return Container(
       margin: const EdgeInsets.symmetric(horizontal: 24),
       height: 52,
-      decoration: BoxDecoration(
-        color: cs.surfaceContainer,
-        borderRadius: BorderRadius.circular(16),
-      ),
+      decoration: BoxDecoration(color: cs.surfaceContainer, borderRadius: BorderRadius.circular(16)),
       child: Row(
         children: List.generate(tabs.length, (i) {
           final selected = _selectedTab == i;
@@ -234,24 +200,15 @@ class _ProfileImagePickerSheetState extends State<_ProfileImagePickerSheet>
               child: AnimatedContainer(
                 duration: const Duration(milliseconds: 200),
                 margin: const EdgeInsets.all(4),
-                decoration: BoxDecoration(
-                  color: selected ? cs.primary : Colors.transparent,
-                  borderRadius: BorderRadius.circular(13),
-                ),
+                decoration: BoxDecoration(color: selected ? cs.primary : Colors.transparent, borderRadius: BorderRadius.circular(13)),
                 child: Row(
                   mainAxisAlignment: MainAxisAlignment.center,
                   children: [
-                    Icon(tabs[i].$1,
-                        size: 16,
-                        color: selected ? cs.onPrimary : cs.onSurfaceVariant),
+                    Icon(tabs[i].$1, size: 16, color: selected ? cs.onPrimary : cs.onSurfaceVariant),
                     const SizedBox(width: 5),
                     Text(
                       tabs[i].$2,
-                      style: TextStyle(
-                        fontSize: 13,
-                        fontWeight: FontWeight.w600,
-                        color: selected ? cs.onPrimary : cs.onSurfaceVariant,
-                      ),
+                      style: TextStyle(fontSize: 13, fontWeight: FontWeight.w600, color: selected ? cs.onPrimary : cs.onSurfaceVariant),
                     ),
                   ],
                 ),
@@ -282,14 +239,8 @@ class _ProfileImagePickerSheetState extends State<_ProfileImagePickerSheet>
       children: [
         _buildPreviewCircle(
           cs: cs,
-          child: _pickedBytes != null
-              ? Image.memory(_pickedBytes!, fit: BoxFit.cover)
-              : null,
-          placeholder: Icon(
-            isCamera ? Icons.camera_alt_outlined : Icons.photo_library_outlined,
-            size: 40,
-            color: cs.onSurfaceVariant.withValues(alpha: 0.5),
-          ),
+          child: _pickedBytes != null ? Image.memory(_pickedBytes!, fit: BoxFit.cover) : null,
+          placeholder: Icon(isCamera ? Icons.camera_alt_outlined : Icons.photo_library_outlined, size: 40, color: cs.onSurfaceVariant.withValues(alpha: 0.5)),
         ),
         const SizedBox(height: 28),
         _OutlinedActionButton(
@@ -302,9 +253,10 @@ class _ProfileImagePickerSheetState extends State<_ProfileImagePickerSheet>
           const SizedBox(height: 12),
           TextButton(
             onPressed: () => setState(() => _pickedBytes = null),
-            child: Text('Remove',
-                style: TextStyle(
-                    color: cs.onSurfaceVariant, fontWeight: FontWeight.w500)),
+            child: Text(
+              'Remove',
+              style: TextStyle(color: cs.onSurfaceVariant, fontWeight: FontWeight.w500),
+            ),
           ),
         ],
         const SizedBox(height: 16),
@@ -320,17 +272,13 @@ class _ProfileImagePickerSheetState extends State<_ProfileImagePickerSheet>
           cs: cs,
           child: _seedPreviewUrl.isNotEmpty
               ? CachedNetworkImage(
-            imageUrl: _seedPreviewUrl,
-            fit: BoxFit.cover,
-            placeholder: (_, _) => Center(
-                child: CircularProgressIndicator(
-                    strokeWidth: 2, color: cs.primary)),
-            errorWidget: (_, _, _) =>
-                Icon(Icons.error_outline, color: cs.onSurfaceVariant),
-          )
+                  imageUrl: _seedPreviewUrl,
+                  fit: BoxFit.cover,
+                  placeholder: (_, _) => Center(child: CircularProgressIndicator(strokeWidth: 2, color: cs.primary)),
+                  errorWidget: (_, _, _) => Icon(Icons.error_outline, color: cs.onSurfaceVariant),
+                )
               : null,
-          placeholder: Icon(Icons.auto_awesome_outlined,
-              size: 40, color: cs.onSurfaceVariant.withValues(alpha: 0.5)),
+          placeholder: Icon(Icons.auto_awesome_outlined, size: 40, color: cs.onSurfaceVariant.withValues(alpha: 0.5)),
         ),
         const SizedBox(height: 28),
         TextField(
@@ -345,15 +293,11 @@ class _ProfileImagePickerSheetState extends State<_ProfileImagePickerSheet>
             prefixIcon: Icon(Icons.tag, color: cs.onSurfaceVariant),
             suffixIcon: _seedController.text.isNotEmpty
                 ? IconButton(
-              icon:
-              Icon(Icons.close, size: 18, color: cs.onSurfaceVariant),
-              onPressed: () => _seedController.clear(),
-            )
+                    icon: Icon(Icons.close, size: 18, color: cs.onSurfaceVariant),
+                    onPressed: () => _seedController.clear(),
+                  )
                 : null,
-            border: OutlineInputBorder(
-              borderRadius: BorderRadius.circular(14),
-              borderSide: BorderSide.none,
-            ),
+            border: OutlineInputBorder(borderRadius: BorderRadius.circular(14), borderSide: BorderSide.none),
             focusedBorder: OutlineInputBorder(
               borderRadius: BorderRadius.circular(14),
               borderSide: BorderSide(color: cs.primary, width: 1.5),
@@ -364,8 +308,7 @@ class _ProfileImagePickerSheetState extends State<_ProfileImagePickerSheet>
         Text(
           'Same seed → same result every time',
           textAlign: TextAlign.center,
-          style: TextStyle(
-              fontSize: 12, color: cs.onSurfaceVariant, height: 1.5),
+          style: TextStyle(fontSize: 12, color: cs.onSurfaceVariant, height: 1.5),
         ),
         const SizedBox(height: 16),
       ],
@@ -374,11 +317,7 @@ class _ProfileImagePickerSheetState extends State<_ProfileImagePickerSheet>
 
   // ... (Rest der Hilfs-Widgets _buildPreviewCircle, _buildConfirmButton, _OutlinedActionButton bleibt gleich)
 
-  Widget _buildPreviewCircle({
-    required ColorScheme cs,
-    required Widget? child,
-    required Widget placeholder,
-  }) {
+  Widget _buildPreviewCircle({required ColorScheme cs, required Widget? child, required Widget placeholder}) {
     return Center(
       child: Container(
         width: 150,
@@ -387,26 +326,13 @@ class _ProfileImagePickerSheetState extends State<_ProfileImagePickerSheet>
           shape: BoxShape.circle,
           color: cs.surfaceContainerHighest,
           border: Border.all(color: cs.outlineVariant, width: 2),
-          boxShadow: [
-            BoxShadow(
-              color: cs.primary.withValues(alpha: 0.12),
-              blurRadius: 24,
-              offset: const Offset(0, 6),
-            ),
-          ],
+          boxShadow: [BoxShadow(color: cs.primary.withValues(alpha: 0.12), blurRadius: 24, offset: const Offset(0, 6))],
         ),
         child: ClipOval(
           child: AnimatedSwitcher(
             duration: const Duration(milliseconds: 300),
-            transitionBuilder: (child, animation) => SlideMorphTransitions.switcher(
-              child,
-              animation,
-              beginOffset: const Offset(0, 0.1),
-              beginScale: 0.95,
-            ),
-            child: child != null
-                ? SizedBox.expand(key: const ValueKey('img'), child: child)
-                : Center(key: const ValueKey('ph'), child: placeholder),
+            transitionBuilder: (child, animation) => SlideMorphTransitions.switcher(child, animation, beginOffset: const Offset(0, 0.1), beginScale: 0.95),
+            child: child != null ? SizedBox.expand(key: const ValueKey('img'), child: child) : Center(key: const ValueKey('ph'), child: placeholder),
           ),
         ),
       ),
@@ -414,8 +340,7 @@ class _ProfileImagePickerSheetState extends State<_ProfileImagePickerSheet>
   }
 
   Widget _buildConfirmButton(ColorScheme cs) {
-    final canConfirm = (_selectedTab < 2 && _pickedBytes != null) ||
-        (_selectedTab == 2 && _seedController.text.trim().isNotEmpty);
+    final canConfirm = (_selectedTab < 2 && _pickedBytes != null) || (_selectedTab == 2 && _seedController.text.trim().isNotEmpty);
 
     return Padding(
       padding: const EdgeInsets.symmetric(horizontal: 24),
@@ -438,37 +363,22 @@ class _ProfileImagePickerSheetState extends State<_ProfileImagePickerSheet>
               ),
               child: Center(
                 child: _uploading
-                    ? SizedBox(
-                        width: 22,
-                        height: 22,
-                        child: CircularProgressIndicator(
-                            color: cs.onPrimary, strokeWidth: 2.5),
-                      )
+                    ? SizedBox(width: 22, height: 22, child: CircularProgressIndicator(color: cs.onPrimary, strokeWidth: 2.5))
                     : Text(
                         'Save',
-                        style: TextStyle(
-                          color: cs.onPrimary,
-                          fontSize: 16,
-                          fontWeight: FontWeight.w700,
-                          letterSpacing: 0.2,
-                        ),
+                        style: TextStyle(color: cs.onPrimary, fontSize: 16, fontWeight: FontWeight.w700, letterSpacing: 0.2),
                       ),
-                ),
               ),
             ),
           ),
         ),
-      );
+      ),
+    );
   }
 }
 
 class _OutlinedActionButton extends StatelessWidget {
-  const _OutlinedActionButton({
-    required this.cs,
-    required this.icon,
-    required this.label,
-    required this.onTap,
-  });
+  const _OutlinedActionButton({required this.cs, required this.icon, required this.label, required this.onTap});
 
   final ColorScheme cs;
   final IconData icon;
@@ -493,11 +403,7 @@ class _OutlinedActionButton extends StatelessWidget {
             const SizedBox(width: 8),
             Text(
               label,
-              style: TextStyle(
-                color: cs.onSurface,
-                fontSize: 15,
-                fontWeight: FontWeight.w600,
-              ),
+              style: TextStyle(color: cs.onSurface, fontSize: 15, fontWeight: FontWeight.w600),
             ),
           ],
         ),

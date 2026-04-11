@@ -2,8 +2,7 @@ import 'dart:convert';
 
 import 'package:wurp/ui/screens/chat/chat_managing_screen.dart';
 
-Future<void> setupMessaging() async {
-}
+Future<void> setupMessaging() async {}
 
 void handleIncomingMessagePayload(String? body) {
   if (body == null) return;

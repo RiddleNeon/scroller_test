@@ -5,6 +5,7 @@ import 'package:wurp/ui/widgets/camera/web_camera.dart';
 class WebCameraDialog extends StatefulWidget {
   final bool preferFrontCamera;
   final bool showControls;
+
   const WebCameraDialog({super.key, this.preferFrontCamera = false, this.showControls = true});
 
   @override
@@ -13,12 +14,13 @@ class WebCameraDialog extends StatefulWidget {
 
 class _WebCameraDialogState extends State<WebCameraDialog> {
   bool _takingPhoto = false;
-  final GlobalObjectKey<WebCameraState> _webCameraState = const GlobalObjectKey('WebCamera'); 
-  
+  final GlobalObjectKey<WebCameraState> _webCameraState = const GlobalObjectKey('WebCamera');
+
   CameraController? get _controller => _webCameraState.currentState?.controller;
+
   List<CameraDescription> get _cameras => _webCameraState.currentState?.cameras ?? [];
-  
-  void switchCamera(){
+
+  void switchCamera() {
     _webCameraState.currentState?.switchCamera();
   }
 
@@ -31,10 +33,8 @@ class _WebCameraDialogState extends State<WebCameraDialog> {
       if (mounted) Navigator.of(context).pop(bytes);
     } catch (e) {
       setState(() => _takingPhoto = false);
-      if(mounted) {
-        ScaffoldMessenger.of(context).showSnackBar(
-          SnackBar(content: Text('Error: $e')),
-        );
+      if (mounted) {
+        ScaffoldMessenger.of(context).showSnackBar(SnackBar(content: Text('Error: $e')));
       }
     }
   }
@@ -43,11 +43,11 @@ class _WebCameraDialogState extends State<WebCameraDialog> {
   void dispose() {
     super.dispose();
   }
-  
+
   @override
   void initState() {
     Future.delayed(const Duration(milliseconds: 500), () {
-      if(mounted){
+      if (mounted) {
         setState(() {});
       }
     });
@@ -77,10 +77,7 @@ class _WebCameraDialogState extends State<WebCameraDialog> {
                   child: Container(
                     width: 36,
                     height: 36,
-                    decoration: BoxDecoration(
-                      color: Colors.black45,
-                      borderRadius: BorderRadius.circular(18),
-                    ),
+                    decoration: BoxDecoration(color: Colors.black45, borderRadius: BorderRadius.circular(18)),
                     child: const Icon(Icons.close, color: Colors.white, size: 20),
                   ),
                 ),
@@ -95,10 +92,7 @@ class _WebCameraDialogState extends State<WebCameraDialog> {
                     child: Container(
                       width: 36,
                       height: 36,
-                      decoration: BoxDecoration(
-                        color: Colors.black45,
-                        borderRadius: BorderRadius.circular(18),
-                      ),
+                      decoration: BoxDecoration(color: Colors.black45, borderRadius: BorderRadius.circular(18)),
                       child: const Icon(Icons.flip_camera_ios_outlined, color: Colors.white, size: 20),
                     ),
                   ),
@@ -119,13 +113,9 @@ class _WebCameraDialogState extends State<WebCameraDialog> {
                         shape: BoxShape.circle,
                         color: Colors.white,
                         border: Border.all(color: Colors.white38, width: 4),
-                        boxShadow: [
-                          const BoxShadow(color: Colors.black26, blurRadius: 12, spreadRadius: 2),
-                        ],
+                        boxShadow: [const BoxShadow(color: Colors.black26, blurRadius: 12, spreadRadius: 2)],
                       ),
-                      child: _takingPhoto
-                          ? const Center(child: CircularProgressIndicator(strokeWidth: 2, color: Colors.black54))
-                          : null,
+                      child: _takingPhoto ? const Center(child: CircularProgressIndicator(strokeWidth: 2, color: Colors.black54)) : null,
                     ),
                   ),
                 ),

@@ -1,13 +1,12 @@
+import 'package:supabase_flutter/supabase_flutter.dart' hide User;
 import 'package:wurp/base_logic.dart';
 import 'package:wurp/base_ui.dart';
-import 'package:supabase_flutter/supabase_flutter.dart' hide User;
 
 void main() async {
   print("running main");
   await initLogic();
   print("logic initialized");
-  
-  
+
   startApp();
 }
 
@@ -31,10 +30,12 @@ Future<void> ensureSupabaseInitialized() async {
 }
 
 Supabase? _supabase;
+
 Supabase get supabase {
   if (_supabase == null) {
     throw StateError('Supabase has not been initialized yet.');
   }
   return _supabase!;
 }
+
 SupabaseClient get supabaseClient => supabase.client;

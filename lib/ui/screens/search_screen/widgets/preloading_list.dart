@@ -107,9 +107,9 @@ class _PreloadingListState<T> extends State<PreloadingList<T>> {
             itemCount: widget.query.results.length,
             itemBuilder: (context, index) {
               if (widget.query.results.isEmpty) return EmptyState(label: widget.emptyStateLabel ?? 'Nothing found', cs: cs);
-                if (index == _currentLoadedCount) {
-                 return const SizedBox.shrink();
-               }
+              if (index == _currentLoadedCount) {
+                return const SizedBox.shrink();
+              }
               if (index < widget.query.results.length) {
                 return widget.itemBuilder(context, widget.query.results[index]);
               }
@@ -188,9 +188,7 @@ class AnimatedPreloadingList<T> extends StatefulWidget {
   AnimatedPreloadingListState<T> createState() => AnimatedPreloadingListState<T>();
 }
 
-class AnimatedPreloadingListState<T> extends State<AnimatedPreloadingList<T>>
-    with AutomaticKeepAliveClientMixin {
-
+class AnimatedPreloadingListState<T> extends State<AnimatedPreloadingList<T>> with AutomaticKeepAliveClientMixin {
   final GlobalKey<AnimatedListState> _listKey = GlobalKey<AnimatedListState>();
   final ScrollController _scrollController = ScrollController();
 
@@ -241,8 +239,7 @@ class AnimatedPreloadingListState<T> extends State<AnimatedPreloadingList<T>>
   void _onScroll() {
     if (_loading || _preloading) return;
 
-    if (_scrollController.position.pixels >=
-        _scrollController.position.maxScrollExtent - 300) {
+    if (_scrollController.position.pixels >= _scrollController.position.maxScrollExtent - 300) {
       preloadMore();
     }
   }
@@ -272,8 +269,7 @@ class AnimatedPreloadingListState<T> extends State<AnimatedPreloadingList<T>>
     }
 
     if (items.isEmpty) {
-      return widget.notFoundWidget ??
-          Center(child: Text(widget.emptyStateLabel ?? 'Nothing found'));
+      return widget.notFoundWidget ?? Center(child: Text(widget.emptyStateLabel ?? 'Nothing found'));
     }
 
     return AnimatedList(
@@ -285,13 +281,7 @@ class AnimatedPreloadingListState<T> extends State<AnimatedPreloadingList<T>>
           return const SizedBox.shrink();
         }
 
-        return widget.itemBuilder(
-          context,
-          items[index],
-          animation,
-          index,
-          items,
-        );
+        return widget.itemBuilder(context, items[index], animation, index, items);
       },
     );
   }

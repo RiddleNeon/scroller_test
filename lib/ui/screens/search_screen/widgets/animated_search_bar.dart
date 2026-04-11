@@ -1,12 +1,7 @@
 import 'package:flutter/material.dart';
 
 class AnimatedSearchBar extends StatelessWidget {
-  const AnimatedSearchBar({
-    super.key,
-    required this.visibility,
-    required this.slotHeight,
-    required this.child,
-  });
+  const AnimatedSearchBar({super.key, required this.visibility, required this.slotHeight, required this.child});
 
   final double visibility;
   final double slotHeight;

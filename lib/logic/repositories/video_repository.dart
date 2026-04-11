@@ -45,14 +45,7 @@ class VideoRepository {
     required String authorId,
     List<String> tags = const [],
   }) async {
-    await publishVideoSupabase(
-      title: title,
-      description: description,
-      videoUrl: videoUrl,
-      thumbnailUrl: thumbnailUrl,
-      authorId: authorId,
-      tags: tags,
-    );
+    await publishVideoSupabase(title: title, description: description, videoUrl: videoUrl, thumbnailUrl: thumbnailUrl, authorId: authorId, tags: tags);
   }
 
   Future<void> publishVideoSupabase({
@@ -64,36 +57,35 @@ class VideoRepository {
     List<String> tags = const [],
     int commentCount = 0,
   }) async {
-    final publishedVideoId = (await supabaseClient
-            .from('videos')
-            .insert({
-              'title': title,
-              'description': description,
-              'video_url': videoUrl,
-              'thumbnail_url': thumbnailUrl ?? '',
-              'author_id': authorId,
-              'is_published': true,
-              'comment_count': commentCount,
-            })
-            .select('id')
-            .single())['id'] as int;
-    if (tags.isNotEmpty) {      
-      final upsertedTags = await supabaseClient.from('tags').upsert(
-        tags.map((tag) => {'name': tag.toLowerCase()}).toList(),
-        onConflict: 'name',
-      ).select('id');
+    final publishedVideoId =
+        (await supabaseClient
+                .from('videos')
+                .insert({
+                  'title': title,
+                  'description': description,
+                  'video_url': videoUrl,
+                  'thumbnail_url': thumbnailUrl ?? '',
+                  'author_id': authorId,
+                  'is_published': true,
+                  'comment_count': commentCount,
+                })
+                .select('id')
+                .single())['id']
+            as int;
+    if (tags.isNotEmpty) {
+      final upsertedTags = await supabaseClient.from('tags').upsert(tags.map((tag) => {'name': tag.toLowerCase()}).toList(), onConflict: 'name').select('id');
 
       final videoTags = upsertedTags.map((tag) => {'video_id': publishedVideoId, 'tag_id': tag['id']}).toList();
       await supabaseClient.from('video_tags').upsert(videoTags, onConflict: 'video_id, tag_id');
     }
   }
-  
+
   // Toggles like for the given video and user. Returns true if the video is now liked, false if it's now unliked. Also removes dislike if it exists.
   Future<bool> toggleLike(String videoId) async {
     final String result = await supabaseClient.rpc('toggle_like', params: {'p_video_id': _parseVideoId(videoId)});
     return result == 'liked';
   }
-  
+
   Future<bool> toggleDislike(String videoId) async {
     final String result = await supabaseClient.rpc('toggle_dislike', params: {'p_video_id': _parseVideoId(videoId)});
     return result == 'disliked';
@@ -123,17 +115,11 @@ class VideoRepository {
     );
   }
 
-  Future<Comment> postCommentSupabase({
-    required int videoId,
-    required String content,
-    int? parentId,
-  }) async {
-    int insertedId = await supabaseClient.rpc('post_comment', params: {
-      'p_author_id': currentUser.id,
-      'p_video_id': videoId,
-      'p_parent_id': parentId,
-      'p_content': content,
-    });
+  Future<Comment> postCommentSupabase({required int videoId, required String content, int? parentId}) async {
+    int insertedId = await supabaseClient.rpc(
+      'post_comment',
+      params: {'p_author_id': currentUser.id, 'p_video_id': videoId, 'p_parent_id': parentId, 'p_content': content},
+    );
 
     return Comment(
       id: insertedId.toString(),
@@ -149,12 +135,7 @@ class VideoRepository {
     );
   }
 
-  Future<({List<Comment> comments, int? nextOffset})> getComments(
-    String videoId, {
-    String? commentId,
-    int offset = 0,
-    int limit = 20,
-  }) async {
+  Future<({List<Comment> comments, int? nextOffset})> getComments(String videoId, {String? commentId, int offset = 0, int limit = 20}) async {
     final comments = await getCommentsWithLikeSupabase(
       videoId: int.parse(videoId),
       parentCommentId: commentId == null ? null : int.tryParse(commentId),
@@ -165,30 +146,27 @@ class VideoRepository {
     return (comments: comments, nextOffset: comments.length < limit ? null : offset + comments.length);
   }
 
-  Future<List<Comment>> getCommentsWithLikeSupabase({
-    required int videoId,
-    int? parentCommentId,
-    int limit = 20,
-    int offset = 0,
-  }) async {
-    final rpcResult = await supabaseClient.rpc('get_comments_with_like', params: {
-      'p_video_id': videoId,
-      'p_current_user': currentUser.id,
-      'p_parent_id': parentCommentId,
-      'p_limit': 20, //fixme: hardcoded limit in the RPC function, should be passed as parameter
-      'p_offset': offset,
-    });
-    
-    if(rpcResult == null) {
+  Future<List<Comment>> getCommentsWithLikeSupabase({required int videoId, int? parentCommentId, int limit = 20, int offset = 0}) async {
+    final rpcResult = await supabaseClient.rpc(
+      'get_comments_with_like',
+      params: {
+        'p_video_id': videoId,
+        'p_current_user': currentUser.id,
+        'p_parent_id': parentCommentId,
+        'p_limit': 20, //fixme: hardcoded limit in the RPC function, should be passed as parameter
+        'p_offset': offset,
+      },
+    );
+
+    if (rpcResult == null) {
       print("RPC result is null, returning empty comment list");
       return [];
     }
-    
-    if(rpcResult is Map<String, dynamic>){
+
+    if (rpcResult is Map<String, dynamic>) {
       print("RPC result is a single comment, mapping it directly");
       return [_mapComment(rpcResult)];
     }
-    
 
     late final List rows;
     try {
@@ -196,12 +174,12 @@ class VideoRepository {
     } catch (_) {
       rows = (rpcResult as List).cast();
     }
-    
+
     print("RPC returned ${rows.length} comments for video $videoId with parentCommentId $parentCommentId, offset $offset, limit $limit");
 
     return rows.map<Comment>((e) => _mapComment(e)).toList();
   }
-  
+
   Comment _mapComment(Map<String, dynamic> e) {
     final Map<String, dynamic> profiles = e['profiles'] is String
         ? (jsonDecode(e['profiles']) as Map<String, dynamic>)
@@ -221,7 +199,6 @@ class VideoRepository {
     return Comment.fromSupabase(mapped, likedByMe: liked);
   }
 
-  
   Future<bool> toggleCommentLike(String commentId) async {
     final parsedCommentId = int.tryParse(commentId);
     if (parsedCommentId == null) {
@@ -234,10 +211,7 @@ class VideoRepository {
   Future<void> saveVideo(String userId, String videoId) async => saveVideoSupabase(userId, _parseVideoId(videoId));
 
   Future<void> saveVideoSupabase(String userId, int videoId) async {
-    await supabaseClient.from('saved_videos').upsert(
-      {'user_id': userId, 'video_id': videoId},
-      onConflict: 'user_id, video_id',
-    );
+    await supabaseClient.from('saved_videos').upsert({'user_id': userId, 'video_id': videoId}, onConflict: 'user_id, video_id');
   }
 
   Future<void> unsaveVideo(String userId, String videoId) async => unsaveVideoSupabase(userId, _parseVideoId(videoId));
@@ -249,12 +223,7 @@ class VideoRepository {
   Future<void> reportVideo(String userId, String videoId, String reason) async => reportVideoSupabase(userId, _parseVideoId(videoId), reason);
 
   Future<void> reportVideoSupabase(String userId, int videoId, String reason) async {
-    await supabaseClient.from('video_reports').insert({
-      'user_id': userId,
-      'video_id': videoId,
-      'reason': reason,
-      'status': 'pending',
-    });
+    await supabaseClient.from('video_reports').insert({'user_id': userId, 'video_id': videoId, 'reason': reason, 'status': 'pending'});
   }
 
   Future<void> flush() async {}
@@ -270,7 +239,6 @@ class VideoRepository {
         .map((e) => e['following_id'] as String)
         .toList();
     if (followingIds.isEmpty) return [];
-    
 
     final result = await supabaseClient
         .from('videos')
@@ -295,7 +263,6 @@ class VideoRepository {
     return result.map<Video>(_toVideo).toList();
   }
 
-  
   /// searches all videos where title, description or tags contain the query (case-insensitive), ordered by relevance desc then creation date and popularity desc. Also contains unprecise full text search, so "funny" will match "funny videos". For more precise tag search, use [searchVideosByTag].
   Future<({List<Video> videos, int? nextOffset})> searchVideos(String query, {int limit = 20, int offset = 0, bool withAuthor = false}) async {
     final videos = await searchVideosSupabase(query, limit: limit, offset: offset, withAuthor: withAuthor);
@@ -303,25 +270,20 @@ class VideoRepository {
   }
 
   Future<List<Video>> searchVideosSupabase(String query, {int limit = 20, int offset = 0, bool withAuthor = false}) async {
-    final result = await supabaseClient
-        .rpc(withAuthor ? 'search_videos_with_author' : 'search_videos', params: {
-      'search_query': query,
-      'p_limit': limit,
-      'p_offset': offset,
-    });
-    
+    final result = await supabaseClient.rpc(
+      withAuthor ? 'search_videos_with_author' : 'search_videos',
+      params: {'search_query': query, 'p_limit': limit, 'p_offset': offset},
+    );
+
     return (result as List).map<Video>((e) => _toVideo(e)).toList();
   }
-  
+
   /// returns the total length of the search result of the search query, without pagination. Useful for showing total result count in the UI.
   Future<int> countSearchVideos(String query) async {
-    final result = await supabaseClient
-        .rpc('count_search_videos', params: {
-      'search_query': query,
-    });
+    final result = await supabaseClient.rpc('count_search_videos', params: {'search_query': query});
     return result as int;
   }
-  
+
   ///searches all videos with a given tag, ordered by creation date desc. Warning: only outputs videos with that exact tag, so "funny" won't match "funny videos". Use [searchVideos] for more flexible search.
   Future<({List<Video> videos, int? nextOffset})> searchVideosByTag(String tag, {int limit = 20, int offset = 0}) async {
     final videos = await searchVideosByTagSupabase(tag, limit: limit, offset: offset);
@@ -352,7 +314,6 @@ class VideoRepository {
     final videoIds = taggedVideoIds.map((e) => e['video_id']).toSet().toList();
     if (videoIds.isEmpty) return [];
 
-    
     final result = await supabaseClient
         .from('videos')
         .select(_videoSelect)
@@ -367,13 +328,10 @@ class VideoRepository {
 
   Future<List<Video>> getRelatedVideosSupabase(Video video, {int limit = 10}) async {
     if (video.tags.isEmpty) return [];
-    final taggedVideoIds = await supabaseClient
-        .from('video_tags')
-        .select('video_id, tags!inner(name)')
-        .inFilter('tags.name', video.tags.take(5).toList());
+    final taggedVideoIds = await supabaseClient.from('video_tags').select('video_id, tags!inner(name)').inFilter('tags.name', video.tags.take(5).toList());
     final videoIds = taggedVideoIds.map((e) => e['video_id']).where((id) => id.toString() != video.id).toSet().toList();
     if (videoIds.isEmpty) return [];
-    
+
     final result = await supabaseClient
         .from('videos')
         .select(_videoSelect)
@@ -420,10 +378,7 @@ class VideoRepository {
   Video _toVideo(Map<String, dynamic> data) {
     final profile = (data['profiles'] as Map<String, dynamic>? ?? <String, dynamic>{});
     final authorName = profile['display_name'] ?? profile['username'] ?? data['display_name'] ?? data['username'] ?? 'Unknown';
-    final tags = (data['video_tags'] as List? ?? const [])
-        .map((vt) => vt['tags']?['name'] as String?)
-        .whereType<String>()
-        .toList();
+    final tags = (data['video_tags'] as List? ?? const []).map((vt) => vt['tags']?['name'] as String?).whereType<String>().toList();
     return Video.fromSupabase(data, authorName, tags);
   }
 

@@ -9,7 +9,7 @@ import '../../../../logic/local_storage/local_seen_service.dart';
 
 class UserCard extends StatefulWidget {
   const UserCard({super.key, required this.initialUser, required this.cs, this.onFollowChange});
-  
+
   final void Function(bool)? onFollowChange;
   final UserProfile initialUser;
   final ColorScheme cs;
@@ -43,7 +43,7 @@ class _UserCardState extends State<UserCard> {
                   hasBackButton: true,
                   initialFollowed: localSeenService.isFollowing(user.id),
                   onFollowChange: (bool followed) {
-                    if(mounted) {
+                    if (mounted) {
                       setState(() {
                         user = user.copyWith(followersCount: user.followersCount + (followed ? 1 : -1));
                         _followButtonState.currentState?.setFollowed(followed);
@@ -78,7 +78,8 @@ class _UserCardState extends State<UserCard> {
                       StatChip(icon: Icons.favorite_border_rounded, label: _formatCount(user.totalLikesCount), cs: widget.cs),
                       StatChip(icon: FontAwesomeIcons.users, label: _formatCount(user.followersCount), cs: widget.cs),
                     ],
-                  ),*/ //fixme
+                  ),*/
+                  //fixme
                 ],
               ),
             ),
@@ -86,7 +87,7 @@ class _UserCardState extends State<UserCard> {
               FollowButton(
                 key: _followButtonState,
                 onChanged: (followed) async {
-                  if(mounted) {
+                  if (mounted) {
                     setState(() {
                       user = user.copyWith(followersCount: user.followersCount + (followed ? 1 : -1));
                       widget.onFollowChange?.call(followed);

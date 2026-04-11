@@ -51,12 +51,11 @@ class QuestBubblesOverlayState extends State<QuestBubblesOverlay> with TickerPro
   }
 
   void refresh() => setState(() {});
-  
+
   void onScaleChange(double newScale, Rect viewportRect) {
     setState(() {
-    _connectionPainter.scale = newScale;
-    _connectionPainter.viewportRect = viewportRect;
-      
+      _connectionPainter.scale = newScale;
+      _connectionPainter.viewportRect = viewportRect;
     });
   }
 

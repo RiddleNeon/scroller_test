@@ -221,38 +221,36 @@ class _VideoItemState extends State<VideoItem> {
       child: Center(
         child: RepaintBoundary(
           child: AspectRatio(
-              aspectRatio: widget.controller.value.aspectRatio,
-              child: LayoutBuilder(
-                builder: (context, constraints) {
-                  return Stack(
-                    children: [
-                      RepaintBoundary(
-                        child: VideoPlayer(widget.controller, key: ValueKey(widget.video.id)),
-                      ),
-                      PageOverlay(
-                        provider: widget.provider,
-                        video: widget.video,
-                        onLikeChanged: onLikeChanged,
-                        onDislikeChanged: onDislikeChanged,
-                        onShareChanged: onShareChanged,
-                        onSaveChanged: onSaveChanged,
-                        onCommentChanged: onCommentChanged,
-                        initiallyLiked: localSeenService.isLiked(widget.video.id),
-                        initiallyDisliked: localSeenService.isDisliked(widget.video.id),
-                        onPauseChanged: (isPaused) {
-                          print("Pause changed: $isPaused");
-                          if(isPaused){
-                            widget.controller.pause();
-                          } else {
-                            widget.controller.play();
-                          }
-                        },
-                        index: widget.index,
-                      ),
-                    ],
-                  );
-                },
-              ),
+            aspectRatio: widget.controller.value.aspectRatio,
+            child: LayoutBuilder(
+              builder: (context, constraints) {
+                return Stack(
+                  children: [
+                    RepaintBoundary(child: VideoPlayer(widget.controller, key: ValueKey(widget.video.id))),
+                    PageOverlay(
+                      provider: widget.provider,
+                      video: widget.video,
+                      onLikeChanged: onLikeChanged,
+                      onDislikeChanged: onDislikeChanged,
+                      onShareChanged: onShareChanged,
+                      onSaveChanged: onSaveChanged,
+                      onCommentChanged: onCommentChanged,
+                      initiallyLiked: localSeenService.isLiked(widget.video.id),
+                      initiallyDisliked: localSeenService.isDisliked(widget.video.id),
+                      onPauseChanged: (isPaused) {
+                        print("Pause changed: $isPaused");
+                        if (isPaused) {
+                          widget.controller.pause();
+                        } else {
+                          widget.controller.play();
+                        }
+                      },
+                      index: widget.index,
+                    ),
+                  ],
+                );
+              },
+            ),
           ),
         ),
       ),

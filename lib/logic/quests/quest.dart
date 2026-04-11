@@ -35,16 +35,16 @@ class Quest {
   });
 
   Quest.fromJson(Map<String, dynamic> json)
-      : id = json['id'] as int,
-        name = json['name'] as String,
-        description = json['description'] as String,
-        subject = json['subject'] as String,
-        posX = (json['posX'] as num?)?.toDouble() ?? 0,
-        posY = (json['posY'] as num?)?.toDouble() ?? 0,
-        difficulty = (json['difficulty'] as num?)?.toDouble() ?? 0.5,
-        sizeX = (json['sizeX'] as num?)?.toDouble() ?? 200,
-        sizeY = (json['sizeY'] as num?)?.toDouble() ?? 100,
-        isCompleted = json['isCompleted'] as bool? ?? false;
+    : id = json['id'] as int,
+      name = json['name'] as String,
+      description = json['description'] as String,
+      subject = json['subject'] as String,
+      posX = (json['posX'] as num?)?.toDouble() ?? 0,
+      posY = (json['posY'] as num?)?.toDouble() ?? 0,
+      difficulty = (json['difficulty'] as num?)?.toDouble() ?? 0.5,
+      sizeX = (json['sizeX'] as num?)?.toDouble() ?? 200,
+      sizeY = (json['sizeY'] as num?)?.toDouble() ?? 100,
+      isCompleted = json['isCompleted'] as bool? ?? false;
 
   Quest copyWith({
     int? id,
@@ -70,5 +70,5 @@ class Quest {
       sizeY: sizeY ?? this.sizeY,
       isCompleted: isCompleted ?? this.isCompleted,
     );
-  }  
+  }
 }

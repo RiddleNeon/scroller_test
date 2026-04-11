@@ -17,7 +17,7 @@ void startApp() async {
       await auth.signOut();
     }
   }
-  
+
   initRouter();
   routerConfig.refresh();
 
@@ -32,10 +32,9 @@ void startApp() async {
           themeMode: value.$1.brightness == Brightness.dark ? ThemeMode.dark : ThemeMode.light,
           routerConfig: routerConfig,
         );
-      }
+      },
     ),
   );
 }
-
 
 final ValueNotifier<(ThemeData, String)> appThemeNotifier = ValueNotifier((AppTheme.light, 'default'));

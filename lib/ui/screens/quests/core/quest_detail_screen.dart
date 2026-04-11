@@ -180,7 +180,7 @@ class _QuestDetailScreenState extends State<QuestDetailScreen> {
             padding: const EdgeInsets.fromLTRB(20, 24, 20, 40),
             sliver: SliverList(
               delegate: SliverChildListDelegate([
-                _StatusRow(quest: _editedQuest, colorScheme: colorScheme, questSystem: questSystem,),
+                _StatusRow(quest: _editedQuest, colorScheme: colorScheme, questSystem: questSystem),
                 const SizedBox(height: 24),
                 _SectionCard(
                   colorScheme: colorScheme,
@@ -205,7 +205,13 @@ class _QuestDetailScreenState extends State<QuestDetailScreen> {
                   const SizedBox(height: 16),
                   _SectionCard(
                     colorScheme: colorScheme,
-                    child: _PrerequisitesSection(quest: _editedQuest, colorScheme: colorScheme, debugMode: widget.debugMode, editMode: _editMode, questSystem: questSystem,),
+                    child: _PrerequisitesSection(
+                      quest: _editedQuest,
+                      colorScheme: colorScheme,
+                      debugMode: widget.debugMode,
+                      editMode: _editMode,
+                      questSystem: questSystem,
+                    ),
                   ),
                 ],
                 if (widget.debugMode) ...[

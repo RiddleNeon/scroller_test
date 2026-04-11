@@ -5,6 +5,7 @@ import 'package:font_awesome_flutter/font_awesome_flutter.dart';
 import 'package:wurp/logic/chat/chat.dart';
 import 'package:wurp/logic/users/user_model.dart';
 import 'package:wurp/logic/video/video.dart';
+import 'package:wurp/ui/animations/slide_morph_transitions.dart';
 import 'package:wurp/ui/misc/avatar.dart';
 import 'package:wurp/ui/router.dart';
 import 'package:wurp/ui/screens/search_screen/search_query.dart';
@@ -14,14 +15,13 @@ import 'package:wurp/ui/screens/search_screen/widgets/search_user_card.dart';
 import 'package:wurp/ui/screens/search_screen/widgets/search_video_card.dart';
 import 'package:wurp/ui/widgets/logout_button.dart';
 import 'package:wurp/ui/widgets/overlays/follow_button.dart';
-import 'package:wurp/ui/animations/slide_morph_transitions.dart';
 
 import '../../base_logic.dart';
 import '../../logic/local_storage/local_seen_service.dart';
 import '../feed_view_model.dart';
 import '../misc/basic_player.dart';
-import '../misc/rolling_digit_counter.dart';
 import '../misc/profile_image_picker.dart';
+import '../misc/rolling_digit_counter.dart';
 import 'chat/chat_managing_screen.dart';
 
 class ProfileScreen extends StatefulWidget {
@@ -263,7 +263,10 @@ class _ProfileScreenState extends State<ProfileScreen> with TickerProviderStateM
 
   Widget _buildCollapsedTitle(ColorScheme cs) {
     return Container(
-      decoration: BoxDecoration(color: cs.surfaceContainer.withValues(alpha: 0.95), borderRadius: const BorderRadius.only(bottomLeft: Radius.circular(16), bottomRight: Radius.circular(16))),
+      decoration: BoxDecoration(
+        color: cs.surfaceContainer.withValues(alpha: 0.95),
+        borderRadius: const BorderRadius.only(bottomLeft: Radius.circular(16), bottomRight: Radius.circular(16)),
+      ),
       height: kToolbarHeight,
       padding: const EdgeInsets.symmetric(horizontal: 4),
       child: Row(

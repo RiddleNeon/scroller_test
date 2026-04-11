@@ -15,12 +15,15 @@ class _LogoutButtonState extends State<LogoutButton> {
   Widget build(BuildContext context) {
     return Tooltip(
       message: "logout",
-      child: InkWell(onTap: () async {
-        await onUserLogout();
-        
-        print("logged out, navigating to login screen");
-        routerConfig.go('/login');
-      }, child: const Icon(Icons.logout_rounded)),
+      child: InkWell(
+        onTap: () async {
+          await onUserLogout();
+
+          print("logged out, navigating to login screen");
+          routerConfig.go('/login');
+        },
+        child: const Icon(Icons.logout_rounded),
+      ),
     );
   }
 }

@@ -8,16 +8,18 @@ import 'package:wurp/logic/video/video.dart';
 import '../../base_logic.dart';
 import '../../tools/supabase_tests/supabase_login_test.dart';
 
-
 LocalSeenService get localSeenService {
   if (_localSeenService == null) throw StateError("Local Seen Service isn't initialized yet!");
   return _localSeenService!;
 }
+
 LocalSeenService? _localSeenService;
-Future<void> initLocalSeenService() async{
+
+Future<void> initLocalSeenService() async {
   _localSeenService = LocalSeenService();
   await _localSeenService!.init();
 }
+
 Future<void> disposeLocalSeenService() async {
   return await _localSeenService?.dispose();
 }
@@ -84,7 +86,7 @@ class LocalSeenService {
     _chatCursorBox = await Hive.openBox<DateTime>('${userId}_$_chatCursorBoxName');
     _conversationBox = await Hive.openBox('${userId}_$_conversationBoxName');
     _authorBox = await Hive.openBox('${userId}_$_authorBoxName');
-/*    await _seenBox.clear();
+    /*    await _seenBox.clear();
     await _settingsBox.clear();
     await _cursorBox.clear();
     await _cursorDirtyBox.clear();
@@ -125,7 +127,9 @@ class LocalSeenService {
     _interactionBox.put(video.id, {'authorId': video.authorId, 'tags': video.tags});
   }
 
-  bool hasSeen(String videoId) => false; /*_seenBox.containsKey(videoId);*/
+  bool hasSeen(String videoId) => false;
+
+  /*_seenBox.containsKey(videoId);*/
 
   Set<String> get allSeenIds => _seenBox.keys.cast<String>().toSet();
 
@@ -144,8 +148,10 @@ class LocalSeenService {
         videoId: videoId,
         authorId: meta?['authorId'] as String? ?? '',
         tags: meta?['tags'] != null ? List<String>.from(meta!['tags'] as List) : [],
-        watchTime: 0, //dummy values bc those are not stored
-        videoDuration: 1, //same here
+        watchTime: 0,
+        //dummy values bc those are not stored
+        videoDuration: 1,
+        //same here
         timestamp: seenAt,
       );
     }).toList();
@@ -169,7 +175,9 @@ class LocalSeenService {
   // ---------------------------------------------------------------------------
 
   Future<void> syncWithSupabase({bool onlyLoad = true}) async {
-    final lastSyncSeen = _settingsBox.get(_lastSyncSeenKey) as DateTime? ?? DateTime.utc(2024, 1, 1); // if the key doesn't exist, assume we have never synced and use a very old date
+    final lastSyncSeen =
+        _settingsBox.get(_lastSyncSeenKey) as DateTime? ??
+        DateTime.utc(2024, 1, 1); // if the key doesn't exist, assume we have never synced and use a very old date
     final lastSyncLikes = _settingsBox.get(_lastSyncLikesKey) as DateTime? ?? DateTime.utc(2024, 1, 1);
     final lastSyncDislikes = _settingsBox.get(_lastSyncDislikesKey) as DateTime? ?? DateTime.utc(2024, 1, 1);
     final lastSyncPreferences = _settingsBox.get(_lastSyncPreferencesKey) as DateTime? ?? DateTime.utc(2024, 1, 1);
@@ -359,11 +367,7 @@ class LocalSeenService {
         final followedUserId = key as String;
         final followedAt = _followingBox.get(followedUserId)!;
         if (!followedAt.isAfter(lastSync)) continue;
-        payload.add({
-          'follower_id': userId,
-          'following_id': followedUserId,
-          'created_at': followedAt.toIso8601String(),
-        });
+        payload.add({'follower_id': userId, 'following_id': followedUserId, 'created_at': followedAt.toIso8601String()});
       }
       if (payload.isNotEmpty) {
         await _upsertInChunks('follows', payload, onConflict: 'follower_id, following_id');
@@ -573,7 +577,7 @@ class LocalSeenService {
             .where((e) => (e.key as String).startsWith('$conversationId:'))
             .where((element) {
               return ((element.value['createdAt'] ?? DateTime(0)) as DateTime).isBefore(startOffset ?? DateTime.now());
-        })
+            })
             .map((e) => _messageFromMap(e.value as Map, conversationId))
             .toList()
           ..sort((a, b) => a.timestamp.compareTo(b.timestamp));

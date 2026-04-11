@@ -26,7 +26,6 @@ class UserProfile {
   });
 
   factory UserProfile.fromSupabase(Map<String, dynamic> data) {
-    
     return UserProfile(
       id: data['id'],
       username: data['display_name'] ?? data['username'] ?? '',
@@ -68,7 +67,15 @@ class UserProfile {
     };
   }
 
-  UserProfile copyWith({String? username, String? profileImageUrl, String? bio, int? followersCount, int? followingCount, int? totalVideosCount, int? totalLikesCount}) {
+  UserProfile copyWith({
+    String? username,
+    String? profileImageUrl,
+    String? bio,
+    int? followersCount,
+    int? followingCount,
+    int? totalVideosCount,
+    int? totalLikesCount,
+  }) {
     return UserProfile(
       id: id,
       username: username ?? this.username,

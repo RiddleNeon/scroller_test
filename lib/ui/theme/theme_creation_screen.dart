@@ -1,4 +1,6 @@
 import 'dart:convert';
+
+import 'package:file_picker/file_picker.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter_web_file_saver/flutter_web_file_saver.dart';
 import 'package:supabase_flutter/supabase_flutter.dart';
@@ -6,8 +8,6 @@ import 'package:uuid/uuid.dart';
 import 'package:wurp/base_ui.dart';
 import 'package:wurp/logic/themes/theme_model.dart';
 import 'package:wurp/ui/theme/theme_editor_screen.dart';
-
-import 'package:file_picker/file_picker.dart';
 
 import 'app_theme.dart';
 
@@ -17,8 +17,6 @@ class ThemeManagerScreen extends StatefulWidget {
   @override
   State<ThemeManagerScreen> createState() => _ThemeManagerScreenState();
 }
-
-
 
 class _ThemeManagerScreenState extends State<ThemeManagerScreen> with TickerProviderStateMixin {
   final _supabase = Supabase.instance.client;
@@ -74,7 +72,10 @@ class _ThemeManagerScreenState extends State<ThemeManagerScreen> with TickerProv
       final res = await _supabase.from('themes').select().eq('is_public', true).order('likes_count', ascending: false);
       if (mounted) {
         setState(() {
-          _communityThemes = (res as List).where((element) => element['id'] != defaultDarkThemeId && element['id'] != defaultLightThemeId,).map((e) => CustomThemeModel.fromJson(e)).toList();
+          _communityThemes = (res as List)
+              .where((element) => element['id'] != defaultDarkThemeId && element['id'] != defaultLightThemeId)
+              .map((e) => CustomThemeModel.fromJson(e))
+              .toList();
           _loadingCommunity = false;
         });
       }
@@ -107,7 +108,7 @@ class _ThemeManagerScreenState extends State<ThemeManagerScreen> with TickerProv
       }
       await _loadMyThemes();
       await _loadCommunityThemes();
-      if(_selectedThemeId == theme.id) await applyTheme(theme.id, false);
+      if (_selectedThemeId == theme.id) await applyTheme(theme.id, false);
       if (!mounted) return;
       showSnackBar(context, 'Theme Uploaded!');
     } catch (e) {
@@ -182,18 +183,16 @@ class _ThemeManagerScreenState extends State<ThemeManagerScreen> with TickerProv
   Future<void> applyTheme(String id, [bool pushToServer = true]) async {
     setState(() => _selectedThemeId = id);
     appThemeNotifier.value = (getTheme(id), id);
-    if(id == 'default') {
+    if (id == 'default') {
       await _supabase.from("applied_themes").upsert({'user_id': _uid, 'theme_id': defaultLightThemeId});
-    } else if(id == 'default-dark') {
+    } else if (id == 'default-dark') {
       await _supabase.from("applied_themes").upsert({'user_id': _uid, 'theme_id': defaultDarkThemeId});
     } else {
       await _supabase.from("applied_themes").upsert({'user_id': _uid, 'theme_id': id});
     }
-    
-    if(!mounted) return;
-    showSnackBar(context, 'Theme applied!');
-    
 
+    if (!mounted) return;
+    showSnackBar(context, 'Theme applied!');
   }
 
   Future<void> _openEditor({CustomThemeModel? existing}) async {

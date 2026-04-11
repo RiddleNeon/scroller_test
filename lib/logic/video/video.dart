@@ -102,13 +102,14 @@ class Video {
 class VideoWithAuthor {
   final Video video;
   final UserProfile author;
+
   VideoWithAuthor({required this.video, required this.author});
 
   static Future<VideoWithAuthor?> fromVideo(Video video, String currentUserId) async {
     final author = await video.getAuthorProfile();
     if (author == null) return null;
 
-    return VideoWithAuthor(video: video, author: author,);
+    return VideoWithAuthor(video: video, author: author);
   }
 
   static Future<Map<String, UserProfile>> fetchAuthorProfiles(List<Video> videos) async {

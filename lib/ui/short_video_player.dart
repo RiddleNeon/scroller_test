@@ -95,7 +95,7 @@ Widget feedVideos(
                       }
                       return FittedBox(
                         fit: BoxFit.fitHeight,
-                        child: CachedNetworkImage(imageUrl: snapshot.data!.thumbnailUrl!,),
+                        child: CachedNetworkImage(imageUrl: snapshot.data!.thumbnailUrl!),
                       );
                     },
                   );

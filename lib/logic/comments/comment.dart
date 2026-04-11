@@ -1,4 +1,3 @@
-
 class Comment {
   String id;
   String userId;
@@ -51,7 +50,7 @@ class Comment {
       likedByCurrentUser: likedByMe ?? (data['liked_by_current_user'] as bool?) ?? false,
     );
   }
-  
+
   void addReply(Comment reply) {
     _replies.add(reply);
     replyCount ??= _replies.length;
@@ -63,11 +62,11 @@ class Comment {
     replyCount ??= _replies.length;
     replyCount ??= ((replyCount ?? 0) + 1);
   }
-  
-  List<Comment> getReplies(){
+
+  List<Comment> getReplies() {
     return _replies;
   }
-  
+
   @override
   String toString() => "Comment '$message' by $username ($userProfileImageUrl) with $likeCount likes, written at $date";
 }

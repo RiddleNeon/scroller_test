@@ -20,20 +20,22 @@ class MessagingScreen extends StatefulWidget {
   final Future<List<ChatMessage>> Function(int limit, DateTime? lastVisibleMessage) loadMoreMessages;
 
   String? get recipientName => user.username;
+
   String get recipientId => user.id;
+
   String? get recipientAvatarUrl => user.profileImageUrl;
-  
+
   final UserProfile user;
-  
+
   final bool isOnline;
 
   const MessagingScreen({
     super.key,
     required this.onSend,
     this.isOnline = true,
-    required this.loadMoreMessages, 
-    required this.onMessageUpdate, 
-    required this.user, 
+    required this.loadMoreMessages,
+    required this.onMessageUpdate,
+    required this.user,
   });
 
   @override
@@ -121,8 +123,26 @@ class MessagingScreenState extends State<MessagingScreen> with TickerProviderSta
     }
   }
 
-  void _addMessage({required String text, required bool isMe, Future<void>? sendingFuture, bool animated = true, bool appendToEnd = true, bool isNewMessage = true, DateTime? createdAt, String? id}) {
-    if(isNewMessage) widget.onMessageUpdate(ChatMessage(id: getChatId(receiverId: widget.recipientId), text: text, isMe: isMe, timestamp: createdAt ?? DateTime.now()));
+  void _addMessage({
+    required String text,
+    required bool isMe,
+    Future<void>? sendingFuture,
+    bool animated = true,
+    bool appendToEnd = true,
+    bool isNewMessage = true,
+    DateTime? createdAt,
+    String? id,
+  }) {
+    if (isNewMessage) {
+      widget.onMessageUpdate(
+        ChatMessage(
+          id: getChatId(receiverId: widget.recipientId),
+          text: text,
+          isMe: isMe,
+          timestamp: createdAt ?? DateTime.now(),
+        ),
+      );
+    }
     final msg = ChatMessage(
       id: id ?? (createdAt ?? DateTime.now()).millisecondsSinceEpoch.toString(),
       text: text,
@@ -142,16 +162,18 @@ class MessagingScreenState extends State<MessagingScreen> with TickerProviderSta
 
     if (isMe) {
       if (sendingFuture == null) setState(() => msg.status = MessageStatus.sent);
-      sendingFuture?.then((val) {
-        if (mounted) {
-          setState(() => msg.status = MessageStatus.delivered);
-        }
-      }).catchError((e) {
-        if (mounted) {
-          setState(() => msg.status = MessageStatus.sent);
-        }
-        debugPrint('send message failed: $e');
-      });
+      sendingFuture
+          ?.then((val) {
+            if (mounted) {
+              setState(() => msg.status = MessageStatus.delivered);
+            }
+          })
+          .catchError((e) {
+            if (mounted) {
+              setState(() => msg.status = MessageStatus.sent);
+            }
+            debugPrint('send message failed: $e');
+          });
     }
   }
 
@@ -276,13 +298,15 @@ class MessagingScreenState extends State<MessagingScreen> with TickerProviderSta
     return AppBar(
       backgroundColor: cs.surfaceContainer,
       elevation: 0,
-      shape: const RoundedRectangleBorder(borderRadius: BorderRadiusGeometry.only(bottomLeft: Radius.circular(18), bottomRight: Radius.circular(18))),
+      shape: const RoundedRectangleBorder(
+        borderRadius: BorderRadiusGeometry.only(bottomLeft: Radius.circular(18), bottomRight: Radius.circular(18)),
+      ),
       scrolledUnderElevation: 0,
       toolbarHeight: kToolbarHeight,
       systemOverlayStyle: SystemUiOverlayStyle(statusBarBrightness: theme.brightness == Brightness.dark ? Brightness.dark : Brightness.light),
       leading: IconButton(
         icon: Icon(Icons.arrow_back_ios_new_rounded, size: 20, color: cs.onSurface),
-        onPressed: () => Navigator.maybePop(context), 
+        onPressed: () => Navigator.maybePop(context),
       ),
       title: InkWell(
         onTap: () => Navigator.of(context).push(
@@ -293,36 +317,35 @@ class MessagingScreenState extends State<MessagingScreen> with TickerProviderSta
                 ownProfile: widget.user.id == currentUser.id,
                 hasBackButton: true,
                 initialFollowed: localSeenService.isFollowing(widget.user.id),
-                onFollowChange: (bool followed) {
-                },
+                onFollowChange: (bool followed) {},
               );
             },
           ),
         ),
         borderRadius: const BorderRadius.only(bottomLeft: Radius.circular(25), bottomRight: Radius.circular(25)),
         child: Padding(
-            padding: const EdgeInsets.symmetric(horizontal: 8.0, vertical: 8),
-            child: Row(
-              children: [
-                _AvatarWidget(name: widget.recipientName ?? '', imageUrl: widget.recipientAvatarUrl, isOnline: widget.isOnline, radius: 18, colorScheme: cs),
-                const SizedBox(width: 10),
-                Column(
-                  crossAxisAlignment: CrossAxisAlignment.start,
-                  mainAxisSize: MainAxisSize.min,
-                  children: [
-                    Text(
-                      widget.recipientName ?? '',
-                      style: theme.textTheme.titleMedium?.copyWith(fontWeight: FontWeight.w700, fontSize: 15, color: cs.onSurface),
-                    ),
-                    Text(
-                      widget.isOnline ? 'Active now' : 'Offline',
-                      style: TextStyle(fontSize: 11, color: widget.isOnline ? const Color(0xFF20D070) : cs.outline, fontWeight: FontWeight.w500),
-                    ),
-                  ],
-                ),
-              ],
-            ),
+          padding: const EdgeInsets.symmetric(horizontal: 8.0, vertical: 8),
+          child: Row(
+            children: [
+              _AvatarWidget(name: widget.recipientName ?? '', imageUrl: widget.recipientAvatarUrl, isOnline: widget.isOnline, radius: 18, colorScheme: cs),
+              const SizedBox(width: 10),
+              Column(
+                crossAxisAlignment: CrossAxisAlignment.start,
+                mainAxisSize: MainAxisSize.min,
+                children: [
+                  Text(
+                    widget.recipientName ?? '',
+                    style: theme.textTheme.titleMedium?.copyWith(fontWeight: FontWeight.w700, fontSize: 15, color: cs.onSurface),
+                  ),
+                  Text(
+                    widget.isOnline ? 'Active now' : 'Offline',
+                    style: TextStyle(fontSize: 11, color: widget.isOnline ? const Color(0xFF20D070) : cs.outline, fontWeight: FontWeight.w500),
+                  ),
+                ],
+              ),
+            ],
           ),
+        ),
       ),
       actions: [
         Center(
@@ -343,7 +366,7 @@ class MessagingScreenState extends State<MessagingScreen> with TickerProviderSta
             },
           ),
         ),
-/*        IconButton(
+        /*        IconButton(
           icon: Icon(Icons.info_outline_rounded, color: cs.onSurface),
           onPressed: () {},
         ),*/

@@ -6,7 +6,7 @@ import '../local_storage/local_seen_service.dart';
 import '../users/user_model.dart';
 import '../video/video.dart';
 
-class BanAuthException extends AuthException{
+class BanAuthException extends AuthException {
   const BanAuthException(super.message);
 }
 
@@ -649,10 +649,11 @@ class UserRepository {
   Future<void> _adjustProfileMetric(String userId, String column, int delta) async {
     await supabaseClient.rpc('increment_profile_metric', params: {'p_user_id': userId, 'p_column': column, 'p_delta': delta});
   }
-  
+
   bool _currentlySelfBanning = false;
+
   Future<void> selfBanUserSupabase() async {
-    if(_currentlySelfBanning) return;
+    if (_currentlySelfBanning) return;
     _currentlySelfBanning = true;
     await supabaseClient.from('profiles').update({"is_banned": true}).eq('id', currentUser.id);
     _userCache.remove(currentUser.id);

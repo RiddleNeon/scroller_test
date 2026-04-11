@@ -62,13 +62,11 @@ class QuestRepository {
       final latest = row['quest_connections_latest'] as Map<String, dynamic>?;
       if (latest == null || latest['is_deleted'] == true) continue;
 
-      connections
-          .putIfAbsent(row['from_id'] as int, () => {})
-          .add(row['to_id'] as int);
-      
+      connections.putIfAbsent(row['from_id'] as int, () => {}).add(row['to_id'] as int);
+
       print('Found connection: ${row['from_id']} -> ${row['to_id']}');
     }
-    
+
     print("Fetched connections: ${connections.entries.map((e) => "${e.key} -> ${e.value}").toList()}");
 
     return (questMap.values.toList(), connections);
@@ -117,12 +115,11 @@ class QuestRepository {
 
     if (!exists) {
       print('Inserting new connection into quest_connections');
-      final result = await supabaseClient.from('quest_connections').insert({
-        'from_id': fromId,
-        'to_id': toId,
-        'created_at': DateTime.now().toIso8601String(),
-        'created_by': currentUser.id,
-      }).select().single();
+      final result = await supabaseClient
+          .from('quest_connections')
+          .insert({'from_id': fromId, 'to_id': toId, 'created_at': DateTime.now().toIso8601String(), 'created_by': currentUser.id})
+          .select()
+          .single();
       connectionId = result['connection_id'] as int;
     } else {
       connectionId = existingId;

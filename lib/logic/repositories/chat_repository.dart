@@ -27,9 +27,7 @@ class ChatRepository {
         .update({'updated_at': DateTime.now().toUtc().toIso8601String(), 'last_message': "${currentUser.id}: ${message.text}"})
         .eq('id', conversationId);
 
-    await supabaseClient
-        .from('messages')
-        .insert({
+    await supabaseClient.from('messages').insert({
       'conversation_id': conversationId,
       'sender_id': currentUser.id,
       'content': message.text,
@@ -54,17 +52,9 @@ class ChatRepository {
   /// 3. Fetch any server messages newer than that anchor (or all if cache
   ///    is empty) and merge them into the local cache.
   /// 4. Return the merged, sorted, limited result.
-  Future<List<ChatMessage>> getMessagesWith(
-      String otherUserId, {
-        int limit = 30,
-        DateTime? startOffset,
-      }) async {
+  Future<List<ChatMessage>> getMessagesWith(String otherUserId, {int limit = 30, DateTime? startOffset}) async {
     // 1. Local messages first.
-    final localMessages = await localSeenService.getMessagesWithLocal(
-      otherUserId,
-      limit: limit,
-      startOffset: startOffset,
-    );
+    final localMessages = await localSeenService.getMessagesWithLocal(otherUserId, limit: limit, startOffset: startOffset);
 
     // 2. Find the conversation id so we can query the server.
     final conversationId = await _findDirectConversationId(otherUserId);
@@ -129,7 +119,6 @@ class ChatRepository {
           .eq('conversation_id', conversationId)
           .isFilter('deleted_at', null); // exclude soft-deleted messages
 
-
       if (after != null) {
         query = query.gt('created_at', after.toUtc().toIso8601String());
       }
@@ -137,8 +126,7 @@ class ChatRepository {
         query = query.lt('created_at', before.toUtc().toIso8601String());
       }
 
-      final rows = (await (query.order('created_at', ascending: false)
-          .limit(limit)) as List)
+      final rows = (await (query.order('created_at', ascending: false).limit(limit)) as List)
           .map<Map<String, dynamic>>((row) => Map<String, dynamic>.from(row))
           .toList();
 
@@ -167,11 +155,7 @@ class ChatRepository {
     return localSeenService.getMessage(otherUserId, messageId);
   }
 
-  Future<({int? newCurrent, List<Chat> result})> getChats(
-      String userId, {
-        int limit = 10,
-        int offset = 0,
-      }) async {
+  Future<({int? newCurrent, List<Chat> result})> getChats(String userId, {int limit = 10, int offset = 0}) async {
     final cacheKey = _getChatsCacheKey(userId: userId, limit: limit, offset: offset);
     final cachedPage = _chatPageCache[cacheKey];
     if (cachedPage != null && !cachedPage.isExpired) {
@@ -183,29 +167,23 @@ class ChatRepository {
       return _cloneChatPage(await inFlight);
     }
 
-    final fetch = _getChatsFromLocalWithIncrementalSync(userId, limit: limit, offset: offset).then((value) {
-      _chatPageCache[cacheKey] = _CachedChatsPage(value);
-      return value;
-    }).whenComplete(() {
-      _inFlightChatPages.remove(cacheKey);
-    });
+    final fetch = _getChatsFromLocalWithIncrementalSync(userId, limit: limit, offset: offset)
+        .then((value) {
+          _chatPageCache[cacheKey] = _CachedChatsPage(value);
+          return value;
+        })
+        .whenComplete(() {
+          _inFlightChatPages.remove(cacheKey);
+        });
     _inFlightChatPages[cacheKey] = fetch;
     return _cloneChatPage(await fetch);
   }
 
-  Future<({int? newCurrent, List<Chat> result})> _getChatsFromLocalWithIncrementalSync(
-    String userId, {
-    int limit = 10,
-    int offset = 0,
-  }) async {
+  Future<({int? newCurrent, List<Chat> result})> _getChatsFromLocalWithIncrementalSync(String userId, {int limit = 10, int offset = 0}) async {
     await _syncConversationsIncrementalIfNeeded();
-    final localChats = localSeenService.getChats()
-      ..sort((a, b) => (b.lastMessageAt ?? b.createdAt).compareTo(a.lastMessageAt ?? a.createdAt));
+    final localChats = localSeenService.getChats()..sort((a, b) => (b.lastMessageAt ?? b.createdAt).compareTo(a.lastMessageAt ?? a.createdAt));
     final page = localChats.skip(offset).take(limit).toList();
-    return (
-      result: page,
-      newCurrent: localChats.length > offset + page.length ? offset + page.length : null,
-    );
+    return (result: page, newCurrent: localChats.length > offset + page.length ? offset + page.length : null);
   }
 
   Future<void> _syncConversationsIncrementalIfNeeded() async {
@@ -235,8 +213,7 @@ class ChatRepository {
       return cachedChat.conversationId;
     }
 
-    final currentMembershipRows =
-    await supabaseClient.from('conversation_members').select('conversation_id').eq('profile_id', currentUser.id);
+    final currentMembershipRows = await supabaseClient.from('conversation_members').select('conversation_id').eq('profile_id', currentUser.id);
     final currentConversationIds = (currentMembershipRows as List)
         .map<Map<String, dynamic>>((row) => Map<String, dynamic>.from(row))
         .map<int>((row) => row['conversation_id'] as int)
@@ -258,12 +235,7 @@ class ChatRepository {
       return null;
     }
 
-    final directConversations = await supabaseClient
-        .from('conversations')
-        .select('id')
-        .eq('type', 'direct')
-        .inFilter('id', sharedConversationIds)
-        .limit(1);
+    final directConversations = await supabaseClient.from('conversations').select('id').eq('type', 'direct').inFilter('id', sharedConversationIds).limit(1);
 
     final directConversationList = (directConversations as List).map<Map<String, dynamic>>((row) => Map<String, dynamic>.from(row)).toList();
     if (directConversationList.isEmpty) {
@@ -275,11 +247,7 @@ class ChatRepository {
     return conversationId;
   }
 
-  Future<int> _getOrCreateDirectConversation(
-      String receiverId, {
-        required String partnerName,
-        required String partnerProfileImageUrl,
-      }) async {
+  Future<int> _getOrCreateDirectConversation(String receiverId, {required String partnerName, required String partnerProfileImageUrl}) async {
     final existingConversationId = await _findDirectConversationId(receiverId);
     if (existingConversationId != null) {
       _conversationIdCache[receiverId] = _CachedConversationId(existingConversationId);
@@ -288,14 +256,7 @@ class ChatRepository {
 
     print("No existing conversation found with $receiverId, creating a new one. currentUser: ${currentUser.id}");
 
-    final conversationId = await supabaseClient.rpc(
-      'create_conversation',
-      params: {
-        'p_receiver_id': receiverId,
-        'p_title': null,
-        'p_type': 'direct',
-      },
-    ) as int;
+    final conversationId = await supabaseClient.rpc('create_conversation', params: {'p_receiver_id': receiverId, 'p_title': null, 'p_type': 'direct'}) as int;
 
     final now = DateTime.now();
 
@@ -322,19 +283,12 @@ class ChatRepository {
     _chatPageCache.removeWhere((key, _) => key.startsWith(prefix));
   }
 
-  String _getChatsCacheKey({
-    required String userId,
-    required int limit,
-    required int offset,
-  }) {
+  String _getChatsCacheKey({required String userId, required int limit, required int offset}) {
     return '$userId:$offset:$limit';
   }
 
   ({int? newCurrent, List<Chat> result}) _cloneChatPage(({int? newCurrent, List<Chat> result}) page) {
-    return (
-      newCurrent: page.newCurrent,
-      result: page.result.map(_cloneChat).toList(),
-    );
+    return (newCurrent: page.newCurrent, result: page.result.map(_cloneChat).toList());
   }
 
   Chat _cloneChat(Chat chat) {

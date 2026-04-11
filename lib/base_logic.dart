@@ -9,9 +9,9 @@ import 'package:wurp/ui/feed_view_model.dart';
 
 import 'logic/feed_recommendation/user_preference_manager.dart';
 import 'logic/local_storage/local_seen_service.dart';
-import 'logic/users/user_model.dart';
 import 'logic/repositories/chat_repository.dart';
 import 'logic/repositories/user_repository.dart';
+import 'logic/users/user_model.dart';
 import 'logic/video/video_provider.dart';
 
 GoTrueClient get auth => supabaseClient.auth;
@@ -43,7 +43,7 @@ Future<void> initLogic() async {
   debugPrint("Initializing logic...");
   WidgetsFlutterBinding.ensureInitialized();
   fvp.registerWith();
-  if(_currentUser != null) await onUserLogout();
+  if (_currentUser != null) await onUserLogout();
   await ensureSupabaseInitialized();
 }
 
@@ -57,7 +57,7 @@ Future<void> onUserLogin(UserProfile user) async {
 
 Future<void> applyThemeFromServer() async {
   final response = await supabaseClient.from('applied_themes').select().eq('user_id', currentUser.id).single();
-  final themeId = response['theme_id'] as String? ?? defaultDarkThemeId;  
+  final themeId = response['theme_id'] as String? ?? defaultDarkThemeId;
   final themeData = await supabaseClient.from('themes').select().eq('id', themeId).single();
   final theme = CustomThemeModel.fromJson(themeData);
   appThemeNotifier.value = (theme.colors.toThemeData(), themeId);

@@ -74,15 +74,15 @@ class _VideoCardState extends State<VideoCard> {
                             Positioned(
                               bottom: 5,
                               right: 5,
-                                child: Container(
-                                  padding: const EdgeInsets.symmetric(horizontal: 5, vertical: 2),
-                                  decoration: BoxDecoration(color: cs.scrim.withValues(alpha: 0.7), borderRadius: BorderRadius.circular(5)),
-                                  child: Text(
-                                    _formatDuration(video.duration),
-                                    style: TextStyle(color: cs.onSurface, fontSize: 10, fontWeight: FontWeight.w600),
-                                  ),
+                              child: Container(
+                                padding: const EdgeInsets.symmetric(horizontal: 5, vertical: 2),
+                                decoration: BoxDecoration(color: cs.scrim.withValues(alpha: 0.7), borderRadius: BorderRadius.circular(5)),
+                                child: Text(
+                                  _formatDuration(video.duration),
+                                  style: TextStyle(color: cs.onSurface, fontSize: 10, fontWeight: FontWeight.w600),
                                 ),
                               ),
+                            ),
                         ],
                       ),
                     ),
@@ -111,7 +111,7 @@ class _VideoCardState extends State<VideoCard> {
                                   video.authorName,
                                   maxLines: 1,
                                   overflow: TextOverflow.ellipsis,
-                                  style: TextStyle(color: cs.onSurfaceVariant, fontSize: 12, fontWeight: FontWeight.w500),  
+                                  style: TextStyle(color: cs.onSurfaceVariant, fontSize: 12, fontWeight: FontWeight.w500),
                                 ),
                               ),
                             ],

@@ -1,27 +1,17 @@
 import 'dart:ui' as ui;
+
 import 'package:flutter/material.dart';
 
-enum NinePatchMode {
-  stretch,
+enum NinePatchMode { stretch, tile }
 
-  tile,
-}
 class NinePatchBorder {
-  const NinePatchBorder({
-    required this.left,
-    required this.top,
-    required this.right,
-    required this.bottom,
-  })  : assert(left >= 0),
-        assert(top >= 0),
-        assert(right >= 0),
-        assert(bottom >= 0);
+  const NinePatchBorder({required this.left, required this.top, required this.right, required this.bottom})
+    : assert(left >= 0),
+      assert(top >= 0),
+      assert(right >= 0),
+      assert(bottom >= 0);
 
-  const NinePatchBorder.all(double value)
-      : left = value,
-        top = value,
-        right = value,
-        bottom = value;
+  const NinePatchBorder.all(double value) : left = value, top = value, right = value, bottom = value;
 
   final double left;
   final double top;
@@ -30,22 +20,18 @@ class NinePatchBorder {
 }
 
 class NinePatchPainter extends CustomPainter {
-  NinePatchPainter({
-    required this.image,
-    required this.border,
-    this.mode = NinePatchMode.stretch,
-    this.fit = BoxFit.fill,
-  });
+  NinePatchPainter({required this.image, required this.border, this.mode = NinePatchMode.stretch, this.fit = BoxFit.fill});
 
   final ui.Image image;
 
   final NinePatchBorder border;
 
   final NinePatchMode mode;
-  
+
   final BoxFit fit;
-  
+
   double get _iw => image.width.toDouble();
+
   double get _ih => image.height.toDouble();
 
   List<Rect> get _srcRects {
@@ -95,6 +81,7 @@ class NinePatchPainter extends CustomPainter {
   }
 
   static const _flexible = {1, 3, 4, 5, 7};
+
   @override
   void paint(Canvas canvas, Size size) {
     final srcs = _srcRects;
@@ -137,22 +124,11 @@ class NinePatchPainter extends CustomPainter {
   }
 
   @override
-  bool shouldRepaint(NinePatchPainter oldDelegate) =>
-      oldDelegate.image != image ||
-          oldDelegate.border != border ||
-          oldDelegate.mode != mode;
+  bool shouldRepaint(NinePatchPainter oldDelegate) => oldDelegate.image != image || oldDelegate.border != border || oldDelegate.mode != mode;
 }
 
 class NinePatchBox extends StatelessWidget {
-  const NinePatchBox({
-    super.key,
-    required this.image,
-    required this.border,
-    this.mode = NinePatchMode.stretch,
-    this.width,
-    this.height,
-    this.child,
-  });
+  const NinePatchBox({super.key, required this.image, required this.border, this.mode = NinePatchMode.stretch, this.width, this.height, this.child});
 
   final ui.Image image;
   final NinePatchBorder border;
@@ -164,16 +140,8 @@ class NinePatchBox extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     return CustomPaint(
-      painter: NinePatchPainter(
-        image: image,
-        border: border,
-        mode: mode,
-      ),
-      child: SizedBox(
-        width: width,
-        height: height,
-        child: child,
-      ),
+      painter: NinePatchPainter(image: image, border: border, mode: mode),
+      child: SizedBox(width: width, height: height, child: child),
     );
   }
 }

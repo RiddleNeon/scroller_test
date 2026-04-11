@@ -207,7 +207,8 @@ class _ChangeTimelineTile extends StatelessWidget {
         ? cs.outline
         : cs.primary;
 
-    return Material( //to prevent a 'no material widget found' error when this is used inside a ReorderableList
+    return Material(
+      //to prevent a 'no material widget found' error when this is used inside a ReorderableList
       child: InkWell(
         onTap: onTap,
         child: Padding(
@@ -236,22 +237,15 @@ class _ChangeTimelineTile extends StatelessWidget {
                         decoration: BoxDecoration(
                           shape: BoxShape.circle,
                           color: color,
-                          border: Border.all(color: cs.surface, width: 2), 
+                          border: Border.all(color: cs.surface, width: 2),
                         ),
                       ),
                       Expanded(
                         child: Stack(
                           clipBehavior: Clip.none,
                           children: [
-                            Container(
-                              width: 2,
-                              color: isLast ? Colors.transparent : color.withValues(alpha: 0.3),
-                            ),
-                            if (isLast) Positioned(
-                              top: -4,
-                              left: -7,
-                              child: Icon(Icons.arrow_downward_rounded, size: 16, color: color.withValues(alpha: 0.7)),
-                            ),
+                            Container(width: 2, color: isLast ? Colors.transparent : color.withValues(alpha: 0.3)),
+                            if (isLast) Positioned(top: -4, left: -7, child: Icon(Icons.arrow_downward_rounded, size: 16, color: color.withValues(alpha: 0.7))),
                           ],
                         ),
                       ), //display an arrow if it's the last item to indicate the current state, otherwise fade out
@@ -419,15 +413,17 @@ class _ChangeDetailsSheet extends StatelessWidget {
         "Completed": reversePatch.isCompleted,
       };
 
-      final Map<String, (dynamic oldValue, dynamic newValue)> activeFields = Map.fromEntries(fields.entries.where((e) {
-        return e.value != null;
-      }).map((e) => MapEntry(e.key, (reversedFields[e.key], e.value))));
+      final Map<String, (dynamic oldValue, dynamic newValue)> activeFields = Map.fromEntries(
+        fields.entries
+            .where((e) {
+              return e.value != null;
+            })
+            .map((e) => MapEntry(e.key, (reversedFields[e.key], e.value))),
+      );
 
       final detailDiffRows = activeFields.entries.map((e) => _buildDetailDiffRow(context, e.key, e.value.$2.toString(), e.value.$1.toString())).toList();
-      
-      return Column(
-        children: detailDiffRows
-      );
+
+      return Column(children: detailDiffRows);
     }
 
     if (change is AddConnectionChange || change is RemoveConnectionChange) {

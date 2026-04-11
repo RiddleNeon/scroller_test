@@ -1,7 +1,7 @@
 import 'dart:convert';
+
 import 'package:flutter/material.dart';
 import 'package:wurp/base_logic.dart';
-
 
 const defaultLightThemeId = '0f5309f7-0a82-4842-ae06-79a7251afa6f';
 const defaultDarkThemeId = '3c5ec440-64fd-46ad-ac2c-2ea06821a32f';
@@ -129,7 +129,7 @@ class CustomThemeColors {
 
     return bgHsl.withLightness(targetL).toColor();
   }
-  
+
   factory CustomThemeColors.fromJson(Map<String, dynamic> json) {
     int c(String key, int fallback) => (json[key] as int? ?? fallback).toUnsigned(32);
 
@@ -319,23 +319,22 @@ class CustomThemeModel {
       createdAt: json['created_at'] != null ? DateTime.parse(json['created_at'] as String) : null,
     );
   }
-  
-  static CustomThemeColors getColorsFromJson(Map<String, dynamic> json){
+
+  static CustomThemeColors getColorsFromJson(Map<String, dynamic> json) {
     final rawPrimary = (json['primary_color'] as int? ?? 0xFF6C5443).toUnsigned(32);
 
-
-    if(json['id'] == defaultLightThemeId) {
+    if (json['id'] == defaultLightThemeId) {
       return CustomThemeColors.fromSeeds(primary: Color(rawPrimary), dark: false);
-    } 
-    if(json['id'] == defaultDarkThemeId) {
+    }
+    if (json['id'] == defaultDarkThemeId) {
       return CustomThemeColors.fromSeeds(primary: Color(rawPrimary), dark: true);
-    } 
-    
+    }
+
     final rawThemeData = json['theme_data'];
-    if(rawThemeData == null) {
+    if (rawThemeData == null) {
       return CustomThemeColors.fromPrimary(Color(rawPrimary));
     }
-    
+
     try {
       final decoded = rawThemeData is String ? jsonDecode(rawThemeData) as Map<String, dynamic> : rawThemeData as Map<String, dynamic>;
       return CustomThemeColors.fromJson(decoded);

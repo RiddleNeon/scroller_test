@@ -4,14 +4,12 @@ import 'package:wurp/base_logic.dart';
 import 'base_ui.dart';
 import 'messaging_base.dart';
 
-
 final GlobalKey<NavigatorState> appNavigatorKey = GlobalKey<NavigatorState>();
 
-void main() async {  
+void main() async {
   await initLogic();
   await setupMessaging();
   //?await publishTest();
-  
-  
+
   startApp();
 }

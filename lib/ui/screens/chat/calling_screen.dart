@@ -14,11 +14,7 @@ class CallingApp extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    return CallingScreen(
-      joinFuture: Future.delayed(const Duration(milliseconds: 2500)),
-      name: name,
-      profileImageUrl: profileImageUrl,
-    );
+    return CallingScreen(joinFuture: Future.delayed(const Duration(milliseconds: 2500)), name: name, profileImageUrl: profileImageUrl);
   }
 }
 
@@ -58,13 +54,7 @@ class _CallingScreenState extends State<CallingScreen> with TickerProviderStateM
     super.dispose();
   }
 
-  Widget buildActionButton({
-    required IconData icon,
-    required String label,
-    required Color bg,
-    required VoidCallback onTap,
-    double size = 68,
-  }) {
+  Widget buildActionButton({required IconData icon, required String label, required Color bg, required VoidCallback onTap, double size = 68}) {
     return GestureDetector(
       onTap: onTap,
       child: Column(
@@ -78,10 +68,7 @@ class _CallingScreenState extends State<CallingScreen> with TickerProviderStateM
                   return Container(
                     width: size + _pulse.value,
                     height: size + _pulse.value,
-                    decoration: BoxDecoration(
-                      shape: BoxShape.circle,
-                      color: bg.withValues(alpha: 0.12),
-                    ),
+                    decoration: BoxDecoration(shape: BoxShape.circle, color: bg.withValues(alpha: 0.12)),
                   );
                 },
               ),
@@ -122,10 +109,7 @@ class _CallingScreenState extends State<CallingScreen> with TickerProviderStateM
             Container(
               decoration: BoxDecoration(
                 gradient: LinearGradient(
-                  colors: [
-                    theme.scaffoldBackgroundColor.withValues(alpha: 0.95),
-                    theme.scaffoldBackgroundColor.withValues(alpha: 0.80),
-                  ],
+                  colors: [theme.scaffoldBackgroundColor.withValues(alpha: 0.95), theme.scaffoldBackgroundColor.withValues(alpha: 0.80)],
                   begin: Alignment.topLeft,
                   end: Alignment.bottomRight,
                 ),
@@ -147,7 +131,12 @@ class _CallingScreenState extends State<CallingScreen> with TickerProviderStateM
                           )
                         : null,
                     child: widget.profileImageUrl == null
-                        ? Center(child: Text(widget.name.substring(0, 2), style: const TextStyle(fontWeight: FontWeight.bold, color: Colors.white)))
+                        ? Center(
+                            child: Text(
+                              widget.name.substring(0, 2),
+                              style: const TextStyle(fontWeight: FontWeight.bold, color: Colors.white),
+                            ),
+                          )
                         : Avatar(imageUrl: widget.profileImageUrl, name: widget.name, colorScheme: theme.colorScheme),
                   ),
                   const SizedBox(width: 12),
@@ -155,16 +144,17 @@ class _CallingScreenState extends State<CallingScreen> with TickerProviderStateM
                     child: Column(
                       crossAxisAlignment: CrossAxisAlignment.start,
                       children: [
-                        Text(widget.name, style: const TextStyle(fontSize: 18, fontWeight: FontWeight.bold, color: Colors.white)),
+                        Text(
+                          widget.name,
+                          style: const TextStyle(fontSize: 18, fontWeight: FontWeight.bold, color: Colors.white),
+                        ),
                       ],
                     ),
                   ),
                   const Column(
                     crossAxisAlignment: CrossAxisAlignment.end,
-                    children: [
-                      Icon(Icons.more_vert, color: Colors.white54),
-                    ],
-                  )
+                    children: [Icon(Icons.more_vert, color: Colors.white54)],
+                  ),
                 ],
               ),
             ),
@@ -188,14 +178,7 @@ class _CallingScreenState extends State<CallingScreen> with TickerProviderStateM
                         child: Column(
                           mainAxisSize: MainAxisSize.min,
                           children: [
-                            SizedBox(
-                              width: 32,
-                              height: 32,
-                              child: CircularProgressIndicator(
-                                strokeWidth: 2.6,
-                                valueColor: AlwaysStoppedAnimation(primary),
-                              ),
-                            ),
+                            SizedBox(width: 32, height: 32, child: CircularProgressIndicator(strokeWidth: 2.6, valueColor: AlwaysStoppedAnimation(primary))),
                             const SizedBox(height: 12),
                             const Text('Establishing Connection...', style: TextStyle(color: Colors.white54)),
                           ],
@@ -207,31 +190,30 @@ class _CallingScreenState extends State<CallingScreen> with TickerProviderStateM
                   final t = Curves.easeOut.transform(_videoAppearController.value);
                   return Opacity(
                     opacity: t,
-                    child: Transform.scale(
-                      scale: 0.92 + 0.08 * t,
-                      child: child,
-                    ),
+                    child: Transform.scale(scale: 0.92 + 0.08 * t, child: child),
                   );
                 },
                 child: Hero(
                   tag: 'video_placeholder',
                   child: Container(
-                      clipBehavior: Clip.hardEdge,
-                      decoration: BoxDecoration(
-                        borderRadius: BorderRadius.circular(20),
-                        gradient: LinearGradient(
-                          colors: [Colors.white.withValues(alpha: 0.03), Colors.white.withValues(alpha: 0.01)],
-                          begin: Alignment.topCenter,
-                          end: Alignment.bottomCenter,
-                        ),
-                        border: Border.all(color: Colors.white12),
+                    clipBehavior: Clip.hardEdge,
+                    decoration: BoxDecoration(
+                      borderRadius: BorderRadius.circular(20),
+                      gradient: LinearGradient(
+                        colors: [Colors.white.withValues(alpha: 0.03), Colors.white.withValues(alpha: 0.01)],
+                        begin: Alignment.topCenter,
+                        end: Alignment.bottomCenter,
                       ),
-                      child: Transform.scale(scale: 2, child: FittedBox(
-                          fit: BoxFit.fitHeight,
-                          child: SizedBox(
-                              width: 1024,
-                              height: 1024,
-                              child: BasicMemePlayer(vid: MemeVid.hamster)))))
+                      border: Border.all(color: Colors.white12),
+                    ),
+                    child: Transform.scale(
+                      scale: 2,
+                      child: FittedBox(
+                        fit: BoxFit.fitHeight,
+                        child: SizedBox(width: 1024, height: 1024, child: BasicMemePlayer(vid: MemeVid.hamster)),
+                      ),
+                    ),
+                  ),
                 ),
               ),
             ),
@@ -245,13 +227,7 @@ class _CallingScreenState extends State<CallingScreen> with TickerProviderStateM
                   Row(
                     mainAxisAlignment: MainAxisAlignment.spaceEvenly,
                     children: [
-                      buildActionButton(
-                        icon: Icons.mic_off,
-                        label: 'Mute',
-                        bg: theme.colorScheme.primary,
-                        onTap: () {},
-                        size: 60,
-                      ),
+                      buildActionButton(icon: Icons.mic_off, label: 'Mute', bg: theme.colorScheme.primary, onTap: () {}, size: 60),
                       GestureDetector(
                         onTap: () {
                           routerConfig.pop();
@@ -305,28 +281,35 @@ class _CallingScreenState extends State<CallingScreen> with TickerProviderStateM
               right: 28,
               top: media.size.height * 0.14 + 12,
               child: Container(
-                  width: 96,
-                  height: 120,
-                  decoration: BoxDecoration(
-                      borderRadius: BorderRadius.circular(14), color: Colors.black.withValues(alpha: 0.5), border: Border.all(color: Colors.white12)),
-                  child: ClipRRect(
-                    borderRadius: const BorderRadiusGeometry.all(Radius.circular(5)),
-                    child: WebCamera(
-                        preferFrontCamera: true,
-                        key: _cameraKey,
-                        onCameraConnected: () {
-                          setState(() {
-                            _cameraConnected = true;
-                            _videoAppearController.animateTo(0.1);
-                            widget.joinFuture.then((_) {
+                width: 96,
+                height: 120,
+                decoration: BoxDecoration(
+                  borderRadius: BorderRadius.circular(14),
+                  color: Colors.black.withValues(alpha: 0.5),
+                  border: Border.all(color: Colors.white12),
+                ),
+                child: ClipRRect(
+                  borderRadius: const BorderRadiusGeometry.all(Radius.circular(5)),
+                  child: WebCamera(
+                    preferFrontCamera: true,
+                    key: _cameraKey,
+                    onCameraConnected: () {
+                      setState(() {
+                        _cameraConnected = true;
+                        _videoAppearController.animateTo(0.1);
+                        widget.joinFuture
+                            .then((_) {
                               if (mounted) {
                                 setState(() => _joined = true);
                                 _videoAppearController.forward();
                               }
-                            }).catchError((_) {});
-                          });
-                        }),
-                  )),
+                            })
+                            .catchError((_) {});
+                      });
+                    },
+                  ),
+                ),
+              ),
             ),
           ],
         ),

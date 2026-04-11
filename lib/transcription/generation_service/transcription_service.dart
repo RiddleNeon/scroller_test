@@ -9,14 +9,8 @@ import 'dart:js_interop';
 
 import 'package:flutter/foundation.dart';
 
-
 @JS('transcribeAudio')
-external JSPromise _transcribeAudio(
-    JSAny audioBlob,
-    JSString language,
-    JSString prompt,
-    JSFunction? onProgress,
-    );
+external JSPromise _transcribeAudio(JSAny audioBlob, JSString language, JSString prompt, JSFunction? onProgress);
 
 @JS('extractAudioFromVideo')
 external JSPromise _extractAudioFromVideo(JSAny videoBlob);
@@ -34,17 +28,12 @@ class _BlobOptions {
   external factory _BlobOptions({required JSString type});
 }
 
-
 class TranscriptChunk {
   final double start;
   final double end;
   final String text;
 
-  const TranscriptChunk({
-    required this.start,
-    required this.end,
-    required this.text,
-  });
+  const TranscriptChunk({required this.start, required this.end, required this.text});
 
   factory TranscriptChunk.fromJson(Map<String, dynamic> json) {
     final timestamp = json['timestamp'] as List<dynamic>? ?? [0.0, 0.0];
@@ -60,12 +49,8 @@ class TranscriptionResult {
   final String fullText;
   final List<TranscriptChunk> chunks;
 
-  const TranscriptionResult({
-    required this.fullText,
-    required this.chunks,
-  });
+  const TranscriptionResult({required this.fullText, required this.chunks});
 }
-
 
 class TranscriptionService {
   static Future<TranscriptionResult> transcribeVideo({
@@ -75,23 +60,20 @@ class TranscriptionService {
     void Function(int percent)? onProgress,
   }) async {
     if (!kIsWeb) {
-      throw UnsupportedError(
-        'Transcription service is currently only supported on Flutter Web.',
-      );
+      throw UnsupportedError('Transcription service is currently only supported on Flutter Web.');
     }
 
     debugPrint('[Whisper] Extracting audio...');
     final jsUint8Array = videoBytes.toJS;
-    final jsBlob = _JSBlob(
-      [jsUint8Array].toJS,
-      _BlobOptions(type: 'video/mp4'.toJS) as JSObject,
-    );
+    final jsBlob = _JSBlob([jsUint8Array].toJS, _BlobOptions(type: 'video/mp4'.toJS) as JSObject);
 
     final audioBlob = await _extractAudioFromVideo(jsBlob as JSAny).toDart;
 
     if (audioBlob == null) {
-      throw Exception('Audio-Extraction failed. '
-          'make sure the file is a valid MP4/WebM-file?');
+      throw Exception(
+        'Audio-Extraction failed. '
+        'make sure the file is a valid MP4/WebM-file?',
+      );
     }
 
     debugPrint('[Whisper] starting transcription...');
@@ -103,12 +85,7 @@ class TranscriptionService {
       }).toJS;
     }
 
-    final resultJson = await _transcribeAudio(
-      audioBlob,
-      language.toJS,
-      prompt.toJS,
-      progressFn,
-    ).toDart;
+    final resultJson = await _transcribeAudio(audioBlob, language.toJS, prompt.toJS, progressFn).toDart;
 
     final resultStr = (resultJson as JSString).toDart;
     final resultMap = jsonDecode(resultStr) as Map<String, dynamic>;
@@ -118,13 +95,8 @@ class TranscriptionService {
     }
 
     final data = resultMap['data'] as Map<String, dynamic>;
-    final chunks = (data['chunks'] as List<dynamic>? ?? [])
-        .map((c) => TranscriptChunk.fromJson(c as Map<String, dynamic>))
-        .toList();
+    final chunks = (data['chunks'] as List<dynamic>? ?? []).map((c) => TranscriptChunk.fromJson(c as Map<String, dynamic>)).toList();
 
-    return TranscriptionResult(
-      fullText: data['text'] as String? ?? '',
-      chunks: chunks,
-    );
+    return TranscriptionResult(fullText: data['text'] as String? ?? '', chunks: chunks);
   }
 }

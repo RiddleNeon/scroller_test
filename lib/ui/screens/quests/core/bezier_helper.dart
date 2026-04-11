@@ -4,21 +4,20 @@ import 'package:wurp/logic/quests/quest_system.dart';
 
 Offset bezierPoint(Offset p0, Offset p1, Offset p2, Offset p3, double t) {
   final mt = 1.0 - t;
-  return p0 * (mt * mt * mt) +
-      p1 * (3 * mt * mt * t) +
-      p2 * (3 * mt * t * t) +
-      p3 * (t * t * t);
+  return p0 * (mt * mt * mt) + p1 * (3 * mt * mt * t) + p2 * (3 * mt * t * t) + p3 * (t * t * t);
 }
 
-
 List<Offset> calculateCubicControlPointsOffsetting(
-    Offset pStart, Offset dirStart,
-    Offset pEnd, Offset dirEnd,
-    int sourceId, int targetId,
-    QuestSystem questSystem,
-    Offset? currentDraggedQuestPos,
-    int? currentDraggedQuestId
-    ) {
+  Offset pStart,
+  Offset dirStart,
+  Offset pEnd,
+  Offset dirEnd,
+  int sourceId,
+  int targetId,
+  QuestSystem questSystem,
+  Offset? currentDraggedQuestPos,
+  int? currentDraggedQuestId,
+) {
   final delta = pEnd - pStart;
   final dist = delta.distance;
   final tension = (dist * 0.4).clamp(30.0, 200.0);
@@ -57,19 +56,16 @@ List<Offset> calculateCubicControlPoints(Offset pStart, Offset dirStart, Offset 
   final dist = (pEnd - pStart).distance;
   final tension = (dist * 0.4).clamp(30.0, 200.0);
 
-  return [
-    pStart + dirStart * tension,
-    pEnd + dirEnd * tension,
-  ];
+  return [pStart + dirStart * tension, pEnd + dirEnd * tension];
 }
 
 const int _kLutSamples = 64;
 const int _kMaxCacheEntries = 256;
 final Map<String, ArcLut> _lutCache = {};
 
-
 ArcLut getLut(Offset p0, Offset p1, Offset p2, Offset p3) {
-  final key = '${p0.dx.round()},${p0.dy.round()},'
+  final key =
+      '${p0.dx.round()},${p0.dy.round()},'
       '${p1.dx.round()},${p1.dy.round()},'
       '${p2.dx.round()},${p2.dy.round()},'
       '${p3.dx.round()},${p3.dy.round()}';
@@ -84,16 +80,14 @@ ArcLut getLut(Offset p0, Offset p1, Offset p2, Offset p3) {
   return lut;
 }
 
-
 class ArcLut {
   final List<double> _data;
+
   double get totalLength => _data[_data.length - 1];
+
   const ArcLut._(this._data);
 
-  factory ArcLut.build(
-      Offset p0, Offset p1, Offset p2, Offset p3, int samples,
-      Offset Function(Offset, Offset, Offset, Offset, double) bezierPoint,
-      ) {
+  factory ArcLut.build(Offset p0, Offset p1, Offset p2, Offset p3, int samples, Offset Function(Offset, Offset, Offset, Offset, double) bezierPoint) {
     final data = List<double>.filled((samples + 1) * 2, 0.0);
     var cumLen = 0.0;
     var prev = p0;
@@ -131,10 +125,10 @@ class ArcLut {
   }
 }
 
-
 class Anchor {
   final Offset pos;
   final Offset sideDir;
+
   Anchor(this.pos, this.sideDir);
 }
 
@@ -142,9 +136,7 @@ Anchor getBestAnchor(int id, Offset targetCenter, QuestSystem questSystem, int? 
   final quest = questSystem.maybeGetQuestById(id);
   if (quest == null) return Anchor(Offset.zero, Offset.zero);
 
-  final pos = (id == currentDraggedQuestId && currentDraggedQuestPos != null)
-      ? currentDraggedQuestPos
-      : quest.position;
+  final pos = (id == currentDraggedQuestId && currentDraggedQuestPos != null) ? currentDraggedQuestPos : quest.position;
 
   final double w = quest.sizeX;
   final double h = quest.sizeY;
@@ -152,7 +144,6 @@ Anchor getBestAnchor(int id, Offset targetCenter, QuestSystem questSystem, int? 
 
   final dx = targetCenter.dx - center.dx;
   final dy = targetCenter.dy - center.dy;
-
 
   if ((dx / w).abs() > (dy / h).abs()) {
     if (dx > 0) {
@@ -172,8 +163,6 @@ Anchor getBestAnchor(int id, Offset targetCenter, QuestSystem questSystem, int? 
 Offset? getQuestCenter(int id, QuestSystem questSystem, int? currentDraggedQuestId, Offset? currentDraggedQuestPos) {
   final quest = questSystem.maybeGetQuestById(id);
   if (quest == null) return null;
-  final pos = (id == currentDraggedQuestId && currentDraggedQuestPos != null)
-      ? currentDraggedQuestPos
-      : quest.position;
+  final pos = (id == currentDraggedQuestId && currentDraggedQuestPos != null) ? currentDraggedQuestPos : quest.position;
   return pos + Offset(quest.sizeX, quest.sizeY) / 2;
 }

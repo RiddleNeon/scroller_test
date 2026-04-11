@@ -6,13 +6,15 @@ import 'video_container.dart';
 
 class FeedViewModel {
   VideoProvider? videoSource;
-  
+
   FeedViewModel([this.videoSource]);
 
   // Stores futures so we never load the same index twice
   final Map<int, Future<VideoContainer>> _videoFutures = {};
+
   // Tracks which containers are fully loaded and not yet disposed
   final Map<int, VideoContainer> _loadedContainers = {};
+
   // Tracks indices that have been disposed so we never use them again
   final Set<int> _disposedIndices = {};
 
@@ -28,7 +30,7 @@ class FeedViewModel {
     }
 
     _videoFutures[index] ??= _loadContainer(index, videoSource: videoSource);
-    
+
     final next = index + 1;
     if (_loadedContainers.length < 2 && !_disposedIndices.contains(next)) {
       _videoFutures[next] ??= _loadContainer(next, videoSource: videoSource);
@@ -55,9 +57,7 @@ class FeedViewModel {
 
     // 1. Dispose far-away containers FIRST to free decoder slots and audio focus
     //    before the new player tries to acquire them.
-    final indicesToDispose = _loadedContainers.keys
-        .where((i) => (i - index).abs() > 2)
-        .toList();
+    final indicesToDispose = _loadedContainers.keys.where((i) => (i - index).abs() > 2).toList();
     await Future.wait(indicesToDispose.map(_disposeIndex));
 
     // 2. Pause the previous video
@@ -89,7 +89,7 @@ class FeedViewModel {
 
     await container?.controller?.dispose();
   }
-  
+
   Future<void> dispose() async {
     await Future.wait([..._videoFutures.values, ..._loadedContainers.values.map((element) => element.controller?.dispose() ?? Future.value())]);
     _videoFutures.clear();

@@ -122,24 +122,20 @@ class BottomNavBarState extends State<BottomNavBar> with SingleTickerProviderSta
                                 selected
                                     ? AnimatedBuilder(
                                         animation: _selectionSizeAnimationController,
-                                  builder: (context, child) {
-                                    final val = 1 - _selectionSizeAnimationController.value;
-                                    final scale = 1 + (val * 0.2);
-                                    final scaleY = 1 + (val * 0.01);
-                                    final rotation = val * 0.02;
+                                        builder: (context, child) {
+                                          final val = 1 - _selectionSizeAnimationController.value;
+                                          final scale = 1 + (val * 0.2);
+                                          final scaleY = 1 + (val * 0.01);
+                                          final rotation = val * 0.02;
 
-                                    final transform = Matrix4.identity()
-                                      ..translateByVector3(Vector3(0, -4 * val, 0))
-                                      ..rotateZ(rotation)
-                                      ..scaleByVector3(Vector3(scaleY, scale, scale))
-                                      ..translateByVector3(Vector3(0, 4 * val, 0));
+                                          final transform = Matrix4.identity()
+                                            ..translateByVector3(Vector3(0, -4 * val, 0))
+                                            ..rotateZ(rotation)
+                                            ..scaleByVector3(Vector3(scaleY, scale, scale))
+                                            ..translateByVector3(Vector3(0, 4 * val, 0));
 
-                                    return Transform(
-                                      alignment: Alignment.center,
-                                      transform: transform,
-                                      child: child,
-                                    );
-                                  },
+                                          return Transform(alignment: Alignment.center, transform: transform, child: child);
+                                        },
                                         child: Icon(item.icon, color: iconColor, size: 24),
                                       )
                                     : Icon(item.icon, color: iconColor, size: 24),

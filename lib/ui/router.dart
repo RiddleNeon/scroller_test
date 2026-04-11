@@ -3,13 +3,13 @@ import 'package:flutter/material.dart';
 import 'package:go_router/go_router.dart';
 import 'package:wurp/main.dart';
 import 'package:wurp/transcription/uploading/video_upload_screen.dart';
+import 'package:wurp/ui/animations/slide_morph_transitions.dart';
 import 'package:wurp/ui/screens/auth_screen.dart';
 import 'package:wurp/ui/screens/chat/chat_managing_screen.dart';
 import 'package:wurp/ui/screens/profile_screen.dart';
 import 'package:wurp/ui/screens/quests/test_quest_screen.dart';
 import 'package:wurp/ui/screens/search_screen/search_screen.dart';
 import 'package:wurp/ui/short_video_player.dart';
-import 'package:wurp/ui/animations/slide_morph_transitions.dart';
 import 'package:wurp/ui/theme/theme_creation_screen.dart';
 import 'package:wurp/ui/widgets/bottom_navigation_bar.dart';
 
@@ -23,7 +23,7 @@ void initRouter() {
     observers: [RouteObserver()],
     redirect: (context, state) {
       print("navigating to ${state.uri.path}");
-      
+
       final navBarItem = _navigationBarItems.where((element) => element.id == state.uri.path).firstOrNull;
       if (navBarItem != null) {
         int navBarIndex = _navigationBarItems.indexOf(navBarItem);
@@ -36,7 +36,6 @@ void initRouter() {
             navBarKey.currentState?.switchToIndex(navBarIndex);
           }
         }
-        
       }
 
       final path = state.uri.path;
@@ -62,21 +61,13 @@ void initRouter() {
         routes: [
           GoRoute(
             path: '/feed',
-            pageBuilder: (context, state) => SlideMorphTransitions.page<void>(
-              key: state.pageKey,
-              child: const VideoFeed(),
-              beginOffset: const Offset(0.02, 0.0),
-              beginScale: 0.995,
-            ),
+            pageBuilder: (context, state) =>
+                SlideMorphTransitions.page<void>(key: state.pageKey, child: const VideoFeed(), beginOffset: const Offset(0.02, 0.0), beginScale: 0.995),
           ),
           GoRoute(
             path: '/search_screen',
-            pageBuilder: (context, state) => SlideMorphTransitions.page<void>(
-              key: state.pageKey,
-              child: const SearchScreen(),
-              beginOffset: const Offset(0.03, 0.0),
-              beginScale: 0.993,
-            ),
+            pageBuilder: (context, state) =>
+                SlideMorphTransitions.page<void>(key: state.pageKey, child: const SearchScreen(), beginOffset: const Offset(0.03, 0.0), beginScale: 0.993),
           ),
           GoRoute(
             path: '/profile',
@@ -91,9 +82,7 @@ void initRouter() {
             path: '/chat',
             pageBuilder: (context, state) => SlideMorphTransitions.page<void>(
               key: state.pageKey,
-              child: ChatManagingScreen(
-                preloadMoreChats: (current) => chatRepository.getChats(currentUser.id, offset: current ?? 0, limit: 15),
-              ),
+              child: ChatManagingScreen(preloadMoreChats: (current) => chatRepository.getChats(currentUser.id, offset: current ?? 0, limit: 15)),
               beginOffset: const Offset(0.03, 0.0),
               beginScale: 0.993,
             ),
@@ -131,19 +120,12 @@ void initRouter() {
         path: '/login',
         pageBuilder: (context, state) {
           print("login!");
-          return SlideMorphTransitions.page<void>(
-            key: state.pageKey,
-            child: const LoginScreen(),
-            beginOffset: const Offset(0.0, 0.07),
-            beginScale: 0.985,
-          );
+          return SlideMorphTransitions.page<void>(key: state.pageKey, child: const LoginScreen(), beginOffset: const Offset(0.0, 0.07), beginScale: 0.985);
         },
       ),
       GoRoute(
         path: '/',
-        pageBuilder: (context, state) => const NoTransitionPage(
-          child: SizedBox.shrink(),
-        ),
+        pageBuilder: (context, state) => const NoTransitionPage(child: SizedBox.shrink()),
       ),
       GoRoute(
         path: '/reset-password',

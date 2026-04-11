@@ -26,8 +26,11 @@ class QuestChangeManager with ChangeNotifier {
   final List<QuestChange> _redoStack = [];
 
   bool get hasPendingChanges => _pendingChanges.isNotEmpty;
+
   bool get canUndo => _undoStack.isNotEmpty;
+
   bool get canRedo => _redoStack.isNotEmpty;
+
   int get pendingCount => _pendingChanges.length;
 
   /// Stores the wall-clock time at which each change was recorded.
@@ -43,6 +46,7 @@ class QuestChangeManager with ChangeNotifier {
   // ── Public read-only views ─────────────────────────────────────────────────
 
   List<QuestChange> get pendingChanges => List.unmodifiable(_pendingChanges);
+
   List<QuestChange> get skippedChanges => List.unmodifiable(_skippedChanges);
 
   /// Read-only view of the redo stack (globally undone, newest last).
@@ -232,20 +236,17 @@ class QuestChangeManager with ChangeNotifier {
   List<QuestChange> conflictsOf(QuestChange skipped) {
     return _pendingChanges.where((pending) {
       if (skipped is AddQuestChange) {
-        for(var e in pending.affectedQuestIds?.whereType<int>() ?? []) {
+        for (var e in pending.affectedQuestIds?.whereType<int>() ?? []) {
           if (e == skipped.quest.id) return true;
         }
       }
-      if (skipped is AddConnectionChange &&
-          pending is RemoveConnectionChange &&
-          pending.fromId == skipped.fromId &&
-          pending.toId == skipped.toId) {
+      if (skipped is AddConnectionChange && pending is RemoveConnectionChange && pending.fromId == skipped.fromId && pending.toId == skipped.toId) {
         return true;
       }
       return false;
     }).toList();
   }
-  
+
   Set<QuestChange> get allConflictedPending {
     final result = <QuestChange>{};
 
@@ -257,13 +258,14 @@ class QuestChangeManager with ChangeNotifier {
     for (final pending in _pendingChanges) {
       if (pending is AddQuestChange) {
         createdIdsInOrder.add(pending.questId);
-      }
-      else if (pending is _QuestTargetedChange) {
+      } else if (pending is _QuestTargetedChange) {
         final idsToVerify = [pending.questId, if (pending.otherQuestId != null) pending.otherQuestId!];
 
         for (final id in idsToVerify) {
           //final existsGlobally = questSystem.maybeGetQuestById(id) != null;
-          final isCreatedLater = _pendingChanges.any((c) => c is AddQuestChange && c.questId == id && _pendingChanges.indexOf(c) > _pendingChanges.indexOf(pending));
+          final isCreatedLater = _pendingChanges.any(
+            (c) => c is AddQuestChange && c.questId == id && _pendingChanges.indexOf(c) > _pendingChanges.indexOf(pending),
+          );
 
           if (isCreatedLater) {
             result.add(pending);
@@ -344,11 +346,7 @@ class QuestChangeManager with ChangeNotifier {
   }
 
   void dropStaleChanges() {
-    _pendingChanges.removeWhere(
-          (c) =>
-      c.affectedQuestIds != null &&
-          !(c.affectedQuestIds?.any((id) => questSystem.maybeGetQuestById(id) != null) ?? true),
-    );
+    _pendingChanges.removeWhere((c) => c.affectedQuestIds != null && !(c.affectedQuestIds?.any((id) => questSystem.maybeGetQuestById(id) != null) ?? true));
     notifyListeners();
   }
 }
@@ -371,34 +369,21 @@ class QuestPatch {
   final double? sizeY;
   final bool? isCompleted;
 
-  const QuestPatch({
-    this.name,
-    this.description,
-    this.subject,
-    this.posX,
-    this.posY,
-    this.difficulty,
-    this.sizeX,
-    this.sizeY,
-    this.isCompleted,
-  });
+  const QuestPatch({this.name, this.description, this.subject, this.posX, this.posY, this.difficulty, this.sizeX, this.sizeY, this.isCompleted});
 
   /// Creates a patch from two quest snapshots, keeping only fields that differ.
   factory QuestPatch.diff(Quest before, Quest after) {
     assert(before.id == after.id, 'Diff requires the same quest ID');
     return QuestPatch(
       name: after.name != before.name ? after.name : null,
-      description:
-      after.description != before.description ? after.description : null,
+      description: after.description != before.description ? after.description : null,
       subject: after.subject != before.subject ? after.subject : null,
       posX: after.posX != before.posX ? after.posX : null,
       posY: after.posY != before.posY ? after.posY : null,
-      difficulty:
-      after.difficulty != before.difficulty ? after.difficulty : null,
+      difficulty: after.difficulty != before.difficulty ? after.difficulty : null,
       sizeX: after.sizeX != before.sizeX ? after.sizeX : null,
       sizeY: after.sizeY != before.sizeY ? after.sizeY : null,
-      isCompleted:
-      after.isCompleted != before.isCompleted ? after.isCompleted : null,
+      isCompleted: after.isCompleted != before.isCompleted ? after.isCompleted : null,
     );
   }
 
@@ -464,24 +449,20 @@ class QuestPatch {
 
   bool get isEmpty =>
       name == null &&
-          description == null &&
-          subject == null &&
-          posX == null &&
-          posY == null &&
-          difficulty == null &&
-          sizeX == null &&
-          sizeY == null &&
-          isCompleted == null;
+      description == null &&
+      subject == null &&
+      posX == null &&
+      posY == null &&
+      difficulty == null &&
+      sizeX == null &&
+      sizeY == null &&
+      isCompleted == null;
 
   /// Serialises only the non-null fields for Supabase.
   ///
   /// [isCompleted] is intentionally excluded – it is client-only state and
   /// has no column in quest_versions.
-  Map<String, dynamic> toSupabaseMap({
-    required int questId,
-    required String updateMessage,
-    required String createdBy,
-  }) {
+  Map<String, dynamic> toSupabaseMap({required int questId, required String updateMessage, required String createdBy}) {
     return {
       'quest_id': questId,
       'created_by': createdBy,
@@ -500,18 +481,21 @@ class QuestPatch {
   @override
   String toString() =>
       'QuestPatch(name: $name, description: $description, subject: $subject, '
-          'posX: $posX, posY: $posY, difficulty: $difficulty, '
-          'sizeX: $sizeX, sizeY: $sizeY, isCompleted: $isCompleted)';
+      'posX: $posX, posY: $posY, difficulty: $difficulty, '
+      'sizeX: $sizeX, sizeY: $sizeY, isCompleted: $isCompleted)';
 }
 
 // ── Base ───────────────────────────────────────────────────────────────────
 
 abstract class QuestChange {
   final String updateMessage;
+
   const QuestChange({required this.updateMessage});
 
   String get collapseKey;
+
   void applyLocally(QuestSystem system);
+
   void undoLocally(QuestSystem system);
 
   /// [system] is provided so patch-based changes can resolve the current quest
@@ -531,7 +515,9 @@ abstract class QuestChange {
 /// Marker for changes that target a specific quest by ID.
 abstract class _QuestTargetedChange extends QuestChange {
   int get questId;
+
   int? get otherQuestId => null;
+
   const _QuestTargetedChange({required super.updateMessage});
 
   @override
@@ -544,10 +530,7 @@ abstract class _QuestTargetedChange extends QuestChange {
 class AddQuestChange extends _QuestTargetedChange {
   final Quest quest;
 
-  const AddQuestChange({
-    required this.quest,
-    super.updateMessage = 'added quest',
-  });
+  const AddQuestChange({required this.quest, super.updateMessage = 'added quest'});
 
   @override
   int get questId => quest.id;
@@ -562,17 +545,13 @@ class AddQuestChange extends _QuestTargetedChange {
   void undoLocally(QuestSystem s) => s.removeQuest(quest.id);
 
   @override
-  Future<void> push(QuestRepository repo, QuestSystem system) =>
-      repo.addQuest(quest, updateMessage);
+  Future<void> push(QuestRepository repo, QuestSystem system) => repo.addQuest(quest, updateMessage);
 
   @override
   QuestChange? mergeWith(QuestChange newer) {
     if (newer is DeleteQuestChange && newer.quest.id == quest.id) return null;
     if (newer is UpdateQuestChange && newer.questId == quest.id) {
-      return AddQuestChange(
-        quest: newer.patch.applyTo(quest),
-        updateMessage: newer.updateMessage,
-      );
+      return AddQuestChange(quest: newer.patch.applyTo(quest), updateMessage: newer.updateMessage);
     }
     return newer;
   }
@@ -604,27 +583,13 @@ class UpdateQuestChange extends _QuestTargetedChange {
   /// sync with the change's current position in the sequence.
   QuestPatch reversePatch;
 
-  UpdateQuestChange({
-    required this.questId,
-    required this.patch,
-    required this.reversePatch,
-    super.updateMessage = 'updated quest',
-  });
+  UpdateQuestChange({required this.questId, required this.patch, required this.reversePatch, super.updateMessage = 'updated quest'});
 
   /// Convenience constructor: computes [patch] and [reversePatch] automatically
   /// from two full quest snapshots.
-  factory UpdateQuestChange.fromDiff({
-    required Quest before,
-    required Quest after,
-    String updateMessage = 'updated quest',
-  }) {
+  factory UpdateQuestChange.fromDiff({required Quest before, required Quest after, String updateMessage = 'updated quest'}) {
     final patch = QuestPatch.diff(before, after);
-    return UpdateQuestChange(
-      questId: after.id,
-      patch: patch,
-      reversePatch: patch.reverse(before),
-      updateMessage: updateMessage,
-    );
+    return UpdateQuestChange(questId: after.id, patch: patch, reversePatch: patch.reverse(before), updateMessage: updateMessage);
   }
 
   @override
@@ -646,18 +611,12 @@ class UpdateQuestChange extends _QuestTargetedChange {
 
   /// Sends only the changed fields so the DB trigger merges them via COALESCE.
   @override
-  Future<void> push(QuestRepository repo, QuestSystem system) =>
-      repo.patchQuest(questId, patch, updateMessage);
+  Future<void> push(QuestRepository repo, QuestSystem system) => repo.patchQuest(questId, patch, updateMessage);
 
   @override
   QuestChange? mergeWith(QuestChange newer) {
     if (newer is UpdateQuestChange && newer.questId == questId) {
-      return UpdateQuestChange(
-        questId: questId,
-        patch: patch.mergedWith(newer.patch),
-        reversePatch: reversePatch,
-        updateMessage: newer.updateMessage,
-      );
+      return UpdateQuestChange(questId: questId, patch: patch.mergedWith(newer.patch), reversePatch: reversePatch, updateMessage: newer.updateMessage);
     }
     if (newer is DeleteQuestChange) return newer;
     return newer;
@@ -666,16 +625,13 @@ class UpdateQuestChange extends _QuestTargetedChange {
   @override
   String toString() =>
       'UpdateQuestChange(questId: $questId, patch: $patch, '
-          'reversePatch: $reversePatch, updateMessage: $updateMessage)';
+      'reversePatch: $reversePatch, updateMessage: $updateMessage)';
 }
 
 class DeleteQuestChange extends _QuestTargetedChange {
   final Quest quest;
 
-  const DeleteQuestChange({
-    required this.quest,
-    super.updateMessage = 'deleted quest',
-  });
+  const DeleteQuestChange({required this.quest, super.updateMessage = 'deleted quest'});
 
   @override
   int get questId => quest.id;
@@ -690,8 +646,7 @@ class DeleteQuestChange extends _QuestTargetedChange {
   void undoLocally(QuestSystem s) => s.upsertQuest(quest);
 
   @override
-  Future<void> push(QuestRepository repo, QuestSystem system) =>
-      repo.deleteQuest(quest);
+  Future<void> push(QuestRepository repo, QuestSystem system) => repo.deleteQuest(quest);
 }
 
 // ── Connection changes ─────────────────────────────────────────────────────
@@ -700,11 +655,7 @@ class AddConnectionChange extends _QuestTargetedChange {
   final int fromId;
   final int toId;
 
-  const AddConnectionChange({
-    required this.fromId,
-    required this.toId,
-    super.updateMessage = 'connection added',
-  });
+  const AddConnectionChange({required this.fromId, required this.toId, super.updateMessage = 'connection added'});
 
   @override
   String get collapseKey => 'conn:${fromId}_$toId';
@@ -716,14 +667,11 @@ class AddConnectionChange extends _QuestTargetedChange {
   void undoLocally(QuestSystem s) => s.removeConnection(fromId, toId);
 
   @override
-  Future<void> push(QuestRepository repo, QuestSystem system) =>
-      repo.addConnection(fromId, toId);
+  Future<void> push(QuestRepository repo, QuestSystem system) => repo.addConnection(fromId, toId);
 
   @override
   QuestChange? mergeWith(QuestChange newer) {
-    if (newer is RemoveConnectionChange &&
-        newer.fromId == fromId &&
-        newer.toId == toId) {
+    if (newer is RemoveConnectionChange && newer.fromId == fromId && newer.toId == toId) {
       return null;
     }
     return newer;
@@ -731,7 +679,7 @@ class AddConnectionChange extends _QuestTargetedChange {
 
   @override
   int get questId => fromId;
-  
+
   @override
   int? get otherQuestId => toId;
 }
@@ -740,11 +688,7 @@ class RemoveConnectionChange extends _QuestTargetedChange {
   final int fromId;
   final int toId;
 
-  const RemoveConnectionChange({
-    required this.fromId,
-    required this.toId,
-    super.updateMessage = 'connection removed',
-  });
+  const RemoveConnectionChange({required this.fromId, required this.toId, super.updateMessage = 'connection removed'});
 
   @override
   String get collapseKey => 'conn:${fromId}_$toId';
@@ -756,14 +700,11 @@ class RemoveConnectionChange extends _QuestTargetedChange {
   void undoLocally(QuestSystem s) => s.addConnection(fromId, toId);
 
   @override
-  Future<void> push(QuestRepository repo, QuestSystem system) =>
-      repo.removeConnection(fromId, toId);
+  Future<void> push(QuestRepository repo, QuestSystem system) => repo.removeConnection(fromId, toId);
 
   @override
   QuestChange? mergeWith(QuestChange newer) {
-    if (newer is AddConnectionChange &&
-        newer.fromId == fromId &&
-        newer.toId == toId) {
+    if (newer is AddConnectionChange && newer.fromId == fromId && newer.toId == toId) {
       return null;
     }
     return newer;

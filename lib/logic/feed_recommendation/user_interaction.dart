@@ -40,8 +40,14 @@ class UserInteraction {
   }
 }
 
-double calculateEngagementScore(
-    {required bool liked, required bool disliked, required bool shared, required bool commented, required bool saved, required double completionRate}) {
+double calculateEngagementScore({
+  required bool liked,
+  required bool disliked,
+  required bool shared,
+  required bool commented,
+  required bool saved,
+  required double completionRate,
+}) {
   double score = completionRate * 10.0;
 
   if (liked) score += 5.0;

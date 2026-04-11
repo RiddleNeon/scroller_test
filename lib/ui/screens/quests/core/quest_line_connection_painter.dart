@@ -1,6 +1,8 @@
 import 'dart:ui' as ui;
+
 import 'package:flutter/material.dart';
 import 'package:wurp/logic/quests/quest_system.dart';
+
 import 'bezier_helper.dart';
 import 'quest_bubble.dart';
 
@@ -24,7 +26,6 @@ class QuestLineConnectionPainter extends CustomPainter {
   final Color borderColor;
   final double arrowSize;
 
-
   QuestLineConnectionPainter({
     required this.questSystem,
     required this.animation,
@@ -37,7 +38,7 @@ class QuestLineConnectionPainter extends CustomPainter {
     this.borderColor = const Color(0xFF0A0A0A),
     this.arrowSize = 9.0,
   }) : super(repaint: animation);
-  
+
   @override
   void paint(Canvas canvas, Size size) {
     final pixelOffset = animation.value * pixelSpacing;
@@ -63,12 +64,17 @@ class QuestLineConnectionPainter extends CustomPainter {
 
         final anchorStart = getBestAnchor(startQuest.id, endCenter, questSystem, currentDraggedQuestId, currentDraggedQuestPos);
         final anchorEnd = getBestAnchor(quest.id, startCenter, questSystem, currentDraggedQuestId, currentDraggedQuestPos);
-        
+
         final cps = calculateCubicControlPointsOffsetting(
-            anchorStart.pos, anchorStart.sideDir,
-            anchorEnd.pos, anchorEnd.sideDir,
-            startQuest.id, quest.id,
-              questSystem, currentDraggedQuestPos, currentDraggedQuestId
+          anchorStart.pos,
+          anchorStart.sideDir,
+          anchorEnd.pos,
+          anchorEnd.sideDir,
+          startQuest.id,
+          quest.id,
+          questSystem,
+          currentDraggedQuestPos,
+          currentDraggedQuestId,
         );
 
         final p0 = anchorStart.pos;
@@ -83,12 +89,9 @@ class QuestLineConnectionPainter extends CustomPainter {
         final lut = getLut(p0, cp1, cp2, p3);
         _drawBorderLine(canvas, p0, cp1, cp2, p3);
         _drawBaseLine(canvas, p0, cp1, cp2, p3, prereqColor, questColor);
-        
+
         if (showArrows) {
-          _drawMarchingArrows(
-            canvas, p0, cp1, cp2, p3,
-            lut, pixelOffset, prereqColor, questColor, cullRect,
-          );
+          _drawMarchingArrows(canvas, p0, cp1, cp2, p3, lut, pixelOffset, prereqColor, questColor, cullRect);
         }
       }
     }
@@ -134,10 +137,7 @@ class QuestLineConnectionPainter extends CustomPainter {
     canvas.drawPath(
       path,
       Paint()
-        ..shader = ui.Gradient.linear(p0, p3, [
-          c0.withValues(alpha: 0.45),
-          c1.withValues(alpha: 0.45),
-        ])
+        ..shader = ui.Gradient.linear(p0, p3, [c0.withValues(alpha: 0.45), c1.withValues(alpha: 0.45)])
         ..strokeWidth = lineWidth
         ..style = PaintingStyle.stroke
         ..strokeCap = StrokeCap.round,
@@ -145,13 +145,17 @@ class QuestLineConnectionPainter extends CustomPainter {
   }
 
   void _drawMarchingArrows(
-      Canvas canvas,
-      Offset p0, Offset p1, Offset p2, Offset p3,
-      ArcLut lut,
-      double pixelOffset,
-      Color startColor, Color endColor,
-      Rect? cullRect,
-      ) {
+    Canvas canvas,
+    Offset p0,
+    Offset p1,
+    Offset p2,
+    Offset p3,
+    ArcLut lut,
+    double pixelOffset,
+    Color startColor,
+    Color endColor,
+    Rect? cullRect,
+  ) {
     final totalLen = lut.totalLength;
     if (totalLen < 1) return;
 
@@ -218,37 +222,26 @@ class QuestLineConnectionPainter extends CustomPainter {
     );
   }
 
-
-
   Offset _bezierTangent(Offset p0, Offset p1, Offset p2, Offset p3, double t) {
     final mt = 1.0 - t;
-    return (p1 - p0) * (3 * mt * mt) +
-        (p2 - p1) * (6 * mt * t) +
-        (p3 - p2) * (3 * t * t);
+    return (p1 - p0) * (3 * mt * mt) + (p2 - p1) * (6 * mt * t) + (p3 - p2) * (3 * t * t);
   }
 
-
-
   void _drawConnectionPreview(Canvas canvas, Offset start, Offset end, Color color, int connectionId) {
-
     final pixelOffset = animation.value * pixelSpacing;
     final showArrows = scale >= arrowHideScale;
     final cullRect = viewportRect?.inflate(_cullPadding());
-    
+
     final anchorStart = getBestAnchor(connectionId, end, questSystem, currentDraggedQuestId, currentDraggedQuestPos);
     final anchorEnd = Anchor(end, ui.Offset.zero);
 
-    final cps = calculateCubicControlPoints(
-        anchorStart.pos, anchorStart.sideDir,
-        anchorEnd.pos, anchorEnd.sideDir,
-    );
-
+    final cps = calculateCubicControlPoints(anchorStart.pos, anchorStart.sideDir, anchorEnd.pos, anchorEnd.sideDir);
 
     final p0 = anchorStart.pos;
     final cp1 = cps[0];
     final cp2 = cps[1];
     final p3 = anchorEnd.pos;
-    
+
     if (cullRect != null && !_aabbIntersects(cullRect, start, cp1, cp2, end)) {
       return;
     }
@@ -258,25 +251,20 @@ class QuestLineConnectionPainter extends CustomPainter {
     _drawBaseLine(canvas, p0, cp1, cp2, p3, color, color);
 
     if (showArrows) {
-      _drawMarchingArrows(
-        canvas, p0, cp1, cp2, p3,
-        lut, pixelOffset, color, color, cullRect,
-      );
+      _drawMarchingArrows(canvas, p0, cp1, cp2, p3, lut, pixelOffset, color, color, cullRect);
     }
   }
-  
 
   @override
   bool shouldRepaint(covariant QuestLineConnectionPainter old) =>
       old.currentDraggedQuestId != currentDraggedQuestId ||
-          old.currentDraggedQuestPos != currentDraggedQuestPos ||
-          old.connectionSourceId != connectionSourceId ||
-          old.connectionPreviewEnd != connectionPreviewEnd ||
-          old.viewportRect != viewportRect ||
-          old.scale != scale ||
-          old.animation.value != animation.value;
+      old.currentDraggedQuestPos != currentDraggedQuestPos ||
+      old.connectionSourceId != connectionSourceId ||
+      old.connectionPreviewEnd != connectionPreviewEnd ||
+      old.viewportRect != viewportRect ||
+      old.scale != scale ||
+      old.animation.value != animation.value;
 }
-
 
 Color glowColorOfQuest(int id) {
   if (glowColors.containsKey(id)) return glowColors[id]!;
@@ -286,4 +274,3 @@ Color glowColorOfQuest(int id) {
 }
 
 Map<int, Color> glowColors = {};
-

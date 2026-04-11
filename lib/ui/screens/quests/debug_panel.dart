@@ -1,12 +1,12 @@
 import 'dart:async';
 
 import 'package:flutter/material.dart';
-import 'package:wurp/ui/animations/slide_morph_transitions.dart';
 import 'package:flutter/services.dart';
 import 'package:wurp/logic/quests/quest.dart';
 import 'package:wurp/logic/quests/quest_change_manager.dart';
 import 'package:wurp/logic/quests/quest_system.dart';
 import 'package:wurp/logic/repositories/quest_repository.dart';
+import 'package:wurp/ui/animations/slide_morph_transitions.dart';
 
 class QuestDebugPanel extends StatefulWidget {
   final QuestSystem questSystem;
@@ -94,7 +94,8 @@ class QuestDebugPanelState extends State<QuestDebugPanel> with TickerProviderSta
           questSystem.upsertQuest(quest);
           setState(() => _expandedQuestId = quest.id);
           widget.onChanged();
-        }, changeManager: changeManager,
+        },
+        changeManager: changeManager,
       ),
     );
   }
@@ -203,7 +204,8 @@ class QuestDebugPanelState extends State<QuestDebugPanel> with TickerProviderSta
           onChanged: () {
             setState(() {});
             widget.onChanged();
-          }, changeManager: changeManager,
+          },
+          changeManager: changeManager,
         );
       },
     );
@@ -605,12 +607,7 @@ class _ApplyButton extends StatelessWidget {
           padding: const EdgeInsets.symmetric(vertical: 10),
           child: AnimatedSwitcher(
             duration: const Duration(milliseconds: 220),
-            transitionBuilder: (child, anim) => SlideMorphTransitions.switcher(
-              child,
-              anim,
-              beginOffset: const Offset(0, 0.35),
-              beginScale: 0.9,
-            ),
+            transitionBuilder: (child, anim) => SlideMorphTransitions.switcher(child, anim, beginOffset: const Offset(0, 0.35), beginScale: 0.9),
             child: isSaved
                 ? const Row(
                     key: ValueKey('saved'),
@@ -818,7 +815,7 @@ class _CreateQuestDialog extends StatefulWidget {
   const _CreateQuestDialog({required this.onCreated, required this.changeManager});
 
   final void Function(Quest) onCreated;
-  
+
   final QuestChangeManager changeManager;
 
   @override
@@ -834,7 +831,7 @@ class _CreateQuestDialogState extends State<_CreateQuestDialog> {
   final _sizeXCtrl = TextEditingController(text: '200');
   final _sizeYCtrl = TextEditingController(text: '100');
   double _difficulty = 0.5;
-  
+
   QuestChangeManager get changeManager => widget.changeManager;
 
   @override

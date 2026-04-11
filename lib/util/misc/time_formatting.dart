@@ -17,8 +17,7 @@ String formatTime(DateTime dateTime) {
     const weekdays = ["Mon", "Tue", "Wed", "Thu", "Fri", "Sat", "Sun"];
     return weekdays[dateTime.weekday - 1];
   } else if (now.year == dateTime.year) {
-    const months = ["Jan", "Feb", "Mar", "Apr", "May", "Jun",
-      "Jul", "Aug", "Sep", "Oct", "Nov", "Dec"];
+    const months = ["Jan", "Feb", "Mar", "Apr", "May", "Jun", "Jul", "Aug", "Sep", "Oct", "Nov", "Dec"];
     return "${dateTime.day}. ${months[dateTime.month - 1]}";
   } else {
     final d = dateTime.day.toString().padLeft(2, '0');

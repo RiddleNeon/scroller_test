@@ -58,7 +58,7 @@ class _TestQuestScreenState extends State<TestQuestScreen> {
       builder: (context, asyncSnapshot) {
         final loaded = asyncSnapshot.hasData;
         final questSystem = asyncSnapshot.data;
-        
+
         print("loaded: $loaded, questSystem: $questSystem");
 
         return Scaffold(
@@ -93,8 +93,8 @@ class _TestQuestScreenState extends State<TestQuestScreen> {
                       const Icon(Icons.commit),
                       if (loaded)
                         Positioned(
-                          top: -kFloatingActionButtonMargin*1.5,
-                          right: -kFloatingActionButtonMargin*1.5,
+                          top: -kFloatingActionButtonMargin * 1.5,
+                          right: -kFloatingActionButtonMargin * 1.5,
                           child: AnimatedScale(
                             scale: questSystem!.changeManager.hasPendingChanges ? 1 : 0,
                             duration: const Duration(milliseconds: 420),

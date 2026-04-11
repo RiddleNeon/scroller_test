@@ -5,6 +5,7 @@ class Avatar extends StatelessWidget {
   final ColorScheme colorScheme;
   final String? imageUrl;
   final String name;
+
   const Avatar({super.key, required this.imageUrl, required this.name, required this.colorScheme});
 
   @override
@@ -19,9 +20,7 @@ class Avatar extends StatelessWidget {
       child: CircleAvatar(
         radius: 26,
         backgroundColor: colorScheme.surfaceContainer,
-        backgroundImage: (imageUrl?.isNotEmpty ?? false)
-            ? NetworkImage(imageUrl!)
-            : NetworkImage(createUserProfileImageUrl(name)),
+        backgroundImage: (imageUrl?.isNotEmpty ?? false) ? NetworkImage(imageUrl!) : NetworkImage(createUserProfileImageUrl(name)),
       ),
     );
   }

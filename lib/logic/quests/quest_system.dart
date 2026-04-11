@@ -8,7 +8,7 @@ import 'package:wurp/logic/repositories/quest_repository.dart';
 
 class QuestSystem with ChangeNotifier {
   late QuestChangeManager changeManager;
-  
+
   final Map<int, Quest> _quests = {};
   final Map<int, Set<int>> _prerequisites = {};
 
@@ -21,11 +21,8 @@ class QuestSystem with ChangeNotifier {
 
   /// Returns the [Quest] objects for all prerequisites of [questId].
   /// Silently skips IDs that no longer exist in the system.
-  List<Quest> prerequisitesOf(int questId) => prerequisiteIds(questId)
-      .map((id) => _quests[id])
-      .whereType<Quest>()
-      .toList();
-  
+  List<Quest> prerequisitesOf(int questId) => prerequisiteIds(questId).map((id) => _quests[id]).whereType<Quest>().toList();
+
   bool isConnected(int fromId, int toId) => _prerequisites[fromId]?.contains(toId) ?? false;
 
   // ── Quest mutations ────────────────────────────────────────────────────────
@@ -38,14 +35,16 @@ class QuestSystem with ChangeNotifier {
   /// Removes the quest and all connections to/from it.
   void removeQuest(int id) {
     _quests.remove(id);
-    _prerequisites.remove(id);                      // outgoing connections
-    for (final deps in _prerequisites.values) {     // incoming connections
+    _prerequisites.remove(id); // outgoing connections
+    for (final deps in _prerequisites.values) {
+      // incoming connections
       deps.remove(id);
     }
     notifyListeners();
   }
 
   Quest getQuestById(int id) => _quests[id]!;
+
   Quest? maybeGetQuestById(int id) => _quests[id];
 
   // ── Connection mutations ───────────────────────────────────────────────────
@@ -56,7 +55,9 @@ class QuestSystem with ChangeNotifier {
   }
 
   void removeConnection(int fromId, int toId) {
-    print("Attempting to remove connection from $fromId to $toId. Current connections from $fromId: ${_prerequisites[fromId]} and from $toId: ${_prerequisites[toId]}");
+    print(
+      "Attempting to remove connection from $fromId to $toId. Current connections from $fromId: ${_prerequisites[fromId]} and from $toId: ${_prerequisites[toId]}",
+    );
     _prerequisites[fromId]!.remove(toId);
     print("Removed connection from $fromId to $toId. Remaining connections from $fromId: ${_prerequisites[fromId]}");
     notifyListeners();
@@ -66,8 +67,7 @@ class QuestSystem with ChangeNotifier {
 
   /// Loads quests from the bundled [assets/quests.json] file (offline / dev).
   Future<void> loadFromAssets() async {
-    final rawJson =
-    jsonDecode(await rootBundle.loadString('assets/quests.json')) as List;
+    final rawJson = jsonDecode(await rootBundle.loadString('assets/quests.json')) as List;
     final json = rawJson.cast<Map<String, dynamic>>();
 
     for (final data in json) {
@@ -80,10 +80,7 @@ class QuestSystem with ChangeNotifier {
       final prereqIds = (data['prerequisites'] as List?)?.cast<int>();
       if (prereqIds == null || prereqIds.isEmpty) continue;
 
-      assert(
-      prereqIds.every(_quests.containsKey),
-      'All prerequisite IDs must reference existing quests.',
-      );
+      assert(prereqIds.every(_quests.containsKey), 'All prerequisite IDs must reference existing quests.');
 
       _prerequisites[data['id'] as int] = prereqIds.toSet();
     }
@@ -104,7 +101,7 @@ class QuestSystem with ChangeNotifier {
     for (final quest in fetchedQuests) {
       _quests[quest.id] = quest;
     }
-    
+
     print("Fetched quests: ${fetchedQuests.map((q) => q.id).toList()}");
 
     for (final entry in fetchedConnections.entries) {
@@ -113,7 +110,7 @@ class QuestSystem with ChangeNotifier {
 
     print("fetched connections: ${fetchedConnections.entries.map((e) => "${e.key} -> ${e.value}").toList()}");
     changeManager = QuestChangeManager(questSystem: this, repo: questRepo);
-    
+
     notifyListeners();
   }
 
@@ -125,19 +122,19 @@ class QuestSystem with ChangeNotifier {
         _quests.values
             .map(
               (q) => {
-            'id': q.id,
-            'name': q.name,
-            'description': q.description,
-            'subject': q.subject,
-            'posX': q.posX,
-            'posY': q.posY,
-            'sizeX': q.sizeX,
-            'sizeY': q.sizeY,
-            'difficulty': q.difficulty,
-            'isCompleted': q.isCompleted,
-            'prerequisites': (_prerequisites[q.id] ?? {}).toList(),
-          },
-        )
+                'id': q.id,
+                'name': q.name,
+                'description': q.description,
+                'subject': q.subject,
+                'posX': q.posX,
+                'posY': q.posY,
+                'sizeX': q.sizeX,
+                'sizeY': q.sizeY,
+                'difficulty': q.difficulty,
+                'isCompleted': q.isCompleted,
+                'prerequisites': (_prerequisites[q.id] ?? {}).toList(),
+              },
+            )
             .toList(),
       );
     } on Exception {

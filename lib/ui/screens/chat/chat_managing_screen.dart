@@ -76,7 +76,9 @@ class _ChatManagingScreenState extends State<ChatManagingScreen> {
         title: const Text("Chats"),
         backgroundColor: theme.colorScheme.surfaceContainer,
         elevation: 0,
-        shape: const RoundedRectangleBorder(borderRadius: BorderRadiusGeometry.only(bottomLeft: Radius.circular(18), bottomRight: Radius.circular(18))),
+        shape: const RoundedRectangleBorder(
+          borderRadius: BorderRadiusGeometry.only(bottomLeft: Radius.circular(18), bottomRight: Radius.circular(18)),
+        ),
       ),
       body: Padding(padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 12), child: _buildChatList(chats)),
     );
@@ -94,7 +96,7 @@ class _ChatManagingScreenState extends State<ChatManagingScreen> {
     if (loading && chats.isEmpty) {
       return const SizedBox.shrink();
     }
-    
+
     if (chats.isEmpty) {
       return const Center(child: Text("No Chats yet!"));
     }
@@ -159,15 +161,15 @@ class _ChatManagingScreenState extends State<ChatManagingScreen> {
                     ],
                   ),
                 ),
-                
+
                 const SizedBox(width: 12),
-                
+
                 Column(
                   crossAxisAlignment: CrossAxisAlignment.end,
                   children: [
                     Text(timeString, style: theme.textTheme.bodySmall?.copyWith(color: theme.colorScheme.primary)),
                     const SizedBox(height: 6),
-                    
+
                     if (!chat.lastMessageByMe)
                       Container(
                         width: 8,
@@ -199,17 +201,10 @@ class _ChatManagingScreenState extends State<ChatManagingScreen> {
         reverseTransitionDuration: const Duration(milliseconds: 260),
         pageBuilder: (context, animation, secondaryAnimation) => buildMessagingScreen(chat, onMessageUpdate),
         transitionsBuilder: (context, animation, secondaryAnimation, child) {
-          final curved = CurvedAnimation(
-            parent: animation,
-            curve: Curves.easeOutCubic,
-            reverseCurve: Curves.easeInCubic,
-          );
+          final curved = CurvedAnimation(parent: animation, curve: Curves.easeOutCubic, reverseCurve: Curves.easeInCubic);
           return ClipRect(
             child: SlideTransition(
-              position: Tween<Offset>(
-                begin: const Offset(1, 0),
-                end: Offset.zero,
-              ).animate(curved),
+              position: Tween<Offset>(begin: const Offset(1, 0), end: Offset.zero).animate(curved),
               child: child,
             ),
           );
@@ -233,7 +228,7 @@ Widget buildMessagingScreen(Chat chat, void Function(ChatMessage) onMessageUpdat
     future: userRepository.getUser(chat.partnerId),
     builder: (context, asyncSnapshot) {
       if (!asyncSnapshot.hasData) return const SizedBox.shrink();
-      
+
       return MessagingScreen(
         key: currentOpenChatScreenKey,
         user: asyncSnapshot.data!,
@@ -242,15 +237,13 @@ Widget buildMessagingScreen(Chat chat, void Function(ChatMessage) onMessageUpdat
           chatManager.addChat(chat, replaceExisting: false);
           await chatRepository.sendNotification(
             chat: chat,
-            message: ChatMessage(id: "${chat.partnerId}-${DateTime
-                .now()
-                .microsecondsSinceEpoch}", text: message, isMe: true, timestamp: DateTime.now()),
+            message: ChatMessage(id: "${chat.partnerId}-${DateTime.now().microsecondsSinceEpoch}", text: message, isMe: true, timestamp: DateTime.now()),
           );
         },
         loadMoreMessages: (int limit, DateTime? lastVisibleMessage) async {
           return chatRepository.getMessagesWith(chat.partnerId, startOffset: lastVisibleMessage, limit: limit);
         },
       );
-    }
+    },
   );
 }

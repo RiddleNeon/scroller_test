@@ -29,8 +29,9 @@ class _InfiniteDotsBackgroundState extends State<InfiniteDotsBackground> {
     final frame = await codec.getNextFrame();
     return frame.image;
   }
-  
+
   late ui.Image img;
+
   Future<void> _loadShader() async {
     try {
       final program = await ui.FragmentProgram.fromAsset('shaders/dotted_background.frag');
@@ -42,7 +43,6 @@ class _InfiniteDotsBackgroundState extends State<InfiniteDotsBackground> {
       debugPrint('dotted_background.frag failed to load – falling back to CPU painter: $e');
     }
   }
-
 
   @override
   Widget build(BuildContext context) {
@@ -76,7 +76,6 @@ class _ShaderDotsPainter extends CustomPainter {
 
   @override
   void paint(Canvas canvas, Size size) {
-
     const double spacing = 25.0;
     const double accentSpacing = spacing * 4.0;
     final double period = accentSpacing * scale;

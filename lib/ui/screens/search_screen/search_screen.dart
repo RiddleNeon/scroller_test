@@ -22,24 +22,24 @@ class SearchScreen extends StatefulWidget {
 
 class _SearchScreenState extends State<SearchScreen> with TickerProviderStateMixin {
   final TextEditingController _controller = TextEditingController();
-  
+
   late TabController _tabController;
-  
+
   bool _hasSearched = false;
   bool _loading = false;
-  
+
   SearchQuery<Video>? _videoQuery;
   SearchQuery<UserProfile>? _userQuery;
-  
+
   FeedViewModel? _currentSearchViewModel;
   int _searchRequestId = 0;
-  
+
   static const _kSearchBarHeight = 56.0;
   static const _kPadding = 16.0;
   static const _kSearchBarSlotHeight = _kSearchBarHeight + _kPadding * 2;
-  
+
   double _searchBarVisibility = 1.0;
-  
+
   @override
   void initState() {
     super.initState();
@@ -48,7 +48,7 @@ class _SearchScreenState extends State<SearchScreen> with TickerProviderStateMix
       if (mounted) setState(() {});
     });
   }
-  
+
   @override
   void dispose() {
     disposeThumbnailCache();
@@ -97,7 +97,7 @@ class _SearchScreenState extends State<SearchScreen> with TickerProviderStateMix
     final cs = Theme.of(context).colorScheme;
     return Scaffold(backgroundColor: cs.surface, body: _hasSearched ? _buildResultsBody(cs) : _buildLandingBody(cs));
   }
-  
+
   Widget _buildLandingBody(ColorScheme cs) {
     return Center(
       child: SingleChildScrollView(
@@ -126,7 +126,7 @@ class _SearchScreenState extends State<SearchScreen> with TickerProviderStateMix
       ),
     );
   }
-  
+
   Widget _buildResultsBody(ColorScheme cs) {
     return Column(
       children: [
@@ -142,10 +142,7 @@ class _SearchScreenState extends State<SearchScreen> with TickerProviderStateMix
             duration: const Duration(milliseconds: 220),
             switchInCurve: Curves.easeOutCubic,
             switchOutCurve: Curves.easeInCubic,
-            child: KeyedSubtree(
-              key: ValueKey('tab_${_tabController.index}'),
-              child: _buildTabContent(),
-            ),
+            child: KeyedSubtree(key: ValueKey('tab_${_tabController.index}'), child: _buildTabContent()),
           ),
         ),
       ],
@@ -214,7 +211,7 @@ class _SearchScreenState extends State<SearchScreen> with TickerProviderStateMix
 
     return const SizedBox.shrink();
   }
-  
+
   Widget _buildSearchField(ColorScheme cs) {
     return AnimatedContainer(
       duration: const Duration(milliseconds: 280),
@@ -238,10 +235,7 @@ class _SearchScreenState extends State<SearchScreen> with TickerProviderStateMix
             onTap: _search,
             child: Container(
               margin: const EdgeInsets.all(8),
-              decoration: BoxDecoration(
-                color: cs.primary,
-                borderRadius: BorderRadius.circular(14),
-              ),
+              decoration: BoxDecoration(color: cs.primary, borderRadius: BorderRadius.circular(14)),
               child: AnimatedScale(
                 duration: const Duration(milliseconds: 180),
                 scale: _loading ? 0.92 : 1,
@@ -314,24 +308,14 @@ Future<int> openVideoPlayer({
       ),
     ),
     transitionBuilder: (context, animation, _, child) {
-      return SlideMorphTransitions.build(
-        animation,
-        child,
-        beginOffset: const Offset(0, 0.08),
-        beginScale: 0.88,
-      );
+      return SlideMorphTransitions.build(animation, child, beginOffset: const Offset(0, 0.08), beginScale: 0.88);
     },
   );
   return likes;
 }
 
 class _SearchSegmentButton extends StatelessWidget {
-  const _SearchSegmentButton({
-    required this.selected,
-    required this.onTap,
-    required this.icon,
-    required this.label,
-  });
+  const _SearchSegmentButton({required this.selected, required this.onTap, required this.icon, required this.label});
 
   final bool selected;
   final VoidCallback onTap;
@@ -355,11 +339,7 @@ class _SearchSegmentButton extends StatelessWidget {
         ),
         child: AnimatedDefaultTextStyle(
           duration: const Duration(milliseconds: 180),
-          style: TextStyle(
-            fontWeight: selected ? FontWeight.w700 : FontWeight.w600,
-            fontSize: 13,
-            color: selected ? cs.primary : cs.onSurfaceVariant,
-          ),
+          style: TextStyle(fontWeight: selected ? FontWeight.w700 : FontWeight.w600, fontSize: 13, color: selected ? cs.primary : cs.onSurfaceVariant),
           child: Row(
             mainAxisAlignment: MainAxisAlignment.center,
             children: [

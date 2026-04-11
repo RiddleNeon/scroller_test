@@ -14,23 +14,26 @@ class UserPreferenceManager {
   Map<String, TagInteraction> cachedAuthorPrefs = {};
   double cachedAvgCompletion = 0.0;
   int cachedTotalInteractions = 0;
-  
+
   static UserPreferenceManager? currentInstance;
+
   factory UserPreferenceManager() {
     return currentInstance ??= UserPreferenceManager._internal();
   }
+
   UserPreferenceManager._internal() {
     loadCache();
   }
-  
+
   ///resets all values in case of the user logging out and switching accounts
-  static void reset(){
+  static void reset() {
     currentInstance = null;
   }
 
   bool get isCacheLoaded => _loadFuture != null;
-  
+
   Future<void>? _loadFuture;
+
   Future<void> loadCache() async {
     _loadFuture ??= _loadCacheInternal().catchError((e) {
       _loadFuture = null;
@@ -94,14 +97,13 @@ class UserPreferenceManager {
 
   List<MapEntry<String, TagInteraction>> sortByRelevancy(Map<String, TagInteraction> tagPrefs) {
     DateTime now = DateTime.now();
-    return tagPrefs.entries.toList()
-      ..sort((a, b) {
-        final aRecent = now.difference(a.value.lastInteracted) < const Duration(minutes: 30);
-        final bRecent = now.difference(b.value.lastInteracted) < const Duration(minutes: 30);
-        if (bRecent && !aRecent) return 1;
-        if (aRecent && !bRecent) return -1;
-        return b.value.engagementScore.distanceTo(0.5).compareTo(a.value.engagementScore.distanceTo(0.5));
-      });
+    return tagPrefs.entries.toList()..sort((a, b) {
+      final aRecent = now.difference(a.value.lastInteracted) < const Duration(minutes: 30);
+      final bRecent = now.difference(b.value.lastInteracted) < const Duration(minutes: 30);
+      if (bRecent && !aRecent) return 1;
+      if (aRecent && !bRecent) return -1;
+      return b.value.engagementScore.distanceTo(0.5).compareTo(a.value.engagementScore.distanceTo(0.5));
+    });
   }
 }
 
