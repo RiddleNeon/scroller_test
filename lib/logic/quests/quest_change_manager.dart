@@ -827,6 +827,15 @@ class UpdateConnectionChange extends _QuestTargetedChange {
   }
 
   @override
+  QuestChange? mergeWith(QuestChange newer) {
+    if (newer is UpdateConnectionChange && newer.questId == questId) {
+      return UpdateConnectionChange(fromId: fromId, toId: toId, patch: patch.mergedWith(newer.patch), reversePatch: reversePatch, updateMessage: newer.updateMessage);
+    }
+    if (newer is RemoveConnectionChange) return newer;
+    return newer;
+  }
+
+  @override
   int get questId => fromId;
   
   @override

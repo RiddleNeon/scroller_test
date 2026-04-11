@@ -164,6 +164,9 @@ class QuestRepository {
   }
 
   Future<void> updateConnection(int fromId, int toId, {String? newType, double? newXpRequirement, String? updateMessage}) async {
+    
+    print("UPDATING CONNECTION from $fromId to $toId with newType: $newType, newXpRequirement: $newXpRequirement, updateMessage: $updateMessage");
+    
     final int? existingId =
         (await supabaseClient.from('quest_connections').select('connection_id').eq('from_id', fromId).eq('to_id', toId).maybeSingle())?['connection_id']
             as int?;
