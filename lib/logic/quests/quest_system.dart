@@ -25,6 +25,7 @@ class QuestSystem with ChangeNotifier {
   List<Quest> prerequisitesOf(int questId) => prerequisiteIds(questId).map((id) => _quests[id]).whereType<Quest>().toList();
 
   bool isConnected(int fromId, int toId) => _prerequisites.any((element) => element.fromQuestId == fromId && element.toQuestId == toId);
+  QuestConnection? getConnection(int fromId, int toId) => _prerequisites.where((element) => element.fromQuestId == fromId && element.toQuestId == toId).firstOrNull;
 
   // ── Quest mutations ────────────────────────────────────────────────────────
 
@@ -54,9 +55,14 @@ class QuestSystem with ChangeNotifier {
   }
 
   void removeConnection(int fromId, int toId) {
-    print("Removing connection from $fromId to $toId. before: ${_prerequisites.length} connections");
     _prerequisites.removeWhere((element) => element.fromQuestId == fromId && element.toQuestId == toId);
-    print("after: ${_prerequisites.length} connections");
+    notifyListeners();
+  }
+  
+  void updateConnection(int fromId, int toId, {String? newType, double? newXpRequirement}) {
+    final connection = _prerequisites.firstWhere((element) => element.fromQuestId == fromId && element.toQuestId == toId);
+    if(newType != null) connection.type = newType;
+    if(newXpRequirement != null) connection.xpRequirement = newXpRequirement;
     notifyListeners();
   }
 
@@ -103,18 +109,7 @@ class QuestSystem with ChangeNotifier {
 
     print("Fetched quests: ${fetchedQuests.map((q) => q.id).toList()}");
 
-    for (final entry in fetchedConnections.entries) {
-      final toId = entry.key;
-      final fromIds = entry.value;
-
-      for (final fromId in fromIds) {
-        if (!isConnected(fromId, toId)) {
-          _prerequisites.add(QuestConnection(fromQuestId: fromId, toQuestId: toId));
-        }
-      }
-    }
-
-    print("fetched connections: ${fetchedConnections.entries.map((e) => "${e.key} -> ${e.value}").toList()}");
+    _prerequisites.addAll(fetchedConnections);
     changeManager = QuestChangeManager(questSystem: this, repo: questRepo);
 
     notifyListeners();

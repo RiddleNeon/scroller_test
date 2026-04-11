@@ -1,5 +1,6 @@
 import 'package:wurp/logic/quests/quest.dart';
 import 'package:wurp/logic/quests/quest_change_manager.dart';
+import 'package:wurp/logic/quests/quest_connection.dart';
 import 'package:wurp/tools/supabase_tests/supabase_login_test.dart';
 
 import '../../base_logic.dart';
@@ -41,35 +42,36 @@ class QuestRepository {
 
   /// Loads all non-deleted quests for [subject] and returns them together with
   /// their prerequisite connections as a [Map<fromId, Set<toId>>].
-  Future<(List<Quest>, Map<int, Set<int>>)> fetchQuestsBySubject(String subject) async {
+  Future<(List<Quest>, List<QuestConnection>)> fetchQuestsBySubject(String subject) async {
     final questRows = await supabaseClient.from('quests_latest').select().eq('subject', subject).eq('is_deleted', false);
 
     final Map<int, Quest> questMap = {for (final row in questRows as List<dynamic>) (row['quest_id'] as int): _questFromRow(row as Map<String, dynamic>)};
 
-    if (questMap.isEmpty) return (<Quest>[], <int, Set<int>>{});
+    if (questMap.isEmpty) return (<Quest>[], <QuestConnection>[]);
 
     print("getting rows now for quests: ${questMap.keys.toList()}");
 
     final connectionRows = await supabaseClient
         .from('quest_connections')
-        .select('from_id, to_id, quest_connections_latest!connection_id(is_deleted)')
+        .select('from_id, to_id, quest_connections_latest!connection_id(is_deleted, type, xp_requirement)')
         .inFilter('from_id', questMap.keys.toList())
         .inFilter('to_id', questMap.keys.toList())
         .limit(10000);
 
     final Map<int, Set<int>> connections = {};
+    final List<QuestConnection> connectionList = [];
     for (final row in connectionRows as List<dynamic>) {
       final latest = row['quest_connections_latest'] as Map<String, dynamic>?;
       if (latest == null || latest['is_deleted'] == true) continue;
 
       connections.putIfAbsent(row['from_id'] as int, () => {}).add(row['to_id'] as int);
-
-      print('Found connection: ${row['from_id']} -> ${row['to_id']}');
+      connectionList.add(QuestConnection(fromQuestId: row['from_id'] as int, toQuestId: row['to_id'] as int, type: row['quest_connections_latest']['type'] as String, xpRequirement: (row['quest_connections_latest']['xp_requirement'] as num?)?.toDouble() ?? 0));
+      print('Found connection: ${row['from_id']} -> ${row['to_id']} (type: ${row['quest_connections_latest']['type']}, xpRequirement: ${row['quest_connections_latest']['xp_requirement']})');
     }
 
     print("Fetched connections: ${connections.entries.map((e) => "${e.key} -> ${e.value}").toList()}");
 
-    return (questMap.values.toList(), connections);
+    return (questMap.values.toList(), connectionList);
   }
 
   // ── Write ──────────────────────────────────────────────────────────────────
@@ -139,15 +141,15 @@ class QuestRepository {
   /// Soft-deletes a prerequisite connection.
   /// Does NOT mutate local state – the caller (QuestChangeManager) is responsible.
   Future<void> removeConnection(int fromId, int toId) async {
-    print('Removing connection from $fromId to $toId');
     final int? existingId =
         (await supabaseClient.from('quest_connections').select('connection_id').eq('from_id', fromId).eq('to_id', toId).maybeSingle())?['connection_id']
             as int?;
     final bool exists = existingId != null;
     final int connectionId;
     if (!exists) {
+      print("Connection doesn't exist, inserting new connection into quest_connections");
       connectionId =
-          (await supabaseClient.from('quest_connections').insert({'from_id': fromId, 'to_id': toId, 'created_by': currentUser.id}).single())['connection_id']
+          (await supabaseClient.from('quest_connections').insert({'from_id': fromId, 'to_id': toId, 'created_by': currentUser.id}).select().single())['connection_id']
               as int;
     } else {
       connectionId = existingId;
@@ -159,5 +161,35 @@ class QuestRepository {
       'update_message': 'connection removed',
       'created_by': currentUser.id,
     });
+  }
+
+  Future<void> updateConnection(int fromId, int toId, {String? newType, double? newXpRequirement, String? updateMessage}) async {
+    final int? existingId =
+        (await supabaseClient.from('quest_connections').select('connection_id').eq('from_id', fromId).eq('to_id', toId).maybeSingle())?['connection_id']
+            as int?;
+    final bool exists = existingId != null;
+    final int? connectionId;
+    if (!exists) {
+      print("Connection doesn't exist, inserting new connection into quest_connections");
+      connectionId =
+          (await supabaseClient.from('quest_connections').insert({
+                'from_id': fromId,
+                'to_id': toId,
+                'created_by': currentUser.id,
+              }).select().maybeSingle())?['connection_id']
+              as int?;
+      print("inserted new connection with id $connectionId for update");
+    } else {
+      connectionId = existingId;
+    }
+    final Map<String, dynamic> updateData = {
+      'connection_id': connectionId,
+      'update_message': updateMessage ?? 'connection updated',
+      'created_by': currentUser.id,
+      'type': newType,
+      'xp_requirement': newXpRequirement,
+    };
+
+    await supabaseClient.from('quest_connection_versions').insert(updateData);
   }
 }

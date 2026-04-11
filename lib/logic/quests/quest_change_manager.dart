@@ -1,5 +1,6 @@
 import 'package:flutter/foundation.dart';
 import 'package:wurp/logic/quests/quest.dart';
+import 'package:wurp/logic/quests/quest_connection.dart';
 import 'package:wurp/logic/quests/quest_system.dart';
 import 'package:wurp/logic/repositories/quest_repository.dart';
 
@@ -485,6 +486,77 @@ class QuestPatch {
       'sizeX: $sizeX, sizeY: $sizeY, isCompleted: $isCompleted)';
 }
 
+class QuestConnectionPatch {
+  final String? type;
+  final double? xpRequirement;
+
+  const QuestConnectionPatch({this.type, this.xpRequirement});
+
+  /// Creates a patch from two quest snapshots, keeping only fields that differ.
+  factory QuestConnectionPatch.diff(QuestConnection before, QuestConnection after) {
+    assert(before.fromQuestId == after.fromQuestId && before.toQuestId == after.toQuestId, 'Diff requires the same quest ID');
+    return QuestConnectionPatch(
+      type: after.type != before.type ? after.type : null,
+      xpRequirement: after.xpRequirement != before.xpRequirement ? after.xpRequirement : null,
+    );
+  }
+
+  factory QuestConnectionPatch.fromQuest(QuestConnection connection) {
+    return QuestConnectionPatch(
+      type: connection.type,
+      xpRequirement: connection.xpRequirement,
+    );
+  }
+
+  /// Creates a reverse patch that restores every field touched by [this]
+  /// to its value in [before].
+  QuestConnectionPatch reverse(QuestConnection before) {
+    return QuestConnectionPatch(
+      type: type != null ? before.type : null,
+      xpRequirement: xpRequirement != null ? before.xpRequirement : null,
+    );
+  }
+
+  /// Returns a new patch with all fields from [this], overridden by any
+  /// non-null fields in [newer]. Used when collapsing two updates for the
+  /// same quest into one.
+  QuestConnectionPatch mergedWith(QuestConnectionPatch newer) {
+    return QuestConnectionPatch(
+      type: newer.type ?? type,
+      xpRequirement: newer.xpRequirement ?? xpRequirement,
+    );
+  }
+
+  /// Applies only the non-null fields of this patch to [quest].
+  QuestConnection applyTo(QuestConnection connection) => connection.copyWith(
+    type: type,
+    xpRequirement: xpRequirement,
+  );
+
+  bool get isEmpty =>
+      type == null &&
+          xpRequirement == null;
+
+  /// Serialises only the non-null fields for Supabase.
+  ///
+  /// [isCompleted] is intentionally excluded – it is client-only state and
+  /// has no column in quest_versions.
+  Map<String, dynamic> toSupabaseMap({required int fromId, required int toId, required String updateMessage, required String createdBy}) {
+    return {
+      'from_id': fromId,
+      'to_id': toId,
+      'created_by': createdBy,
+      'update_message': updateMessage,
+      if (type != null) 'type': type,
+      if (xpRequirement != null) 'xp_requirement': xpRequirement,
+    };
+  }
+
+  @override
+  String toString() =>
+      'QuestConnectionPatch(type: $type, xp_requirement: $xpRequirement)';
+}
+
 // ── Base ───────────────────────────────────────────────────────────────────
 
 abstract class QuestChange {
@@ -713,6 +785,50 @@ class RemoveConnectionChange extends _QuestTargetedChange {
   @override
   int get questId => fromId;
 
+  @override
+  int? get otherQuestId => toId;
+}
+
+class UpdateConnectionChange extends _QuestTargetedChange {
+  final int fromId;
+  final int toId;
+
+  final QuestConnectionPatch patch;
+  QuestConnectionPatch reversePatch;
+
+  UpdateConnectionChange({
+    required this.fromId,
+    required this.toId,
+    required this.patch,
+    required this.reversePatch,
+    super.updateMessage = 'updated connection',
+  });
+
+  @override
+  String get collapseKey => 'conn:${fromId}_$toId';
+
+  @override
+  void applyLocally(QuestSystem system) {
+    final current = system.getConnection(fromId, toId);
+    if (current == null) return;
+    system.updateConnection(fromId, toId, newType: patch.type, newXpRequirement: patch.xpRequirement);
+  }
+
+  @override
+  void undoLocally(QuestSystem system) {
+    final current = system.getConnection(fromId, toId);
+    if (current == null) return;
+    system.updateConnection(fromId, toId, newType: reversePatch.type, newXpRequirement: reversePatch.xpRequirement);
+  }
+
+  @override
+  Future<void> push(QuestRepository repo, QuestSystem system) async {
+    return repo.updateConnection(fromId, toId, newType: patch.type, newXpRequirement: patch.xpRequirement, updateMessage: updateMessage);
+  }
+
+  @override
+  int get questId => fromId;
+  
   @override
   int? get otherQuestId => toId;
 }

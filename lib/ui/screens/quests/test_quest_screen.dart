@@ -58,9 +58,7 @@ class _TestQuestScreenState extends State<TestQuestScreen> {
       builder: (context, asyncSnapshot) {
         final loaded = asyncSnapshot.hasData;
         final questSystem = asyncSnapshot.data;
-
-        print("loaded: $loaded, questSystem: $questSystem");
-
+        
         return Scaffold(
           appBar: AppBar(
             title: InkWell(

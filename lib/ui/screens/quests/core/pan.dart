@@ -6,9 +6,11 @@ import 'package:flutter/rendering.dart';
 import 'package:flutter/services.dart';
 import 'package:vector_math/vector_math_64.dart' hide Matrix4, Colors;
 import 'package:wurp/logic/quests/quest_change_manager.dart';
+import 'package:wurp/logic/quests/quest_connection.dart';
 import 'package:wurp/logic/quests/quest_system.dart';
 import 'package:wurp/logic/repositories/quest_repository.dart';
 import 'package:wurp/ui/screens/quests/core/quest_bubbles_overlay.dart';
+import 'package:wurp/ui/screens/quests/core/quest_connection_edit_screen.dart';
 import 'package:wurp/ui/screens/quests/core/quest_detail_screen.dart';
 import 'package:wurp/util/extensions/offset_distance.dart';
 
@@ -50,6 +52,7 @@ class PanWidgetState extends State<PanWidget> {
   Offset _focalAtGestureStart = Offset.zero;
 
   Offset _lastPointerScenePos = Offset.zero;
+  Offset _lastPointerLocalPos = Offset.zero;
 
   double get _currentScale => _controller.value.getMaxScaleOnAxis();
 
@@ -131,6 +134,10 @@ class PanWidgetState extends State<PanWidget> {
     _lastPointerScenePos = scenePos;
 
     if (debugMode && details.pointerCount == 1) {
+      if (_isTapOnConnectionHandle()) {
+        return;
+      }
+
       //ignore if not a single finger, to avoid conflicts with pinch zoom or other gestures
       final connectQuest = _findQuestInConnectZone(scenePos);
       if (connectQuest != null) {
@@ -336,12 +343,12 @@ class PanWidgetState extends State<PanWidget> {
   }
 
   void _removeConnection(int fromId, int toId) {
-    print("Removing connection (pan) from $fromId to $toId");
     changeManager.record(RemoveConnectionChange(fromId: fromId, toId: toId));
     setState(() => _hoveredConnection = null);
   }
 
   void _onDoubleTapDown(TapDownDetails details) {
+    _lastPointerLocalPos = details.localPosition;
     _lastPointerScenePos = _controller.toScene(details.localPosition);
   }
 
@@ -355,7 +362,14 @@ class PanWidgetState extends State<PanWidget> {
   }
 
   void _onTap() {
-    if (_hoveredConnection != null && debugMode) _removeConnection(_hoveredConnection!.fromId, _hoveredConnection!.toId);
+    if (_hoveredConnection != null && debugMode) {
+      if (_isTapOnConnectionHandle()) {
+        _removeConnection(_hoveredConnection!.fromId, _hoveredConnection!.toId);
+      } else {
+        showQuestConnectionEditOverlay(_hoveredConnection!.fromId, _hoveredConnection!.toId);
+      }
+      return;
+    }
 
     final quest = _findQuestAt(_lastPointerScenePos);
     if (quest == null) return;
@@ -387,6 +401,39 @@ class PanWidgetState extends State<PanWidget> {
               changeManager.record(DeleteQuestChange(quest: q));
               if (context.mounted) Navigator.of(context).pop();
             },
+            questSystem: questSystem,
+          ),
+        ),
+      ),
+    );
+  }
+
+  bool _isTapOnConnectionHandle() {
+    if (_hoveredConnection == null) return false;
+
+    final screenPos = MatrixUtils.transformPoint(_controller.value, _hoveredConnection!.midpoint);
+
+    const radius = 20.0;
+
+    return (_lastPointerLocalPos - screenPos).distance <= radius;
+  }
+
+  /// Shows an overlay with options to edit a connection between two quests, such as deleting the connection or changing its type or xp requirements
+  void showQuestConnectionEditOverlay(int fromId, int toId) {
+    final fromQuest = questSystem.maybeGetQuestById(fromId);
+    final toQuest = questSystem.maybeGetQuestById(toId);
+    if (fromQuest == null || toQuest == null) return;
+
+    QuestConnection connection = questSystem.getConnection(fromId, toId)!;
+
+    showDialog(
+      context: context,
+      builder: (context) => Center(
+        child: Card(
+          clipBehavior: Clip.antiAlias,
+          shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(20)),
+          child: QuestConnectionEditScreen(
+            connection: QuestConnection(fromQuestId: fromId, toQuestId: toId, type: connection.type, xpRequirement: connection.xpRequirement),
             questSystem: questSystem,
           ),
         ),
@@ -558,14 +605,17 @@ class PanWidgetState extends State<PanWidget> {
                         top: screenPos.dy - 15,
                         child: MouseRegion(
                           cursor: SystemMouseCursors.click,
-                          child: Container(
-                            decoration: const BoxDecoration(
-                              color: Colors.redAccent,
-                              shape: BoxShape.circle,
-                              boxShadow: [BoxShadow(color: Colors.black26, blurRadius: 4)],
+                          child: InkWell(
+                            onTap: () => _removeConnection(_hoveredConnection!.fromId, _hoveredConnection!.toId),
+                            child: Container(
+                              decoration: const BoxDecoration(
+                                color: Colors.redAccent,
+                                shape: BoxShape.circle,
+                                boxShadow: [BoxShadow(color: Colors.black26, blurRadius: 4)],
+                              ),
+                              padding: const EdgeInsets.all(4),
+                              child: const Icon(Icons.close, size: 18, color: Colors.white),
                             ),
-                            padding: const EdgeInsets.all(4),
-                            child: const Icon(Icons.close, size: 18, color: Colors.white),
                           ),
                         ),
                       );
@@ -574,7 +624,7 @@ class PanWidgetState extends State<PanWidget> {
 
                 Positioned.fill(
                   child: GestureDetector(
-                    behavior: HitTestBehavior.opaque,
+                    behavior: HitTestBehavior.translucent,
                     onScaleStart: _onScaleStart,
                     onScaleUpdate: _onScaleUpdate,
                     onScaleEnd: _onScaleEnd,
