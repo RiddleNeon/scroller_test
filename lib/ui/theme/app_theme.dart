@@ -1,5 +1,3 @@
-import 'dart:ui';
-
 import 'package:flutter/material.dart';
 import 'package:wurp/ui/animations/slide_morph_transitions.dart';
 
@@ -294,7 +292,21 @@ class AppTheme {
       surfaceTint: primary,
     );
 
-    return _lerpScheme(cappuccinoBase, template, 0.86);
+    final lerped = _lerpScheme(cappuccinoBase, template, 0.86);
+
+    // Re-derive every "on" color from the *actual* lerped surface it sits on.
+    // This is necessary because lerping the on-colors independently can produce
+    // a result that no longer has sufficient contrast against the lerped base.
+    return lerped.copyWith(
+      onPrimary: _bestOnColor(lerped.primary),
+      onSecondary: _bestOnColor(lerped.secondary),
+      onTertiary: _bestOnColor(lerped.tertiary),
+      onError: _bestOnColor(lerped.error),
+      onSurface: _bestOnColor(lerped.surface),
+      onSurfaceVariant: _bestOnColor(lerped.surfaceContainerHighest)
+          .withValues(alpha: 0.84),
+      onInverseSurface: _bestOnColor(lerped.inverseSurface),
+    );
   }
 
   // ---------------------------------------------------------------------------

@@ -350,7 +350,7 @@ class _LoginScreenState extends State<LoginScreen> with TickerProviderStateMixin
                 clipBehavior: Clip.hardEdge,
                 children: [
                   ...previousChildren,
-                  if (currentChild != null) currentChild,
+                  ?currentChild,
                 ],
               ),
               child: _buildModeFormContent(cs, theme),

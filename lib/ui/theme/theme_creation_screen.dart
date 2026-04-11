@@ -1,13 +1,12 @@
 import 'dart:convert';
-import 'dart:io';
 import 'package:flutter/material.dart';
+import 'package:flutter_web_file_saver/flutter_web_file_saver.dart';
 import 'package:supabase_flutter/supabase_flutter.dart';
 import 'package:wurp/base_ui.dart';
 import 'package:wurp/logic/themes/theme_model.dart';
 import 'package:wurp/ui/theme/theme_editor_screen.dart';
 
 import 'package:file_picker/file_picker.dart';
-import 'package:path_provider/path_provider.dart';
 
 import 'app_theme.dart';
 
@@ -183,20 +182,19 @@ class _ThemeManagerScreenState extends State<ThemeManagerScreen> with TickerProv
     }
     final theme = [_defaultTheme, ..._myThemes].firstWhere((t) => t.id == _selectedThemeId!, orElse: () => _defaultTheme);
     final jsonStr = const JsonEncoder.withIndent('  ').convert(theme.toJson());
-    final dir = await getApplicationDocumentsDirectory();
-    final file = File('${dir.path}/${theme.name.replaceAll(' ', '_')}.json');
-    await file.writeAsString(jsonStr);
+    await FlutterWebFileSaver.saveText(content: jsonStr, filename: "${theme.name.replaceAll(' ', '_')}.json");
     if (!mounted) return;
-    showSnackBar(context, 'Export: ${file.path}');
+    showSnackBar(context, 'Exported!}');
   }
 
   Future<void> _importTheme() async {
     try {
-      final result = await FilePicker.platform.pickFiles(type: FileType.custom, allowedExtensions: ['json']);
+      final result = await FilePicker.platform.pickFiles(type: FileType.custom, allowedExtensions: ['json'], withData: true);
       if (result == null) return;
 
-      final file = File(result.files.single.path!);
-      final json = jsonDecode(await file.readAsString()) as Map<String, dynamic>;
+      final file = result.files.first.bytes!;
+      final fileAsString = utf8.decode(file);
+      final json = jsonDecode(fileAsString) as Map<String, dynamic>;
       final imported = CustomThemeModel.fromJson(json).copyWith(id: UniqueKey().toString(), isPublic: false);
       await _saveTheme(imported);
       if (!mounted) return;

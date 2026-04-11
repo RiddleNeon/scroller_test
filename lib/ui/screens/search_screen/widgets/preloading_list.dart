@@ -267,9 +267,6 @@ class AnimatedPreloadingListState<T> extends State<AnimatedPreloadingList<T>>
   @override
   Widget build(BuildContext context) {
     super.build(context);
-
-    final cs = Theme.of(context).colorScheme;
-
     if (_loading) {
       return const SizedBox.shrink();
     }
