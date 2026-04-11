@@ -10,13 +10,20 @@ class CustomThemeColors {
   final Color onSecondary;
   final Color tertiary;
   final Color onTertiary;
-  final Color background;
-  final Color onBackground;
   final Color surface;
   final Color onSurface;
+  final Color surfaceContainerHighest;
+  final Color onSurfaceVariant;
+  final Color outlineVariant;
+  final Color inverseSurface;
+  final Color onInverseSurface;
   final Color error;
   final Color onError;
   final bool isDark;
+
+  Color get background => surface;
+
+  Color get onBackground => onSurface;
 
   const CustomThemeColors({
     required this.primary,
@@ -25,123 +32,128 @@ class CustomThemeColors {
     required this.onSecondary,
     required this.tertiary,
     required this.onTertiary,
-    required this.background,
-    required this.onBackground,
     required this.surface,
     required this.onSurface,
+    required this.surfaceContainerHighest,
+    required this.onSurfaceVariant,
+    required this.outlineVariant,
+    required this.inverseSurface,
+    required this.onInverseSurface,
     required this.error,
     required this.onError,
     this.isDark = false,
   });
 
-  // ── Generators ────────────────────────────────────────────────────────────
+  factory CustomThemeColors.fromPrimary(Color primary, {bool dark = false}) => CustomThemeColors.fromSeeds(primary: primary, dark: dark);
 
-  /// Generates a full harmonious palette from a single primary seed color.
-  factory CustomThemeColors.fromPrimary(Color primary, {bool dark = false}) =>
-      CustomThemeColors.fromSeeds(primary: primary, dark: dark);
-
-  /// Generates a palette from 1–3 seed colors.
-  ///
-  /// - [primary] is required.
-  /// - [secondary] and [tertiary] are optional; missing ones are derived via
-  ///   hue rotation from [primary].
-  /// - [dark] switches between light and dark surface/background generation.
-  factory CustomThemeColors.fromSeeds({
-    required Color primary,
-    Color? secondary,
-    Color? tertiary,
-    bool dark = false,
-  }) {
+  factory CustomThemeColors.fromSeeds({required Color primary, Color? secondary, Color? tertiary, bool dark = false}) {
     final hsl = HSLColor.fromColor(primary);
 
-    Color deriveAccent(double hueShift) => hsl
-        .withHue((hsl.hue + hueShift) % 360)
-        .withLightness(hsl.lightness.clamp(0.35, 0.65))
-        .withSaturation(hsl.saturation.clamp(0.3, 0.8))
-        .toColor();
+    Color deriveAccent(double hueShift) =>
+        hsl.withHue((hsl.hue + hueShift) % 360).withLightness(hsl.lightness.clamp(0.35, 0.65)).withSaturation(hsl.saturation.clamp(0.3, 0.8)).toColor();
 
     final resolvedSecondary = secondary ?? deriveAccent(30);
     final resolvedTertiary = tertiary ?? deriveAccent(60);
 
     final bgHsl = hsl.withSaturation(0.08);
-    final Color background;
-    final Color surface;
-    final Color onBackground;
-    final Color onSurface;
+
+    final Color resolvedSurface;
+    final Color resolvedSurfaceContainerHighest;
+    final Color resolvedInverseSurface;
+    final Color resolvedOnInverseSurface;
+    final Color resolvedOnSurface;
+    final Color resolvedOnSurfaceVariant;
+    final Color resolvedOutlineVariant;
 
     if (dark) {
-      background = bgHsl.withLightness(0.08).toColor();
-      surface    = bgHsl.withLightness(0.13).toColor();
-      onBackground = const Color(0xFFECECEC);
-      onSurface    = const Color(0xFFECECEC);
+      resolvedSurface = bgHsl.withLightness(0.08).toColor();
+      resolvedSurfaceContainerHighest = bgHsl.withLightness(0.22).toColor();
+      resolvedInverseSurface = bgHsl.withLightness(0.92).toColor();
+      resolvedOnInverseSurface = const Color(0xFF1A1612);
+      resolvedOnSurface = const Color(0xFFECECEC);
+      resolvedOnSurfaceVariant = const Color(0xFFC6C6C6);
+      resolvedOutlineVariant = hsl.withSaturation((hsl.saturation * 0.25).clamp(0.05, 0.30)).withLightness(0.28).toColor();
     } else {
-      background = bgHsl.withLightness(0.97).toColor();
-      surface    = bgHsl.withLightness(0.94).toColor();
-      onBackground = const Color(0xFF1A1A1A);
-      onSurface    = const Color(0xFF1A1A1A);
+      resolvedSurface = bgHsl.withLightness(0.97).toColor();
+      resolvedSurfaceContainerHighest = bgHsl.withLightness(0.87).toColor();
+      resolvedInverseSurface = bgHsl.withLightness(0.14).toColor();
+      resolvedOnInverseSurface = const Color(0xFFF2EDE8);
+      resolvedOnSurface = const Color(0xFF1A1A1A);
+      resolvedOnSurfaceVariant = hsl.withSaturation((hsl.saturation * 0.40).clamp(0.08, 0.45)).withLightness(0.38).toColor();
+      resolvedOutlineVariant = hsl.withSaturation((hsl.saturation * 0.22).clamp(0.05, 0.28)).withLightness(0.78).toColor();
     }
 
-    Color contrast(Color c) =>
-        c.computeLuminance() > 0.45 ? const Color(0xFF1A1A1A) : Colors.white;
+    Color contrast(Color c) => c.computeLuminance() > 0.45 ? const Color(0xFF1A1A1A) : Colors.white;
 
     return CustomThemeColors(
-      primary:      primary,
-      onPrimary:    contrast(primary),
-      secondary:    resolvedSecondary,
-      onSecondary:  contrast(resolvedSecondary),
-      tertiary:     resolvedTertiary,
-      onTertiary:   contrast(resolvedTertiary),
-      background:   background,
-      onBackground: onBackground,
-      surface:      surface,
-      onSurface:    onSurface,
-      error:        dark ? const Color(0xFFCF6679) : const Color(0xFFB00020),
-      onError:      Colors.white,
-      isDark:       dark,
+      primary: primary,
+      onPrimary: contrast(primary),
+      secondary: resolvedSecondary,
+      onSecondary: contrast(resolvedSecondary),
+      tertiary: resolvedTertiary,
+      onTertiary: contrast(resolvedTertiary),
+      surface: resolvedSurface,
+      onSurface: resolvedOnSurface,
+      surfaceContainerHighest: resolvedSurfaceContainerHighest,
+      onSurfaceVariant: resolvedOnSurfaceVariant,
+      outlineVariant: resolvedOutlineVariant,
+      inverseSurface: resolvedInverseSurface,
+      onInverseSurface: resolvedOnInverseSurface,
+      error: dark ? const Color(0xFFCF6679) : const Color(0xFFB00020),
+      onError: Colors.white,
+      isDark: dark,
     );
   }
 
-  // ── Serialization ─────────────────────────────────────────────────────────
-
   factory CustomThemeColors.fromJson(Map<String, dynamic> json) {
-    // toUnsigned(32) safely handles values stored as signed ints (legacy bug)
-    int c(String key, int fallback) =>
-        (json[key] as int? ?? fallback).toUnsigned(32);
+    int c(String key, int fallback) => (json[key] as int? ?? fallback).toUnsigned(32);
+
+    final isDark = json['is_dark'] as bool? ?? false;
+    final storedSurface = Color(c('surface', 0xFFF2EDE8));
+    final storedHsl = HSLColor.fromColor(storedSurface);
+
+    final defaultContainer = isDark
+        ? storedHsl.withLightness((storedHsl.lightness + 0.14).clamp(0.0, 1.0)).toColor().toARGB32()
+        : storedHsl.withLightness((storedHsl.lightness - 0.10).clamp(0.0, 1.0)).toColor().toARGB32();
 
     return CustomThemeColors(
-      primary:      Color(c('primary',       0xFF6C5443)),
-      onPrimary:    Color(c('on_primary',    0xFFFFFFFF)),
-      secondary:    Color(c('secondary',     0xFF8C7460)),
-      onSecondary:  Color(c('on_secondary',  0xFFFFFFFF)),
-      tertiary:     Color(c('tertiary',      0xFF6C8C54)),
-      onTertiary:   Color(c('on_tertiary',   0xFFFFFFFF)),
-      background:   Color(c('background',    0xFFF8F4F0)),
-      onBackground: Color(c('on_background', 0xFF1A1A1A)),
-      surface:      Color(c('surface',       0xFFF2EDE8)),
-      onSurface:    Color(c('on_surface',    0xFF1A1A1A)),
-      error:        Color(c('error',         0xFFB00020)),
-      onError:      Color(c('on_error',      0xFFFFFFFF)),
-      isDark:       json['is_dark'] as bool? ?? false,
+      primary: Color(c('primary', 0xFF6C5443)),
+      onPrimary: Color(c('on_primary', 0xFFFFFFFF)),
+      secondary: Color(c('secondary', 0xFF8C7460)),
+      onSecondary: Color(c('on_secondary', 0xFFFFFFFF)),
+      tertiary: Color(c('tertiary', 0xFF6C8C54)),
+      onTertiary: Color(c('on_tertiary', 0xFFFFFFFF)),
+      surface: storedSurface,
+      onSurface: Color(c('on_surface', 0xFF1A1A1A)),
+      surfaceContainerHighest: Color(c('surface_container_highest', defaultContainer)),
+      onSurfaceVariant: Color(c('on_surface_variant', isDark ? 0xFFC6C6C6 : 0xFF5D5044)),
+      outlineVariant: Color(c('outline_variant', isDark ? 0xFF3A312A : 0xFFC3B4A6)),
+      inverseSurface: Color(c('inverse_surface', isDark ? 0xFFF2EDE8 : 0xFF2A231E)),
+      onInverseSurface: Color(c('on_inverse_surface', isDark ? 0xFF1A1612 : 0xFFF2EDE8)),
+      error: Color(c('error', isDark ? 0xFFCF6679 : 0xFFB00020)),
+      onError: Color(c('on_error', 0xFFFFFFFF)),
+      isDark: isDark,
     );
   }
 
   Map<String, dynamic> toJson() => {
-    'primary':       primary.toARGB32(),
-    'on_primary':    onPrimary.toARGB32(),
-    'secondary':     secondary.toARGB32(),
-    'on_secondary':  onSecondary.toARGB32(),
-    'tertiary':      tertiary.toARGB32(),
-    'on_tertiary':   onTertiary.toARGB32(),
-    'background':    background.toARGB32(),
-    'on_background': onBackground.toARGB32(),
-    'surface':       surface.toARGB32(),
-    'on_surface':    onSurface.toARGB32(),
-    'error':         error.toARGB32(),
-    'on_error':      onError.toARGB32(),
-    'is_dark':       isDark,
+    'primary': primary.toARGB32(),
+    'on_primary': onPrimary.toARGB32(),
+    'secondary': secondary.toARGB32(),
+    'on_secondary': onSecondary.toARGB32(),
+    'tertiary': tertiary.toARGB32(),
+    'on_tertiary': onTertiary.toARGB32(),
+    'surface': surface.toARGB32(),
+    'on_surface': onSurface.toARGB32(),
+    'surface_container_highest': surfaceContainerHighest.toARGB32(),
+    'on_surface_variant': onSurfaceVariant.toARGB32(),
+    'outline_variant': outlineVariant.toARGB32(),
+    'inverse_surface': inverseSurface.toARGB32(),
+    'on_inverse_surface': onInverseSurface.toARGB32(),
+    'error': error.toARGB32(),
+    'on_error': onError.toARGB32(),
+    'is_dark': isDark,
   };
-
-  // ── Helpers ───────────────────────────────────────────────────────────────
 
   CustomThemeColors copyWith({
     Color? primary,
@@ -150,66 +162,107 @@ class CustomThemeColors {
     Color? onSecondary,
     Color? tertiary,
     Color? onTertiary,
-    Color? background,
-    Color? onBackground,
     Color? surface,
     Color? onSurface,
+    Color? surfaceContainerHighest,
+    Color? onSurfaceVariant,
+    Color? outlineVariant,
+    Color? inverseSurface,
+    Color? onInverseSurface,
     Color? error,
     Color? onError,
     bool? isDark,
-  }) =>
-      CustomThemeColors(
-        primary:      primary      ?? this.primary,
-        onPrimary:    onPrimary    ?? this.onPrimary,
-        secondary:    secondary    ?? this.secondary,
-        onSecondary:  onSecondary  ?? this.onSecondary,
-        tertiary:     tertiary     ?? this.tertiary,
-        onTertiary:   onTertiary   ?? this.onTertiary,
-        background:   background   ?? this.background,
-        onBackground: onBackground ?? this.onBackground,
-        surface:      surface      ?? this.surface,
-        onSurface:    onSurface    ?? this.onSurface,
-        error:        error        ?? this.error,
-        onError:      onError      ?? this.onError,
-        isDark:       isDark       ?? this.isDark,
-      );
+  }) => CustomThemeColors(
+    primary: primary ?? this.primary,
+    onPrimary: onPrimary ?? this.onPrimary,
+    secondary: secondary ?? this.secondary,
+    onSecondary: onSecondary ?? this.onSecondary,
+    tertiary: tertiary ?? this.tertiary,
+    onTertiary: onTertiary ?? this.onTertiary,
+    surface: surface ?? this.surface,
+    onSurface: onSurface ?? this.onSurface,
+    surfaceContainerHighest: surfaceContainerHighest ?? this.surfaceContainerHighest,
+    onSurfaceVariant: onSurfaceVariant ?? this.onSurfaceVariant,
+    outlineVariant: outlineVariant ?? this.outlineVariant,
+    inverseSurface: inverseSurface ?? this.inverseSurface,
+    onInverseSurface: onInverseSurface ?? this.onInverseSurface,
+    error: error ?? this.error,
+    onError: onError ?? this.onError,
+    isDark: isDark ?? this.isDark,
+  );
 
   ThemeData toThemeData() {
     final scheme = ColorScheme(
-      brightness:   isDark ? Brightness.dark : Brightness.light,
-      primary:      primary,
-      onPrimary:    onPrimary,
-      secondary:    secondary,
-      onSecondary:  onSecondary,
-      tertiary:     tertiary,
-      onTertiary:   onTertiary,
-      background:   background,
-      onBackground: onBackground,
-      surface:      surface,
-      onSurface:    onSurface,
-      error:        error,
-      onError:      onError,
+      brightness: isDark ? Brightness.dark : Brightness.light,
+      primary: primary,
+      onPrimary: onPrimary,
+      secondary: secondary,
+      onSecondary: onSecondary,
+      tertiary: tertiary,
+      onTertiary: onTertiary,
+      surface: surface,
+      onSurface: onSurface,
+      surfaceContainerHighest: surfaceContainerHighest,
+      onSurfaceVariant: onSurfaceVariant,
+      surfaceContainerHigh: Color.lerp(surface, surfaceContainerHighest, 0.72)!,
+      surfaceContainer: Color.lerp(surface, surfaceContainerHighest, 0.52)!,
+      surfaceContainerLow: Color.lerp(surface, surfaceContainerHighest, 0.34)!,
+      surfaceContainerLowest: Color.lerp(surface, surfaceContainerHighest, 0.18)!,
+      outline: Color.lerp(onSurfaceVariant, outlineVariant, 0.5)!,
+      outlineVariant: outlineVariant,
+      inverseSurface: inverseSurface,
+      onInverseSurface: onInverseSurface,
+      inversePrimary: Color.lerp(primary, surface, isDark ? 0.55 : 0.35)!,
+      surfaceTint: primary,
+      error: error,
+      onError: onError,
     );
+
     return ThemeData(
-      colorScheme:            scheme,
-      useMaterial3:           true,
-      brightness:             isDark ? Brightness.dark : Brightness.light,
-      scaffoldBackgroundColor: background,
-      cardColor:              surface,
-      appBarTheme: AppBarTheme(
-        backgroundColor: primary,
-        foregroundColor: onPrimary,
-        elevation:       0,
+      colorScheme: scheme,
+      useMaterial3: true,
+      brightness: isDark ? Brightness.dark : Brightness.light,
+      scaffoldBackgroundColor: surface,
+      cardColor: surfaceContainerHighest,
+      appBarTheme: AppBarTheme(backgroundColor: primary, foregroundColor: onPrimary, elevation: 0),
+      cardTheme: CardThemeData(
+        elevation: 0,
+        color: surfaceContainerHighest,
+        margin: EdgeInsets.zero,
+        shape: RoundedRectangleBorder(
+          borderRadius: BorderRadius.circular(20),
+          side: BorderSide(color: outlineVariant.withValues(alpha: 0.6)),
+        ),
       ),
-      floatingActionButtonTheme: FloatingActionButtonThemeData(
-        backgroundColor: primary,
-        foregroundColor: onPrimary,
+      dividerTheme: DividerThemeData(color: outlineVariant.withValues(alpha: 0.6), thickness: 1),
+      inputDecorationTheme: InputDecorationTheme(
+        filled: true,
+        fillColor: surfaceContainerHighest,
+        hintStyle: TextStyle(color: onSurfaceVariant),
+        prefixIconColor: onSurfaceVariant,
+        suffixIconColor: onSurfaceVariant,
+        border: OutlineInputBorder(
+          borderRadius: BorderRadius.circular(16),
+          borderSide: BorderSide(color: outlineVariant),
+        ),
+        enabledBorder: OutlineInputBorder(
+          borderRadius: BorderRadius.circular(16),
+          borderSide: BorderSide(color: outlineVariant),
+        ),
+        focusedBorder: OutlineInputBorder(
+          borderRadius: BorderRadius.circular(16),
+          borderSide: BorderSide(color: primary, width: 1.4),
+        ),
+      ),
+      floatingActionButtonTheme: FloatingActionButtonThemeData(backgroundColor: primary, foregroundColor: onPrimary),
+      snackBarTheme: SnackBarThemeData(
+        behavior: SnackBarBehavior.floating,
+        backgroundColor: inverseSurface,
+        contentTextStyle: TextStyle(color: onInverseSurface),
       ),
     );
   }
 }
-
-// ──────────────────────────────────────────────────────────────────────────────
 
 class CustomThemeModel {
   final String id;
@@ -239,9 +292,7 @@ class CustomThemeModel {
     final rawThemeData = json['theme_data'];
     if (rawThemeData != null) {
       try {
-        final decoded = rawThemeData is String
-            ? jsonDecode(rawThemeData) as Map<String, dynamic>
-            : rawThemeData as Map<String, dynamic>;
+        final decoded = rawThemeData is String ? jsonDecode(rawThemeData) as Map<String, dynamic> : rawThemeData as Map<String, dynamic>;
         colors = CustomThemeColors.fromJson(decoded);
       } catch (_) {
         colors = CustomThemeColors.fromPrimary(Color(rawPrimary));
@@ -251,45 +302,33 @@ class CustomThemeModel {
     }
 
     return CustomThemeModel(
-      id:        json['id']         as String? ?? UniqueKey().toString(),
-      name:      json['name']       as String? ?? 'Untitled Theme',
-      colors:    colors,
+      id: json['id'] as String? ?? UniqueKey().toString(),
+      name: json['name'] as String? ?? 'Untitled Theme',
+      colors: colors,
       createdBy: json['created_by'] as String?,
       likesCount: json['likes_count'] as int? ?? 0,
-      isPublic:  json['is_public']  as bool?   ?? false,
-      createdAt: json['created_at'] != null
-          ? DateTime.parse(json['created_at'] as String)
-          : null,
+      isPublic: json['is_public'] as bool? ?? false,
+      createdAt: json['created_at'] != null ? DateTime.parse(json['created_at'] as String) : null,
     );
   }
 
   Map<String, dynamic> toJson() => {
     if (id.length > 20) 'id': id,
-    'name':          name,
-    'primary_color': colors.primary.toARGB32(), // BIGINT in DB — no overflow
-    'theme_data':    jsonEncode(colors.toJson()),
-    'is_public':     isPublic,
-    'created_by':    createdBy ?? currentUser.id,
-    'created_at':    createdAt?.toIso8601String() ?? DateTime.now().toIso8601String(),
+    'name': name,
+    'primary_color': colors.primary.toARGB32(),
+    'theme_data': jsonEncode(colors.toJson()),
+    'is_public': isPublic,
+    'created_by': createdBy ?? currentUser.id,
+    'created_at': createdAt?.toIso8601String() ?? DateTime.now().toIso8601String(),
   };
 
-  CustomThemeModel copyWith({
-    String? id,
-    String? name,
-    CustomThemeColors? colors,
-    Color? primaryColor,
-    bool? isPublic,
-    int? likesCount,
-  }) =>
-      CustomThemeModel(
-        id:        id        ?? this.id,
-        name:      name      ?? this.name,
-        colors:    colors    ?? (primaryColor != null
-            ? CustomThemeColors.fromPrimary(primaryColor)
-            : this.colors),
-        createdBy: createdBy,
-        likesCount: likesCount ?? this.likesCount,
-        isPublic:  isPublic  ?? this.isPublic,
-        createdAt: createdAt,
-      );
+  CustomThemeModel copyWith({String? id, String? name, CustomThemeColors? colors, Color? primaryColor, bool? isPublic, int? likesCount}) => CustomThemeModel(
+    id: id ?? this.id,
+    name: name ?? this.name,
+    colors: colors ?? (primaryColor != null ? CustomThemeColors.fromPrimary(primaryColor) : this.colors),
+    createdBy: createdBy,
+    likesCount: likesCount ?? this.likesCount,
+    isPublic: isPublic ?? this.isPublic,
+    createdAt: createdAt,
+  );
 }
