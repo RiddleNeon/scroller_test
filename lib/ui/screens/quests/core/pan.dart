@@ -526,6 +526,8 @@ class PanWidgetState extends State<PanWidget> {
 
   @override
   Widget build(BuildContext context) {
+    final cs = Theme.of(context).colorScheme;
+    
     return RawKeyboardListener(
       focusNode: FocusNode(
         onKey: (node, event) {
@@ -637,17 +639,6 @@ class PanWidgetState extends State<PanWidget> {
                     onDoubleTap: _onDoubleTap,
                     onTap: _onTap,
                     onTapDown: _onDoubleTapDown,
-                  ),
-                ),
-                const Positioned.fill(
-                  child: IgnorePointer(
-                    child: Column(
-                      children: [
-                        _EdgeFade(fromColor: Color(0xFF0A1218)),
-                        Spacer(),
-                        _EdgeFade(fromColor: Color(0xFF0A1218), flip: true),
-                      ],
-                    ),
                   ),
                 ),
                 /*if (debugMode)
