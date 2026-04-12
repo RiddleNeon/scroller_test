@@ -526,8 +526,6 @@ class PanWidgetState extends State<PanWidget> {
 
   @override
   Widget build(BuildContext context) {
-    final cs = Theme.of(context).colorScheme;
-    
     return RawKeyboardListener(
       focusNode: FocusNode(
         onKey: (node, event) {
@@ -580,19 +578,6 @@ class PanWidgetState extends State<PanWidget> {
             child: Stack(
               children: [
                 Positioned.fill(child: InfiniteDotsBackground(controller: _controller)),
-                Positioned.fill(
-                  child: IgnorePointer(
-                    child: DecoratedBox(
-                      decoration: BoxDecoration(
-                        gradient: RadialGradient(
-                          center: Alignment.center,
-                          radius: 1.15,
-                          colors: [Colors.transparent, const Color(0xFF0A1218).withValues(alpha: 0.72)],
-                        ),
-                      ),
-                    ),
-                  ),
-                ),
                 Positioned.fill(
                   child: AnimatedBuilder(
                     animation: _controller,
@@ -647,30 +632,6 @@ class PanWidgetState extends State<PanWidget> {
             ),
           ),
         ),
-      ),
-    );
-  }
-}
-
-class _EdgeFade extends StatelessWidget {
-  const _EdgeFade({required this.fromColor, this.flip = false});
-
-  final Color fromColor;
-  final bool flip;
-
-  @override
-  Widget build(BuildContext context) {
-    return SizedBox(
-      height: 56,
-      child: DecoratedBox(
-        decoration: BoxDecoration(
-          gradient: LinearGradient(
-            begin: flip ? Alignment.bottomCenter : Alignment.topCenter,
-            end: flip ? Alignment.topCenter : Alignment.bottomCenter,
-            colors: [fromColor.withValues(alpha: 0.85), fromColor.withValues(alpha: 0.0)],
-          ),
-        ),
-        child: const SizedBox.expand(),
       ),
     );
   }

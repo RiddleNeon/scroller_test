@@ -6,7 +6,6 @@ import 'package:wurp/logic/quests/quest_system.dart';
 import 'package:wurp/ui/screens/quests/core/quest_bubbles_overlay.dart';
 
 import 'bezier_helper.dart';
-import 'quest_bubble.dart';
 
 class _ConnectionGeometry {
   const _ConnectionGeometry({
