@@ -9,31 +9,64 @@ class QuestBubblesOverlay extends StatefulWidget {
   final bool debugMode;
   final QuestSystem questSystem;
 
-  const QuestBubblesOverlay({super.key, required this.debugMode, required this.questSystem});
+  const QuestBubblesOverlay(
+      {super.key, required this.debugMode, required this.questSystem});
 
   @override
   State<QuestBubblesOverlay> createState() => QuestBubblesOverlayState();
 }
 
-class QuestBubblesOverlayState extends State<QuestBubblesOverlay> with TickerProviderStateMixin {
+class QuestBubblesOverlayState extends State<QuestBubblesOverlay>
+    with TickerProviderStateMixin {
   late final QuestLineConnectionPainter _connectionPainter;
   late Size _worldBounds;
 
   QuestSystem get questSystem => widget.questSystem;
 
-  final _dragNotifier = ValueNotifier<({int? id, Offset? pos})>((id: null, pos: null));
+  final _dragNotifier =
+  ValueNotifier<({int? id, Offset? pos})>((id: null, pos: null));
 
-  final _connectionNotifier = ValueNotifier<({int? sourceId, int? targetId, Offset? previewPos})>((sourceId: null, targetId: null, previewPos: null));
+  final _connectionNotifier = ValueNotifier<
+      ({
+      int? sourceId,
+      int? targetId,
+      Offset? previewPos
+      })>((sourceId: null, targetId: null, previewPos: null));
 
   late final AnimationController _lineAnimCtrl;
 
   @override
   void initState() {
     super.initState();
-    _lineAnimCtrl = AnimationController(vsync: this, duration: const Duration(seconds: 2))..repeat();
-    _connectionPainter = QuestLineConnectionPainter(questSystem: questSystem, animation: _lineAnimCtrl, pixelSpacing: 30, lineWidth: 10, arrowSize: 8.0);
+
+    _lineAnimCtrl =
+    AnimationController(vsync: this, duration: const Duration(seconds: 2))
+      ..repeat();
+
+    _connectionPainter = QuestLineConnectionPainter(
+      questSystem: questSystem,
+      animation: _lineAnimCtrl,
+      pixelSpacing: 30,
+      lineWidth: 10,
+      arrowSize: 8.0,
+    );
+
     _worldBounds = _computeWorldBounds();
-    questSystem.addListener(revalidateWorldBounds);
+
+    questSystem.addListener(_onQuestSystemChanged);
+    
+    _connectionPainter.rebuildCache();
+  }
+  
+  void _onQuestSystemChanged() {
+    final newBounds = _computeWorldBounds();
+    final boundsChanged = newBounds != _worldBounds;
+
+    _connectionPainter.rebuildCache();
+
+    if (boundsChanged) {
+      setState(() => _worldBounds = newBounds);
+    }
   }
 
   void setDragState({required int? questId, required Offset? position}) {
@@ -43,8 +76,13 @@ class QuestBubblesOverlayState extends State<QuestBubblesOverlay> with TickerPro
       ..currentDraggedQuestPos = position;
   }
 
-  void setConnectionState({required int? sourceId, required int? targetId, required Offset? previewPos}) {
-    _connectionNotifier.value = (sourceId: sourceId, targetId: targetId, previewPos: previewPos);
+  void setConnectionState({
+    required int? sourceId,
+    required int? targetId,
+    required Offset? previewPos,
+  }) {
+    _connectionNotifier.value =
+    (sourceId: sourceId, targetId: targetId, previewPos: previewPos);
     _connectionPainter
       ..connectionSourceId = sourceId
       ..connectionPreviewEnd = previewPos;
@@ -100,7 +138,7 @@ class QuestBubblesOverlayState extends State<QuestBubblesOverlay> with TickerPro
       },
     );
   }
-
+  
   Size _computeWorldBounds() {
     double maxX = 0, maxY = 0;
     for (final quest in questSystem.quests) {
@@ -110,18 +148,13 @@ class QuestBubblesOverlayState extends State<QuestBubblesOverlay> with TickerPro
     return Size(maxX, maxY);
   }
 
-  void revalidateWorldBounds() {
-    final newBounds = _computeWorldBounds();
-    if (newBounds != _worldBounds) {
-      setState(() => _worldBounds = newBounds);
-    }
-  }
+  void revalidateWorldBounds() => _onQuestSystemChanged();
 
   @override
   void dispose() {
     _dragNotifier.dispose();
     _connectionNotifier.dispose();
-    questSystem.removeListener(revalidateWorldBounds);
+    questSystem.removeListener(_onQuestSystemChanged);
     _lineAnimCtrl.dispose();
     super.dispose();
   }

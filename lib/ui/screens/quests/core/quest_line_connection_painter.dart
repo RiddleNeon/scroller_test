@@ -6,26 +6,26 @@ import 'package:wurp/logic/quests/quest_system.dart';
 import 'bezier_helper.dart';
 import 'quest_bubble.dart';
 
+class _ConnectionGeometry {
+  const _ConnectionGeometry({
+    required this.p0,
+    required this.cp1,
+    required this.cp2,
+    required this.p3,
+    required this.lut,
+    required this.startColor,
+    required this.endColor,
+    required this.midPoint,
+  });
+
+  final Offset p0, cp1, cp2, p3;
+  final ArcLut lut;
+  final Color startColor, endColor;
+
+  final Offset midPoint;
+}
+
 class QuestLineConnectionPainter extends CustomPainter {
-  int? currentDraggedQuestId;
-  Offset? currentDraggedQuestPos;
-
-  int? connectionSourceId;
-  Offset? connectionPreviewEnd;
-
-  final QuestSystem questSystem;
-  final Animation<double> animation;
-
-  Rect? viewportRect;
-  double scale;
-
-  final double arrowHideScale;
-  final double pixelSpacing;
-  final double lineWidth;
-  final double borderWidth;
-  final Color borderColor;
-  final double arrowSize;
-
   QuestLineConnectionPainter({
     required this.questSystem,
     required this.animation,
@@ -39,6 +39,94 @@ class QuestLineConnectionPainter extends CustomPainter {
     this.arrowSize = 9.0,
   }) : super(repaint: animation);
 
+  int? currentDraggedQuestId;
+  Offset? currentDraggedQuestPos;
+
+  int? connectionSourceId;
+  Offset? connectionPreviewEnd;
+
+  Rect? viewportRect;
+  double scale;
+
+  final QuestSystem questSystem;
+  final Animation<double> animation;
+
+  final double arrowHideScale;
+  final double pixelSpacing;
+  final double lineWidth;
+  final double borderWidth;
+  final Color borderColor;
+  final double arrowSize;
+
+  final Map<(int, int), _ConnectionGeometry> _cache = {};
+
+  void rebuildCache() {
+    _cache.clear();
+    for (final quest in questSystem.quests) {
+      for (final prereq in questSystem.prerequisitesOf(quest.id)) {
+        _buildAndStoreEntry(prereq.id, quest.id);
+      }
+    }
+  }
+
+  void rebuildCacheForQuest(int questId) {
+    _cache.removeWhere((key, _) => key.$1 == questId || key.$2 == questId);
+
+    for (final quest in questSystem.quests) {
+      for (final prereq in questSystem.prerequisitesOf(quest.id)) {
+        if (prereq.id == questId || quest.id == questId) {
+          _buildAndStoreEntry(prereq.id, quest.id);
+        }
+      }
+    }
+  }
+
+  _ConnectionGeometry? _buildAndStoreEntry(int fromId, int toId) {
+    final geom = _computeGeometry(fromId, toId, null, null);
+    if (geom != null) _cache[(fromId, toId)] = geom;
+    return geom;
+  }
+
+  _ConnectionGeometry? _computeGeometry(int fromId, int toId, int? draggedId, Offset? draggedPos) {
+    final startCenter = getQuestCenter(fromId, questSystem, draggedId, draggedPos);
+    final endCenter = getQuestCenter(toId, questSystem, draggedId, draggedPos);
+    if (startCenter == null || endCenter == null) return null;
+
+    final anchorStart = getBestAnchor(fromId, endCenter, questSystem, draggedId, draggedPos);
+    final anchorEnd = getBestAnchor(toId, startCenter, questSystem, draggedId, draggedPos);
+
+    final cps = calculateCubicControlPointsOffsetting(
+      anchorStart.pos,
+      anchorStart.sideDir,
+      anchorEnd.pos,
+      anchorEnd.sideDir,
+      fromId,
+      toId,
+      questSystem,
+      draggedPos,
+      draggedId,
+    );
+
+    final p0 = anchorStart.pos;
+    final cp1 = cps[0];
+    final cp2 = cps[1];
+    final p3 = anchorEnd.pos;
+
+    final lut = getLut(p0, cp1, cp2, p3);
+    final midPoint = bezierPoint(p0, cp1, cp2, p3, lut.tForArcLen(lut.totalLength / 2.0));
+
+    return _ConnectionGeometry(
+      p0: p0,
+      cp1: cp1,
+      cp2: cp2,
+      p3: p3,
+      lut: lut,
+      startColor: glowColorOfQuest(fromId),
+      endColor: glowColorOfQuest(toId),
+      midPoint: midPoint,
+    );
+  }
+
   @override
   void paint(Canvas canvas, Size size) {
     final pixelOffset = animation.value * pixelSpacing;
@@ -46,55 +134,35 @@ class QuestLineConnectionPainter extends CustomPainter {
     final cullRect = viewportRect?.inflate(_cullPadding());
 
     for (final quest in questSystem.quests) {
-      if (questSystem.prerequisitesOf(quest.id).isEmpty) continue;
+      final prereqs = questSystem.prerequisitesOf(quest.id);
+      if (prereqs.isEmpty) continue;
 
-      final endCenter = getQuestCenter(quest.id, questSystem, currentDraggedQuestId, currentDraggedQuestPos);
-      if (endCenter == null) continue;
-      final questColor = glowColorOfQuest(quest.id);
+      for (final prereq in prereqs) {
+        if (questSystem.maybeGetQuestById(prereq.id) == null) continue;
 
-      for (final prereq in questSystem.prerequisitesOf(quest.id)) {
-        final prereqColor = glowColorOfQuest(prereq.id);
+        final bool isDynamic = currentDraggedQuestId != null && (prereq.id == currentDraggedQuestId || quest.id == currentDraggedQuestId);
 
-        final startQuest = questSystem.maybeGetQuestById(prereq.id);
+        final _ConnectionGeometry? geom;
+        if (isDynamic) {
+          geom = _computeGeometry(prereq.id, quest.id, currentDraggedQuestId, currentDraggedQuestPos);
+        } else {
+          geom = _cache[(prereq.id, quest.id)] ?? _buildAndStoreEntry(prereq.id, quest.id);
+        }
 
-        if (startQuest == null) continue;
+        if (geom == null) continue;
 
-        final startCenter = getQuestCenter(startQuest.id, questSystem, currentDraggedQuestId, currentDraggedQuestPos)!;
-        final endCenter = getQuestCenter(quest.id, questSystem, currentDraggedQuestId, currentDraggedQuestPos)!;
-
-        final anchorStart = getBestAnchor(startQuest.id, endCenter, questSystem, currentDraggedQuestId, currentDraggedQuestPos);
-        final anchorEnd = getBestAnchor(quest.id, startCenter, questSystem, currentDraggedQuestId, currentDraggedQuestPos);
-
-        final cps = calculateCubicControlPointsOffsetting(
-          anchorStart.pos,
-          anchorStart.sideDir,
-          anchorEnd.pos,
-          anchorEnd.sideDir,
-          startQuest.id,
-          quest.id,
-          questSystem,
-          currentDraggedQuestPos,
-          currentDraggedQuestId,
-        );
-
-        final p0 = anchorStart.pos;
-        final cp1 = cps[0];
-        final cp2 = cps[1];
-        final p3 = anchorEnd.pos;
-
-        if (cullRect != null && !_aabbIntersects(cullRect, startCenter, cp1, cp2, endCenter)) {
+        if (cullRect != null && !_aabbIntersects(cullRect, geom.p0, geom.cp1, geom.cp2, geom.p3)) {
           continue;
         }
 
-        final lut = getLut(p0, cp1, cp2, p3);
-        _drawBorderLine(canvas, p0, cp1, cp2, p3);
-        _drawBaseLine(canvas, p0, cp1, cp2, p3, prereqColor, questColor);
+        _drawBorderLine(canvas, geom.p0, geom.cp1, geom.cp2, geom.p3);
+        _drawBaseLine(canvas, geom.p0, geom.cp1, geom.cp2, geom.p3, geom.startColor, geom.endColor);
 
         if (showArrows) {
-          _drawMarchingArrows(canvas, p0, cp1, cp2, p3, lut, pixelOffset, prereqColor, questColor, cullRect);
+          _drawMarchingArrows(canvas, geom.p0, geom.cp1, geom.cp2, geom.p3, geom.lut, pixelOffset, geom.startColor, geom.endColor, cullRect);
         }
 
-        _drawLockedIndicator(canvas, bezierPoint(anchorStart.pos, cps[0], cps[1], anchorEnd.pos, lut.tForArcLen(lut.totalLength / 2.0)), glowColorOfQuest(quest.id));
+        _drawLockedIndicator(canvas, geom.midPoint, geom.endColor);
       }
     }
 
@@ -105,7 +173,7 @@ class QuestLineConnectionPainter extends CustomPainter {
       }
     }
   }
-  
+
   void _drawLockedIndicator(Canvas canvas, Offset center, Color color) {
     const size = 12.0;
     final path = Path()
