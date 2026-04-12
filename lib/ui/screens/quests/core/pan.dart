@@ -593,12 +593,12 @@ class PanWidgetState extends State<PanWidget> {
                     child: QuestBubblesOverlay(key: _questBubbleOverlayKey, debugMode: debugMode, questSystem: questSystem),
                   ),
                 ),
-
+                
                 if (_hoveredConnection != null && debugMode)
                   AnimatedBuilder(
                     animation: _controller,
                     builder: (context, child) {
-                      final screenPos = MatrixUtils.transformPoint(_controller.value, _hoveredConnection!.midpoint);
+                      final screenPos = MatrixUtils.transformPoint(_controller.value, _hoveredConnection!.midpoint); //todo: optimize by only recalculating this when the hovered connection or the transform changes, instead of on every frame of the animation
 
                       return Positioned(
                         left: screenPos.dx - 15,

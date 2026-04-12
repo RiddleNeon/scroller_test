@@ -93,6 +93,8 @@ class QuestLineConnectionPainter extends CustomPainter {
         if (showArrows) {
           _drawMarchingArrows(canvas, p0, cp1, cp2, p3, lut, pixelOffset, prereqColor, questColor, cullRect);
         }
+
+        _drawLockedIndicator(canvas, bezierPoint(anchorStart.pos, cps[0], cps[1], anchorEnd.pos, lut.tForArcLen(lut.totalLength / 2.0)), glowColorOfQuest(quest.id));
       }
     }
 
@@ -102,6 +104,31 @@ class QuestLineConnectionPainter extends CustomPainter {
         _drawConnectionPreview(canvas, start, connectionPreviewEnd!, glowColorOfQuest(connectionSourceId!), connectionSourceId!);
       }
     }
+  }
+  
+  void _drawLockedIndicator(Canvas canvas, Offset center, Color color) {
+    const size = 12.0;
+    final path = Path()
+      ..moveTo(center.dx - size / 2, center.dy + size / 4)
+      ..lineTo(center.dx + size / 2, center.dy + size / 4)
+      ..lineTo(center.dx + size / 2, center.dy - size / 4)
+      ..arcToPoint(Offset(center.dx - size / 2, center.dy - size / 4), radius: const Radius.circular(size / 4))
+      ..close();
+
+    canvas.drawPath(
+      path,
+      Paint()
+        ..color = color.withValues(alpha: 0.85)
+        ..style = PaintingStyle.fill,
+    );
+
+    canvas.drawCircle(
+      Offset(center.dx, center.dy - size / 4),
+      size * 0.35,
+      Paint()
+        ..color = color.withValues(alpha: 0.85)
+        ..style = PaintingStyle.fill,
+    );
   }
 
   double _cullPadding() => (arrowSize * 2.0) / scale.clamp(0.01, double.infinity);

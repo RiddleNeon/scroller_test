@@ -192,7 +192,7 @@ class _ThemeManagerScreenState extends State<ThemeManagerScreen> with TickerProv
     }
 
     if (!mounted) return;
-    showSnackBar(context, 'Theme applied!');
+    //showSnackBar(context, 'Theme applied!');
   }
 
   Future<void> _openEditor({CustomThemeModel? existing}) async {
