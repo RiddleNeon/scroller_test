@@ -1,91 +1,101 @@
-import 'dart:async';
+import 'package:wurp/ui/video_container.dart';
 
-import 'package:wurp/logic/video/video_provider.dart';
-
-import 'video_container.dart';
+import '../logic/video/video_provider.dart';
 
 class FeedViewModel {
   VideoProvider? videoSource;
 
   FeedViewModel([this.videoSource]);
 
-  // Stores futures so we never load the same index twice
-  final Map<int, Future<VideoContainer>> _videoFutures = {};
-
-  // Tracks which containers are fully loaded and not yet disposed
-  final Map<int, VideoContainer> _loadedContainers = {};
-
-  // Tracks indices that have been disposed so we never use them again
-  final Set<int> _disposedIndices = {};
+  final Map<int, VideoContainer> _containers = {};
+  final Set<int> _loading = {};
 
   int _currentIndex = 0;
-  
-  Future<VideoContainer> getVideoAt(int index, {VideoProvider? videoSource}) {
+
+
+  Future<VideoContainer> getVideoAt(int index, {VideoProvider? videoSource}) async {
     videoSource ??= this.videoSource;
-    if (_disposedIndices.contains(index)) {
-      _videoFutures.remove(index);
-      _disposedIndices.remove(index);
+
+    if (_containers.containsKey(index)) {
+      return _containers[index]!;
     }
 
-    _videoFutures[index] ??= _loadContainer(index, videoSource: videoSource);
-
-    final next = index + 1;
-    if (_loadedContainers.length < 2 && !_disposedIndices.contains(next)) {
-      _videoFutures[next] ??= _loadContainer(next, videoSource: videoSource);
-    }
-
-    return _videoFutures[index]!;
-  }
-
-  Future<VideoContainer> _loadContainer(int index, {VideoProvider? videoSource}) async {
-    videoSource ??= this.videoSource;
-    assert(videoSource != null, "you have to provide a video source!");
-    final video = await videoSource!.getVideoByIndex(index);
-    final container = VideoContainer(video: video);
-    await container.loadController();
-    _loadedContainers[index] = container;
-    return container;
+    return await _loadContainer(index, videoSource: videoSource);
   }
 
   Future<void> switchToVideoAt(int index, {VideoProvider? videoSource}) async {
     videoSource ??= this.videoSource;
     final previous = _currentIndex;
     _currentIndex = index;
-    
-    final indicesToDispose = _loadedContainers.keys.where((i) => (i - index).abs() > 2).toList();
-    await Future.wait(indicesToDispose.map(_disposeIndex));
 
-    if (previous != index && !_disposedIndices.contains(previous)) {
-      final prev = _loadedContainers[previous];
+    final toDispose = _containers.keys
+        .where((i) => (i - index).abs() > 3)
+        .toList();
+
+    for (final i in toDispose) {
+      await _disposeIndex(i);
+    }
+
+    final current = await getVideoAt(index, videoSource: videoSource);
+
+    if (!current.controller!.value.isInitialized) {
+      await current.loadController();
+    }
+
+    await current.controller?.play();
+
+    if (previous != index && _containers.containsKey(previous)) {
+      final prev = _containers[previous];
       await prev?.controller?.pause();
       await prev?.controller?.seekTo(Duration.zero);
     }
 
-    final current = await getVideoAt(index, videoSource: videoSource);
-    if (!_disposedIndices.contains(index)) {
-      await current.controller?.play();
-    }
-
-    final next = index + 1;
-    if (!_disposedIndices.contains(next)) {
-      _videoFutures[next] ??= _loadContainer(next, videoSource: videoSource);
-    }
-  }
-
-  Future<void> _disposeIndex(int index) async {
-    if (_disposedIndices.contains(index)) return;
-    _disposedIndices.add(index);
-
-    final container = _loadedContainers.remove(index);
-    _videoFutures.remove(index);
-
-    await container?.controller?.dispose();
+    _preload(index + 1, videoSource);
+    _preload(index - 1, videoSource);
   }
 
   Future<void> dispose() async {
-    await Future.wait([..._videoFutures.values, ..._loadedContainers.values.map((element) => element.controller?.dispose() ?? Future.value())]);
-    _videoFutures.clear();
-    _loadedContainers.clear();
-    _disposedIndices.clear();
+    for (final container in _containers.values) {
+      await container.controller?.dispose();
+    }
+    _containers.clear();
+    _loading.clear();
+  }
+
+
+  Future<VideoContainer> _loadContainer(int index, {VideoProvider? videoSource}) async {
+    if (_loading.contains(index)) {
+      while (_loading.contains(index)) {
+        await Future.delayed(const Duration(milliseconds: 10));
+      }
+      return _containers[index]!;
+    }
+
+    _loading.add(index);
+
+    try {
+      final video = await videoSource!.getVideoByIndex(index);
+
+      final container = VideoContainer(video: video);
+      await container.loadController();
+
+      _containers[index] = container;
+      return container;
+    } finally {
+      _loading.remove(index);
+    }
+  }
+
+  void _preload(int index, VideoProvider? videoSource) {
+    if (index < 0) return;
+    if (_containers.containsKey(index)) return;
+    if (_loading.contains(index)) return;
+
+    _loadContainer(index, videoSource: videoSource);
+  }
+
+  Future<void> _disposeIndex(int index) async {
+    final container = _containers.remove(index);
+    await container?.controller?.dispose();
   }
 }
