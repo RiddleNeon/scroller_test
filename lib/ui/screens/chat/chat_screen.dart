@@ -93,7 +93,7 @@ class MessagingScreenState extends State<MessagingScreen> with TickerProviderSta
       moreMessagesAvailable = false;
     }
 
-    loadedMessages.sort((a, b) => b.timestamp.compareTo(a.timestamp));
+    loadedMessages.sort((a, b) => a.timestamp.compareTo(b.timestamp));
 
     _addMessages(loadedMessages, appendToEnd: false, isNewMessage: false);
 
@@ -102,10 +102,12 @@ class MessagingScreenState extends State<MessagingScreen> with TickerProviderSta
   }
 
   void onReceiveMessage(String text) {
-    _addMessage(text: text, isMe: false);
-    if (_partnerTyping) {
-      setState(() => _partnerTyping = false);
-    }
+    setState(() {
+      _addMessage(text: text, isMe: false);
+      if (_partnerTyping) {
+        _partnerTyping = false;
+      }
+    });
   }
 
   void setPartnerTyping(bool typing) {
@@ -208,6 +210,9 @@ class MessagingScreenState extends State<MessagingScreen> with TickerProviderSta
 
     for (var i = 0; i < newMessages.length; i++) {
       _createBubbleController(animate: false);
+      
+      print("added message ${newMessages[i].text} with timestamp ${newMessages[i].timestamp}");
+      
     }
 
     if (appendToEnd) {
@@ -222,7 +227,7 @@ class MessagingScreenState extends State<MessagingScreen> with TickerProviderSta
     HapticFeedback.lightImpact();
     _textController.clear();
     Future<void> sendingFuture = widget.onSend(text);
-    _addMessage(text: text, isMe: true, sendingFuture: sendingFuture);
+    _addMessage(text: text, isMe: true, sendingFuture: sendingFuture, isNewMessage: true);
     return sendingFuture;
   }
 

@@ -485,7 +485,13 @@ class _ProfileScreenState extends State<ProfileScreen> with TickerProviderStateM
                   lastMessageByMe: true,
                   createdAt: DateTime.now(),
                 );
-                Navigator.of(context).push(MaterialPageRoute(builder: (context) => buildMessagingScreen(chat!, (p0) {})));
+                Navigator.of(context).push(
+                  MaterialPageRoute(
+                    builder: (context) => buildMessagingScreen(chat!, (message) {
+                      chatManagingScreenKey.currentState?.onMessageUpdate(chat!, message);
+                    }),
+                  ),
+                );
               },
               child: Container(
                 width: 46,

@@ -7,16 +7,18 @@ import '../../../base_logic.dart';
 import '../../../logic/chat/chat.dart';
 import '../../../util/misc/time_formatting.dart';
 
+GlobalKey<ChatManagingScreenState> chatManagingScreenKey = GlobalKey();
+
 class ChatManagingScreen extends StatefulWidget {
   final Future<({List<Chat> result, int? newCurrent})> Function(int? current) preloadMoreChats;
 
   const ChatManagingScreen({super.key, required this.preloadMoreChats});
 
   @override
-  State<ChatManagingScreen> createState() => _ChatManagingScreenState();
+  State<ChatManagingScreen> createState() => ChatManagingScreenState();
 }
 
-class _ChatManagingScreenState extends State<ChatManagingScreen> {
+class ChatManagingScreenState extends State<ChatManagingScreen> {
   late final ScrollController _scrollController;
   final List<Chat> chats = [];
 
@@ -85,10 +87,17 @@ class _ChatManagingScreenState extends State<ChatManagingScreen> {
   }
 
   void onMessageUpdate(Chat chat, ChatMessage message) {
+    if(message.timestamp.isBefore(chat.lastMessageAt ?? chat.createdAt)) {
+      return;
+    }
+
+    print("Updating chat ${chat.partnerId} with new message: ${message.text} at ${message.timestamp}");
+    
     setState(() {
-      chat.lastMessage = message.text;
-      chat.lastMessageAt = message.timestamp;
-      chat.lastMessageByMe = message.isMe;
+      final manageableChat = chats.firstWhere((c) => c.partnerId == chat.partnerId, orElse: () => chat);
+      manageableChat.lastMessage = message.text;
+      manageableChat.lastMessageAt = message.timestamp;
+      manageableChat.lastMessageByMe = message.isMe;
     });
   }
 
@@ -222,7 +231,7 @@ Chat? currentOpenChat;
 GlobalObjectKey<MessagingScreenState>? currentOpenChatScreenKey;
 
 Widget buildMessagingScreen(Chat chat, void Function(ChatMessage) onMessageUpdate) {
-  currentOpenChatScreenKey = GlobalObjectKey('chat${currentUser.id}-${chat.partnerId}');
+  currentOpenChatScreenKey = GlobalObjectKey('chat${currentUser.id}-${chat.partnerId}-${DateTime.now().millisecondsSinceEpoch}');
   currentOpenChat = chat;
   return FutureBuilder(
     future: userRepository.getUser(chat.partnerId),
@@ -241,6 +250,7 @@ Widget buildMessagingScreen(Chat chat, void Function(ChatMessage) onMessageUpdat
           );
         },
         loadMoreMessages: (int limit, DateTime? lastVisibleMessage) async {
+          print("Loading more messages for chat ${chat.partnerId} with offset $lastVisibleMessage and limit $limit");
           return chatRepository.getMessagesWith(chat.partnerId, startOffset: lastVisibleMessage, limit: limit);
         },
       );

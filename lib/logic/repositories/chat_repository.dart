@@ -44,28 +44,17 @@ class ChatRepository {
   }
 
   /// Loads messages with [otherUserId].
-  ///
-  /// Strategy:
-  /// 1. Load from local cache (fast, offline-capable).
-  /// 2. Determine the newest local timestamp to use as sync anchor.
-  /// 3. Fetch any server messages newer than that anchor (or all if cache
-  ///    is empty) and merge them into the local cache.
-  /// 4. Return the merged, sorted, limited result.
   Future<List<ChatMessage>> getMessagesWith(String otherUserId, {int limit = 30, DateTime? startOffset}) async {
     // 1. Local messages first.
     final localMessages = await localSeenService.getMessagesWithLocal(otherUserId, limit: limit, startOffset: startOffset);
 
-    // 2. Find the conversation id so we can query the server.
     final conversationId = await _findDirectConversationId(otherUserId);
     if (conversationId == null) {
-      // No conversation on server yet – return local only.
+      print("No conversation found with $otherUserId, returning only local messages.");
       final result = localMessages..sort((a, b) => a.timestamp.compareTo(b.timestamp));
       return result.length > limit ? result.sublist(result.length - limit) : result;
     }
-
-    // 3. Determine the sync anchor:
-    //    • If we have local messages, only fetch messages newer than the latest one.
-    //    • If the cache is empty (or a startOffset is given), fetch from startOffset.
+    
     DateTime? syncFrom;
     if (localMessages.isNotEmpty) {
       final latestLocal = localMessages.map((m) => m.timestamp).reduce((a, b) => a.isAfter(b) ? a : b);
@@ -74,13 +63,11 @@ class ChatRepository {
       syncFrom = startOffset;
     }
 
-    // 4. Fetch server messages.
     final serverMessages = await _fetchMessagesFromServer(
       conversationId: conversationId,
       otherUserId: otherUserId,
       limit: limit,
       after: syncFrom,
-      // When there is no anchor we also need messages *before* startOffset.
       before: localMessages.isEmpty ? startOffset : null,
     );
 
