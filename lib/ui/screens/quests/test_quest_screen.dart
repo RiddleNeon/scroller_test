@@ -69,6 +69,7 @@ class _TestQuestScreenState extends State<TestQuestScreen> {
               },
               child: const Text('Quest Screen'),
             ),
+            centerTitle: true,
           ),
           body: loaded
               ? SizedBox.expand(

@@ -473,7 +473,6 @@ class QuestPatch {
   /// [isCompleted] is intentionally excluded – it is client-only state and
   /// has no column in quest_versions.
   Map<String, dynamic> toSupabaseMap({required int questId, required String updateMessage, required String createdBy}) {
-    print("Serialising patch for quest $questId: $this. color: ${color?.toARGB32().toRadixString(16)}");
     return {
       'quest_id': questId,
       'created_by': createdBy,

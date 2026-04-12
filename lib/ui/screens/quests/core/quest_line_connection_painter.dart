@@ -184,7 +184,7 @@ class QuestLineConnectionPainter extends CustomPainter {
       int levelRequirement,
       bool isOpen
       ) {
-    const lockSize = 24.0;
+    const lockSize = 40.0;
 
     final bodyPaint = Paint()
       ..color = color
@@ -193,7 +193,7 @@ class QuestLineConnectionPainter extends CustomPainter {
     final shacklePaint = Paint()
       ..color = color.withValues(alpha: 0.9)
       ..style = PaintingStyle.stroke
-      ..strokeWidth = 2.5
+      ..strokeWidth = 4.5
       ..strokeCap = StrokeCap.round;
 
     final outlinePaint = Paint()
@@ -217,7 +217,7 @@ class QuestLineConnectionPainter extends CustomPainter {
 
     final bodyRRect = RRect.fromRectAndRadius(
       bodyRect,
-      const Radius.circular(6),
+      const Radius.circular(9),
     );
 
     canvas.drawRRect(bodyRRect, bodyPaint);
@@ -263,7 +263,7 @@ class QuestLineConnectionPainter extends CustomPainter {
 
     final textOffset = center.translate(
       -textPainter.width / 2,
-      -textPainter.height / 3 + 2,
+      lockSize*0.01,
     );
 
     textPainter.paint(canvas, textOffset);

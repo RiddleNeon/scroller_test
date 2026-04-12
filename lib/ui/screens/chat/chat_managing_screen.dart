@@ -75,8 +75,9 @@ class ChatManagingScreenState extends State<ChatManagingScreen> {
     return Scaffold(
       backgroundColor: theme.colorScheme.surface,
       appBar: AppBar(
-        title: const Text("Chats"),
+        title: const Text("Chats", textAlign: TextAlign.center,),
         backgroundColor: theme.colorScheme.surfaceContainer,
+        centerTitle: true,
         elevation: 0,
         shape: const RoundedRectangleBorder(
           borderRadius: BorderRadiusGeometry.only(bottomLeft: Radius.circular(18), bottomRight: Radius.circular(18)),
