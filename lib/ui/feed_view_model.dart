@@ -19,9 +19,7 @@ class FeedViewModel {
   final Set<int> _disposedIndices = {};
 
   int _currentIndex = 0;
-
-  /// Returns (and starts loading) the video at [index].
-  /// Safe to call multiple times for the same index.
+  
   Future<VideoContainer> getVideoAt(int index, {VideoProvider? videoSource}) {
     videoSource ??= this.videoSource;
     if (_disposedIndices.contains(index)) {
@@ -49,31 +47,25 @@ class FeedViewModel {
     return container;
   }
 
-  /// Called by the PageView whenever the user lands on a new page.
   Future<void> switchToVideoAt(int index, {VideoProvider? videoSource}) async {
     videoSource ??= this.videoSource;
     final previous = _currentIndex;
     _currentIndex = index;
-
-    // 1. Dispose far-away containers FIRST to free decoder slots and audio focus
-    //    before the new player tries to acquire them.
+    
     final indicesToDispose = _loadedContainers.keys.where((i) => (i - index).abs() > 2).toList();
     await Future.wait(indicesToDispose.map(_disposeIndex));
 
-    // 2. Pause the previous video
     if (previous != index && !_disposedIndices.contains(previous)) {
       final prev = _loadedContainers[previous];
       await prev?.controller?.pause();
       await prev?.controller?.seekTo(Duration.zero);
     }
 
-    // 3. Now play the current video (decoder slot is free, audio focus available)
     final current = await getVideoAt(index, videoSource: videoSource);
     if (!_disposedIndices.contains(index)) {
       await current.controller?.play();
     }
 
-    // 4. Trigger pre-load of next video now that we have headroom
     final next = index + 1;
     if (!_disposedIndices.contains(next)) {
       _videoFutures[next] ??= _loadContainer(next, videoSource: videoSource);
