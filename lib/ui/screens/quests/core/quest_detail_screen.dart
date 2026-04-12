@@ -88,14 +88,23 @@ class _QuestDetailScreenState extends State<QuestDetailScreen> {
     double? newSizeY = (newSizeYRaw == null || newSizeYRaw == widget.quest.sizeY) ? null : newSizeYRaw;
 
     double? newDifficulty = (_difficulty == widget.quest.difficulty) ? null : _difficulty;
-    
+
     Color? newColor = (_newColor == null || _newColor == widget.quest.color) ? null : _newColor;
 
     print(
       "Built QuestPatch with values: name=$newName, description=$newDescription, posX=$newPosX, posY=$newPosY, sizeX=$newSizeX, sizeY=$newSizeY, difficulty=$newDifficulty, color=$newColor",
     );
 
-    return QuestPatch(name: newName, description: newDescription, posX: newPosX, posY: newPosY, sizeX: newSizeX, sizeY: newSizeY, difficulty: newDifficulty, color: newColor);
+    return QuestPatch(
+      name: newName,
+      description: newDescription,
+      posX: newPosX,
+      posY: newPosY,
+      sizeX: newSizeX,
+      sizeY: newSizeY,
+      difficulty: newDifficulty,
+      color: newColor,
+    );
   }
 
   void _saveAndExit() {
@@ -104,7 +113,8 @@ class _QuestDetailScreenState extends State<QuestDetailScreen> {
       _editedQuest = updated.applyTo(_editedQuest);
       _editMode = false;
     });
-    showChangeMessageDialog(widget.recommendedChangeMessage).then((message) {
+    final smartMessage = widget.recommendedChangeMessage ?? updated.generateChangeMessage();
+    showChangeMessageDialog(smartMessage).then((message) {
       widget.onDoneEditing?.call(updated, message.isEmpty ? null : message);
     });
   }
@@ -269,7 +279,8 @@ class _QuestSliverAppBar extends StatelessWidget {
     required this.debugMode,
     required this.editMode,
     required this.nameController,
-    this.onToggleEditMode, this.onColorChanged,
+    this.onToggleEditMode,
+    this.onColorChanged,
   });
 
   @override

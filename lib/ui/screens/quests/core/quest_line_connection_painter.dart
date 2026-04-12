@@ -3,6 +3,7 @@ import 'dart:ui' as ui;
 
 import 'package:flutter/material.dart';
 import 'package:wurp/logic/quests/quest_system.dart';
+import 'package:wurp/ui/screens/quests/core/quest_bubbles_overlay.dart';
 
 import 'bezier_helper.dart';
 import 'quest_bubble.dart';
@@ -122,8 +123,8 @@ class QuestLineConnectionPainter extends CustomPainter {
       cp2: cp2,
       p3: p3,
       lut: lut,
-      startColor: glowColorOfQuest(fromId),
-      endColor: glowColorOfQuest(toId),
+      startColor: glowColorOfQuest(fromId, questSystem),
+      endColor: glowColorOfQuest(toId, questSystem),
       midPoint: midPoint,
     );
   }
@@ -171,7 +172,7 @@ class QuestLineConnectionPainter extends CustomPainter {
     if (connectionSourceId != null && connectionPreviewEnd != null) {
       final start = getQuestCenter(connectionSourceId!, questSystem, currentDraggedQuestId, currentDraggedQuestPos);
       if (start != null) {
-        _drawConnectionPreview(canvas, start, connectionPreviewEnd!, glowColorOfQuest(connectionSourceId!), connectionSourceId!);
+        _drawConnectionPreview(canvas, start, connectionPreviewEnd!, glowColorOfQuest(connectionSourceId!, questSystem), connectionSourceId!);
       }
     }
   }
@@ -429,13 +430,19 @@ class QuestLineConnectionPainter extends CustomPainter {
       old.viewportRect != viewportRect ||
       old.scale != scale ||
       old.animation.value != animation.value;
-}
+  
+  void recomputeGlowColors(){
+    glowColors.clear();
+    rebuildCache();
+  }
 
-Color glowColorOfQuest(int id) {
-  if (glowColors.containsKey(id)) return glowColors[id]!;
-  final hsl = HSLColor.fromColor(getColorFromSeed(id));
-  final color = hsl.withLightness(0.65).withSaturation(0.75).toColor();
-  return glowColors[id] = color;
-}
+  Color glowColorOfQuest(int id, QuestSystem system) {
+    if (glowColors.containsKey(id)) return glowColors[id]!;
+    print('Computing glow color for quest $id. derived color: ${derivedQuestColors[id]}, base color: ${system.getQuestById(id).color}');
+    final hsl = HSLColor.fromColor(derivedQuestColors[id] ?? system.getQuestById(id).color);
+    final color = hsl.withLightness(0.65).withSaturation(0.75).toColor();
+    return glowColors[id] = color;
+  }
 
-Map<int, Color> glowColors = {};
+  Map<int, Color> glowColors = {};
+}

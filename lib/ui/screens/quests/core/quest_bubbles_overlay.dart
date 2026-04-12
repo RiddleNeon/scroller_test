@@ -16,7 +16,7 @@ class QuestBubblesOverlay extends StatefulWidget {
   @override
   State<QuestBubblesOverlay> createState() => QuestBubblesOverlayState();
 }
-
+Map<int, Color> derivedQuestColors = {};
 class QuestBubblesOverlayState extends State<QuestBubblesOverlay>
     with TickerProviderStateMixin {
   late final QuestLineConnectionPainter _connectionPainter;
@@ -36,7 +36,6 @@ class QuestBubblesOverlayState extends State<QuestBubblesOverlay>
 
   late final AnimationController _lineAnimCtrl;
 
-  Map<int, Color> _derivedColors = {};
 
   @override
   void initState() {
@@ -68,10 +67,13 @@ class QuestBubblesOverlayState extends State<QuestBubblesOverlay>
       prerequisiteResolver: questSystem.prerequisitesOf,
     );
 
-    _derivedColors = QuestColorPropagator.compute(
+    derivedQuestColors = QuestColorPropagator.compute(
       quests: questSystem.quests,
       adjacency: adjacency,
     );
+    _connectionPainter.recomputeGlowColors();
+    print("Derived quest colors: $derivedQuestColors");
+    
   }
   
   void _onQuestSystemChanged() {
@@ -143,7 +145,7 @@ class QuestBubblesOverlayState extends State<QuestBubblesOverlay>
           valueListenable: _connectionNotifier,
           builder: (context, conn, _) {
             final effectiveColor =
-                _derivedColors[quest.id] ?? quest.color;
+                derivedQuestColors[quest.id] ?? quest.color;
             
             return Positioned(
               left: isDragged ? drag.pos!.dx : quest.posX,

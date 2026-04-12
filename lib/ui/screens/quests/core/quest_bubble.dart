@@ -114,14 +114,6 @@ class _ConnectionHandle extends StatelessWidget {
   }
 }
 
-Color getColorFromSeed(int seed) {
-  final rng = Random(seed);
-  final hue = rng.nextDouble() * 360;
-  final saturation = 0.55 + rng.nextDouble() * 0.25;
-  final lightness = 0.45 + rng.nextDouble() * 0.15;
-  return HSLColor.fromAHSL(1, hue, saturation, lightness).toColor();
-}
-
 Color _adjustColor(Color color, {double? lightness, double? saturation}) {
   final hsl = HSLColor.fromColor(color);
   return hsl.withLightness(lightness ?? hsl.lightness).withSaturation(saturation ?? hsl.saturation).toColor();

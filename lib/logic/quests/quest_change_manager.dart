@@ -489,6 +489,86 @@ class QuestPatch {
     };
   }
 
+  String generateChangeMessage() {
+    final parts = <String>[];
+
+    if (name != null) parts.add('renamed to "$name"');
+    if (description != null) parts.add('updated description');
+    if (subject != null) parts.add('changed subject to "$subject"');
+    if (difficulty != null) parts.add('changed difficulty to ${(difficulty! * 100).round()}%');
+    if (color != null) parts.add('changed color to ${_colorLabel(color!)}');
+    if (isCompleted != null) parts.add(isCompleted! ? 'marked as completed' : 'marked as incomplete');
+
+    if (posX != null || posY != null) {
+      final x = posX?.toInt() ?? '?';
+      final y = posY?.toInt() ?? '?';
+      parts.add('moved to ($x, $y)');
+    }
+
+    if (sizeX != null || sizeY != null) {
+      final w = sizeX?.toInt() ?? '?';
+      final h = sizeY?.toInt() ?? '?';
+      parts.add('resized to ${w}x$h');
+    }
+
+    if (parts.isEmpty) return 'updated quest';
+    return parts.join(', ');
+  }
+  
+  static String _colorLabel(Color color) {
+    final argb = color.toARGB32();
+    final r = (argb >> 16) & 0xFF;
+    final g = (argb >> 8) & 0xFF;
+    final b = argb & 0xFF;
+
+    const namedColors = <int, String>{
+      0xFFF44336: 'red',
+      0xFFE91E63: 'pink',
+      0xFF9C27B0: 'purple',
+      0xFF673AB7: 'deep purple',
+      0xFF3F51B5: 'indigo',
+      0xFF2196F3: 'blue',
+      0xFF03A9F4: 'light blue',
+      0xFF00BCD4: 'cyan',
+      0xFF009688: 'teal',
+      0xFF4CAF50: 'green',
+      0xFF8BC34A: 'light green',
+      0xFFCDDC39: 'lime',
+      0xFFFFEB3B: 'yellow',
+      0xFFFFC107: 'amber',
+      0xFFFF9800: 'orange',
+      0xFFFF5722: 'deep orange',
+      0xFF795548: 'brown',
+      0xFF9E9E9E: 'grey',
+      0xFF607D8B: 'blue grey',
+      0xFF000000: 'black',
+      0xFFFFFFFF: 'white',
+    };
+
+    if (namedColors.containsKey(argb)) return namedColors[argb]!;
+
+    String? closestName;
+    double closestDist = double.infinity;
+    for (final entry in namedColors.entries) {
+      final nr = (entry.key >> 16) & 0xFF;
+      final ng = (entry.key >> 8) & 0xFF;
+      final nb = entry.key & 0xFF;
+      final dist = ((r - nr) * (r - nr) + (g - ng) * (g - ng) + (b - nb) * (b - nb)).toDouble();
+      if (dist < closestDist) {
+        closestDist = dist;
+        closestName = entry.value;
+      }
+    }
+
+    if (closestDist < 5000 && closestName != null) return closestName;
+    
+    print("no closest named color for #${r.toRadixString(16).padLeft(2, '0')}${g.toRadixString(16).padLeft(2, '0')}${b.toRadixString(16).padLeft(2, '0')}, closest is $closestName with distance $closestDist");
+
+    return '#${r.toRadixString(16).padLeft(2, '0')}'
+        '${g.toRadixString(16).padLeft(2, '0')}'
+        '${b.toRadixString(16).padLeft(2, '0')}';
+  }
+
   @override
   String toString() =>
       'QuestPatch(name: $name, description: $description, subject: $subject, '
