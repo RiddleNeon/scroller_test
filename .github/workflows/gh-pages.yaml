@@ -22,7 +22,7 @@ jobs:
 
       - run: flutter config --enable-web
 
-      - run: flutter build web --release --base-href /scroller_test/ --dart-define=RICK_URL=${{secrets.RICK_URL}} --dart-define=HAMSTER_URL=${{secrets.HAMSTER_URL}} --dart-define=SUPABASE_URL=${{secrets.SUPABASE_URL}} --dart-define=SUPABASE_ANON_KEY=${{secrets.SUPABASE_ANON_KEY}}
+      - run: flutter build web --release --base-href /scroller_test/ --dart-define=RICK_URL=${{secrets.RICK_URL}} --dart-define=HAMSTER_URL=${{secrets.HAMSTER_URL}} --dart-define=SUPABASE_URL=${{secrets.SUPABASE_URL}} --dart-define=SUPABASE_ANON_KEY=${{secrets.SUPABASE_ANON_KEY}} --dart-define=CLOUDINARY_CLOUD_NAME=${{secrets.CLOUDINARY_CLOUD_NAME}}
       - run: cp web/coi-serviceworker.js build/web/
       - uses: actions/upload-pages-artifact@v3
         with:
