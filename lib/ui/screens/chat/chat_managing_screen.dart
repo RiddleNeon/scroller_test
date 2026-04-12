@@ -91,7 +91,6 @@ class ChatManagingScreenState extends State<ChatManagingScreen> {
       return;
     }
 
-    print("Updating chat ${chat.partnerId} with new message: ${message.text} at ${message.timestamp}");
     
     setState(() {
       final manageableChat = chats.firstWhere((c) => c.partnerId == chat.partnerId, orElse: () => chat);

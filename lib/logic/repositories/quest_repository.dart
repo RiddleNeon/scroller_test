@@ -26,6 +26,7 @@ class QuestRepository {
     'size_x': quest.sizeX.toInt(),
     'size_y': quest.sizeY.toInt(),
     'is_deleted': isDeleted,
+    'color': quest.color.toARGB32(),
   };
 
   Quest _questFromRow(Map<String, dynamic> row) => Quest(

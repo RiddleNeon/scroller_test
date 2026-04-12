@@ -48,8 +48,7 @@ class Quest {
       sizeX = (json['sizeX'] as num?)?.toDouble() ?? 200,
       sizeY = (json['sizeY'] as num?)?.toDouble() ?? 100,
       isCompleted = json['isCompleted'] as bool? ?? false,
-      color = json['color'] != null ? Color(json['color'] as int) : const Color(0xFFFFFFFF)
-  ;
+      color = json['color'] != null ? Color(json['color'] as int) : const Color(0xFFFFFFFF);
 
   Quest copyWith({
     int? id,

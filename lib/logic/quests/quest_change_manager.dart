@@ -420,7 +420,7 @@ class QuestPatch {
       sizeX: sizeX != null ? before.sizeX : null,
       sizeY: sizeY != null ? before.sizeY : null,
       isCompleted: isCompleted != null ? before.isCompleted : null,
-      color: (color == null || color!.toARGB32() == 0xFFFFFFFF) ? null : before.color,
+      color: color == null ? null : before.color,
     );
   }
 
@@ -438,7 +438,7 @@ class QuestPatch {
       sizeX: newer.sizeX ?? sizeX,
       sizeY: newer.sizeY ?? sizeY,
       isCompleted: newer.isCompleted ?? isCompleted,
-      color: (newer.color == null || newer.color!.toARGB32() == 0xFFFFFFFF) ? color : newer.color,
+      color: newer.color ?? color,
     );
   }
 
@@ -473,6 +473,7 @@ class QuestPatch {
   /// [isCompleted] is intentionally excluded – it is client-only state and
   /// has no column in quest_versions.
   Map<String, dynamic> toSupabaseMap({required int questId, required String updateMessage, required String createdBy}) {
+    print("Serialising patch for quest $questId: $this. color: ${color?.toARGB32().toRadixString(16)}");
     return {
       'quest_id': questId,
       'created_by': createdBy,
@@ -543,6 +544,7 @@ class QuestPatch {
       0xFF607D8B: 'blue grey',
       0xFF000000: 'black',
       0xFFFFFFFF: 'white',
+      0xFFFF00FF: 'magenta',
     };
 
     if (namedColors.containsKey(argb)) return namedColors[argb]!;
@@ -560,7 +562,7 @@ class QuestPatch {
       }
     }
 
-    if (closestDist < 5000 && closestName != null) return closestName;
+    if (closestName != null) return closestName;
     
     print("no closest named color for #${r.toRadixString(16).padLeft(2, '0')}${g.toRadixString(16).padLeft(2, '0')}${b.toRadixString(16).padLeft(2, '0')}, closest is $closestName with distance $closestDist");
 
