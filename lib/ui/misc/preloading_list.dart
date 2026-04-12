@@ -255,9 +255,11 @@ class AnimatedPreloadingListState<T> extends State<AnimatedPreloadingList<T>> wi
   }
 
   void addItem(T item) {
-    items.add(item);
-    final int insertIndex = items.indexOf(item);
-    _listKey.currentState?.insertItem(insertIndex, duration: widget.animationDuration);
+    setState(() {
+      items.add(item);
+      final int insertIndex = items.indexOf(item);
+      _listKey.currentState?.insertItem(insertIndex, duration: widget.animationDuration);
+    });
   }
 
   @override

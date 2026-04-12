@@ -427,15 +427,23 @@ class _ProfileScreenState extends State<ProfileScreen> with TickerProviderStateM
                     user = user.copyWith(followersCount: user.followersCount + (followed ? 1 : -1));
 
                     if (followed) {
-                      _followersListKey.currentState?.addItem(currentUser);
+                      if (_followersListKey.currentState == null) {
+                        _followersQuery.results.add(currentUser);
+                      } else {
+                        _followersListKey.currentState?.addItem(currentUser);
+                      }
                     } else {
-                      final currentIndex =
-                          _followersListKey.currentState?.items.indexOf(
-                            _followersListKey.currentState?.items.where((element) => element.id == currentUser.id).singleOrNull ?? currentUser,
-                          ) ??
-                          -1;
-                      if (currentIndex != -1) {
-                        _followersListKey.currentState?.removeItem(currentIndex, (context, anim) => _buildSqueezeItem(currentUser, anim, cs));
+                      if (_followersListKey.currentState == null) {
+                        _followersQuery.results.removeWhere((element) => element.id == currentUser.id);
+                      } else {
+                        final currentIndex =
+                            _followersListKey.currentState?.items.indexOf(
+                              _followersListKey.currentState?.items.where((element) => element.id == currentUser.id).singleOrNull ?? currentUser,
+                            ) ??
+                            -1;
+                        if (currentIndex != -1) {
+                          _followersListKey.currentState?.removeItem(currentIndex, (context, anim) => _buildSqueezeItem(currentUser, anim, cs));
+                        }
                       }
                     }
 

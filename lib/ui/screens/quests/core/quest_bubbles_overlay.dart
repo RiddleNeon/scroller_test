@@ -72,8 +72,6 @@ class QuestBubblesOverlayState extends State<QuestBubblesOverlay>
       adjacency: adjacency,
     );
     _connectionPainter.recomputeGlowColors();
-    print("Derived quest colors: $derivedQuestColors");
-    
   }
   
   void _onQuestSystemChanged() {
