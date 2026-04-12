@@ -10,7 +10,7 @@ import 'package:wurp/ui/misc/avatar.dart';
 import 'package:wurp/ui/router.dart';
 import 'package:wurp/ui/screens/search_screen/search_query.dart';
 import 'package:wurp/ui/screens/search_screen/search_screen.dart';
-import 'package:wurp/ui/screens/search_screen/widgets/preloading_list.dart';
+import 'package:wurp/ui/misc/preloading_list.dart';
 import 'package:wurp/ui/screens/search_screen/widgets/search_user_card.dart';
 import 'package:wurp/ui/screens/search_screen/widgets/search_video_card.dart';
 import 'package:wurp/ui/widgets/logout_button.dart';

@@ -103,7 +103,6 @@ class _PreloadingListState<T> extends State<PreloadingList<T>> {
           thumbVisibility: true,
           child: ListView.builder(
             controller: _scrollController,
-            physics: const NeverScrollableScrollPhysics(),
             itemCount: widget.query.results.length,
             itemBuilder: (context, index) {
               if (widget.query.results.isEmpty) return EmptyState(label: widget.emptyStateLabel ?? 'Nothing found', cs: cs);
@@ -139,7 +138,7 @@ class _SliverPreloadingListState<T> extends _PreloadingListState<T> {
           controller: _scrollController,
           interactive: true,
           thumbVisibility: true,
-          child: CustomScrollView(controller: _scrollController, physics: const NeverScrollableScrollPhysics(), slivers: [_buildSliver(cs)]),
+          child: CustomScrollView(controller: _scrollController, slivers: [_buildSliver(cs)]),
         ),
       ),
     );

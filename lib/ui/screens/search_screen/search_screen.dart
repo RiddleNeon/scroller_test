@@ -7,7 +7,7 @@ import 'package:wurp/logic/video/video.dart';
 import 'package:wurp/ui/feed_view_model.dart';
 import 'package:wurp/ui/screens/search_screen/search_query.dart';
 import 'package:wurp/ui/screens/search_screen/widgets/animated_search_bar.dart';
-import 'package:wurp/ui/screens/search_screen/widgets/preloading_list.dart';
+import 'package:wurp/ui/misc/preloading_list.dart';
 import 'package:wurp/ui/screens/search_screen/widgets/search_user_card.dart';
 import 'package:wurp/ui/screens/search_screen/widgets/search_video_card.dart';
 import 'package:wurp/ui/animations/slide_morph_transitions.dart';

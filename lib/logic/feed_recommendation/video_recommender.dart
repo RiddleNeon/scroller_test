@@ -63,7 +63,7 @@ class VideoRecommender extends VideoRecommenderBase {
   Future<Set<Video>> _getCandidateVideos({required UserPreferences userPreferences, required int limit}) async {
     return fetchTrendingVideos(limit: limit, onlyUnseen: true);
 
-    final Set<Video> candidates = {};
+    /*final Set<Video> candidates = {}; // old code, can be optimized by fetching directly into a set and avoiding duplicates early on
 
     final topTags = _getTopTags(userPreferences, 3);
     print("top tags for user: $topTags");
@@ -99,7 +99,7 @@ class VideoRecommender extends VideoRecommenderBase {
       candidates.addAll(trending);
     }
 
-    return removeDuplicates<Video>(candidates.toList(), getCheckedParameter: (vid) => vid.videoUrl).toSet();
+    return removeDuplicates<Video>(candidates.toList(), getCheckedParameter: (vid) => vid.videoUrl).toSet();*/
   }
 
   List<String>? blacklistedTags;

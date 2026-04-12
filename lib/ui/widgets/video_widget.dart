@@ -143,7 +143,6 @@ class _VideoItemState extends State<VideoItem> {
     try {
       // Use VideoRecommender to track interaction
       // This handles BOTH recent_interactions AND preference updates
-      print("Saving interaction for video ${widget.video.id}");
       await trackInteraction(
         video: widget.video,
         watchTime: _totalWatchTime,
