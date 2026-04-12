@@ -11,21 +11,28 @@ class QuestSystem with ChangeNotifier {
   late QuestChangeManager changeManager;
 
   final Map<int, Quest> _quests = {};
-  final List<QuestConnection> _prerequisites = [];
+  /// Key format: "$fromId,$toId"
+  final Map<String, QuestConnection> _prerequisites = {};
+
+  static String _key(int fromId, int toId) => '$fromId,$toId';
 
   List<Quest> get quests => _quests.values.toList();
 
   // ── Prerequisites ──────────────────────────────────────────────────────────
 
   /// Returns the IDs of all prerequisites for [questId].
-  Set<int> prerequisiteIds(int questId) => _prerequisites.where((element) => element.toQuestId == questId).map((e) => e.fromQuestId).toSet();
+  Set<int> prerequisiteIds(int questId) => _prerequisites.values
+      .where((conn) => conn.toQuestId == questId)
+      .map((conn) => conn.fromQuestId)
+      .toSet();
 
   /// Returns the [Quest] objects for all prerequisites of [questId].
   /// Silently skips IDs that no longer exist in the system.
-  List<Quest> prerequisitesOf(int questId) => prerequisiteIds(questId).map((id) => _quests[id]).whereType<Quest>().toList();
+  List<Quest> prerequisitesOf(int questId) =>
+      prerequisiteIds(questId).map((id) => _quests[id]).whereType<Quest>().toList();
 
-  bool isConnected(int fromId, int toId) => _prerequisites.any((element) => element.fromQuestId == fromId && element.toQuestId == toId);
-  QuestConnection? getConnection(int fromId, int toId) => _prerequisites.where((element) => element.fromQuestId == fromId && element.toQuestId == toId).firstOrNull;
+  bool isConnected(int fromId, int toId) => _prerequisites.containsKey(_key(fromId, toId));
+  QuestConnection? getConnection(int fromId, int toId) => _prerequisites[_key(fromId, toId)];
 
   // ── Quest mutations ────────────────────────────────────────────────────────
 
@@ -37,7 +44,7 @@ class QuestSystem with ChangeNotifier {
   /// Removes the quest and all connections to/from it.
   void removeQuest(int id) {
     _quests.remove(id);
-    _prerequisites.removeWhere((element) => element.fromQuestId == id || element.toQuestId == id);
+    _prerequisites.removeWhere((_, conn) => conn.fromQuestId == id || conn.toQuestId == id);
     notifyListeners();
   }
 
@@ -50,19 +57,20 @@ class QuestSystem with ChangeNotifier {
   void addConnection(int fromId, int toId) {
     if (isConnected(fromId, toId)) return;
 
-    _prerequisites.add(QuestConnection(fromQuestId: fromId, toQuestId: toId));
+    _prerequisites[_key(fromId, toId)] = QuestConnection(fromQuestId: fromId, toQuestId: toId);
     notifyListeners();
   }
 
   void removeConnection(int fromId, int toId) {
-    _prerequisites.removeWhere((element) => element.fromQuestId == fromId && element.toQuestId == toId);
+    _prerequisites.remove(_key(fromId, toId));
     notifyListeners();
   }
-  
+
   void updateConnection(int fromId, int toId, {String? newType, double? newXpRequirement}) {
-    final connection = _prerequisites.firstWhere((element) => element.fromQuestId == fromId && element.toQuestId == toId);
-    if(newType != null) connection.type = newType;
-    if(newXpRequirement != null) connection.xpRequirement = newXpRequirement;
+    final connection = _prerequisites[_key(fromId, toId)];
+    if (connection == null) return;
+    if (newType != null) connection.type = newType;
+    if (newXpRequirement != null) connection.xpRequirement = newXpRequirement;
     notifyListeners();
   }
 
@@ -86,7 +94,8 @@ class QuestSystem with ChangeNotifier {
       assert(prereqIds.every(_quests.containsKey), 'All prerequisite IDs must reference existing quests.');
 
       for (final prereqId in prereqIds) {
-        _prerequisites.add(QuestConnection(fromQuestId: prereqId, toQuestId: data['id'] as int));
+        final toId = data['id'] as int;
+        _prerequisites[_key(prereqId, toId)] = QuestConnection(fromQuestId: prereqId, toQuestId: toId);
       }
     }
 
@@ -109,7 +118,9 @@ class QuestSystem with ChangeNotifier {
 
     print("Fetched quests: ${fetchedQuests.map((q) => q.id).toList()}");
 
-    _prerequisites.addAll(fetchedConnections);
+    for (final conn in fetchedConnections) {
+      _prerequisites[_key(conn.fromQuestId, conn.toQuestId)] = conn;
+    }
     changeManager = QuestChangeManager(questSystem: this, repo: questRepo);
 
     notifyListeners();
@@ -123,19 +134,19 @@ class QuestSystem with ChangeNotifier {
         _quests.values
             .map(
               (q) => {
-                'id': q.id,
-                'name': q.name,
-                'description': q.description,
-                'subject': q.subject,
-                'posX': q.posX,
-                'posY': q.posY,
-                'sizeX': q.sizeX,
-                'sizeY': q.sizeY,
-                'difficulty': q.difficulty,
-                'isCompleted': q.isCompleted,
-                'prerequisites': prerequisitesOf(q.id),
-              },
-            )
+            'id': q.id,
+            'name': q.name,
+            'description': q.description,
+            'subject': q.subject,
+            'posX': q.posX,
+            'posY': q.posY,
+            'sizeX': q.sizeX,
+            'sizeY': q.sizeY,
+            'difficulty': q.difficulty,
+            'isCompleted': q.isCompleted,
+            'prerequisites': prerequisitesOf(q.id),
+          },
+        )
             .toList(),
       );
     } on Exception {

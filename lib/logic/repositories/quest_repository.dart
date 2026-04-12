@@ -58,18 +58,15 @@ class QuestRepository {
         .inFilter('to_id', questMap.keys.toList())
         .limit(10000);
 
-    final Map<int, Set<int>> connections = {};
     final List<QuestConnection> connectionList = [];
     for (final row in connectionRows as List<dynamic>) {
       final latest = row['quest_connections_latest'] as Map<String, dynamic>?;
       if (latest == null || latest['is_deleted'] == true) continue;
 
-      connections.putIfAbsent(row['from_id'] as int, () => {}).add(row['to_id'] as int);
       connectionList.add(QuestConnection(fromQuestId: row['from_id'] as int, toQuestId: row['to_id'] as int, type: row['quest_connections_latest']['type'] as String, xpRequirement: (row['quest_connections_latest']['xp_requirement'] as num?)?.toDouble() ?? 0));
-      print('Found connection: ${row['from_id']} -> ${row['to_id']} (type: ${row['quest_connections_latest']['type']}, xpRequirement: ${row['quest_connections_latest']['xp_requirement']})');
+      print("got connection from ${questMap[row['from_id']]?.name} to ${questMap[row['to_id']]?.name} with type ${row['quest_connections_latest']['type']} and xp requirement ${row['quest_connections_latest']['xp_requirement']}");
     }
 
-    print("Fetched connections: ${connections.entries.map((e) => "${e.key} -> ${e.value}").toList()}");
 
     return (questMap.values.toList(), connectionList);
   }
@@ -164,9 +161,6 @@ class QuestRepository {
   }
 
   Future<void> updateConnection(int fromId, int toId, {String? newType, double? newXpRequirement, String? updateMessage}) async {
-    
-    print("UPDATING CONNECTION from $fromId to $toId with newType: $newType, newXpRequirement: $newXpRequirement, updateMessage: $updateMessage");
-    
     final int? existingId =
         (await supabaseClient.from('quest_connections').select('connection_id').eq('from_id', fromId).eq('to_id', toId).maybeSingle())?['connection_id']
             as int?;

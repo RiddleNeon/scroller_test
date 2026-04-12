@@ -241,7 +241,7 @@ class PanWidgetState extends State<PanWidget> {
     }
 
     try {
-      changeManager.record(AddConnectionChange(fromId: targetId, toId: sourceId, updateMessage: 'connection drawn'));
+      changeManager.record(AddConnectionChange(fromId: sourceId, toId: targetId, updateMessage: 'connection drawn'));
     } catch (e) {
       questSystem.addConnection(targetId, sourceId);
       questRepo.addConnection(targetId, sourceId);
@@ -353,6 +353,10 @@ class PanWidgetState extends State<PanWidget> {
   }
 
   void _onDoubleTap() {
+    if(!debugMode) {
+      return;
+    }
+    
     final quest = _findQuestAt(_lastPointerScenePos);
     if (quest == null) {
       showQuestAddOverlay(_lastPointerScenePos);

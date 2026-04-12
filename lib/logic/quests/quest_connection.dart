@@ -8,14 +8,14 @@ class QuestConnection {
     required this.fromQuestId,
     required this.toQuestId,
     this.type = 'prerequisite',
-    this.xpRequirement = 777,
+    this.xpRequirement = 0,
   });
   
   QuestConnection.fromJson(Map<String, dynamic> json)
     : fromQuestId = json['fromQuestId'] as int,
       toQuestId = json['toQuestId'] as int,
       type = json['type'] as String? ?? 'prerequisite',
-      xpRequirement = (json['xpRequirement'] as num?)?.toDouble() ?? 999;
+      xpRequirement = (json['xpRequirement'] as num?)?.toDouble() ?? 0;
   
   QuestConnection copyWith({
     int? fromQuestId,

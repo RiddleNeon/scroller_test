@@ -1,3 +1,4 @@
+import 'dart:math';
 import 'dart:ui' as ui;
 
 import 'package:flutter/material.dart';
@@ -138,7 +139,8 @@ class QuestLineConnectionPainter extends CustomPainter {
       if (prereqs.isEmpty) continue;
 
       for (final prereq in prereqs) {
-        if (questSystem.maybeGetQuestById(prereq.id) == null) continue;
+        final connection = questSystem.getConnection(prereq.id, quest.id);
+        if (connection == null) continue;
 
         final bool isDynamic = currentDraggedQuestId != null && (prereq.id == currentDraggedQuestId || quest.id == currentDraggedQuestId);
 
@@ -162,7 +164,7 @@ class QuestLineConnectionPainter extends CustomPainter {
           _drawMarchingArrows(canvas, geom.p0, geom.cp1, geom.cp2, geom.p3, geom.lut, pixelOffset, geom.startColor, geom.endColor, cullRect);
         }
 
-        _drawLockedIndicator(canvas, geom.midPoint, geom.endColor);
+        _drawLockedIndicator(canvas, geom.midPoint, Colors.grey, connection.xpRequirement.ceil(), false);
       }
     }
 
@@ -174,29 +176,97 @@ class QuestLineConnectionPainter extends CustomPainter {
     }
   }
 
-  void _drawLockedIndicator(Canvas canvas, Offset center, Color color) {
-    const size = 12.0;
-    final path = Path()
-      ..moveTo(center.dx - size / 2, center.dy + size / 4)
-      ..lineTo(center.dx + size / 2, center.dy + size / 4)
-      ..lineTo(center.dx + size / 2, center.dy - size / 4)
-      ..arcToPoint(Offset(center.dx - size / 2, center.dy - size / 4), radius: const Radius.circular(size / 4))
-      ..close();
+  //draws a lock icon with a given level requirement at the midpoint of the connection
+  void _drawLockedIndicator(
+      Canvas canvas,
+      Offset center,
+      Color color,
+      int levelRequirement,
+      bool isOpen
+      ) {
+    const lockSize = 24.0;
 
-    canvas.drawPath(
-      path,
-      Paint()
-        ..color = color.withValues(alpha: 0.85)
-        ..style = PaintingStyle.fill,
+    final bodyPaint = Paint()
+      ..color = color
+      ..style = PaintingStyle.fill;
+
+    final shacklePaint = Paint()
+      ..color = color.withValues(alpha: 0.9)
+      ..style = PaintingStyle.stroke
+      ..strokeWidth = 2.5
+      ..strokeCap = StrokeCap.round;
+
+    final outlinePaint = Paint()
+      ..color = Colors.black.withValues(alpha: 0.25)
+      ..style = PaintingStyle.stroke
+      ..strokeWidth = 1;
+
+    final shackleRect = Rect.fromCenter(
+      center: center.translate(0, -lockSize * 0.2),
+      width: lockSize * 0.6,
+      height: lockSize * 0.7,
     );
 
-    canvas.drawCircle(
-      Offset(center.dx, center.dy - size / 4),
-      size * 0.35,
-      Paint()
-        ..color = color.withValues(alpha: 0.85)
-        ..style = PaintingStyle.fill,
+    canvas.drawArc(shackleRect, pi * (isOpen ? 0.7 : 1), pi, false, shacklePaint);
+
+    final bodyRect = Rect.fromCenter(
+      center: center.translate(0, lockSize * 0.2),
+      width: lockSize * 0.95,
+      height: lockSize * 0.85,
     );
+
+    final bodyRRect = RRect.fromRectAndRadius(
+      bodyRect,
+      const Radius.circular(6),
+    );
+
+    canvas.drawRRect(bodyRRect, bodyPaint);
+    canvas.drawRRect(bodyRRect, outlinePaint);
+
+    final highlightRect = Rect.fromLTWH(
+      bodyRect.left,
+      bodyRect.top,
+      bodyRect.width,
+      bodyRect.height * 0.4,
+    );
+
+    final highlightPaint = Paint()
+      ..shader = LinearGradient(
+        colors: [
+          Colors.white.withValues(alpha: 0.25),
+          Colors.transparent,
+        ],
+        begin: Alignment.topCenter,
+        end: Alignment.bottomCenter,
+      ).createShader(highlightRect);
+
+    canvas.drawRRect(bodyRRect, highlightPaint);
+
+    final textPainter = TextPainter(
+      text: TextSpan(
+        text: '$levelRequirement',
+        style: TextStyle(
+          color: Colors.white.withValues(alpha: 0.95),
+          fontSize: 11,
+          fontWeight: FontWeight.bold,
+          shadows: const [
+            Shadow(
+              blurRadius: 2,
+              offset: Offset(0, 1),
+              color: Colors.black54,
+            ),
+          ],
+        ),
+      ),
+      textDirection: TextDirection.ltr,
+    )..layout();
+
+    final textOffset = center.translate(
+      -textPainter.width / 2,
+      -textPainter.height / 3 + 2,
+    );
+
+    textPainter.paint(canvas, textOffset);
   }
 
   double _cullPadding() => (arrowSize * 2.0) / scale.clamp(0.01, double.infinity);
