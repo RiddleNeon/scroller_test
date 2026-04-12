@@ -134,7 +134,6 @@ class LocalSeenService {
   Set<String> get allSeenIds => _seenBox.keys.cast<String>().toSet();
 
   List<UserInteraction> getRecentInteractionsLocal({int limit = 50}) {
-    print("getting recent interactions local. total seen videos: ${_seenBox.length}, total interaction entries: ${_interactionBox.length}");
     final entries = _seenBox.toMap().entries.toList();
 
     entries.sort((a, b) => (b.value).compareTo(a.value));

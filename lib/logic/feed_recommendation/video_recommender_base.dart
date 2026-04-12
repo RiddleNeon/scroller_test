@@ -1,5 +1,4 @@
-import 'dart:math' hide log;
-
+import 'package:wurp/base_logic.dart';
 import 'package:wurp/logic/feed_recommendation/user_interaction.dart';
 import 'package:wurp/logic/feed_recommendation/user_preference_manager.dart';
 import 'package:wurp/logic/feed_recommendation/user_preferences.dart';
@@ -63,12 +62,14 @@ abstract class VideoRecommenderBase {
     return videos.take(limit).toList();
   }
 
-  Future<List<Video>> fetchNewVideos(DateTime? newestSeen, int limit) async {
-    var query = supabaseClient.from('videos').select(_recommenderVideoSelect).eq('is_published', true);
-    if (newestSeen != null) {
-      query = query.lt('created_at', newestSeen.toIso8601String());
-    }
-    final snapshot = await query.order('created_at', ascending: false).limit(limit);
+  Future<List<Video>> fetchNewVideos(DateTime? newestSeen, int limit, {bool onlyUnseen = false}) async {
+    final snapshot = await supabaseClient.rpc('get_new_videos', params: {
+      'p_user_id': currentUser.id,
+      'p_cursor': newestSeen?.toIso8601String(),
+      'p_limit': limit,
+      'p_only_unseen': onlyUnseen,
+    }).select(_recommenderVideoSelect);
+
     return snapshot.map<Video>(_mapVideo).toList();
   }
 
@@ -76,56 +77,47 @@ abstract class VideoRecommenderBase {
     return fetchNewVideos(oldestSeen, limit);
   }
 
-  Future<Set<Video>> fetchTrendingVideos({DateTime? cursor, required int limit}) async {
+  Future<Set<Video>> fetchTrendingVideos({DateTime? cursor, required int limit, bool onlyUnseen = false}) async {
     cursor ??= localSeenService.getTrendingCursor();
-    var query = supabaseClient
-        .from('videos')
-        .select(_recommenderVideoSelect)
-        .eq('is_published', true)
-        .gte('created_at', DateTime.now().subtract(const Duration(days: 40)).toIso8601String());
+    final snapshot = await supabaseClient.rpc('get_trending_candidates', params: {
+      'p_user_id': currentUser.id,
+      'p_cursor': cursor?.toIso8601String(),
+      'p_limit': limit * 3,
+      'p_only_unseen': onlyUnseen,
+      'p_days_back': 40,
+    }).select(_recommenderVideoSelect);
 
-    if (cursor != null) {
-      query = query.lt('created_at', cursor.toIso8601String());
-    }
+    var videos = snapshot.map<Video>(_mapVideo).toList();
 
-    final snapshot = await query.order('created_at', ascending: false).limit(limit * 3);
-    final videos = snapshot.map<Video>(_mapVideo).where((v) => !localSeenService.hasSeen(v.id)).toList()..sort((a, b) => a.createdAt.compareTo(b.createdAt));
+    videos = videos.where((v) => !localSeenService.hasSeen(v.id)).toList();
 
     if (videos.isNotEmpty) {
+      videos.sort((a, b) => a.createdAt.compareTo(b.createdAt));
       await localSeenService.saveTrendingCursor(videos.first.createdAt);
     }
 
     videos.sort((a, b) => calculateGlobalEngagementScore(b).compareTo(calculateGlobalEngagementScore(a)));
+
     return videos.take(limit).toSet();
   }
+  
+  Future<List<Video>> fetchVideosByTag(String tag, {required int limit, required void Function() onTagVideosEmpty, bool onlyUnseen = false}) async {
+    final snapshot = await supabaseClient.rpc('get_videos_by_tag', params: {
+      'p_tag_name': tag,
+      'p_user_id': currentUser.id,
+      'p_limit': limit,
+      'p_offset': 0,
+      'p_only_unseen': onlyUnseen,
+    }).select(_recommenderVideoSelect);
 
-  static const _maxRetryAttempts = 5;
+    final List<Video> videos = snapshot.map<Video>(_mapVideo).toList();
 
-  Future<List<Video>> fetchVideosByTag(String tag, {required int limit, required void Function() onTagVideosEmpty}) async {
-    final List<Video> unseen = [];
-    DateTime? cursor = localSeenService.getTagCursor(tag);
-
-    int attempts = 0;
-    while (unseen.length < limit && attempts < _maxRetryAttempts) {
-      final videos = await videoRepo.searchVideosByTagSupabase(tag, limit: limit * 2, offset: attempts * limit * 2);
-      if (videos.isEmpty) break;
-
-      unseen.addAll(videos.where((v) => !localSeenService.hasSeen(v.id)));
-
-      final lastCountingIndex = min(videos.length - 1, limit);
-      cursor = videos.elementAtOrNull(lastCountingIndex)?.createdAt;
-      attempts++;
-    }
-
-    if (cursor != null) {
-      await localSeenService.saveTagCursor(tag, cursor);
-    }
-
+    final unseen = videos.where((v) => !localSeenService.hasSeen(v.id)).toList();
     if (unseen.isEmpty) {
       onTagVideosEmpty();
     }
 
-    return unseen.take(limit).toList();
+    return unseen;
   }
 
   double calculateGlobalEngagementScore(Video video) {
@@ -150,6 +142,16 @@ Future<void> trackInteraction({
   bool commented = false,
   bool saved = false,
 }) async {
+
+  await supabaseClient.from('user_interactions').insert({
+    'user_id': userId,
+    'video_id': video.id,
+    'created_at': DateTime.now().toIso8601String(),
+    'interaction_type': 'view',
+    'liked': liked,
+    'watch_time': watchTime,
+  });
+  
   await UserPreferenceManager().updatePreferences(
     video: video,
     normalizedEngagementScore: calculateNormalizedEngagementScore(

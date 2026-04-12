@@ -36,6 +36,7 @@ class VideoRecommender extends VideoRecommenderBase {
       final recentInteractions = localSeenService.getRecentInteractionsLocal();
 
       final candidateVideos = await _getCandidateVideos(userPreferences: userPreferences, limit: _candidatePoolSize);
+      print("candidate videos count: ${candidateVideos.length}. data: ${candidateVideos.map((v) => "${v.id}: ${v.title})").join(",\n")}");
 
       final scoredVideos = _scoreVideos(candidateVideos, userPreferences, recentInteractions);
 
@@ -60,7 +61,7 @@ class VideoRecommender extends VideoRecommenderBase {
 
   /// Get candidate videos with smart filtering based on user preferences
   Future<Set<Video>> _getCandidateVideos({required UserPreferences userPreferences, required int limit}) async {
-    if (userPreferences.isNewUser) return fetchTrendingVideos(limit: limit);
+    return fetchTrendingVideos(limit: limit, onlyUnseen: true);
 
     final Set<Video> candidates = {};
 
@@ -70,25 +71,31 @@ class VideoRecommender extends VideoRecommenderBase {
       final tagVideos = await fetchVideosByTag(
         tag,
         limit: limit ~/ 3,
+        onlyUnseen: true,
         onTagVideosEmpty: () {
           localSeenService.saveBlacklistedTag(tag, DateTime.now());
           blacklistedTags?.add(tag);
           print("tag videos empty! removing $tag");
         },
       );
+      print("fetched ${tagVideos.length} videos for tag $tag");
       candidates.addAll(tagVideos);
     }
 
     final newestTimestamp = localSeenService.getNewestSeenTimestamp();
-    final newVideos = await fetchNewVideos(newestTimestamp, (limit - candidates.length) + 10);
+    final newVideos = await fetchNewVideos(newestTimestamp, (limit - candidates.length) + 10, onlyUnseen: true);
+    print("fetched ${newVideos.length} new videos since $newestTimestamp");
+    
     final filteredNewVideos = newVideos.where((v) => !localSeenService.hasSeen(v.id)).toList();
     if (filteredNewVideos.isNotEmpty) {
+      print("adding ${filteredNewVideos.length} new videos to candidates");
       candidates.addAll(filteredNewVideos);
       localSeenService.saveNewestSeenTimestamp((filteredNewVideos..sort((a, b) => a.createdAt.compareTo(b.createdAt))).last.createdAt);
     }
 
     if (candidates.length < limit) {
-      final trending = await fetchTrendingVideos(limit: limit ~/ 4);
+      final trending = await fetchTrendingVideos(limit: limit ~/ 4, onlyUnseen: true);
+      print("fetched ${trending.length} trending videos for diversity");
       candidates.addAll(trending);
     }
 
@@ -130,7 +137,7 @@ class VideoRecommender extends VideoRecommenderBase {
 
       // 5. Apply penalties
       if (localSeenService.hasSeen(video.id)) {
-        score *= 0.1; // Heavy penalty for already seen videos
+        score = 0; // Heavy penalty for already seen videos
       }
 
       scoredVideos.add(VideoScore(score: score, video: video));

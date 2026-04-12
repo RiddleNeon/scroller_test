@@ -290,21 +290,27 @@ class VideoRepository {
     return (videos: videos, nextOffset: videos.length < limit ? null : offset + videos.length);
   }
 
-  Future<List<Video>> searchVideosByTagSupabase(String tag, {int limit = 20, int offset = 0}) async {
+  Future<List<Video>> searchVideosByTagSupabase(String tag, {int limit = 20, int offset = 0, bool onlyUnseen = false}) async {
+    final userId = onlyUnseen ? supabaseClient.auth.currentUser?.id : null;
+
     final result = await supabaseClient
-        .from('video_tags')
+        .rpc('get_filtered_video_tags', params: {
+      'p_tag_name': tag,
+      'p_user_id': userId,
+      'p_limit': limit,
+      'p_offset': offset,
+    })
         .select('''
-          videos (
-            $_videoSelectInner
-          ),
-          tags!inner(name)
-        ''')
-        .eq('tags.name', tag)
-        .range(offset, offset + limit - 1);
+        videos (
+          $_videoSelectInner
+        )
+      ''');
 
-    return result.where((e) => e['videos'] != null).map((e) => _toVideo(e['videos'] as Map<String, dynamic>)).toList();
+    return result
+        .where((e) => e['videos'] != null)
+        .map((e) => _toVideo(e['videos'] as Map<String, dynamic>))
+        .toList();
   }
-
   Future<List<Video>> getVideosByTags(List<String> tags, {int limit = 20}) async {
     return getVideosByTagsSupabase(tags, limit: limit);
   }

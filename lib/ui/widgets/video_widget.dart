@@ -138,17 +138,12 @@ class _VideoItemState extends State<VideoItem> {
       _totalWatchTime += elapsed;
     }
     currentlySaving = true;
-
-    // Only save if user actually watched something
-    if (_totalWatchTime < .4 && !_isLiked && !_isDisliked && !_hasShared && !_hasSaved) {
-      return;
-    }
-
     final videoDuration = widget.controller.value.duration.inSeconds.toDouble();
 
     try {
       // Use VideoRecommender to track interaction
       // This handles BOTH recent_interactions AND preference updates
+      print("Saving interaction for video ${widget.video.id}");
       await trackInteraction(
         video: widget.video,
         watchTime: _totalWatchTime,

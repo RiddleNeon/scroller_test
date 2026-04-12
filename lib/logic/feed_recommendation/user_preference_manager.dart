@@ -91,8 +91,6 @@ class UserPreferenceManager {
 
     cachedAvgCompletion = (cachedAvgCompletion * cachedTotalInteractions + normalizedEngagementScore) / (cachedTotalInteractions + 1);
     cachedTotalInteractions++;
-
-    print('Keeping recommendation preferences in memory/local state because the provided Supabase schema has no user_preferences table.');
   }
 
   List<MapEntry<String, TagInteraction>> sortByRelevancy(Map<String, TagInteraction> tagPrefs) {
