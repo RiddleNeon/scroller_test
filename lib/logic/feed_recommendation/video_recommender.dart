@@ -1,11 +1,9 @@
 import 'dart:math';
 
-import 'package:wurp/logic/feed_recommendation/user_interaction.dart';
 import 'package:wurp/logic/feed_recommendation/user_preferences.dart';
 import 'package:wurp/logic/feed_recommendation/video_recommender_base.dart';
 import 'package:wurp/logic/video/video.dart';
 
-import '../../util/misc/lists.dart';
 import '../local_storage/local_seen_service.dart';
 
 class VideoScore {
@@ -20,7 +18,6 @@ class VideoRecommender extends VideoRecommenderBase {
   // Algorithm parameters
   static const double _recencyWeight = 0.1;
   static const double _engagementWeight = 0.30;
-  static const double _diversityWeight = 0.1;
   static const double _personalizedWeight = 0.50;
   static const int _candidatePoolSize = 50;
 
@@ -31,25 +28,13 @@ class VideoRecommender extends VideoRecommenderBase {
     try {
       // Get user preferences
       final userPreferences = await getUserPreferences();
-
-      // Get recent interactions for diversity (limited to last N)
-      final recentInteractions = localSeenService.getRecentInteractionsLocal();
-
+      
       final candidateVideos = await _getCandidateVideos(userPreferences: userPreferences, limit: _candidatePoolSize);
       print("candidate videos count: ${candidateVideos.length}. data: ${candidateVideos.map((v) => "${v.id}: ${v.title})").join(",\n")}");
 
-      final scoredVideos = _scoreVideos(candidateVideos, userPreferences, recentInteractions);
+      final scoredVideos = _scoreVideos(candidateVideos, userPreferences);
 
       final diversifiedVideos = _applyDiversityFilter(scoredVideos, limit: limit);
-
-      if (diversifiedVideos.isEmpty) {
-        print("no more videos!");
-        return fetchTrendingVideos(limit: limit);
-      } else {
-        for (var element in diversifiedVideos) {
-          localSeenService.markAsSeen(element.video);
-        }
-      }
 
       return (diversifiedVideos.take(limit).map((vs) => vs.video).toList()..shuffle()).toSet();
     } catch (e) {
@@ -104,14 +89,14 @@ class VideoRecommender extends VideoRecommenderBase {
 
   List<String>? blacklistedTags;
 
-  List<String> _getTopTags(UserPreferences prefs, int count) {
+  List<String> getTopTags(UserPreferences prefs, int count) {
     blacklistedTags ??= localSeenService.getBlacklistedTags();
     final sorted = prefs.tagPreferences.entries.toList()..sort((a, b) => b.value.compareTo(a.value));
     return (sorted.where((element) => !blacklistedTags!.contains(element.key)).take(count).map((e) => e.key).toList());
   }
 
   /// Score videos based on multiple factors
-  List<VideoScore> _scoreVideos(Set<Video> videos, UserPreferences userPreferences, List<UserInteraction> recentInteractions) {
+  List<VideoScore> _scoreVideos(Set<Video> videos, UserPreferences userPreferences) {
     final now = DateTime.now();
     final scoredVideos = <VideoScore>[];
 
@@ -130,11 +115,7 @@ class VideoRecommender extends VideoRecommenderBase {
       // 3. Personalization Score (optimized with preferences)
       final personalizationScore = calculatePersonalizationScore(video, userPreferences);
       score += personalizationScore * _personalizedWeight;
-
-      // 4. Diversity Score (penalize similar content to recently seen)
-      final diversityScore = _calculateDiversityScore(video, recentInteractions);
-      score += diversityScore * _diversityWeight;
-
+      
       // 5. Apply penalties
       if (localSeenService.hasSeen(video.id)) {
         score = 0; // Heavy penalty for already seen videos
@@ -152,34 +133,6 @@ class VideoRecommender extends VideoRecommenderBase {
   double _calculateRecencyScore(int ageInHours) {
     // Videos lose 50% score every 24 hours
     return exp(-0.029 * ageInHours);
-  }
-
-  /// Calculate diversity score to avoid echo chamber
-  double _calculateDiversityScore(Video video, List<UserInteraction> recentInteractions) {
-    if (recentInteractions.isEmpty) return 1.0;
-
-    final recentTags = <String>{};
-    final recentAuthors = <String>{};
-
-    for (final interaction in recentInteractions.take(10)) {
-      recentTags.addAll(interaction.tags);
-      recentAuthors.add(interaction.authorId);
-    }
-
-    int similarityCount = 0;
-
-    if (recentAuthors.contains(video.authorId)) {
-      similarityCount += 2;
-    }
-
-    for (final tag in video.tags) {
-      if (recentTags.contains(tag)) {
-        similarityCount++;
-      }
-    }
-
-    const maxSimilarity = 5;
-    return 1.0 - (similarityCount / maxSimilarity).clamp(0.0, 1.0);
   }
 
   /// Apply diversity filter to prevent monotony

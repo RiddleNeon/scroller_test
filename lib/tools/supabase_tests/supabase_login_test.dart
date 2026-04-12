@@ -13,8 +13,6 @@ void main() async {
 Future<void> onUserLoginSupabaseTest() async {
   await ensureSupabaseInitialized();
   await userRepository.upsertCurrentUserProfile(currentUser);
-
-  final result = await supabaseClient.rpc('get_my_jwt_sub');
   //await publishTest();
 }
 
