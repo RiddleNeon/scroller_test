@@ -119,7 +119,6 @@ void initRouter() {
       GoRoute(
         path: '/login',
         pageBuilder: (context, state) {
-          print("login!");
           return SlideMorphTransitions.page<void>(key: state.pageKey, child: const LoginScreen(), beginOffset: const Offset(0.0, 0.07), beginScale: 0.985);
         },
       ),

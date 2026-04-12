@@ -115,9 +115,7 @@ class QuestSystem with ChangeNotifier {
     for (final quest in fetchedQuests) {
       _quests[quest.id] = quest;
     }
-
-    print("Fetched quests: ${fetchedQuests.map((q) => q.id).toList()}");
-
+    
     for (final conn in fetchedConnections) {
       _prerequisites[_key(conn.fromQuestId, conn.toQuestId)] = conn;
     }

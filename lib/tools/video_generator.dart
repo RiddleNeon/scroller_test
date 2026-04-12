@@ -101,18 +101,18 @@ class BulkVideoImporter {
         bool result = await _importOne(item);
         if (result) {
           created++;
-          print("  ✅ Created new video");
+          print("Created new video");
         } else {
           skipped++;
-          print("  ⏭  Skipped (already existed)");
+          print("Skipped (already existed)");
         }
       } catch (e, st) {
-        print('  ❌ Error: $e');
+        print('Error: $e');
         print(st);
       }
     }
 
-    print('\n✅ Import complete — $created created, $skipped skipped (already existed).');
+    print('\nImport complete — $created created, $skipped skipped (already existed).');
   }
 
   /// Returns true if a new video was published, false if it was skipped.
@@ -138,10 +138,10 @@ class BulkVideoImporter {
 
     // --- 2. Skip if video URL already imported --------------------------
     if (await _videoUrlExists(videoUrl)) {
-      print('  ⏭  Skipped (URL already in DB)');
+      print('Skipped (URL already in DB)');
       return false;
     } else {
-      print('  🎬 Publishing new video for "$title" by "$authorUsername" (author ID: $supabaseAuthorId)');
+      print('Publishing new video for "$title" by "$authorUsername" (author ID: $supabaseAuthorId)');
     }
 
     // --- 3. Publish video -----------------------------------------------
@@ -159,7 +159,7 @@ class BulkVideoImporter {
       await _backfillMetrics(videoUrl, supabaseAuthorId, views: views, likes: likes);
     }
 
-    print('  ✅ Published (views: $views, likes: $likes)');
+    print('Published (views: $views, likes: $likes)');
     return true;
   }
 
@@ -186,7 +186,7 @@ class BulkVideoImporter {
     if (existing != null) {
       final id = existing['id'] as String;
       _authorIdCache[externalAuthorId] = id;
-      print('  👤 Reusing existing profile for "$username" ($id)');
+      print('Reusing existing profile for "$username" ($id)');
       return id;
     }
 
@@ -198,7 +198,7 @@ class BulkVideoImporter {
     await userRepo.createUser(id: generatedId, username: username, bio: markerValue, profileImageUrl: profileImageUrl);
 
     _authorIdCache[externalAuthorId] = generatedId;
-    print('  👤 Created new profile for "$username" ($generatedId)');
+    print('Created new profile for "$username" ($generatedId)');
     return generatedId;
   }
 
@@ -211,25 +211,25 @@ class BulkVideoImporter {
   /// Fetches the newly inserted video by URL and sets view/like counts.
   Future<void> _backfillMetrics(String videoUrl, String authorId, {required int views, required int likes}) async {
     try {
-      print('  🔍 Looking up video ID for backfilling metrics...');
+      print('Looking up video ID for backfilling metrics...');
       final row = await supabaseClient.from('videos').select('id').eq('video_url', videoUrl).maybeSingle();
 
-      print('  🔧 Backfilling metrics for video ID ${row?['id']} (views: $views, likes: $likes)');
+      print('Backfilling metrics for video ID ${row?['id']} (views: $views, likes: $likes)');
 
       if (row == null) return;
       final int videoId = row['id'] as int;
 
       if (views > 0) {
-        print('  🔧 Incremented view count by $views');
+        print('Incremented view count by $views');
         await supabaseClient.rpc('_increment_video_metric', params: {'p_video_id': videoId, 'p_column': 'view_count', 'p_delta': views});
       }
       if (likes > 0) {
-        print('  🔧 Incremented like count by $likes');
+        print('Incremented like count by $likes');
         await supabaseClient.rpc('_increment_video_metric', params: {'p_video_id': videoId, 'p_column': 'like_count', 'p_delta': likes});
         await supabaseClient.rpc('increment_profile_metric', params: {'p_user_id': authorId, 'p_column': 'total_likes_count', 'p_delta': likes});
       }
     } catch (e) {
-      print('⚠️ Could not back-fill metrics: $e');
+      print('Could not back-fill metrics: $e');
     }
   }
 

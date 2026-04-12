@@ -30,7 +30,6 @@ class VideoRecommender extends VideoRecommenderBase {
       final userPreferences = await getUserPreferences();
       
       final candidateVideos = await _getCandidateVideos(userPreferences: userPreferences, limit: _candidatePoolSize);
-      print("candidate videos count: ${candidateVideos.length}. data: ${candidateVideos.map((v) => "${v.id}: ${v.title})").join(",\n")}");
 
       final scoredVideos = _scoreVideos(candidateVideos, userPreferences);
 

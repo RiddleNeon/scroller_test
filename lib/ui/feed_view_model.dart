@@ -95,6 +95,5 @@ class FeedViewModel {
     _videoFutures.clear();
     _loadedContainers.clear();
     _disposedIndices.clear();
-    print("disposed");
   }
 }

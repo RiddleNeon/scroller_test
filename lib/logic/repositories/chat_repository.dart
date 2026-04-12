@@ -41,7 +41,6 @@ class ChatRepository {
     chat.lastMessageAt = message.timestamp;
     chat.lastMessageByMe = true;
     _invalidateChatPagesForUser(currentUser.id);
-    print("updated timestamps");
   }
 
   /// Loads messages with [otherUserId].

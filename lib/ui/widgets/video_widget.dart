@@ -232,7 +232,6 @@ class _VideoItemState extends State<VideoItem> {
                       initiallyLiked: localSeenService.isLiked(widget.video.id),
                       initiallyDisliked: localSeenService.isDisliked(widget.video.id),
                       onPauseChanged: (isPaused) {
-                        print("Pause changed: $isPaused");
                         if (isPaused) {
                           widget.controller.pause();
                         } else {

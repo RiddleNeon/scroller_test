@@ -9,8 +9,6 @@ class UserPreferences {
   UserPreferences({required this.tagPreferences, required this.authorPreferences, this.avgCompletionRate = 0.0, this.totalInteractions = 0, this.lastUpdated});
 
   factory UserPreferences.fromSupabase(Map<String, dynamic>? data) {
-    print("Loading user preferences from Supabase");
-
     if (data == null) {
       print("User preferences row does not exist. Initializing with empty preferences.");
       return UserPreferences(tagPreferences: {}, authorPreferences: {});

@@ -75,9 +75,7 @@ class QuestRepository {
 
   /// Inserts a new quest row and its first version (full snapshot).
   Future<void> addQuest(Quest quest, [String message = 'initial version']) async {
-    print('Adding new quest ${quest.id} for user ${supabaseClient.auth.currentUser?.id}');
     await supabaseClient.from('quests').insert({'id': quest.id, 'created_by': currentUser.id});
-    print("inserted");
     await supabaseClient.from('quest_versions').insert(_questToMap(quest, message)).select().single();
   }
 
