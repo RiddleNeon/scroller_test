@@ -15,7 +15,6 @@ import 'package:wurp/ui/screens/quests/core/quest_detail_screen.dart';
 import 'package:wurp/util/extensions/offset_distance.dart';
 
 import '../../../../logic/quests/quest.dart';
-import '../debug_panel.dart';
 import 'bezier_helper.dart';
 import 'pan_background.dart';
 import 'quest_bubble.dart';
@@ -36,7 +35,6 @@ class PanWidgetState extends State<PanWidget> {
   bool debugMode = false;
 
   final _questBubbleOverlayKey = GlobalKey<QuestBubblesOverlayState>();
-  final _debugPanelKey = GlobalKey<QuestDebugPanelState>();
 
   Quest? _draggingQuest;
   Offset _dragStartQuestPos = Offset.zero;
@@ -369,7 +367,6 @@ class PanWidgetState extends State<PanWidget> {
       showQuestAddOverlay(_lastPointerScenePos);
       return;
     }
-    _debugPanelKey.currentState?.inspectQuest(quest.id);
   }
 
   void _onTap() {
@@ -560,17 +557,6 @@ class PanWidgetState extends State<PanWidget> {
       )..requestFocus(),
       child: Listener(
         onPointerHover: _onPointerHover,
-        onPointerSignal: (e) {
-          if (e is PointerScrollEvent) {
-            final panelBox = _debugPanelKey.currentContext?.findRenderObject() as RenderBox?;
-            if (panelBox != null && panelBox.attached) {
-              final result = BoxHitTestResult();
-              final localPos = panelBox.globalToLocal(e.position);
-              if (panelBox.hitTest(result, position: localPos)) return;
-            }
-            _onPointerScroll(e);
-          }
-        },
         child: ClipRRect(
           borderRadius: BorderRadius.circular(20),
           child: DecoratedBox(
