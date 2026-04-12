@@ -424,6 +424,32 @@ class _ChangeDetailsSheet extends StatelessWidget {
       final detailDiffRows = activeFields.entries.map((e) => _buildDetailDiffRow(context, e.key, e.value.$2.toString(), e.value.$1.toString())).toList();
 
       return Column(children: detailDiffRows);
+    } else if(change is UpdateConnectionChange) {
+      final update = change as UpdateConnectionChange;
+      final patch = update.patch;
+      final reversePatch = update.reversePatch;
+
+      final Map<String, dynamic> fields = {
+        "Type": patch.type,
+        "XP Requirement": patch.xpRequirement,
+      };
+
+      final Map<String, dynamic> reversedFields = {
+        "Type": reversePatch.type,
+        "XP Requirement": reversePatch.xpRequirement,
+      };
+
+      final Map<String, (dynamic oldValue, dynamic newValue)> activeFields = Map.fromEntries(
+        fields.entries
+            .where((e) {
+              return e.value != null;
+            })
+            .map((e) => MapEntry(e.key, (reversedFields[e.key], e.value))),
+      );
+
+      final detailDiffRows = activeFields.entries.map((e) => _buildDetailDiffRow(context, e.key, e.value.$2.toString(), e.value.$1.toString())).toList();
+
+      return Column(children: detailDiffRows);
     }
 
     if (change is AddConnectionChange || change is RemoveConnectionChange) {

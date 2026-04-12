@@ -3,79 +3,120 @@ import 'package:wurp/logic/quests/quest_change_manager.dart';
 import 'package:wurp/logic/quests/quest_connection.dart';
 import 'package:wurp/logic/quests/quest_system.dart';
 
-///a screen for editing a quest connection (type, xp requirement, etc.)
 class QuestConnectionEditScreen extends StatelessWidget {
   final QuestConnection connection;
   final QuestSystem questSystem;
 
-  const QuestConnectionEditScreen({super.key, required this.connection, required this.questSystem});
+  QuestConnectionEditScreen({super.key, required this.connection, required this.questSystem});
 
   @override
   Widget build(BuildContext context) {
-    return FractionallySizedBox(
-      heightFactor: 0.6,
-      widthFactor: 0.6,
-      child: Padding(
-        padding: const EdgeInsets.all(16.0),
-        child: Column(
-          mainAxisSize: MainAxisSize.min,
-          children: [
-            _buildTypeField("type:", connection.type, (value) {
-              questSystem.changeManager.record(
-                UpdateConnectionChange(
-                  fromId: connection.fromQuestId,
-                  toId: connection.toQuestId,
-                  patch: QuestConnectionPatch(type: value),
-                  reversePatch: QuestConnectionPatch(type: connection.type),
+    return Center(
+      child: FractionallySizedBox(
+        widthFactor: 0.45,
+        child: Card(
+          elevation: 8,
+          shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(20)),
+          child: Padding(
+            padding: const EdgeInsets.all(24),
+            child: Column(
+              mainAxisSize: MainAxisSize.min,
+              crossAxisAlignment: CrossAxisAlignment.start,
+              children: [
+                const Text("Edit Connection", style: TextStyle(fontSize: 22, fontWeight: FontWeight.bold)),
+                const SizedBox(height: 20),
+
+                _buildField(
+                  context: context,
+                  label: "Type",
+                  icon: Icons.category,
+                  initialValue: connection.type,
                 ),
-              );
-              print("Updated connection type to: $value");
-            }),
-            const SizedBox(height: 16),
-            _buildTypeField("xp requirements:", connection.xpRequirement.toString(), (value) {
-              print("Trying to parse xp requirement: $value");
-              double? parsedValue = double.tryParse(value);
-              if (parsedValue == null) {
-                // Show an error message if the input is not a valid number
-                ScaffoldMessenger.of(context).showSnackBar(
-                  const SnackBar(content: Text("Please enter a valid number for XP requirement.")),
-                );
-                return;
-              }
-              
-              questSystem.changeManager.record(
-                UpdateConnectionChange(
-                  fromId: connection.fromQuestId,
-                  toId: connection.toQuestId,
-                  patch: QuestConnectionPatch(xpRequirement: double.tryParse(value)),
-                  reversePatch: QuestConnectionPatch(xpRequirement: connection.xpRequirement),
+
+                const SizedBox(height: 16),
+
+                _buildField(
+                  context: context,
+                  label: "XP Requirement",
+                  icon: Icons.star,
+                  initialValue: connection.xpRequirement.toString(),
+                  isNumber: true,
+                  onSubmitted: (value) {
+                    if (double.tryParse(value) == null) {
+                      ScaffoldMessenger.of(context).showSnackBar(const SnackBar(content: Text("Please enter a valid number.")));
+                      return;
+                    }
+                  },
                 ),
-              );
-              print("Updated connection XP requirement to: $parsedValue");
-            }),
-          ],
+
+                const SizedBox(height: 24),
+
+                Row(
+                  mainAxisAlignment: MainAxisAlignment.end,
+                  children: [
+                    TextButton(onPressed: () => Navigator.pop(context), child: const Text("Cancel")),
+                    const SizedBox(width: 12),
+                    ElevatedButton(
+                      onPressed: () {
+                        final typeVal = getController("Type", connection.type).text;
+                        final typeChanged = typeVal.isNotEmpty && typeVal != connection.type;
+
+                        final xpVal = getController("XP Requirement", connection.xpRequirement.toString()).text;
+                        final xpChanged = xpVal.isNotEmpty && double.tryParse(xpVal) != connection.xpRequirement;
+
+                        if (xpChanged || typeChanged) {
+                          print("Recording change for connection ${connection.fromQuestId} -> ${connection.toQuestId}: typeChanged=$typeChanged (new value: $typeVal), xpChanged=$xpChanged (new value: $xpVal)");
+                          questSystem.changeManager.record(
+                            UpdateConnectionChange(
+                              fromId: connection.fromQuestId,
+                              toId: connection.toQuestId,
+                              patch: QuestConnectionPatch(type: typeChanged ? typeVal : null, xpRequirement: xpChanged ? double.tryParse(xpVal) : null),
+                              reversePatch: QuestConnectionPatch(type: connection.type),
+                            )
+                          );
+                        }
+                        Navigator.pop(context);
+                      },
+                      child: const Text("Done"),
+                    ),
+                  ],
+                ),
+              ],
+            ),
+          ),
         ),
       ),
     );
   }
 
-  Widget _buildTypeField(String label, String initialValue, void Function(String) onSubmitted) {
-    return Row(
-      mainAxisSize: .max,
-      mainAxisAlignment: .spaceBetween,
-      children: [
-        Text(label, style: const TextStyle(fontSize: 16, fontWeight: FontWeight.bold)),
-        SizedBox(
-          width: 264,
-          height: 48,
-          child: TextFormField(
-            initialValue: initialValue,
-            keyboardType: const .numberWithOptions(signed: false, decimal: true),
-            decoration: InputDecoration(labelText: label),
-            onFieldSubmitted: onSubmitted,
-          ),
-        ),
-      ],
+  final Map<String, TextEditingController> controllers = {};
+
+  TextEditingController getController(String field, String initialValue) {
+    if (!controllers.containsKey(field)) {
+      controllers[field] = TextEditingController(text: initialValue);
+    }
+    return controllers[field]!;
+  }
+
+  Widget _buildField({
+    required BuildContext context,
+    required String label,
+    required IconData icon,
+    required String initialValue,
+    void Function(String)? onSubmitted,
+    bool isNumber = false,
+  }) {
+    return TextFormField(
+      keyboardType: isNumber ? const TextInputType.numberWithOptions(decimal: true) : TextInputType.text,
+      decoration: InputDecoration(
+        labelText: label,
+        prefixIcon: Icon(icon),
+        filled: true,
+        border: OutlineInputBorder(borderRadius: BorderRadius.circular(12)),
+      ),
+      controller: getController(label, initialValue),
+      onFieldSubmitted: onSubmitted,
+      onEditingComplete: () => onSubmitted?.call(getController(label, initialValue).text),
     );
   }
 }

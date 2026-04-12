@@ -840,4 +840,9 @@ class UpdateConnectionChange extends _QuestTargetedChange {
   
   @override
   int? get otherQuestId => toId;
+
+  @override
+  String toString() =>
+      'UpdateConnectionChange(fromId: $fromId, toId: $toId, patch: $patch, '
+          'reversePatch: $reversePatch, updateMessage: $updateMessage)';
 }

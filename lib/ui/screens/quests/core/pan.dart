@@ -419,7 +419,7 @@ class PanWidgetState extends State<PanWidget> {
   }
 
   /// Shows an overlay with options to edit a connection between two quests, such as deleting the connection or changing its type or xp requirements
-  void showQuestConnectionEditOverlay(int fromId, int toId) {
+  void showQuestConnectionEditOverlay(int fromId, int toId) async {
     final fromQuest = questSystem.maybeGetQuestById(fromId);
     final toQuest = questSystem.maybeGetQuestById(toId);
     if (fromQuest == null || toQuest == null) return;
@@ -428,15 +428,9 @@ class PanWidgetState extends State<PanWidget> {
 
     showDialog(
       context: context,
-      builder: (context) => Center(
-        child: Card(
-          clipBehavior: Clip.antiAlias,
-          shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(20)),
-          child: QuestConnectionEditScreen(
-            connection: QuestConnection(fromQuestId: fromId, toQuestId: toId, type: connection.type, xpRequirement: connection.xpRequirement),
-            questSystem: questSystem,
-          ),
-        ),
+      builder: (context) => QuestConnectionEditScreen(
+        connection: QuestConnection(fromQuestId: fromId, toQuestId: toId, type: connection.type, xpRequirement: connection.xpRequirement),
+        questSystem: questSystem,
       ),
     );
   }
