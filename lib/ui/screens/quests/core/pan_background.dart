@@ -56,8 +56,8 @@ class _InfiniteDotsBackgroundState extends State<InfiniteDotsBackground> {
 
         return CustomPaint(
           painter: _shader != null
-              ? _ShaderDotsPainter(shader: _shader!, offsetX: offsetX, offsetY: offsetY, scale: scale, img: img)
-              : _CpuDotsPainter(offsetX: offsetX, offsetY: offsetY, scale: scale),
+              ? _ShaderDotsPainter(shader: _shader!, offsetX: offsetX, offsetY: offsetY, scale: scale, img: img, cs: Theme.of(context).colorScheme)
+              : _CpuDotsPainter(offsetX: offsetX, offsetY: offsetY, scale: scale, cs: Theme.of(context).colorScheme),
           child: const SizedBox.expand(),
         );
       },
@@ -71,21 +71,36 @@ class _ShaderDotsPainter extends CustomPainter {
   final double offsetX;
   final double offsetY;
   final double scale;
+  final ColorScheme cs;
 
-  const _ShaderDotsPainter({required this.shader, required this.offsetX, required this.offsetY, required this.scale, required this.img});
+  const _ShaderDotsPainter({required this.shader, required this.offsetX, required this.offsetY, required this.scale, required this.img, required this.cs});
 
   @override
   void paint(Canvas canvas, Size size) {
     const double spacing = 25.0;
     const double accentSpacing = spacing * 4.0;
     final double period = accentSpacing * scale;
-
+    
+    final Color backgroundColor = cs.surface;
+    final Color baseColor = cs.onSurface;
+    final Color accentColor = cs.onSurfaceVariant;
+    
+    
     shader
       ..setFloat(0, size.width)
       ..setFloat(1, size.height)
       ..setFloat(2, offsetX % period)
       ..setFloat(3, offsetY % period)
-      ..setFloat(4, scale);
+      ..setFloat(4, scale)
+      ..setFloat(5, baseColor.r)
+      ..setFloat(6, baseColor.g)
+      ..setFloat(7, baseColor.b)
+      ..setFloat(8, accentColor.r)
+      ..setFloat(9, accentColor.g)
+      ..setFloat(10, accentColor.b)
+      ..setFloat(11, backgroundColor.r)
+      ..setFloat(12, backgroundColor.g)
+      ..setFloat(13, backgroundColor.b);
     shader.setImageSampler(0, img);
 
     canvas.drawRect(Offset.zero & size, Paint()..shader = shader);
@@ -99,10 +114,10 @@ class _CpuDotsPainter extends CustomPainter {
   final double offsetX;
   final double offsetY;
   final double scale;
+  final ColorScheme cs;
+  const _CpuDotsPainter({required this.offsetX, required this.offsetY, required this.scale, required this.cs});
 
-  const _CpuDotsPainter({required this.offsetX, required this.offsetY, required this.scale});
-
-  static const double _baseSpacing = 28.0;
+  static const double _baseSpacing = 50.0;
 
   @override
   void paint(Canvas canvas, Size size) {
@@ -117,12 +132,14 @@ class _CpuDotsPainter extends CustomPainter {
         pts.add(Offset(x, y));
       }
     }
+    
+    canvas.drawRect(Offset.zero & size, Paint()..color = cs.surface);
 
     canvas.drawPoints(
       ui.PointMode.points,
       pts,
       Paint()
-        ..color = const Color(0xFF6C7A96).withValues(alpha: 0.38)
+        ..color = cs.onSurface.withValues(alpha: 0.3)
         ..strokeCap = StrokeCap.round
         ..strokeWidth = radius * 2,
     );
