@@ -234,20 +234,7 @@ class PanWidgetState extends State<PanWidget> {
     return newPos;
   }
 
-  void _addConnection({required int sourceId, required int targetId}) {
-    final target = questSystem.maybeGetQuestById(targetId);
-    if (target == null || questSystem.prerequisitesOf(targetId).any((p) => p.id == sourceId)) {
-      return;
-    }
 
-    try {
-      changeManager.record(AddConnectionChange(fromId: sourceId, toId: targetId, updateMessage: 'connection drawn'));
-    } catch (e) {
-      questSystem.addConnection(targetId, sourceId);
-      questRepo.addConnection(targetId, sourceId);
-    }
-    _questBubbleOverlayKey.currentState?.refresh();
-  }
 
   void _onPointerScroll(PointerScrollEvent event) {
     if (_draggingQuest != null || _isConnecting) return;
@@ -345,6 +332,31 @@ class PanWidgetState extends State<PanWidget> {
   void _removeConnection(int fromId, int toId) {
     changeManager.record(RemoveConnectionChange(fromId: fromId, toId: toId));
     setState(() => _hoveredConnection = null);
+  }
+
+  void _addConnection({required int sourceId, required int targetId}) {
+    final target = questSystem.maybeGetQuestById(targetId);
+    if (target == null || questSystem.prerequisitesOf(targetId).any((p) => p.id == sourceId)) {
+      return;
+    }
+    
+    final source = questSystem.maybeGetQuestById(sourceId);
+    if (source == null) {
+      return;
+    }
+
+    try {
+      changeManager.record(AddConnectionChange(fromId: sourceId, toId: targetId, updateMessage: 'connection drawn'));
+      if(target.color.toARGB32() == 0xFFFFFFFF) {
+        final distance = (Offset(target.posX, target.posY) - Offset(source.posX, source.posY)).distance;
+        //todo mix colors based on distance and connections. the closer the quests are, the more the color of the source quest should influence the color of the target quest. 
+        changeManager.record(UpdateQuestChange(questId: targetId, patch: QuestPatch(color: getColorFromSeed(targetId)), reversePatch: QuestPatch(color: target.color), updateMessage: 'assigned mixed color to quest'));
+      }
+    } catch (e) {
+      questSystem.addConnection(targetId, sourceId);
+      questRepo.addConnection(targetId, sourceId);
+    }
+    _questBubbleOverlayKey.currentState?.refresh();
   }
 
   void _onDoubleTapDown(TapDownDetails details) {
@@ -525,7 +537,7 @@ class PanWidgetState extends State<PanWidget> {
           if (event.logicalKey == LogicalKeyboardKey.keyZ && event is RawKeyDownEvent && (event.isMetaPressed || event.isControlPressed)) {
             setState(() {
               changeManager.undo();
-              _controller.value.rotateX(0.0000000000001);
+              _controller.value.rotateX(0.0000000000001); //force rebuild every animated builder that uses this controller to update quest positions after undo, 
             });
             return KeyEventResult.handled;
           } else if (event.logicalKey == LogicalKeyboardKey.keyY && event is RawKeyDownEvent && (event.isMetaPressed || event.isControlPressed)) {
@@ -596,7 +608,7 @@ class PanWidgetState extends State<PanWidget> {
                   AnimatedBuilder(
                     animation: _controller,
                     builder: (context, child) {
-                      final screenPos = MatrixUtils.transformPoint(_controller.value, _hoveredConnection!.midpoint); //todo: optimize by only recalculating this when the hovered connection or the transform changes, instead of on every frame of the animation
+                      final screenPos = MatrixUtils.transformPoint(_controller.value, _hoveredConnection!.midpoint);
 
                       return Positioned(
                         left: screenPos.dx - 15,

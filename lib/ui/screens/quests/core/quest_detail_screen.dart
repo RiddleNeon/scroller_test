@@ -1,4 +1,5 @@
 import 'package:flutter/material.dart';
+import 'package:flutter_colorpicker/flutter_colorpicker.dart';
 import 'package:wurp/logic/quests/quest.dart';
 import 'package:wurp/logic/quests/quest_change_manager.dart';
 import 'package:wurp/logic/quests/quest_system.dart';
@@ -40,6 +41,7 @@ class _QuestDetailScreenState extends State<QuestDetailScreen> {
   late final TextEditingController _sizeXCtrl;
   late final TextEditingController _sizeYCtrl;
   late double _difficulty;
+  Color? _newColor;
 
   QuestSystem get questSystem => widget.questSystem;
 
@@ -86,12 +88,14 @@ class _QuestDetailScreenState extends State<QuestDetailScreen> {
     double? newSizeY = (newSizeYRaw == null || newSizeYRaw == widget.quest.sizeY) ? null : newSizeYRaw;
 
     double? newDifficulty = (_difficulty == widget.quest.difficulty) ? null : _difficulty;
+    
+    Color? newColor = (_newColor == null || _newColor == widget.quest.color) ? null : _newColor;
 
     print(
-      "Built QuestPatch with values: name=$newName, description=$newDescription, posX=$newPosX, posY=$newPosY, sizeX=$newSizeX, sizeY=$newSizeY, difficulty=$newDifficulty",
+      "Built QuestPatch with values: name=$newName, description=$newDescription, posX=$newPosX, posY=$newPosY, sizeX=$newSizeX, sizeY=$newSizeY, difficulty=$newDifficulty, color=$newColor",
     );
 
-    return QuestPatch(name: newName, description: newDescription, posX: newPosX, posY: newPosY, sizeX: newSizeX, sizeY: newSizeY, difficulty: newDifficulty);
+    return QuestPatch(name: newName, description: newDescription, posX: newPosX, posY: newPosY, sizeX: newSizeX, sizeY: newSizeY, difficulty: newDifficulty, color: newColor);
   }
 
   void _saveAndExit() {
@@ -175,6 +179,11 @@ class _QuestDetailScreenState extends State<QuestDetailScreen> {
             editMode: _editMode,
             nameController: _nameCtrl,
             onToggleEditMode: widget.debugMode ? _toggleEditMode : null,
+            onColorChanged: (newColor) {
+              setState(() {
+                _newColor = newColor;
+              });
+            },
           ),
           SliverPadding(
             padding: const EdgeInsets.fromLTRB(20, 24, 20, 40),
@@ -252,6 +261,7 @@ class _QuestSliverAppBar extends StatelessWidget {
   final bool editMode;
   final TextEditingController nameController;
   final VoidCallback? onToggleEditMode;
+  final void Function(Color newColor)? onColorChanged;
 
   const _QuestSliverAppBar({
     required this.quest,
@@ -259,7 +269,7 @@ class _QuestSliverAppBar extends StatelessWidget {
     required this.debugMode,
     required this.editMode,
     required this.nameController,
-    this.onToggleEditMode,
+    this.onToggleEditMode, this.onColorChanged,
   });
 
   @override
@@ -294,7 +304,7 @@ class _QuestSliverAppBar extends StatelessWidget {
             ? TextField(
                 controller: nameController,
                 style: TextStyle(color: colorScheme.onPrimaryContainer, fontWeight: FontWeight.w700, fontSize: 20, height: 1.2),
-                maxLines: 2,
+                maxLines: 1,
                 cursorColor: colorScheme.onPrimaryContainer,
                 decoration: InputDecoration(
                   border: InputBorder.none,
@@ -308,7 +318,7 @@ class _QuestSliverAppBar extends StatelessWidget {
             : Text(
                 quest.name,
                 style: TextStyle(color: colorScheme.onPrimaryContainer, fontWeight: FontWeight.w700, fontSize: 20, height: 1.2),
-                maxLines: 2,
+                maxLines: 1,
                 overflow: TextOverflow.ellipsis,
               ),
         background: Stack(
@@ -342,7 +352,7 @@ class _QuestSliverAppBar extends StatelessWidget {
             Positioned(
               top: 60,
               right: 16,
-              child: _SubjectBadge(subject: quest.subject, colorScheme: colorScheme),
+              child: _SubjectBadge(subject: quest.subject, colorScheme: colorScheme, initialColor: quest.color, onColorChanged: onColorChanged),
             ),
             if (debugMode)
               Positioned(
@@ -385,9 +395,11 @@ class _GridPatternPainter extends CustomPainter {
 
 class _SubjectBadge extends StatelessWidget {
   final String subject;
+  final Color initialColor;
+  final void Function(Color newColor)? onColorChanged;
   final ColorScheme colorScheme;
 
-  const _SubjectBadge({required this.subject, required this.colorScheme});
+  const _SubjectBadge({required this.subject, required this.colorScheme, required this.initialColor, this.onColorChanged});
 
   @override
   Widget build(BuildContext context) {
@@ -398,9 +410,41 @@ class _SubjectBadge extends StatelessWidget {
         borderRadius: BorderRadius.circular(20),
         boxShadow: [BoxShadow(color: colorScheme.primary.withValues(alpha: 0.35), blurRadius: 8, offset: const Offset(0, 3))],
       ),
-      child: Text(
-        subject.toUpperCase(),
-        style: TextStyle(color: colorScheme.onPrimary, fontSize: 11, fontWeight: FontWeight.w700, letterSpacing: 1.2),
+      child: Row(
+        children: [
+          Text(
+            subject.toUpperCase(),
+            style: TextStyle(color: colorScheme.onPrimary, fontSize: 11, fontWeight: FontWeight.w700, letterSpacing: 1.2),
+          ),
+          IconButton(
+            onPressed: () async {
+              Color? temp;
+              await showDialog<void>(
+                context: context,
+                builder: (c2) => AlertDialog(
+                  title: const Text('Primary Seed'),
+                  content: SizedBox(
+                    width: 300,
+                    child: SingleChildScrollView(
+                      child: ColorPicker(
+                        pickerColor: initialColor,
+                        onColorChanged: (c) => temp = c,
+                        enableAlpha: false,
+                        portraitOnly: true,
+                        labelTypes: const [ColorLabelType.hex],
+                      ),
+                    ),
+                  ),
+                  actions: [FilledButton(onPressed: () => Navigator.pop(c2), child: const Text('OK'))],
+                ),
+              );
+              if (temp != null) {
+                onColorChanged?.call(temp!);
+              }
+            },
+            icon: const Icon(Icons.colorize_rounded),
+          ),
+        ],
       ),
     );
   }

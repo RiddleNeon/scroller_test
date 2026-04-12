@@ -10,13 +10,14 @@ class QuestBubble extends StatelessWidget {
   final Quest quest;
   final bool isConnectionSource;
   final bool isConnectionTarget;
+  final ColorScheme cs;
 
-  const QuestBubble({super.key, required this.quest, this.isConnectionSource = false, this.isConnectionTarget = false, this.debugMode = false});
+  const QuestBubble({super.key, required this.quest, this.isConnectionSource = false, this.isConnectionTarget = false, this.debugMode = false, required this.cs});
 
   @override
   Widget build(BuildContext context) {
-    final baseColor = getColorFromSeed(quest.id);
-    final darkColor = _adjustColor(baseColor, lightness: 0.28, saturation: 0.60);
+    final baseColor = quest.color;
+    final darkColor = _adjustColor(baseColor, lightness: 0.28);
     final midColor = _adjustColor(baseColor, lightness: 0.28, saturation: 0.60);
     final glowColor = _adjustColor(baseColor, lightness: 0.60, saturation: 0.75);
 
@@ -37,7 +38,7 @@ class QuestBubble extends StatelessWidget {
           height: quest.sizeY,
           decoration: BoxDecoration(
             borderRadius: BorderRadius.circular(quest.sizeY / 2),
-            gradient: LinearGradient(begin: Alignment.topLeft, end: Alignment.bottomRight, colors: [midColor, darkColor]),
+            gradient: LinearGradient(begin: Alignment.topLeft, end: Alignment.bottomRight, colors: [baseColor, baseColor]),
             border: Border.all(color: borderColor, width: borderWidth),
             boxShadow: isConnectionTarget
                 ? [BoxShadow(color: glowColor.withValues(alpha: 0.55), blurRadius: 18, spreadRadius: 3)]

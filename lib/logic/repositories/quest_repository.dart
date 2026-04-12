@@ -1,3 +1,5 @@
+import 'dart:ui';
+
 import 'package:wurp/logic/quests/quest.dart';
 import 'package:wurp/logic/quests/quest_change_manager.dart';
 import 'package:wurp/logic/quests/quest_connection.dart';
@@ -36,6 +38,7 @@ class QuestRepository {
     posY: (row['pos_y'] as num).toDouble(),
     sizeX: (row['size_x'] as num).toDouble(),
     sizeY: (row['size_y'] as num).toDouble(),
+    color: (row['color'] != null) ? Color(row['color'] as int) : const Color(0xFFFFFFFF),
   );
 
   // ── Fetch ──────────────────────────────────────────────────────────────────

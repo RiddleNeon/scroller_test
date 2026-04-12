@@ -1,3 +1,5 @@
+import 'dart:ui';
+
 import 'package:flutter/foundation.dart';
 import 'package:wurp/logic/quests/quest.dart';
 import 'package:wurp/logic/quests/quest_connection.dart';
@@ -369,8 +371,9 @@ class QuestPatch {
   final double? sizeX;
   final double? sizeY;
   final bool? isCompleted;
+  final Color? color;
 
-  const QuestPatch({this.name, this.description, this.subject, this.posX, this.posY, this.difficulty, this.sizeX, this.sizeY, this.isCompleted});
+  const QuestPatch({this.name, this.description, this.subject, this.posX, this.posY, this.difficulty, this.sizeX, this.sizeY, this.isCompleted, this.color});
 
   /// Creates a patch from two quest snapshots, keeping only fields that differ.
   factory QuestPatch.diff(Quest before, Quest after) {
@@ -385,6 +388,7 @@ class QuestPatch {
       sizeX: after.sizeX != before.sizeX ? after.sizeX : null,
       sizeY: after.sizeY != before.sizeY ? after.sizeY : null,
       isCompleted: after.isCompleted != before.isCompleted ? after.isCompleted : null,
+      color: after.color != before.color ? after.color : null,
     );
   }
 
@@ -399,6 +403,7 @@ class QuestPatch {
       sizeX: quest.sizeX,
       sizeY: quest.sizeY,
       isCompleted: quest.isCompleted,
+      color: quest.color,
     );
   }
 
@@ -415,6 +420,7 @@ class QuestPatch {
       sizeX: sizeX != null ? before.sizeX : null,
       sizeY: sizeY != null ? before.sizeY : null,
       isCompleted: isCompleted != null ? before.isCompleted : null,
+      color: color != null ? before.color : null,
     );
   }
 
@@ -432,6 +438,7 @@ class QuestPatch {
       sizeX: newer.sizeX ?? sizeX,
       sizeY: newer.sizeY ?? sizeY,
       isCompleted: newer.isCompleted ?? isCompleted,
+      color: newer.color ?? color,
     );
   }
 
@@ -446,6 +453,7 @@ class QuestPatch {
     sizeX: sizeX,
     sizeY: sizeY,
     isCompleted: isCompleted,
+    color: color,
   );
 
   bool get isEmpty =>
@@ -457,7 +465,8 @@ class QuestPatch {
       difficulty == null &&
       sizeX == null &&
       sizeY == null &&
-      isCompleted == null;
+      isCompleted == null &&
+      color == null;
 
   /// Serialises only the non-null fields for Supabase.
   ///
@@ -476,6 +485,7 @@ class QuestPatch {
       if (posY != null) 'pos_y': posY!.toInt(),
       if (sizeX != null) 'size_x': sizeX!.toInt(),
       if (sizeY != null) 'size_y': sizeY!.toInt(),
+      if (color != null) 'color': color!.toARGB32(),
     };
   }
 
@@ -483,7 +493,7 @@ class QuestPatch {
   String toString() =>
       'QuestPatch(name: $name, description: $description, subject: $subject, '
       'posX: $posX, posY: $posY, difficulty: $difficulty, '
-      'sizeX: $sizeX, sizeY: $sizeY, isCompleted: $isCompleted)';
+      'sizeX: $sizeX, sizeY: $sizeY, isCompleted: $isCompleted, color: $color)';
 }
 
 class QuestConnectionPatch {
@@ -502,40 +512,26 @@ class QuestConnectionPatch {
   }
 
   factory QuestConnectionPatch.fromQuest(QuestConnection connection) {
-    return QuestConnectionPatch(
-      type: connection.type,
-      xpRequirement: connection.xpRequirement,
-    );
+    return QuestConnectionPatch(type: connection.type, xpRequirement: connection.xpRequirement);
   }
 
   /// Creates a reverse patch that restores every field touched by [this]
   /// to its value in [before].
   QuestConnectionPatch reverse(QuestConnection before) {
-    return QuestConnectionPatch(
-      type: type != null ? before.type : null,
-      xpRequirement: xpRequirement != null ? before.xpRequirement : null,
-    );
+    return QuestConnectionPatch(type: type != null ? before.type : null, xpRequirement: xpRequirement != null ? before.xpRequirement : null);
   }
 
   /// Returns a new patch with all fields from [this], overridden by any
   /// non-null fields in [newer]. Used when collapsing two updates for the
   /// same quest into one.
   QuestConnectionPatch mergedWith(QuestConnectionPatch newer) {
-    return QuestConnectionPatch(
-      type: newer.type ?? type,
-      xpRequirement: newer.xpRequirement ?? xpRequirement,
-    );
+    return QuestConnectionPatch(type: newer.type ?? type, xpRequirement: newer.xpRequirement ?? xpRequirement);
   }
 
   /// Applies only the non-null fields of this patch to [quest].
-  QuestConnection applyTo(QuestConnection connection) => connection.copyWith(
-    type: type,
-    xpRequirement: xpRequirement,
-  );
+  QuestConnection applyTo(QuestConnection connection) => connection.copyWith(type: type, xpRequirement: xpRequirement);
 
-  bool get isEmpty =>
-      type == null &&
-          xpRequirement == null;
+  bool get isEmpty => type == null && xpRequirement == null;
 
   /// Serialises only the non-null fields for Supabase.
   ///
@@ -553,8 +549,7 @@ class QuestConnectionPatch {
   }
 
   @override
-  String toString() =>
-      'QuestConnectionPatch(type: $type, xp_requirement: $xpRequirement)';
+  String toString() => 'QuestConnectionPatch(type: $type, xp_requirement: $xpRequirement)';
 }
 
 // ── Base ───────────────────────────────────────────────────────────────────
@@ -829,7 +824,13 @@ class UpdateConnectionChange extends _QuestTargetedChange {
   @override
   QuestChange? mergeWith(QuestChange newer) {
     if (newer is UpdateConnectionChange && newer.questId == questId) {
-      return UpdateConnectionChange(fromId: fromId, toId: toId, patch: patch.mergedWith(newer.patch), reversePatch: reversePatch, updateMessage: newer.updateMessage);
+      return UpdateConnectionChange(
+        fromId: fromId,
+        toId: toId,
+        patch: patch.mergedWith(newer.patch),
+        reversePatch: reversePatch,
+        updateMessage: newer.updateMessage,
+      );
     }
     if (newer is RemoveConnectionChange) return newer;
     return newer;
@@ -837,12 +838,12 @@ class UpdateConnectionChange extends _QuestTargetedChange {
 
   @override
   int get questId => fromId;
-  
+
   @override
   int? get otherQuestId => toId;
 
   @override
   String toString() =>
       'UpdateConnectionChange(fromId: $fromId, toId: $toId, patch: $patch, '
-          'reversePatch: $reversePatch, updateMessage: $updateMessage)';
+      'reversePatch: $reversePatch, updateMessage: $updateMessage)';
 }

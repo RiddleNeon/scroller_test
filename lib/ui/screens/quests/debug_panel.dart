@@ -2,6 +2,7 @@ import 'dart:async';
 
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
+import 'package:flutter_colorpicker/flutter_colorpicker.dart';
 import 'package:wurp/logic/quests/quest.dart';
 import 'package:wurp/logic/quests/quest_change_manager.dart';
 import 'package:wurp/logic/quests/quest_system.dart';
@@ -329,6 +330,8 @@ class _QuestListTileState extends State<_QuestListTile> with SingleTickerProvide
   _QuestListTileState();
 
   double? _difficulty;
+  
+  Color? newColor;
 
   _SaveState _saveState = _SaveState.idle;
   Timer? _saveTimer;
@@ -384,6 +387,7 @@ class _QuestListTileState extends State<_QuestListTile> with SingleTickerProvide
       sizeX: quest.sizeX,
       sizeY: quest.sizeY,
       difficulty: quest.difficulty,
+      color: quest.color,
     );
 
     String? newName = _nameCtrl.text.trim().isEmpty ? null : _nameCtrl.text.trim();
@@ -397,6 +401,8 @@ class _QuestListTileState extends State<_QuestListTile> with SingleTickerProvide
 
     double? newDifficulty = _difficulty == quest.difficulty ? null : _difficulty;
 
+    Color? newColor;
+
     QuestPatch after = QuestPatch(
       name: newName,
       description: newDesc,
@@ -406,6 +412,7 @@ class _QuestListTileState extends State<_QuestListTile> with SingleTickerProvide
       sizeX: newSizeX,
       sizeY: newSizeY,
       difficulty: newDifficulty,
+      color: newColor,
     );
 
     quest = after.applyTo(quest);
@@ -419,11 +426,6 @@ class _QuestListTileState extends State<_QuestListTile> with SingleTickerProvide
     });
 
     widget.onChanged();
-  }
-
-  Color get _subjectColor {
-    const palette = [Colors.cyan, Colors.purple, Colors.orange, Colors.green, Colors.pink, Colors.teal, Colors.amber];
-    return palette[quest.subject.hashCode.abs() % palette.length];
   }
 
   @override
@@ -447,14 +449,49 @@ class _QuestListTileState extends State<_QuestListTile> with SingleTickerProvide
                   width: 30,
                   height: 20,
                   decoration: BoxDecoration(
-                    color: _subjectColor.withValues(alpha: 0.2),
+                    color: quest.color,
                     borderRadius: BorderRadius.circular(4),
-                    border: Border.all(color: _subjectColor.withValues(alpha: 0.5)),
+                    border: Border.all(color: quest.color.withValues(alpha: 0.5)),
                   ),
                   child: Center(
-                    child: Text(
-                      '#${quest.id}',
-                      style: TextStyle(color: _subjectColor, fontSize: 9, fontWeight: FontWeight.bold),
+                    child: Row(
+                      mainAxisSize: .min,
+                      mainAxisAlignment: .center,
+                      children: [
+                        Text(
+                          '#${quest.id}',
+                          style: TextStyle(color: quest.color, fontSize: 9, fontWeight: FontWeight.bold),
+                        ),
+                        IconButton(
+                          onPressed: () async {
+                            Color? temp;
+                            await showDialog<void>(
+                              context: context,
+                              builder: (c2) => AlertDialog(
+                                title: const Text('Primary Seed'),
+                                content: SizedBox(
+                                  width: 300,
+                                  child: SingleChildScrollView(
+                                    child: ColorPicker(
+                                      pickerColor: quest.color,
+                                      onColorChanged: (c) => temp = c,
+                                      enableAlpha: false,
+                                      labelTypes: const [ColorLabelType.hex],
+                                    ),
+                                  ),
+                                ),
+                                actions: [FilledButton(onPressed: () => Navigator.pop(c2), child: const Text('OK'))],
+                              ),
+                            );
+                            if (temp != null) {
+                              newColor = temp;
+                              setState(() => quest = quest.copyWith(color: temp));
+                              _applyChanges();
+                            }
+                          },
+                          icon: const Icon(Icons.colorize_rounded),
+                        ),
+                      ],
                     ),
                   ),
                 ),

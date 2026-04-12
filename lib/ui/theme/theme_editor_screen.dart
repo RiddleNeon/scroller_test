@@ -44,6 +44,7 @@ class _ThemeEditorScreenState extends State<ThemeEditorScreen> {
               pickerColor: current,
               onColorChanged: (c) => temp = c,
               enableAlpha: false,
+              portraitOnly: true,
               labelTypes: const [ColorLabelType.hex, ColorLabelType.rgb],
               pickerAreaHeightPercent: 0.7,
             ),
@@ -101,6 +102,7 @@ class _ThemeEditorScreenState extends State<ThemeEditorScreen> {
                                 pickerColor: seedPrimary,
                                 onColorChanged: (c) => temp = c,
                                 enableAlpha: false,
+                                portraitOnly: true,
                                 labelTypes: const [ColorLabelType.hex],
                               ),
                             ),
@@ -136,6 +138,7 @@ class _ThemeEditorScreenState extends State<ThemeEditorScreen> {
                                       pickerColor: temp,
                                       onColorChanged: (c) => temp = c,
                                       enableAlpha: false,
+                                      portraitOnly: true,
                                       labelTypes: const [ColorLabelType.hex],
                                     ),
                                   ),
@@ -167,8 +170,10 @@ class _ThemeEditorScreenState extends State<ThemeEditorScreen> {
                                 content: SizedBox(
                                   width: 300,
                                   child: SingleChildScrollView(
+                                    scrollDirection: .vertical,
                                     child: ColorPicker(
                                       pickerColor: temp,
+                                      portraitOnly: true,
                                       onColorChanged: (c) => temp = c,
                                       enableAlpha: false,
                                       labelTypes: const [ColorLabelType.hex],

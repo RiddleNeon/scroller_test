@@ -12,6 +12,8 @@ class Quest {
 
   double posX;
   double posY;
+  
+  Color color;
 
   bool isCompleted = false;
 
@@ -32,6 +34,7 @@ class Quest {
     this.sizeX = 200,
     this.sizeY = 100,
     this.isCompleted = false,
+    this.color = const Color(0xFFFFFFFF),
   });
 
   Quest.fromJson(Map<String, dynamic> json)
@@ -44,7 +47,9 @@ class Quest {
       difficulty = (json['difficulty'] as num?)?.toDouble() ?? 0.5,
       sizeX = (json['sizeX'] as num?)?.toDouble() ?? 200,
       sizeY = (json['sizeY'] as num?)?.toDouble() ?? 100,
-      isCompleted = json['isCompleted'] as bool? ?? false;
+      isCompleted = json['isCompleted'] as bool? ?? false,
+      color = json['color'] != null ? Color(json['color'] as int) : const Color(0xFFFFFFFF)
+  ;
 
   Quest copyWith({
     int? id,
@@ -57,6 +62,7 @@ class Quest {
     double? sizeX,
     double? sizeY,
     bool? isCompleted,
+    Color? color,
   }) {
     return Quest(
       id: id ?? this.id,
@@ -69,6 +75,7 @@ class Quest {
       sizeX: sizeX ?? this.sizeX,
       sizeY: sizeY ?? this.sizeY,
       isCompleted: isCompleted ?? this.isCompleted,
+      color: color ?? this.color,
     );
   }
 }

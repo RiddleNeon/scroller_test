@@ -130,7 +130,7 @@ class QuestBubblesOverlayState extends State<QuestBubblesOverlay>
                 quest: quest,
                 isConnectionSource: conn.sourceId == quest.id,
                 isConnectionTarget: conn.targetId == quest.id,
-                debugMode: widget.debugMode,
+                debugMode: widget.debugMode, cs: Theme.of(context).colorScheme,
               ),
             );
           },
