@@ -4,6 +4,7 @@ import 'package:wurp/logic/quests/quest_system.dart';
 import 'package:wurp/ui/screens/quests/core/quest_line_connection_painter.dart';
 
 import 'quest_bubble.dart';
+import 'quest_color_propagator.dart';
 
 class QuestBubblesOverlay extends StatefulWidget {
   final bool debugMode;
@@ -30,10 +31,12 @@ class QuestBubblesOverlayState extends State<QuestBubblesOverlay>
       ({
       int? sourceId,
       int? targetId,
-      Offset? previewPos
+      Offset? previewPos,
       })>((sourceId: null, targetId: null, previewPos: null));
 
   late final AnimationController _lineAnimCtrl;
+
+  Map<int, Color> _derivedColors = {};
 
   @override
   void initState() {
@@ -54,8 +57,21 @@ class QuestBubblesOverlayState extends State<QuestBubblesOverlay>
     _worldBounds = _computeWorldBounds();
 
     questSystem.addListener(_onQuestSystemChanged);
-    
+
     _connectionPainter.rebuildCache();
+    _recomputeColors();
+  }
+  
+  void _recomputeColors() {
+    final adjacency = QuestColorPropagator.buildAdjacency(
+      quests: questSystem.quests,
+      prerequisiteResolver: questSystem.prerequisitesOf,
+    );
+
+    _derivedColors = QuestColorPropagator.compute(
+      quests: questSystem.quests,
+      adjacency: adjacency,
+    );
   }
   
   void _onQuestSystemChanged() {
@@ -63,9 +79,12 @@ class QuestBubblesOverlayState extends State<QuestBubblesOverlay>
     final boundsChanged = newBounds != _worldBounds;
 
     _connectionPainter.rebuildCache();
+    _recomputeColors();
 
     if (boundsChanged) {
       setState(() => _worldBounds = newBounds);
+    } else {
+      setState(() {});
     }
   }
 
@@ -123,14 +142,19 @@ class QuestBubblesOverlayState extends State<QuestBubblesOverlay>
         return ValueListenableBuilder(
           valueListenable: _connectionNotifier,
           builder: (context, conn, _) {
+            final effectiveColor =
+                _derivedColors[quest.id] ?? quest.color;
+            
             return Positioned(
               left: isDragged ? drag.pos!.dx : quest.posX,
               top: isDragged ? drag.pos!.dy : quest.posY,
               child: QuestBubble(
                 quest: quest,
+                effectiveColor: effectiveColor,
                 isConnectionSource: conn.sourceId == quest.id,
                 isConnectionTarget: conn.targetId == quest.id,
-                debugMode: widget.debugMode, cs: Theme.of(context).colorScheme,
+                debugMode: widget.debugMode,
+                cs: Theme.of(context).colorScheme,
               ),
             );
           },
@@ -138,7 +162,7 @@ class QuestBubblesOverlayState extends State<QuestBubblesOverlay>
       },
     );
   }
-  
+
   Size _computeWorldBounds() {
     double maxX = 0, maxY = 0;
     for (final quest in questSystem.quests) {

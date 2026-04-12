@@ -347,11 +347,6 @@ class PanWidgetState extends State<PanWidget> {
 
     try {
       changeManager.record(AddConnectionChange(fromId: sourceId, toId: targetId, updateMessage: 'connection drawn'));
-      if(target.color.toARGB32() == 0xFFFFFFFF) {
-        final distance = (Offset(target.posX, target.posY) - Offset(source.posX, source.posY)).distance;
-        //todo mix colors based on distance and connections. the closer the quests are, the more the color of the source quest should influence the color of the target quest. 
-        changeManager.record(UpdateQuestChange(questId: targetId, patch: QuestPatch(color: getColorFromSeed(targetId)), reversePatch: QuestPatch(color: target.color), updateMessage: 'assigned mixed color to quest'));
-      }
     } catch (e) {
       questSystem.addConnection(targetId, sourceId);
       questRepo.addConnection(targetId, sourceId);

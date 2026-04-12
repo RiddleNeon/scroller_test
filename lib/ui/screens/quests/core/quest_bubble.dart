@@ -8,17 +8,26 @@ const double kConnectionHandleRadius = 12.0;
 class QuestBubble extends StatelessWidget {
   final bool debugMode;
   final Quest quest;
+
+  final Color effectiveColor;
+
   final bool isConnectionSource;
   final bool isConnectionTarget;
   final ColorScheme cs;
 
-  const QuestBubble({super.key, required this.quest, this.isConnectionSource = false, this.isConnectionTarget = false, this.debugMode = false, required this.cs});
+  const QuestBubble({
+    super.key,
+    required this.quest,
+    required this.effectiveColor,
+    this.isConnectionSource = false,
+    this.isConnectionTarget = false,
+    this.debugMode = false,
+    required this.cs,
+  });
 
   @override
   Widget build(BuildContext context) {
-    final baseColor = quest.color;
-    final darkColor = _adjustColor(baseColor, lightness: 0.28);
-    final midColor = _adjustColor(baseColor, lightness: 0.28, saturation: 0.60);
+    final baseColor = effectiveColor;
     final glowColor = _adjustColor(baseColor, lightness: 0.60, saturation: 0.75);
 
     final borderColor = isConnectionSource
