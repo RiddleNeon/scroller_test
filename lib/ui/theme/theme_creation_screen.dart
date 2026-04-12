@@ -32,13 +32,13 @@ class _ThemeManagerScreenState extends State<ThemeManagerScreen> with TickerProv
   static final CustomThemeModel _defaultTheme = CustomThemeModel(
     id: 'default',
     name: 'Default Cappuccino',
-    colors: CustomThemeColors.fromPrimary(const Color(0xFF6C5443), dark: false),
+    colors: CustomThemeColors.fromPrimary(AppTheme.lightScheme.primary, dark: false),
   );
 
   static final CustomThemeModel _defaultThemeDark = CustomThemeModel(
     id: 'default-dark',
     name: 'Default Cappuccino - Dark',
-    colors: CustomThemeColors.fromPrimary(const Color(0xFF6C5443), dark: true),
+    colors: CustomThemeColors.fromPrimary(AppTheme.lightScheme.primary, dark: true),
   );
 
   @override
@@ -57,7 +57,7 @@ class _ThemeManagerScreenState extends State<ThemeManagerScreen> with TickerProv
       final res = await _supabase.from('themes').select().eq('created_by', _uid!);
       if (mounted) {
         setState(() {
-          _myThemes = (res as List).map((e) => CustomThemeModel.fromJson(e)).toList();
+          _myThemes = (res..removeWhere((element) => (element['id'] == defaultLightThemeId || element['id'] == defaultDarkThemeId))).map((e) => CustomThemeModel.fromJson(e)).toList();
           _loadingMine = false;
         });
       }

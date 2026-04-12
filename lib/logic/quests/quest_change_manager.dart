@@ -420,7 +420,7 @@ class QuestPatch {
       sizeX: sizeX != null ? before.sizeX : null,
       sizeY: sizeY != null ? before.sizeY : null,
       isCompleted: isCompleted != null ? before.isCompleted : null,
-      color: color != null ? before.color : null,
+      color: (color == null || color!.toARGB32() == 0xFFFFFFFF) ? null : before.color,
     );
   }
 
@@ -438,7 +438,7 @@ class QuestPatch {
       sizeX: newer.sizeX ?? sizeX,
       sizeY: newer.sizeY ?? sizeY,
       isCompleted: newer.isCompleted ?? isCompleted,
-      color: newer.color ?? color,
+      color: (newer.color == null || newer.color!.toARGB32() == 0xFFFFFFFF) ? color : newer.color,
     );
   }
 

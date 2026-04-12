@@ -10,7 +10,8 @@ void startApp() async {
   if (session != null) {
     final authUser = session.user;
     try {
-      final user = await userRepository.getUserSupabase(authUser.id) ?? await userRepository.getOrCreateCurrentUser();
+      final user = await userRepository.getUserSupabase(authUser.id);
+      if(user == null) throw const AuthException("User not found in database");
       await onUserLogin(user);
     } on AuthException catch (e) {
       print("Error fetching user profile: $e");
