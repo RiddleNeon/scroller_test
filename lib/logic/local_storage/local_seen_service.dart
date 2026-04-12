@@ -1,9 +1,7 @@
 import 'package:hive_flutter/hive_flutter.dart';
 import 'package:wurp/logic/chat/chat.dart';
 import 'package:wurp/logic/chat/chat_message.dart';
-import 'package:wurp/logic/feed_recommendation/user_interaction.dart';
 import 'package:wurp/logic/users/user_model.dart';
-import 'package:wurp/logic/video/video.dart';
 
 import '../../base_logic.dart';
 import '../../tools/supabase_tests/supabase_login_test.dart';
@@ -25,10 +23,8 @@ Future<void> disposeLocalSeenService() async {
 }
 
 class LocalSeenService {
-  static const String _seenBoxName = 'seen_videos';
   static const String _settingsBoxName = 'seen_settings';
   static const String _cursorBoxName = 'feed_cursors';
-  static const String _interactionBoxName = 'seen_interactions';
   static const String _blacklistedTagsBoxName = 'blacklisted_tags';
   static const String _likeValsBoxName = 'liked_videos';
   static const String _followingBoxName = 'following_users';
@@ -47,11 +43,9 @@ class LocalSeenService {
   static const String _lastSyncConversationKey = 'lastSyncConversationTimestamp';
   static const String _lastUpdateAuthorsKey = 'lastUpdateAuthorsTimestamp';
 
-  late Box<DateTime> _seenBox;
   late Box _settingsBox;
   late Box _cursorBox;
   late Box<DateTime> _cursorDirtyBox; // tracks when each cursor was last modified locally
-  late Box _interactionBox;
   late Box<DateTime> _blacklistedTagsBox;
   late Box<bool> _likeValsBox; //bool: true -> like, false -> dislike, not in box: nothing
   late Box<DateTime> _followingBox; // key: userId, value: followedAt
@@ -74,11 +68,9 @@ class LocalSeenService {
       hiveInitialized = true;
     }
 
-    _seenBox = await Hive.openBox<DateTime>('${userId}_$_seenBoxName');
     _settingsBox = await Hive.openBox('${userId}_$_settingsBoxName');
     _cursorBox = await Hive.openBox('${userId}_$_cursorBoxName');
     _cursorDirtyBox = await Hive.openBox<DateTime>('${userId}_cursor_dirty');
-    _interactionBox = await Hive.openBox('${userId}_$_interactionBoxName');
     _blacklistedTagsBox = await Hive.openBox('${userId}_$_blacklistedTagsBoxName');
     _likeValsBox = await Hive.openBox('${userId}_$_likeValsBoxName');
     _followingBox = await Hive.openBox<DateTime>('${userId}_$_followingBoxName');
@@ -108,9 +100,8 @@ class LocalSeenService {
     }
 
     await syncWithSupabase();
-    await cleanUpOldEntries();
     print(
-      "initialized LocalSeenService with ${_seenBox.length} seen videos for user $userId, "
+      "initialized LocalSeenService for user $userId, "
       "last sync seen: ${_settingsBox.get(_lastSyncSeenKey)}, "
       "last sync likes: ${_settingsBox.get(_lastSyncLikesKey)}, "
       "last sync dislikes: ${_settingsBox.get(_lastSyncDislikesKey)}"
@@ -122,61 +113,15 @@ class LocalSeenService {
     return Hive.close();
   }
 
-  void markAsSeen(Video video) {
-    _seenBox.put(video.id, DateTime.now());
-    _interactionBox.put(video.id, {'authorId': video.authorId, 'tags': video.tags});
-  }
-
   bool hasSeen(String videoId) => false;
 
   /*_seenBox.containsKey(videoId);*/
-
-  Set<String> get allSeenIds => _seenBox.keys.cast<String>().toSet();
-
-  List<UserInteraction> getRecentInteractionsLocal({int limit = 50}) {
-    final entries = _seenBox.toMap().entries.toList();
-
-    entries.sort((a, b) => (b.value).compareTo(a.value));
-
-    return entries.take(limit).map((e) {
-      final videoId = e.key as String;
-      final seenAt = e.value;
-      final meta = _interactionBox.get(videoId) as Map?;
-
-      return UserInteraction(
-        videoId: videoId,
-        authorId: meta?['authorId'] as String? ?? '',
-        tags: meta?['tags'] != null ? List<String>.from(meta!['tags'] as List) : [],
-        watchTime: 0,
-        //dummy values bc those are not stored
-        videoDuration: 1,
-        //same here
-        timestamp: seenAt,
-      );
-    }).toList();
-  }
-
-  Future<void> cleanUpOldEntries() async {
-    if (_seenBox.length <= 5000) return;
-
-    final entries = _seenBox.toMap().entries.toList();
-    entries.sort((a, b) => (a.value).compareTo(b.value));
-
-    final amountToDelete = _seenBox.length - 5000;
-    final keysToDelete = entries.take(amountToDelete).map((e) => e.key as String).toList();
-
-    await _seenBox.deleteAll(keysToDelete);
-    await _interactionBox.deleteAll(keysToDelete);
-  }
-
+  
   // ---------------------------------------------------------------------------
   // MAIN SYNC
   // ---------------------------------------------------------------------------
 
   Future<void> syncWithSupabase({bool onlyLoad = true}) async {
-    final lastSyncSeen =
-        _settingsBox.get(_lastSyncSeenKey) as DateTime? ??
-        DateTime.utc(2024, 1, 1); // if the key doesn't exist, assume we have never synced and use a very old date
     final lastSyncLikes = _settingsBox.get(_lastSyncLikesKey) as DateTime? ?? DateTime.utc(2024, 1, 1);
     final lastSyncDislikes = _settingsBox.get(_lastSyncDislikesKey) as DateTime? ?? DateTime.utc(2024, 1, 1);
     final lastSyncPreferences = _settingsBox.get(_lastSyncPreferencesKey) as DateTime? ?? DateTime.utc(2024, 1, 1);
@@ -184,7 +129,6 @@ class LocalSeenService {
     final lastSyncConversation = _settingsBox.get(_lastSyncConversationKey) as DateTime? ?? DateTime.utc(2024, 1, 1);
 
     await Future.wait([
-      _syncSeenInteractions(lastSyncSeen, onlyLoad: onlyLoad),
       _syncLikes(lastSyncLikes, onlyLoad: onlyLoad),
       _syncDislikes(lastSyncDislikes, onlyLoad: onlyLoad),
       _syncPreferences(lastSyncPreferences, onlyLoad: onlyLoad),
@@ -196,17 +140,6 @@ class LocalSeenService {
   Future<void> syncConversationsIncremental() async {
     final lastSyncConversation = _settingsBox.get(_lastSyncConversationKey) as DateTime? ?? DateTime.utc(2024, 1, 1);
     await _syncConversations(lastSyncConversation);
-  }
-
-  // ---------------------------------------------------------------------------
-  // seen / interactions
-  // ---------------------------------------------------------------------------
-
-  Future<void> _syncSeenInteractions(DateTime lastSync, {required bool onlyLoad}) async {
-    if (!onlyLoad) {
-      print('Skipping remote seen sync because the provided Supabase schema has no recent_interactions table.');
-    }
-    await _settingsBox.put(_lastSyncSeenKey, DateTime.now());
   }
 
   // ---------------------------------------------------------------------------

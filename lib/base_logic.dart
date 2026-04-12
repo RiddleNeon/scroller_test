@@ -40,7 +40,6 @@ RecommendationVideoProvider? _videoProvider;
 RecommendationVideoProvider get videoProvider => _videoProvider ??= RecommendationVideoProvider();
 
 Future<void> initLogic() async {
-  debugPrint("Initializing logic...");
   WidgetsFlutterBinding.ensureInitialized();
   fvp.registerWith();
   if (_currentUser != null) await onUserLogout();

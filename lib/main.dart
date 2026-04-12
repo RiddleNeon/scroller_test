@@ -1,3 +1,4 @@
+import 'package:flutter/foundation.dart';
 import 'package:flutter/material.dart';
 import 'package:wurp/base_logic.dart';
 
@@ -7,6 +8,7 @@ import 'messaging_base.dart';
 final GlobalKey<NavigatorState> appNavigatorKey = GlobalKey<NavigatorState>();
 
 void main() async {
+  debugPrint = (String? message, {int? wrapWidth}) {if(!(message?.startsWith("Got object store box") ?? false)) {}};
   await initLogic();
   await setupMessaging();
   //?await publishTest();

@@ -15,7 +15,6 @@ Future<void> onUserLoginSupabaseTest() async {
   await userRepository.upsertCurrentUserProfile(currentUser);
 
   final result = await supabaseClient.rpc('get_my_jwt_sub');
-  print("jwt has 'sub': $result");
   //await publishTest();
 }
 
