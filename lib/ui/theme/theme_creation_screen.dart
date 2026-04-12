@@ -181,11 +181,12 @@ class _ThemeManagerScreenState extends State<ThemeManagerScreen> with TickerProv
   }
 
   Future<void> applyTheme(String id, [bool pushToServer = true]) async {
+    if(_selectedThemeId == id) return;
     setState(() => _selectedThemeId = id);
     appThemeNotifier.value = (getTheme(id), id);
-    if (id == 'default') {
+    if (id == 'default' || id == defaultLightThemeId) {
       await _supabase.from("applied_themes").upsert({'user_id': _uid, 'theme_id': defaultLightThemeId});
-    } else if (id == 'default-dark') {
+    } else if (id == 'default-dark' || id == defaultDarkThemeId) {
       await _supabase.from("applied_themes").upsert({'user_id': _uid, 'theme_id': defaultDarkThemeId});
     } else {
       await _supabase.from("applied_themes").upsert({'user_id': _uid, 'theme_id': id});
@@ -232,8 +233,8 @@ class _ThemeManagerScreenState extends State<ThemeManagerScreen> with TickerProv
   }
 
   ThemeData getTheme(String id) {
-    if (id == 'default') return AppTheme.light;
-    if (id == 'default-dark') return AppTheme.dark;
+    if (id == 'default' || id == defaultLightThemeId) return AppTheme.light;
+    if (id == 'default-dark' || id == defaultDarkThemeId) return AppTheme.dark;
     final theme = _myThemes.firstWhere((t) => t.id == id, orElse: () => _defaultTheme);
     return theme.colors.toThemeData();
   }

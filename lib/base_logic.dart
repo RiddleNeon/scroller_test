@@ -6,6 +6,7 @@ import 'package:wurp/base_ui.dart';
 import 'package:wurp/logic/themes/theme_model.dart';
 import 'package:wurp/tools/supabase_tests/supabase_login_test.dart';
 import 'package:wurp/ui/feed_view_model.dart';
+import 'package:wurp/ui/theme/app_theme.dart';
 
 import 'logic/feed_recommendation/user_preference_manager.dart';
 import 'logic/local_storage/local_seen_service.dart';
@@ -57,9 +58,18 @@ Future<void> onUserLogin(UserProfile user) async {
 Future<void> applyThemeFromServer() async {
   final response = await supabaseClient.from('applied_themes').select().eq('user_id', currentUser.id).single();
   final themeId = response['theme_id'] as String? ?? defaultDarkThemeId;
-  final themeData = await supabaseClient.from('themes').select().eq('id', themeId).single();
-  final theme = CustomThemeModel.fromJson(themeData);
-  appThemeNotifier.value = (theme.colors.toThemeData(), themeId);
+  
+  final ThemeData theme;
+  if (themeId == 'default' || themeId == defaultLightThemeId) {
+    theme = AppTheme.light;
+  } else if (themeId == 'default-dark' || themeId == defaultDarkThemeId) {
+    theme = AppTheme.dark;
+  } else {
+    final themeData = await supabaseClient.from('themes').select().eq('id', themeId).single();
+    theme = CustomThemeModel.fromJson(themeData).colors.toThemeData();
+  }
+  
+  appThemeNotifier.value = (theme, themeId);
 }
 
 String currentAuthUserId() => auth.currentUser?.id ?? currentUser.id;

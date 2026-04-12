@@ -170,9 +170,6 @@ class _LoginScreenState extends State<LoginScreen> with TickerProviderStateMixin
 
       if (_user == null) {
         await auth.signOut();
-        setState(() => _isBanned = true);
-        _banController.forward();
-        _setError("You are banned from this app.");
         return;
       }
 

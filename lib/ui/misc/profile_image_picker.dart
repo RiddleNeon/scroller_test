@@ -7,7 +7,6 @@ import 'package:flutter/foundation.dart';
 import 'package:flutter/material.dart';
 import 'package:http/http.dart' as http;
 import 'package:wurp/logic/repositories/user_repository.dart';
-import 'package:wurp/ui/animations/slide_morph_transitions.dart';
 
 import '../../base_logic.dart';
 import '../widgets/camera/camera_dialog.dart';
@@ -36,16 +35,9 @@ class _ProfileImagePickerSheetState extends State<_ProfileImagePickerSheet> with
   String _seedPreviewUrl = '';
   bool _uploading = false;
 
-  late final AnimationController _fadeCtrl;
-  late final Animation<double> _fadeAnim;
-
   @override
   void initState() {
     super.initState();
-    _fadeCtrl = AnimationController(vsync: this, duration: const Duration(milliseconds: 300));
-    _fadeAnim = CurvedAnimation(parent: _fadeCtrl, curve: Curves.easeOut);
-    _fadeCtrl.forward();
-
     _seedController.addListener(() {
       final seed = _seedController.text.trim();
       setState(() => _seedPreviewUrl = seed.isNotEmpty ? createUserProfileImageUrl(seed) : '');
@@ -54,7 +46,6 @@ class _ProfileImagePickerSheetState extends State<_ProfileImagePickerSheet> with
 
   @override
   void dispose() {
-    _fadeCtrl.dispose();
     _seedController.dispose();
     super.dispose();
   }
@@ -90,6 +81,7 @@ class _ProfileImagePickerSheetState extends State<_ProfileImagePickerSheet> with
     final request = http.MultipartRequest('POST', uri)
       ..fields['upload_preset'] = 'tmp_profile_imgs'
       ..files.add(http.MultipartFile.fromBytes('file', bytes, filename: 'profile.jpg'));
+
     final response = await request.send();
     final body = await response.stream.bytesToString();
     if (response.statusCode != 200) {
@@ -130,54 +122,58 @@ class _ProfileImagePickerSheetState extends State<_ProfileImagePickerSheet> with
   @override
   Widget build(BuildContext context) {
     final cs = Theme.of(context).colorScheme;
-    return SlideMorphTransitions.build(
-      _fadeAnim,
-      DraggableScrollableSheet(
-        initialChildSize: 0.72,
-        minChildSize: 0.5,
-        maxChildSize: 0.92,
-        builder: (_, scrollController) => Container(
-          decoration: BoxDecoration(
-            color: cs.surface,
-            borderRadius: const BorderRadius.vertical(top: Radius.circular(28)),
-          ),
-          child: Column(
-            children: [
-              const SizedBox(height: 12),
-              Container(
-                width: 40,
-                height: 4,
-                decoration: BoxDecoration(color: cs.outlineVariant, borderRadius: BorderRadius.circular(2)),
+    final bottomInset = MediaQuery.of(context).viewInsets.bottom;
+
+    return Container(
+      padding: EdgeInsets.only(bottom: bottomInset),
+      decoration: BoxDecoration(
+        color: cs.surface,
+        borderRadius: const BorderRadius.vertical(top: Radius.circular(32)),
+      ),
+      child: AnimatedSize(
+        duration: const Duration(milliseconds: 300),
+        curve: Curves.easeInOut,
+        child: Column(
+          mainAxisSize: MainAxisSize.min,
+          children: [
+            const SizedBox(height: 12),
+            Container(
+              width: 36,
+              height: 4,
+              decoration: BoxDecoration(color: cs.outlineVariant, borderRadius: BorderRadius.circular(2)),
+            ),
+            const SizedBox(height: 24),
+            Text(
+              'Change profile picture',
+              style: TextStyle(color: cs.onSurface, fontSize: 20, fontWeight: FontWeight.w800, letterSpacing: -0.5),
+            ),
+            const SizedBox(height: 24),
+            _buildTabBar(cs),
+            const SizedBox(height: 32),
+            Padding(
+              padding: const EdgeInsets.symmetric(horizontal: 24),
+              child: AnimatedSwitcher(
+                duration: const Duration(milliseconds: 350),
+                switchInCurve: Curves.easeOutQuart,
+                switchOutCurve: Curves.easeInQuart,
+                transitionBuilder: (child, animation) {
+                  return FadeTransition(
+                    opacity: animation,
+                    child: SlideTransition(
+                      position: animation.drive(Tween(begin: const Offset(0, 0.05), end: Offset.zero)),
+                      child: child,
+                    ),
+                  );
+                },
+                child: _buildTabContent(cs),
               ),
-              const SizedBox(height: 20),
-              Text(
-                'Change profile picture',
-                style: TextStyle(color: cs.onSurface, fontSize: 18, fontWeight: FontWeight.w700, letterSpacing: -0.3),
-              ),
-              const SizedBox(height: 20),
-              _buildTabBar(cs),
-              const SizedBox(height: 24),
-              Expanded(
-                child: SingleChildScrollView(
-                  controller: scrollController,
-                  padding: const EdgeInsets.symmetric(horizontal: 4),
-                  keyboardDismissBehavior: ScrollViewKeyboardDismissBehavior.onDrag,
-                  child: AnimatedSwitcher(
-                    duration: const Duration(milliseconds: 250),
-                    transitionBuilder: (child, animation) =>
-                        SlideMorphTransitions.switcher(child, animation, beginOffset: const Offset(0, 0.1), beginScale: 0.95),
-                    child: _buildTabContent(cs),
-                  ),
-                ),
-              ),
-              _buildConfirmButton(cs),
-              const SizedBox(height: 20),
-            ],
-          ),
+            ),
+            const SizedBox(height: 16),
+            _buildConfirmButton(cs),
+            const SizedBox(height: 32),
+          ],
         ),
       ),
-      beginOffset: const Offset(0, 0.08),
-      beginScale: 0.98,
     );
   }
 
@@ -186,8 +182,8 @@ class _ProfileImagePickerSheetState extends State<_ProfileImagePickerSheet> with
 
     return Container(
       margin: const EdgeInsets.symmetric(horizontal: 24),
-      height: 52,
-      decoration: BoxDecoration(color: cs.surfaceContainer, borderRadius: BorderRadius.circular(16)),
+      padding: const EdgeInsets.all(4),
+      decoration: BoxDecoration(color: cs.surfaceContainerHigh, borderRadius: BorderRadius.circular(20)),
       child: Row(
         children: List.generate(tabs.length, (i) {
           final selected = _selectedTab == i;
@@ -198,17 +194,17 @@ class _ProfileImagePickerSheetState extends State<_ProfileImagePickerSheet> with
                 _pickedBytes = null;
               }),
               child: AnimatedContainer(
-                duration: const Duration(milliseconds: 200),
-                margin: const EdgeInsets.all(4),
-                decoration: BoxDecoration(color: selected ? cs.primary : Colors.transparent, borderRadius: BorderRadius.circular(13)),
+                duration: const Duration(milliseconds: 250),
+                padding: const EdgeInsets.symmetric(vertical: 12),
+                decoration: BoxDecoration(color: selected ? cs.primary : Colors.transparent, borderRadius: BorderRadius.circular(16)),
                 child: Row(
                   mainAxisAlignment: MainAxisAlignment.center,
                   children: [
-                    Icon(tabs[i].$1, size: 16, color: selected ? cs.onPrimary : cs.onSurfaceVariant),
-                    const SizedBox(width: 5),
+                    Icon(tabs[i].$1, size: 18, color: selected ? cs.onPrimary : cs.onSurfaceVariant),
+                    const SizedBox(width: 8),
                     Text(
                       tabs[i].$2,
-                      style: TextStyle(fontSize: 13, fontWeight: FontWeight.w600, color: selected ? cs.onPrimary : cs.onSurfaceVariant),
+                      style: TextStyle(fontSize: 14, fontWeight: FontWeight.w700, color: selected ? cs.onPrimary : cs.onSurfaceVariant),
                     ),
                   ],
                 ),
@@ -239,27 +235,27 @@ class _ProfileImagePickerSheetState extends State<_ProfileImagePickerSheet> with
       children: [
         _buildPreviewCircle(
           cs: cs,
-          child: _pickedBytes != null ? Image.memory(_pickedBytes!, fit: BoxFit.cover) : null,
-          placeholder: Icon(isCamera ? Icons.camera_alt_outlined : Icons.photo_library_outlined, size: 40, color: cs.onSurfaceVariant.withValues(alpha: 0.5)),
+          child: _pickedBytes != null ? Image.memory(_pickedBytes!, fit: BoxFit.cover, key: ValueKey(_pickedBytes.hashCode)) : null,
+          placeholder: Icon(isCamera ? Icons.camera_alt_outlined : Icons.photo_library_outlined, size: 44, color: cs.onSurfaceVariant.withValues(alpha: 0.4)),
         ),
-        const SizedBox(height: 28),
+        const SizedBox(height: 32),
         _OutlinedActionButton(
           cs: cs,
           icon: isCamera ? Icons.camera_alt_outlined : Icons.photo_library_outlined,
-          label: isCamera ? 'Take a photo' : 'Select file',
+          label: isCamera ? 'Take a photo' : 'Select from gallery',
           onTap: _pickImage,
         ),
-        if (_pickedBytes != null) ...[
-          const SizedBox(height: 12),
-          TextButton(
-            onPressed: () => setState(() => _pickedBytes = null),
-            child: Text(
-              'Remove',
-              style: TextStyle(color: cs.onSurfaceVariant, fontWeight: FontWeight.w500),
-            ),
-          ),
-        ],
-        const SizedBox(height: 16),
+        AnimatedOpacity(
+          duration: const Duration(milliseconds: 200),
+          opacity: _pickedBytes != null ? 1 : 0,
+          child: _pickedBytes != null
+              ? TextButton(
+                  onPressed: () => setState(() => _pickedBytes = null),
+                  style: TextButton.styleFrom(foregroundColor: cs.error),
+                  child: const Text('Remove image', style: TextStyle(fontWeight: FontWeight.w600)),
+                )
+              : const SizedBox(height: 48),
+        ),
       ],
     );
   }
@@ -278,60 +274,44 @@ class _ProfileImagePickerSheetState extends State<_ProfileImagePickerSheet> with
                   errorWidget: (_, _, _) => Icon(Icons.error_outline, color: cs.onSurfaceVariant),
                 )
               : null,
-          placeholder: Icon(Icons.auto_awesome_outlined, size: 40, color: cs.onSurfaceVariant.withValues(alpha: 0.5)),
+          placeholder: Icon(Icons.auto_awesome_outlined, size: 44, color: cs.onSurfaceVariant.withValues(alpha: 0.4)),
         ),
-        const SizedBox(height: 28),
+        const SizedBox(height: 32),
         TextField(
           controller: _seedController,
-          style: TextStyle(color: cs.onSurface),
-          cursorColor: cs.primary,
+          autofocus: false,
           decoration: InputDecoration(
-            hintText: 'Enter a seed — try your name!',
-            hintStyle: TextStyle(color: cs.onSurfaceVariant, fontSize: 14),
+            hintText: 'Type something to generate...',
             filled: true,
-            fillColor: cs.surfaceContainer,
-            prefixIcon: Icon(Icons.tag, color: cs.onSurfaceVariant),
-            suffixIcon: _seedController.text.isNotEmpty
-                ? IconButton(
-                    icon: Icon(Icons.close, size: 18, color: cs.onSurfaceVariant),
-                    onPressed: () => _seedController.clear(),
-                  )
-                : null,
-            border: OutlineInputBorder(borderRadius: BorderRadius.circular(14), borderSide: BorderSide.none),
+            fillColor: cs.surfaceContainerHighest.withValues(alpha: 0.5),
+            prefixIcon: Icon(Icons.tag, color: cs.primary),
+            border: OutlineInputBorder(borderRadius: BorderRadius.circular(16), borderSide: BorderSide.none),
             focusedBorder: OutlineInputBorder(
-              borderRadius: BorderRadius.circular(14),
-              borderSide: BorderSide(color: cs.primary, width: 1.5),
+              borderRadius: BorderRadius.circular(16),
+              borderSide: BorderSide(color: cs.primary, width: 2),
             ),
           ),
         ),
-        const SizedBox(height: 10),
-        Text(
-          'Same seed → same result every time',
-          textAlign: TextAlign.center,
-          style: TextStyle(fontSize: 12, color: cs.onSurfaceVariant, height: 1.5),
-        ),
-        const SizedBox(height: 16),
+        const SizedBox(height: 12),
+        Text('Unique seeds create unique avatars.', style: TextStyle(fontSize: 12, color: cs.onSurfaceVariant)),
+        const SizedBox(height: 12),
       ],
     );
   }
 
-  // ... (Rest der Hilfs-Widgets _buildPreviewCircle, _buildConfirmButton, _OutlinedActionButton bleibt gleich)
-
   Widget _buildPreviewCircle({required ColorScheme cs, required Widget? child, required Widget placeholder}) {
     return Center(
       child: Container(
-        width: 150,
-        height: 150,
+        width: 160,
+        height: 160,
         decoration: BoxDecoration(
           shape: BoxShape.circle,
           color: cs.surfaceContainerHighest,
-          border: Border.all(color: cs.outlineVariant, width: 2),
-          boxShadow: [BoxShadow(color: cs.primary.withValues(alpha: 0.12), blurRadius: 24, offset: const Offset(0, 6))],
+          border: Border.all(color: cs.outlineVariant.withValues(alpha: 0.5), width: 4),
         ),
         child: ClipOval(
           child: AnimatedSwitcher(
-            duration: const Duration(milliseconds: 300),
-            transitionBuilder: (child, animation) => SlideMorphTransitions.switcher(child, animation, beginOffset: const Offset(0, 0.1), beginScale: 0.95),
+            duration: const Duration(milliseconds: 400),
             child: child != null ? SizedBox.expand(key: const ValueKey('img'), child: child) : Center(key: const ValueKey('ph'), child: placeholder),
           ),
         ),
@@ -344,29 +324,25 @@ class _ProfileImagePickerSheetState extends State<_ProfileImagePickerSheet> with
 
     return Padding(
       padding: const EdgeInsets.symmetric(horizontal: 24),
-      child: AnimatedSlide(
-        duration: const Duration(milliseconds: 200),
-        curve: Curves.easeOutCubic,
-        offset: canConfirm ? Offset.zero : const Offset(0, 0.04),
-        child: GestureDetector(
-          onTap: canConfirm && !_uploading ? _confirm : null,
-          child: AnimatedScale(
-            duration: const Duration(milliseconds: 200),
-            curve: Curves.easeOutCubic,
-            scale: canConfirm ? 1.0 : 0.96,
+      child: AnimatedScale(
+        duration: const Duration(milliseconds: 400),
+        curve: Curves.elasticOut,
+        scale: canConfirm ? 1.0 : 0.9,
+        child: AnimatedOpacity(
+          duration: const Duration(milliseconds: 200),
+          opacity: canConfirm ? 1.0 : 0.5,
+          child: GestureDetector(
+            onTap: canConfirm && !_uploading ? _confirm : null,
             child: Container(
               width: double.infinity,
-              height: 54,
-              decoration: BoxDecoration(
-                color: cs.primary.withValues(alpha: canConfirm ? 1 : 0.6),
-                borderRadius: BorderRadius.circular(16),
-              ),
+              height: 58,
+              decoration: BoxDecoration(color: cs.primary, borderRadius: BorderRadius.circular(20)),
               child: Center(
                 child: _uploading
-                    ? SizedBox(width: 22, height: 22, child: CircularProgressIndicator(color: cs.onPrimary, strokeWidth: 2.5))
+                    ? SizedBox(width: 24, height: 24, child: CircularProgressIndicator(color: cs.onPrimary, strokeWidth: 3))
                     : Text(
-                        'Save',
-                        style: TextStyle(color: cs.onPrimary, fontSize: 16, fontWeight: FontWeight.w700, letterSpacing: 0.2),
+                        'Save Profile Picture',
+                        style: TextStyle(color: cs.onPrimary, fontSize: 16, fontWeight: FontWeight.w800),
                       ),
               ),
             ),
@@ -387,25 +363,29 @@ class _OutlinedActionButton extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    return GestureDetector(
-      onTap: onTap,
-      child: Container(
-        width: double.infinity,
-        height: 52,
-        decoration: BoxDecoration(
-          border: Border.all(color: cs.outlineVariant, width: 1.5),
-          borderRadius: BorderRadius.circular(14),
-        ),
-        child: Row(
-          mainAxisAlignment: MainAxisAlignment.center,
-          children: [
-            Icon(icon, size: 20, color: cs.onSurface),
-            const SizedBox(width: 8),
-            Text(
-              label,
-              style: TextStyle(color: cs.onSurface, fontSize: 15, fontWeight: FontWeight.w600),
-            ),
-          ],
+    return Material(
+      color: Colors.transparent,
+      child: InkWell(
+        onTap: onTap,
+        borderRadius: BorderRadius.circular(16),
+        child: Container(
+          width: double.infinity,
+          height: 56,
+          decoration: BoxDecoration(
+            border: Border.all(color: cs.outlineVariant, width: 2),
+            borderRadius: BorderRadius.circular(16),
+          ),
+          child: Row(
+            mainAxisAlignment: MainAxisAlignment.center,
+            children: [
+              Icon(icon, size: 22, color: cs.onSurface),
+              const SizedBox(width: 12),
+              Text(
+                label,
+                style: TextStyle(color: cs.onSurface, fontSize: 16, fontWeight: FontWeight.w700),
+              ),
+            ],
+          ),
         ),
       ),
     );
