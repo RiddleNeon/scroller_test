@@ -437,7 +437,6 @@ class QuestLineConnectionPainter extends CustomPainter {
 
   Color glowColorOfQuest(int id, QuestSystem system) {
     if (glowColors.containsKey(id)) return glowColors[id]!;
-    print('Computing glow color for quest $id. derived color: ${derivedQuestColors[id]}, base color: ${system.getQuestById(id).color}');
     final hsl = HSLColor.fromColor(derivedQuestColors[id] ?? system.getQuestById(id).color);
     final color = hsl.withLightness(0.65).withSaturation(0.75).toColor();
     return glowColors[id] = color;

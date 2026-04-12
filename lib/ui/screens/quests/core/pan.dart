@@ -1,5 +1,7 @@
 // ignore_for_file: deprecated_member_use
 
+import 'dart:math' show max;
+
 import 'package:flutter/gestures.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
@@ -57,6 +59,11 @@ class PanWidgetState extends State<PanWidget> {
 
   QuestChangeManager get changeManager => widget.questSystem.changeManager;
 
+  bool get _isMobile {
+    final platform = Theme.of(context).platform;
+    return platform == TargetPlatform.iOS || platform == TargetPlatform.android;
+  }
+  
   Quest? _findQuestAt(Offset scenePos) {
     for (final quest in questSystem.quests) {
       if (quest.rect.contains(scenePos)) return quest;
@@ -65,14 +72,73 @@ class PanWidgetState extends State<PanWidget> {
   }
 
   Quest? _findQuestInConnectZone(Offset scenePos) {
-    const hitRadius = kConnectionHandleRadius * 1.6;
+    final double hitRadius;
+    if (_isMobile) {
+      const minScreenPx = 44.0;
+      hitRadius = max(kConnectionHandleRadius * 2.5, minScreenPx / _currentScale);
+    } else {
+      hitRadius = kConnectionHandleRadius * 1.6;
+    }
+
     for (final quest in questSystem.quests) {
-      final handleCenter = Offset(quest.posX + quest.sizeX, quest.posY + quest.sizeY / 2); //on the right side of the bubble
+      final handleCenter = Offset(quest.posX + quest.sizeX, quest.posY + quest.sizeY / 2);
       if ((scenePos - handleCenter).distance <= hitRadius) return quest;
     }
     return null;
   }
 
+  ({int fromId, int toId, Offset midpoint})? _findConnectionNearScenePos(Offset scenePos) {
+    final threshold = (_isMobile ? 30.0 : 15.0) / _currentScale;
+
+    final int? currentDraggedQuestId = _draggingQuest?.id;
+    final Offset? currentDraggedQuestPos = _draggingQuest != null ? snap(_dragStartQuestPos) : null;
+
+    ({int fromId, int toId, Offset midpoint})? closest;
+    double minDistance = double.infinity;
+
+    for (final quest in questSystem.quests) {
+      for (final prereq in questSystem.prerequisitesOf(quest.id)) {
+        final middlePos = Offset((quest.posX + prereq.posX) / 2, (quest.posY + prereq.posY) / 2);
+        if ((scenePos - middlePos).distance > 400.0 / _currentScale) continue;
+
+        final startCenter = getQuestCenter(prereq.id, questSystem, currentDraggedQuestId, currentDraggedQuestPos);
+        final endCenter = getQuestCenter(quest.id, questSystem, currentDraggedQuestId, currentDraggedQuestPos);
+        if (startCenter == null || endCenter == null) continue;
+
+        final anchorStart = getBestAnchor(prereq.id, endCenter, questSystem, currentDraggedQuestId, currentDraggedQuestPos);
+        final anchorEnd = getBestAnchor(quest.id, startCenter, questSystem, currentDraggedQuestId, currentDraggedQuestPos);
+
+        final cps = calculateCubicControlPointsOffsetting(
+          anchorStart.pos,
+          anchorStart.sideDir,
+          anchorEnd.pos,
+          anchorEnd.sideDir,
+          prereq.id,
+          quest.id,
+          questSystem,
+          null,
+          null,
+        );
+
+        final lut = getLut(anchorStart.pos, cps[0], cps[1], anchorEnd.pos);
+        final midT = lut.tForArcLen(lut.totalLength / 2.0);
+        final midPoint = bezierPoint(anchorStart.pos, cps[0], cps[1], anchorEnd.pos, midT);
+
+        for (double t = 0.0; t <= 1.0; t += 0.025) {
+          final pointOnCurve = bezierPoint(anchorStart.pos, cps[0], cps[1], anchorEnd.pos, t);
+          final dist = (scenePos - pointOnCurve).distance;
+
+          if (dist < threshold && dist < minDistance) {
+            minDistance = dist;
+            closest = (fromId: prereq.id, toId: quest.id, midpoint: midPoint);
+          }
+        }
+      }
+    }
+
+    return closest;
+  }
+  
   @override
   void initState() {
     questSystem.addListener(revalidateBoundaries);
@@ -135,20 +201,22 @@ class PanWidgetState extends State<PanWidget> {
         return;
       }
 
-      //ignore if not a single finger, to avoid conflicts with pinch zoom or other gestures
-      final connectQuest = _findQuestInConnectZone(scenePos);
-      if (connectQuest != null) {
-        _isConnecting = true;
-        _connectingFromQuest = connectQuest;
-        _lastConnectionScene = scenePos;
-        _questBubbleOverlayKey.currentState?.setConnectionState(sourceId: connectQuest.id, targetId: null, previewPos: scenePos);
-        return;
+      if (!_isConnecting) {
+        final connectQuest = _findQuestInConnectZone(scenePos);
+        if (connectQuest != null) {
+          _isConnecting = true;
+          _connectingFromQuest = connectQuest;
+          _lastConnectionScene = scenePos;
+          _questBubbleOverlayKey.currentState?.setConnectionState(sourceId: connectQuest.id, targetId: null, previewPos: scenePos);
+          return;
+        }
       }
 
-      _draggingQuest = _findQuestAt(scenePos);
-      _dragStartQuestPos = _draggingQuest?.position ?? Offset.zero;
-
-      _questBubbleOverlayKey.currentState?.setDragState(questId: _draggingQuest?.id, position: _draggingQuest != null ? _dragStartQuestPos : null);
+      if (!_isConnecting) {
+        _draggingQuest = _findQuestAt(scenePos);
+        _dragStartQuestPos = _draggingQuest?.position ?? Offset.zero;
+        _questBubbleOverlayKey.currentState?.setDragState(questId: _draggingQuest?.id, position: _draggingQuest != null ? _dragStartQuestPos : null);
+      }
     }
   }
 
@@ -213,6 +281,63 @@ class PanWidgetState extends State<PanWidget> {
     setState(() => _draggingQuest = null);
   }
 
+  void _onLongPressStart(LongPressStartDetails details) {
+    if (!debugMode) return;
+
+    final localPos = details.localPosition;
+    final scenePos = _controller.toScene(localPos);
+
+    _lastPointerLocalPos = localPos;
+    _lastPointerScenePos = scenePos;
+
+    _draggingQuest = null;
+    _questBubbleOverlayKey.currentState?.setDragState(questId: null, position: null);
+
+    final quest = _findQuestAt(scenePos);
+    if (quest != null) {
+      _isConnecting = true;
+      _connectingFromQuest = quest;
+      _lastConnectionScene = scenePos;
+      _questBubbleOverlayKey.currentState?.setConnectionState(sourceId: quest.id, targetId: null, previewPos: scenePos);
+
+      HapticFeedback.mediumImpact();
+    }
+  }
+
+  void _onLongPressMoveUpdate(LongPressMoveUpdateDetails details) {
+    if (!_isConnecting || _connectingFromQuest == null) return;
+
+    final scenePos = _controller.toScene(details.localPosition);
+    _lastConnectionScene = scenePos;
+    _lastPointerScenePos = scenePos;
+
+    final hoveredQuest = _findQuestAt(scenePos);
+    final targetId = (hoveredQuest != null && hoveredQuest.id != _connectingFromQuest!.id) ? hoveredQuest.id : null;
+
+    _questBubbleOverlayKey.currentState?.setConnectionState(sourceId: _connectingFromQuest!.id, targetId: targetId, previewPos: scenePos);
+  }
+
+  void _onLongPressEnd(LongPressEndDetails details) {
+    if (!_isConnecting || _connectingFromQuest == null) return;
+
+    final targetQuest = _findQuestAt(_lastConnectionScene);
+    if (targetQuest != null && targetQuest.id != _connectingFromQuest!.id) {
+      _addConnection(sourceId: _connectingFromQuest!.id, targetId: targetQuest.id);
+      HapticFeedback.lightImpact();
+    }
+
+    _isConnecting = false;
+    _connectingFromQuest = null;
+    _questBubbleOverlayKey.currentState?.setConnectionState(sourceId: null, targetId: null, previewPos: null);
+  }
+  
+  void _onLongPressCancel() {
+    if (!_isConnecting) return;
+    _isConnecting = false;
+    _connectingFromQuest = null;
+    _questBubbleOverlayKey.currentState?.setConnectionState(sourceId: null, targetId: null, previewPos: null);
+  }
+  
   Offset snap(Offset before) {
     final currentScale = _currentScale;
     final worldDelta = _focalDelta / currentScale;
@@ -230,8 +355,6 @@ class PanWidgetState extends State<PanWidget> {
     }
     return newPos;
   }
-
-
 
   void _onPointerScroll(PointerScrollEvent event) {
     if (_draggingQuest != null || _isConnecting) return;
@@ -267,7 +390,7 @@ class PanWidgetState extends State<PanWidget> {
     final threshold = 15.0 / _currentScale;
 
     if (scenePos.distanceTo(lastHoverPositionCheckPos) < 32.0 / _currentScale) {
-      return; //skip if the mouse hasn't moved much since the last check, to avoid expensive calculations
+      return;
     } else {
       lastHoverPositionCheckPos = scenePos;
     }
@@ -282,7 +405,7 @@ class PanWidgetState extends State<PanWidget> {
       for (final prereq in questSystem.prerequisitesOf(quest.id)) {
         final middlePos = Offset((quest.posX + prereq.posX) / 2, (quest.posY + prereq.posY) / 2);
         if ((scenePos - middlePos).distance > 300.0 / _currentScale) {
-          continue; //skip if the mouse is far from the middle point between the quests, as it's unlikely to be close to the curve
+          continue;
         }
 
         final startCenter = getQuestCenter(prereq.id, questSystem, currentDraggedQuestId, currentDraggedQuestPos);
@@ -336,7 +459,7 @@ class PanWidgetState extends State<PanWidget> {
     if (target == null || questSystem.prerequisitesOf(targetId).any((p) => p.id == sourceId)) {
       return;
     }
-    
+
     final source = questSystem.maybeGetQuestById(sourceId);
     if (source == null) {
       return;
@@ -357,10 +480,10 @@ class PanWidgetState extends State<PanWidget> {
   }
 
   void _onDoubleTap() {
-    if(!debugMode) {
+    if (!debugMode) {
       return;
     }
-    
+
     final quest = _findQuestAt(_lastPointerScenePos);
     if (quest == null) {
       showQuestAddOverlay(_lastPointerScenePos);
@@ -369,11 +492,17 @@ class PanWidgetState extends State<PanWidget> {
   }
 
   void _onTap() {
-    if (_hoveredConnection != null && debugMode) {
-      if (_isTapOnConnectionHandle()) {
-        _removeConnection(_hoveredConnection!.fromId, _hoveredConnection!.toId);
+    final connection = _hoveredConnection ?? (debugMode ? _findConnectionNearScenePos(_lastPointerScenePos) : null);
+
+    if (connection != null && debugMode) {
+      if (_isMobile) {
+        _showConnectionOptionsSheet(connection.fromId, connection.toId);
       } else {
-        showQuestConnectionEditOverlay(_hoveredConnection!.fromId, _hoveredConnection!.toId);
+        if (_isTapOnConnectionHandle()) {
+          _removeConnection(connection.fromId, connection.toId);
+        } else {
+          showQuestConnectionEditOverlay(connection.fromId, connection.toId);
+        }
       }
       return;
     }
@@ -424,8 +553,46 @@ class PanWidgetState extends State<PanWidget> {
 
     return (_lastPointerLocalPos - screenPos).distance <= radius;
   }
-
-  /// Shows an overlay with options to edit a connection between two quests, such as deleting the connection or changing its type or xp requirements
+  
+  void _showConnectionOptionsSheet(int fromId, int toId) {
+    showModalBottomSheet<void>(
+      context: context,
+      shape: const RoundedRectangleBorder(borderRadius: BorderRadius.vertical(top: Radius.circular(20))),
+      builder: (ctx) {
+        return SafeArea(
+          child: Column(
+            mainAxisSize: MainAxisSize.min,
+            children: [
+              Container(
+                margin: const EdgeInsets.symmetric(vertical: 10),
+                width: 40,
+                height: 4,
+                decoration: BoxDecoration(color: Colors.grey.shade400, borderRadius: BorderRadius.circular(2)),
+              ),
+              ListTile(
+                leading: const Icon(Icons.edit_outlined),
+                title: const Text('Edit Connection'),
+                onTap: () {
+                  Navigator.pop(ctx);
+                  showQuestConnectionEditOverlay(fromId, toId);
+                },
+              ),
+              ListTile(
+                leading: const Icon(Icons.delete_outline, color: Colors.redAccent),
+                title: const Text('Delete Connection', style: TextStyle(color: Colors.redAccent)),
+                onTap: () {
+                  Navigator.pop(ctx);
+                  _removeConnection(fromId, toId);
+                },
+              ),
+              const SizedBox(height: 8),
+            ],
+          ),
+        );
+      },
+    );
+  }
+  
   void showQuestConnectionEditOverlay(int fromId, int toId) async {
     final fromQuest = questSystem.maybeGetQuestById(fromId);
     final toQuest = questSystem.maybeGetQuestById(toId);
@@ -528,7 +695,7 @@ class PanWidgetState extends State<PanWidget> {
           if (event.logicalKey == LogicalKeyboardKey.keyZ && event is RawKeyDownEvent && (event.isMetaPressed || event.isControlPressed)) {
             setState(() {
               changeManager.undo();
-              _controller.value.rotateX(0.0000000000001); //force rebuild every animated builder that uses this controller to update quest positions after undo, 
+              _controller.value.rotateX(0.0000000000001);
             });
             return KeyEventResult.handled;
           } else if (event.logicalKey == LogicalKeyboardKey.keyY && event is RawKeyDownEvent && (event.isMetaPressed || event.isControlPressed)) {
@@ -576,7 +743,7 @@ class PanWidgetState extends State<PanWidget> {
                   ),
                 ),
                 
-                if (_hoveredConnection != null && debugMode)
+                if (_hoveredConnection != null && debugMode && !_isMobile)
                   AnimatedBuilder(
                     animation: _controller,
                     builder: (context, child) {
@@ -593,7 +760,6 @@ class PanWidgetState extends State<PanWidget> {
                               decoration: const BoxDecoration(
                                 color: Colors.redAccent,
                                 shape: BoxShape.circle,
-                                boxShadow: [BoxShadow(color: Colors.black26, blurRadius: 4)],
                               ),
                               padding: const EdgeInsets.all(4),
                               child: const Icon(Icons.close, size: 18, color: Colors.white),
@@ -614,6 +780,10 @@ class PanWidgetState extends State<PanWidget> {
                     onDoubleTap: _onDoubleTap,
                     onTap: _onTap,
                     onTapDown: _onDoubleTapDown,
+                    onLongPressStart: _onLongPressStart,
+                    onLongPressMoveUpdate: _onLongPressMoveUpdate,
+                    onLongPressEnd: _onLongPressEnd,
+                    onLongPressCancel: _onLongPressCancel,
                   ),
                 ),
                 /*if (debugMode)
