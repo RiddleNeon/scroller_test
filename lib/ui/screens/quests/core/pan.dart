@@ -63,7 +63,7 @@ class PanWidgetState extends State<PanWidget> {
     final platform = Theme.of(context).platform;
     return platform == TargetPlatform.iOS || platform == TargetPlatform.android;
   }
-  
+
   Quest? _findQuestAt(Offset scenePos) {
     for (final quest in questSystem.quests) {
       if (quest.rect.contains(scenePos)) return quest;
@@ -138,7 +138,7 @@ class PanWidgetState extends State<PanWidget> {
 
     return closest;
   }
-  
+
   @override
   void initState() {
     questSystem.addListener(revalidateBoundaries);
@@ -330,14 +330,14 @@ class PanWidgetState extends State<PanWidget> {
     _connectingFromQuest = null;
     _questBubbleOverlayKey.currentState?.setConnectionState(sourceId: null, targetId: null, previewPos: null);
   }
-  
+
   void _onLongPressCancel() {
     if (!_isConnecting) return;
     _isConnecting = false;
     _connectingFromQuest = null;
     _questBubbleOverlayKey.currentState?.setConnectionState(sourceId: null, targetId: null, previewPos: null);
   }
-  
+
   Offset snap(Offset before) {
     final currentScale = _currentScale;
     final worldDelta = _focalDelta / currentScale;
@@ -553,7 +553,7 @@ class PanWidgetState extends State<PanWidget> {
 
     return (_lastPointerLocalPos - screenPos).distance <= radius;
   }
-  
+
   void _showConnectionOptionsSheet(int fromId, int toId) {
     showModalBottomSheet<void>(
       context: context,
@@ -592,7 +592,7 @@ class PanWidgetState extends State<PanWidget> {
       },
     );
   }
-  
+
   void showQuestConnectionEditOverlay(int fromId, int toId) async {
     final fromQuest = questSystem.maybeGetQuestById(fromId);
     final toQuest = questSystem.maybeGetQuestById(toId);
@@ -757,10 +757,7 @@ class PanWidgetState extends State<PanWidget> {
                           child: InkWell(
                             onTap: () => _removeConnection(_hoveredConnection!.fromId, _hoveredConnection!.toId),
                             child: Container(
-                              decoration: const BoxDecoration(
-                                color: Colors.redAccent,
-                                shape: BoxShape.circle,
-                              ),
+                              decoration: const BoxDecoration(color: Colors.redAccent, shape: BoxShape.circle),
                               padding: const EdgeInsets.all(4),
                               child: const Icon(Icons.close, size: 18, color: Colors.white),
                             ),

@@ -56,7 +56,16 @@ Future<void> onUserLogin(UserProfile user) async {
 }
 
 Future<void> applyThemeFromServer() async {
-  final response = await supabaseClient.from('applied_themes').select().eq('user_id', currentUser.id).single();
+  final response = await supabaseClient.from('applied_themes').select().eq('user_id', currentUser.id).maybeSingle();
+  
+  if(response == null) {
+    bool isDark = WidgetsBinding.instance.platformDispatcher.platformBrightness == Brightness.dark;
+    
+    appThemeNotifier.value = isDark ? (AppTheme.dark, defaultDarkThemeId) : (AppTheme.light, defaultLightThemeId);
+    await supabaseClient.from('applied_themes').insert({'user_id': currentUser.id, 'theme_id': isDark ? defaultDarkThemeId : defaultLightThemeId});
+    return;
+  }
+  
   final themeId = response['theme_id'] as String? ?? defaultDarkThemeId;
   
   final ThemeData theme;
