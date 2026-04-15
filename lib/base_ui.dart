@@ -38,4 +38,6 @@ void startApp() async {
   );
 }
 
-final ValueNotifier<(ThemeData, String)> appThemeNotifier = ValueNotifier((AppTheme.light, 'default'));
+Brightness get currentSystemBrightness => WidgetsBinding.instance.platformDispatcher.platformBrightness;
+
+final ValueNotifier<(ThemeData, String)> appThemeNotifier = ValueNotifier((currentSystemBrightness == Brightness.dark ? AppTheme.dark : AppTheme.light, currentSystemBrightness == Brightness.dark ? "default-dark" : "default"));

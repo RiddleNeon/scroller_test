@@ -56,7 +56,7 @@ class _ProfileImagePickerSheetState extends State<_ProfileImagePickerSheet> with
       return;
     }
 
-    final result = await FilePicker.platform.pickFiles(type: FileType.image, allowMultiple: false, withData: true);
+    final result = await FilePicker.pickFiles(type: FileType.image, allowMultiple: false, withData: true);
 
     if (result != null && result.files.first.bytes != null) {
       setState(() {

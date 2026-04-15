@@ -216,7 +216,7 @@ class _ThemeManagerScreenState extends State<ThemeManagerScreen> with TickerProv
 
   Future<void> _importTheme() async {
     try {
-      final result = await FilePicker.platform.pickFiles(type: FileType.custom, allowedExtensions: ['json'], withData: true);
+      final result = await FilePicker.pickFiles(type: FileType.custom, allowedExtensions: ['json'], withData: true);
       if (result == null) return;
 
       final file = result.files.first.bytes!;

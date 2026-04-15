@@ -22,7 +22,7 @@ class _VideoUploadWidgetState extends State<VideoUploadWidget> {
   PlatformFile? _selectedFile;
 
   Future<void> _pickAndProcess() async {
-    final picked = await FilePicker.platform.pickFiles(type: FileType.custom, allowedExtensions: ['mp4', 'mov', 'webm'], withData: true);
+    final picked = await FilePicker.pickFiles(type: FileType.custom, allowedExtensions: ['mp4', 'mov', 'webm'], withData: true);
     if (picked == null || picked.files.isEmpty) return;
 
     setState(() {
