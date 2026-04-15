@@ -22,7 +22,8 @@ class PreloadingSliverList<T> extends PreloadingList<T> {
 }
 
 class _PreloadingListState<T> extends State<PreloadingList<T>> {
-  final ScrollController _scrollController = ScrollController();
+  late ScrollController _scrollController;
+  bool _ownsScrollController = false;
 
   bool _loading = false;
   bool _preloading = false;
@@ -30,9 +31,17 @@ class _PreloadingListState<T> extends State<PreloadingList<T>> {
   int _currentLoadedCount = 0;
 
   @override
-  void initState() {
-    super.initState();
+  void didChangeDependencies() {
+    super.didChangeDependencies();
+    // Prefer the PrimaryScrollController (provided by NestedScrollView) so
+    // the inner list scrolls are coordinated with the outer sliver app bar.
+    // Use the PrimaryScrollController provided by the surrounding
+    // NestedScrollView / Scaffold when available so scrolling is coordinated.
+    _scrollController = PrimaryScrollController.of(context);
+    _ownsScrollController = false;
+
     _scrollController.addListener(_onScroll);
+    // initialize loading once we've got the correct controller/context
     _init();
   }
 
@@ -81,7 +90,9 @@ class _PreloadingListState<T> extends State<PreloadingList<T>> {
   @override
   void dispose() {
     _scrollController.removeListener(_onScroll);
-    _scrollController.dispose();
+    if (_ownsScrollController) {
+      _scrollController.dispose();
+    }
     super.dispose();
   }
 
@@ -189,7 +200,8 @@ class AnimatedPreloadingList<T> extends StatefulWidget {
 
 class AnimatedPreloadingListState<T> extends State<AnimatedPreloadingList<T>> with AutomaticKeepAliveClientMixin {
   final GlobalKey<AnimatedListState> _listKey = GlobalKey<AnimatedListState>();
-  final ScrollController _scrollController = ScrollController();
+  late ScrollController _scrollController;
+  bool _ownsScrollController = false;
 
   final List<T> items = [];
 
@@ -198,10 +210,24 @@ class AnimatedPreloadingListState<T> extends State<AnimatedPreloadingList<T>> wi
   bool _guard = false;
 
   @override
-  void initState() {
-    super.initState();
+  void didChangeDependencies() {
+    super.didChangeDependencies();
+    // Use the PrimaryScrollController so inner scrolls coordinate with the
+    // outer sliver app bar. We don't own this controller in typical cases.
+    _scrollController = PrimaryScrollController.of(context);
+    _ownsScrollController = false;
+
     _scrollController.addListener(_onScroll);
     _init();
+  }
+
+  @override
+  void dispose() {
+    _scrollController.removeListener(_onScroll);
+    if (_ownsScrollController) {
+      _scrollController.dispose();
+    }
+    super.dispose();
   }
 
   Future<void> _init() async {
