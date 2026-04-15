@@ -661,6 +661,9 @@ class PanWidgetState extends State<PanWidget> {
     final targetX = -(quest.posX * scale) + viewSize.width / 2 - (quest.sizeX * scale / 2);
     final targetY = -(quest.posY * scale) + viewSize.height / 2 - (quest.sizeY * scale / 2);
 
+    final viewportRect = Rect.fromLTWH(-targetX / scale, -targetY / scale, viewSize.width / scale, viewSize.height / scale);
+    _questBubbleOverlayKey.currentState?.onScaleChange(scale, viewportRect);
+
     _controller.value = Matrix4.identity()
       ..scale(scale)
       ..translate(targetX / scale, targetY / scale);
@@ -675,6 +678,14 @@ class PanWidgetState extends State<PanWidget> {
 
     final targetTx = screenWidth / 2 - boundaryCenter.dx * (targetScale);
     final targetTy = screenHeight / 2 - boundaryCenter.dy * (targetScale);
+
+    final viewportRect = Rect.fromLTWH(
+      -targetTx / targetScale,
+      -targetTy / targetScale,
+      screenWidth / targetScale,
+      screenHeight / targetScale,
+    );
+    _questBubbleOverlayKey.currentState?.onScaleChange(targetScale, viewportRect);
 
     _controller.value = Matrix4.identity()
       ..scale(targetScale)

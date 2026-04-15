@@ -22,8 +22,9 @@ class PreloadingSliverList<T> extends PreloadingList<T> {
 }
 
 class _PreloadingListState<T> extends State<PreloadingList<T>> {
-  late ScrollController _scrollController;
+  ScrollController? _scrollController;
   bool _ownsScrollController = false;
+  bool _didInit = false;
 
   bool _loading = false;
   bool _preloading = false;
@@ -33,16 +34,21 @@ class _PreloadingListState<T> extends State<PreloadingList<T>> {
   @override
   void didChangeDependencies() {
     super.didChangeDependencies();
-    // Prefer the PrimaryScrollController (provided by NestedScrollView) so
-    // the inner list scrolls are coordinated with the outer sliver app bar.
-    // Use the PrimaryScrollController provided by the surrounding
-    // NestedScrollView / Scaffold when available so scrolling is coordinated.
-    _scrollController = PrimaryScrollController.of(context);
-    _ownsScrollController = false;
+    final nextController = PrimaryScrollController.of(context);
+    if (!identical(_scrollController, nextController)) {
+      _scrollController?.removeListener(_onScroll);
+      if (_ownsScrollController) {
+        _scrollController?.dispose();
+      }
+      _scrollController = nextController;
+      _ownsScrollController = false;
+      _scrollController?.addListener(_onScroll);
+    }
 
-    _scrollController.addListener(_onScroll);
-    // initialize loading once we've got the correct controller/context
-    _init();
+    if (!_didInit) {
+      _didInit = true;
+      _init();
+    }
   }
 
   Future<void> _init() async {
@@ -63,9 +69,11 @@ class _PreloadingListState<T> extends State<PreloadingList<T>> {
 
   void _onScroll() {
     if (!mounted) return;
-    final current = _scrollController.position.pixels;
+    final controller = _scrollController;
+    if (controller == null || !controller.hasClients) return;
+    final currentPosition = controller.positions.last;
     if (!_loading && !_preloading) {
-      if (current >= _scrollController.position.maxScrollExtent - 300) {
+      if (currentPosition.extentAfter <= 300) {
         _preloadMore();
       }
     }
@@ -89,9 +97,9 @@ class _PreloadingListState<T> extends State<PreloadingList<T>> {
 
   @override
   void dispose() {
-    _scrollController.removeListener(_onScroll);
+    _scrollController?.removeListener(_onScroll);
     if (_ownsScrollController) {
-      _scrollController.dispose();
+      _scrollController?.dispose();
     }
     super.dispose();
   }
@@ -107,7 +115,7 @@ class _PreloadingListState<T> extends State<PreloadingList<T>> {
     return ScrollConfiguration(
       behavior: SmoothScrollBehavior(),
       child: ScrollArea(
-        scrollController: _scrollController,
+        scrollController: _scrollController!,
         child: Scrollbar(
           controller: _scrollController,
           interactive: true,
@@ -144,7 +152,7 @@ class _SliverPreloadingListState<T> extends _PreloadingListState<T> {
     return ScrollConfiguration(
       behavior: SmoothScrollBehavior(),
       child: ScrollArea(
-        scrollController: _scrollController,
+        scrollController: _scrollController!,
         child: Scrollbar(
           controller: _scrollController,
           interactive: true,
@@ -200,8 +208,9 @@ class AnimatedPreloadingList<T> extends StatefulWidget {
 
 class AnimatedPreloadingListState<T> extends State<AnimatedPreloadingList<T>> with AutomaticKeepAliveClientMixin {
   final GlobalKey<AnimatedListState> _listKey = GlobalKey<AnimatedListState>();
-  late ScrollController _scrollController;
+  ScrollController? _scrollController;
   bool _ownsScrollController = false;
+  bool _didInit = false;
 
   final List<T> items = [];
 
@@ -212,20 +221,28 @@ class AnimatedPreloadingListState<T> extends State<AnimatedPreloadingList<T>> wi
   @override
   void didChangeDependencies() {
     super.didChangeDependencies();
-    // Use the PrimaryScrollController so inner scrolls coordinate with the
-    // outer sliver app bar. We don't own this controller in typical cases.
-    _scrollController = PrimaryScrollController.of(context);
-    _ownsScrollController = false;
+    final nextController = PrimaryScrollController.of(context);
+    if (!identical(_scrollController, nextController)) {
+      _scrollController?.removeListener(_onScroll);
+      if (_ownsScrollController) {
+        _scrollController?.dispose();
+      }
+      _scrollController = nextController;
+      _ownsScrollController = false;
+      _scrollController?.addListener(_onScroll);
+    }
 
-    _scrollController.addListener(_onScroll);
-    _init();
+    if (!_didInit) {
+      _didInit = true;
+      _init();
+    }
   }
 
   @override
   void dispose() {
-    _scrollController.removeListener(_onScroll);
+    _scrollController?.removeListener(_onScroll);
     if (_ownsScrollController) {
-      _scrollController.dispose();
+      _scrollController?.dispose();
     }
     super.dispose();
   }
@@ -263,8 +280,11 @@ class AnimatedPreloadingListState<T> extends State<AnimatedPreloadingList<T>> wi
 
   void _onScroll() {
     if (_loading || _preloading) return;
+    final controller = _scrollController;
+    if (controller == null || !controller.hasClients) return;
+    final currentPosition = controller.positions.last;
 
-    if (_scrollController.position.pixels >= _scrollController.position.maxScrollExtent - 300) {
+    if (currentPosition.extentAfter <= 300) {
       preloadMore();
     }
   }

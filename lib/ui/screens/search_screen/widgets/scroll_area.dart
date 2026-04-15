@@ -12,8 +12,10 @@ class ScrollArea extends StatelessWidget {
     return Listener(
       onPointerSignal: (event) {
         if (event is PointerScrollEvent) {
-          final newOffset = (scrollController.offset + event.scrollDelta.dy * 1.8).clamp(0.0, scrollController.position.maxScrollExtent);
-          scrollController.animateTo(newOffset, duration: const Duration(milliseconds: 180), curve: Curves.easeOutCubic);
+          if (!scrollController.hasClients) return;
+          final position = scrollController.positions.last;
+          final newOffset = (position.pixels + event.scrollDelta.dy * 1.8).clamp(position.minScrollExtent, position.maxScrollExtent).toDouble();
+          position.animateTo(newOffset, duration: const Duration(milliseconds: 180), curve: Curves.easeOutCubic);
         }
       },
       child: child,
