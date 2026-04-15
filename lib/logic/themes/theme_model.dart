@@ -353,11 +353,11 @@ class CustomThemeModel {
     'created_at': createdAt?.toIso8601String() ?? DateTime.now().toIso8601String(),
   };
 
-  CustomThemeModel copyWith({String? id, String? name, CustomThemeColors? colors, Color? primaryColor, bool? isPublic, int? likesCount}) => CustomThemeModel(
+  CustomThemeModel copyWith({String? id, String? name, CustomThemeColors? colors, Color? primaryColor, bool? isPublic, int? likesCount, String? createdBy}) => CustomThemeModel(
     id: id ?? this.id,
     name: name ?? this.name,
     colors: colors ?? (primaryColor != null ? CustomThemeColors.fromPrimary(primaryColor) : this.colors),
-    createdBy: createdBy,
+    createdBy: createdBy ?? this.createdBy,
     likesCount: likesCount ?? this.likesCount,
     isPublic: isPublic ?? this.isPublic,
     createdAt: createdAt,

@@ -5,6 +5,7 @@ import 'package:flutter/material.dart';
 import 'package:flutter_web_file_saver/flutter_web_file_saver.dart';
 import 'package:supabase_flutter/supabase_flutter.dart';
 import 'package:uuid/uuid.dart';
+import 'package:wurp/base_logic.dart';
 import 'package:wurp/base_ui.dart';
 import 'package:wurp/logic/themes/theme_model.dart';
 import 'package:wurp/ui/theme/theme_editor_screen.dart';
@@ -326,7 +327,7 @@ class _ThemeManagerScreenState extends State<ThemeManagerScreen> with TickerProv
         return GestureDetector(
           onTap: () async {
             final newId = const Uuid().v4();
-            await _saveTheme(theme.copyWith(name: "${theme.name} - ${theme.createdBy}", id: newId, isPublic: false, likesCount: 0));
+            await _saveTheme(theme.copyWith(name: "${theme.name} - ${theme.createdBy}", id: newId, isPublic: false, likesCount: 0, createdBy: currentUser.id));
             applyTheme(newId);
           },
           child: AnimatedContainer(
