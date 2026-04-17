@@ -283,6 +283,13 @@ class _ProfileScreenState extends State<ProfileScreen> with TickerProviderStateM
           ),
           if (widget.ownProfile) ...[
             IconButton(
+              icon: Icon(Icons.quiz_outlined, color: cs.onSurface),
+              tooltip: 'Open task quiz editor',
+              onPressed: () {
+                routerConfig.push('/task-editor');
+              },
+            ),
+            IconButton(
               icon: Icon(Icons.settings, color: cs.onSurface),
               onPressed: () {
                 showRickDialog(context);

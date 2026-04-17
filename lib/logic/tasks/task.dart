@@ -30,7 +30,13 @@ class Task {
         subjects = List<String>.from(json['subjects']),
         xpReward = (json['xp_reward'] as num).toDouble(),
         xpPunishment = (json['xp_punishment'] as num).toDouble(),
-        data = jsonDecode(json['data']);
+        data = switch (json['data']) {
+          String raw => Map<String, dynamic>.from(jsonDecode(raw) as Map),
+          Map<String, dynamic> map => map,
+          Map map => Map<String, dynamic>.from(map),
+          null => <String, dynamic>{},
+          _ => throw FormatException('Unsupported task data type: ${json['data'].runtimeType}'),
+        };
   
   Map<String, dynamic> toJson() => {
     'id': id,
@@ -40,6 +46,6 @@ class Task {
     'subjects': subjects,
     'xp_reward': xpReward,
     'xp_punishment': xpPunishment,
-    'data': jsonEncode(data),
+    'data': data,
   };
 }

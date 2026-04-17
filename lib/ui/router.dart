@@ -9,6 +9,7 @@ import 'package:wurp/ui/screens/chat/chat_managing_screen.dart';
 import 'package:wurp/ui/screens/profile_screen.dart';
 import 'package:wurp/ui/screens/quests/quest_screen.dart';
 import 'package:wurp/ui/screens/search_screen/search_screen.dart';
+import 'package:wurp/ui/screens/tasks/task_quiz_workspace_screen.dart';
 import 'package:wurp/ui/short_video_player.dart';
 import 'package:wurp/ui/theme/theme_creation_screen.dart';
 import 'package:wurp/ui/widgets/bottom_navigation_bar.dart';
@@ -137,6 +138,15 @@ void initRouter() {
             beginScale: 0.985,
           );
         },
+      ),
+      GoRoute(
+        path: '/task-editor',
+        pageBuilder: (context, state) => SlideMorphTransitions.page<void>(
+          key: state.pageKey,
+          child: const TaskQuizWorkspaceScreen(),
+          beginOffset: const Offset(0.03, 0.0),
+          beginScale: 0.993,
+        ),
       ),
     ],
   );

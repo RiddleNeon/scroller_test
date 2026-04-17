@@ -1,1 +1,0 @@
-alter table profiles disable row level security;
