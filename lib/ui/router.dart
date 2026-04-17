@@ -82,7 +82,10 @@ void initRouter() {
             path: '/chat',
             pageBuilder: (context, state) => SlideMorphTransitions.page<void>(
               key: state.pageKey,
-              child: ChatManagingScreen(preloadMoreChats: (current) => chatRepository.getChats(currentUser.id, offset: current ?? 0, limit: 15), key: chatManagingScreenKey,),
+              child: ChatManagingScreen(
+                preloadMoreChats: (current) => chatRepository.getChats(currentUser.id, offset: current ?? 0, limit: 15),
+                key: chatManagingScreenKey,
+              ),
               beginOffset: const Offset(0.03, 0.0),
               beginScale: 0.993,
             ),

@@ -12,7 +12,7 @@ void startApp() async {
     try {
       final user = await userRepository.getUserSupabase(authUser.id);
       if(user == null) throw const AuthException("User not found in database");
-      await onUserLogin(user);
+      await onUserLogin(user, false);
     } on AuthException catch (e) {
       print("Error fetching user profile: $e");
       await auth.signOut();

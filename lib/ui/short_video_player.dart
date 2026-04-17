@@ -216,6 +216,99 @@ class VideoFeed extends StatefulWidget {
 class _VideoFeedState extends State<VideoFeed> with TickerProviderStateMixin {
   @override
   Widget build(BuildContext context) {
+    if(isUsersFirstLogin) {
+      WidgetsBinding.instance.addPostFrameCallback((_) async {
+        if(!mounted) return;
+        await showWelcomeDialog();
+        isUsersFirstLogin = false;
+      });
+    }
+    
     return Scaffold(body: feedVideos(this, widget.videoProvider ?? videoProvider, context));
   }
+  
+  Future<void> showWelcomeDialog() async {
+    return showDialog(
+      context: context,
+      builder: (context) {
+        final theme = Theme.of(context);
+        final colors = theme.colorScheme;
+
+        return Dialog(
+          backgroundColor: colors.surface,
+          shape: RoundedRectangleBorder(
+            borderRadius: BorderRadius.circular(20),
+          ),
+          elevation: 8,
+          child: Padding(
+            padding: const EdgeInsets.all(20),
+            child: Column(
+              mainAxisSize: MainAxisSize.min,
+              children: [
+                Container(
+                  padding: const EdgeInsets.all(12),
+                  decoration: BoxDecoration(
+                    color: colors.primary.withValues(alpha: 0.1),
+                    shape: BoxShape.circle,
+                  ),
+                  child: Icon(
+                    Icons.lightbulb,
+                    color: colors.primary,
+                    size: 28,
+                  ),
+                ),
+
+                const SizedBox(height: 16),
+
+                Text(
+                  "Welcome to Lumox",
+                  style: theme.textTheme.titleLarge?.copyWith(
+                    fontWeight: FontWeight.bold,
+                  ),
+                ),
+
+                const SizedBox(height: 12),
+
+                Text(
+                  "Thanks for trying Lumox!\n\n"
+                      "This app is currently in a prototype stage, so you may encounter bugs or missing features.\n\n"
+                      "If something doesn’t work as expected, we’d really appreciate your feedback to help us improve.\n\n"
+                      "Since this is only a prototype the videos used in this app are currently sourced from Pixabay. "
+                      "All credit goes to their respective creators.\n\n"
+                      "Thanks for your understanding – and enjoy using Lumox!",
+                  textAlign: TextAlign.center,
+                  style: theme.textTheme.bodyMedium?.copyWith(
+                    height: 1.4,
+                    color: colors.onSurfaceVariant,
+                  ),
+                ),
+
+                const SizedBox(height: 24),
+
+                SizedBox(
+                  width: double.infinity,
+                  child: FilledButton(
+                    style: FilledButton.styleFrom(
+                      backgroundColor: colors.primary,
+                      foregroundColor: colors.onPrimary,
+                      padding: const EdgeInsets.symmetric(vertical: 14),
+                      shape: RoundedRectangleBorder(
+                        borderRadius: BorderRadius.circular(12),
+                      ),
+                    ),
+                    onPressed: () => Navigator.of(context).pop(),
+                    child: const Text(
+                      "Got it",
+                      style: TextStyle(fontWeight: FontWeight.w600),
+                    ),
+                  ),
+                ),
+              ],
+            ),
+          ),
+        );
+      },
+    );
+  }
+  
 }

@@ -173,7 +173,7 @@ class _LoginScreenState extends State<LoginScreen> with TickerProviderStateMixin
         return;
       }
 
-      _completeLogin();
+      _completeLogin(false);
     } on BanAuthException catch (e) {
       setState(() => _isBanned = true);
       _banController.forward();
@@ -193,7 +193,7 @@ class _LoginScreenState extends State<LoginScreen> with TickerProviderStateMixin
         return;
       }
       _user = await userRepository.createCurrentUser(username: currentAuthUsername());
-      _completeLogin();
+      _completeLogin(true);
     } on AuthException catch (e) {
       _setError(e.message);
     } catch (e) {
@@ -217,9 +217,9 @@ class _LoginScreenState extends State<LoginScreen> with TickerProviderStateMixin
     }
   }
 
-  void _completeLogin() {
+  void _completeLogin(bool firstTime) {
     assert(_user != null);
-    onUserLogin(_user!)
+    onUserLogin(_user!, firstTime)
         .then((_) {
           if (mounted) routerConfig.push('/feed');
         })
@@ -296,7 +296,7 @@ class _LoginScreenState extends State<LoginScreen> with TickerProviderStateMixin
         ),
         const SizedBox(height: 16),
         Text(
-          'wurp',
+          'Lumox',
           style: theme.textTheme.headlineMedium?.copyWith(fontWeight: FontWeight.w800, letterSpacing: 1.5, color: cs.onSurface),
         ),
         const SizedBox(height: 6),

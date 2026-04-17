@@ -47,7 +47,10 @@ Future<void> initLogic() async {
   await ensureSupabaseInitialized();
 }
 
-Future<void> onUserLogin(UserProfile user) async {
+bool isUsersFirstLogin = false;
+
+Future<void> onUserLogin(UserProfile user, bool firstTime) async {
+  isUsersFirstLogin = firstTime;
   print("User logged in: ${user.id}");
   _currentUser = user;
   await onUserLoginSupabaseTest();
