@@ -1,4 +1,4 @@
-# scroller_test
+# lumox
 
 this is a flutter app für a scool project. it is meant to be used for any real-live uses, but all the used backend providers, storage providers and code structure are the optimal ones for their corrsponding usages.
 
