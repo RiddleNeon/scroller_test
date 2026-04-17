@@ -23,3 +23,16 @@ for storing the actual video data, profile images, thumbnails, subtitles and all
 - class B operations: 10m free, then 0.36$/1m operations
 
 since profile images are being cached, we can count one sroll roughly as 1.2 class B operations. 
+
+
+
+# project info
+here is some more info about the creation of the project. 
+
+## swot 
+<img width="855" height="383" alt="swot" src="https://github.com/user-attachments/assets/7cb7bc74-0f15-4e3c-a9db-d3859920aa3e" />
+
+
+## gantt plan
+
+<img width="1498" height="700" alt="gantt" src="https://github.com/user-attachments/assets/60efe0ec-e68d-4dd9-b317-8947ae419415" />
