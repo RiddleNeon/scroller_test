@@ -1,6 +1,6 @@
 # lumox
 > [!IMPORTANT]
-> this is a flutter app für a scool project. it is not meant to be used for any real-live uses, but all the used backend providers, storage providers and code structure are the optimal ones for their corrsponding usages.
+> this is a flutter app für a scool project. it is not meant to be used for any real-live uses, but all the used backend providers and storage providers are the best ones for this usecase and the code is built to be scalable. 
 
 ## backend
 as for the database, auth and analytics provider, ive descided to use **supabase**. supabase is a backend provider containing its own services like auth and third party connections.<br>
@@ -23,6 +23,3 @@ for storing the actual video data, profile images, thumbnails, subtitles and all
 - class B operations: 10m free, then 0.36$/1m operations
 
 since profile images are being cached, we can count one sroll roughly as 1.2 class B operations. 
-# costs calculation
-now for the fun part: calculating the costs and income per MAU (monthly active user). Note that these values can vary a lot since there are a lot of variables we cant control and predict as much as others. for example ad income varies depending of the region youre in, the time, the company, the time of the year and just the ad providers in general, depening on how many good ad offers there currently are. these calculations are made based on the most realistic ones. <br>
-
