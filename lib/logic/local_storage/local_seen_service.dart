@@ -1,4 +1,3 @@
-import 'package:hive_flutter/hive_flutter.dart';
 import 'package:wurp/logic/chat/chat.dart';
 import 'package:wurp/logic/chat/chat_message.dart';
 import 'package:wurp/logic/users/user_model.dart';
@@ -23,19 +22,7 @@ Future<void> disposeLocalSeenService() async {
 }
 
 class LocalSeenService {
-  static const String _settingsBoxName = 'seen_settings';
-  static const String _cursorBoxName = 'feed_cursors';
-  static const String _blacklistedTagsBoxName = 'blacklisted_tags';
-  static const String _likeValsBoxName = 'liked_videos';
-  static const String _followingBoxName = 'following_users';
-  static const String _chatBoxName = 'chat_messages';
-  static const String _chatCursorBoxName = 'chat_cursors';
-  static const String _conversationBoxName = 'conversations';
-  static const String _authorBoxName = 'authors';
-  static const double maxLocalStorage = 5e5; //500k
-
   // Settings keys
-  static const String _lastSyncSeenKey = 'lastSyncTimestamp';
   static const String _lastSyncLikesKey = 'lastSyncLikesTimestamp';
   static const String _lastSyncDislikesKey = 'lastSyncDislikesTimestamp';
   static const String _lastSyncPreferencesKey = 'lastSyncPreferencesTimestamp';
@@ -43,74 +30,47 @@ class LocalSeenService {
   static const String _lastSyncConversationKey = 'lastSyncConversationTimestamp';
   static const String _lastUpdateAuthorsKey = 'lastUpdateAuthorsTimestamp';
 
-  late Box _settingsBox;
-  late Box _cursorBox;
-  late Box<DateTime> _cursorDirtyBox; // tracks when each cursor was last modified locally
-  late Box<DateTime> _blacklistedTagsBox;
-  late Box<bool> _likeValsBox; //bool: true -> like, false -> dislike, not in box: nothing
-  late Box<DateTime> _followingBox; // key: userId, value: followedAt
-
-  late Box<Map<String, dynamic>> _authorBox; // key: userId, value: followedAt
-
-  late Box _chatBox;
-  late Box<DateTime> _chatCursorBox;
-  late Box _conversationBox;
+  final Map<String, dynamic> _settings = {};
+  final Map<String, DateTime> _cursor = {};
+  final Map<String, DateTime> _cursorDirty = {};
+  final Map<String, DateTime> _blacklistedTags = {};
+  final Map<String, bool> _likeVals = {};
+  final Map<String, DateTime> _following = {};
+  final Map<String, Map<String, dynamic>> _authorCache = {};
+  final Map<String, Map<String, dynamic>> _chatMessages = {};
+  final Map<String, DateTime> _chatCursors = {};
+  final Map<String, Map<String, dynamic>> _conversations = {};
 
   late final String userId;
 
-  static bool hiveInitialized = false;
-
   Future<void> init() async {
     userId = currentAuthUserId();
-
-    if (!hiveInitialized) {
-      await Hive.initFlutter();
-      hiveInitialized = true;
-    }
-
-    _settingsBox = await Hive.openBox('${userId}_$_settingsBoxName');
-    _cursorBox = await Hive.openBox('${userId}_$_cursorBoxName');
-    _cursorDirtyBox = await Hive.openBox<DateTime>('${userId}_cursor_dirty');
-    _blacklistedTagsBox = await Hive.openBox('${userId}_$_blacklistedTagsBoxName');
-    _likeValsBox = await Hive.openBox('${userId}_$_likeValsBoxName');
-    _followingBox = await Hive.openBox<DateTime>('${userId}_$_followingBoxName');
-    _chatBox = await Hive.openBox('${userId}_$_chatBoxName');
-    _chatCursorBox = await Hive.openBox<DateTime>('${userId}_$_chatCursorBoxName');
-    _conversationBox = await Hive.openBox('${userId}_$_conversationBoxName');
-    _authorBox = await Hive.openBox('${userId}_$_authorBoxName');
-    /*    await _seenBox.clear();
-    await _settingsBox.clear();
-    await _cursorBox.clear();
-    await _cursorDirtyBox.clear();
-    await _interactionBox.clear();
-    await _blacklistedTagsBox.clear();
-    await _followingBox.clear();
-    await _authorBox.clear();
-    
-    await _likeValsBox.clear();
-    await _chatBox.clear(); 
-    await _chatCursorBox.clear();
-    await _conversationBox.clear();*/
-
-    DateTime? lastAuthorUpdate = (_settingsBox.get(_lastUpdateAuthorsKey) as DateTime?);
-
-    if (lastAuthorUpdate == null || lastAuthorUpdate.difference(DateTime.now()) > const Duration(days: 2)) {
-      await _authorBox.clear();
-      _settingsBox.put(_lastUpdateAuthorsKey, DateTime.now());
+    final lastAuthorUpdate = _settings[_lastUpdateAuthorsKey] as DateTime?;
+    if (lastAuthorUpdate == null || DateTime.now().difference(lastAuthorUpdate) > const Duration(days: 2)) {
+      _authorCache.clear();
+      _settings[_lastUpdateAuthorsKey] = DateTime.now();
     }
 
     await syncWithSupabase();
     print(
       "initialized LocalSeenService for user $userId, "
-      "last sync seen: ${_settingsBox.get(_lastSyncSeenKey)}, "
-      "last sync likes: ${_settingsBox.get(_lastSyncLikesKey)}, "
-      "last sync dislikes: ${_settingsBox.get(_lastSyncDislikesKey)}"
-      "last sync chats: ${_settingsBox.get(_lastSyncConversationKey)}",
+      "last sync likes: ${_settings[_lastSyncLikesKey]}, "
+      "last sync dislikes: ${_settings[_lastSyncDislikesKey]}"
+      "last sync chats: ${_settings[_lastSyncConversationKey]}",
     );
   }
 
-  Future<void> dispose() {
-    return Hive.close();
+  Future<void> dispose() async {
+    _settings.clear();
+    _cursor.clear();
+    _cursorDirty.clear();
+    _blacklistedTags.clear();
+    _likeVals.clear();
+    _following.clear();
+    _authorCache.clear();
+    _chatMessages.clear();
+    _chatCursors.clear();
+    _conversations.clear();
   }
 
   bool hasSeen(String videoId) => false;
@@ -122,11 +82,11 @@ class LocalSeenService {
   // ---------------------------------------------------------------------------
 
   Future<void> syncWithSupabase({bool onlyLoad = true}) async {
-    final lastSyncLikes = _settingsBox.get(_lastSyncLikesKey) as DateTime? ?? DateTime.utc(2024, 1, 1);
-    final lastSyncDislikes = _settingsBox.get(_lastSyncDislikesKey) as DateTime? ?? DateTime.utc(2024, 1, 1);
-    final lastSyncPreferences = _settingsBox.get(_lastSyncPreferencesKey) as DateTime? ?? DateTime.utc(2024, 1, 1);
-    final lastSyncFollowing = _settingsBox.get(_lastSyncFollowingKey) as DateTime? ?? DateTime.utc(2024, 1, 1);
-    final lastSyncConversation = _settingsBox.get(_lastSyncConversationKey) as DateTime? ?? DateTime.utc(2024, 1, 1);
+    final lastSyncLikes = _settings[_lastSyncLikesKey] as DateTime? ?? DateTime.utc(2024, 1, 1);
+    final lastSyncDislikes = _settings[_lastSyncDislikesKey] as DateTime? ?? DateTime.utc(2024, 1, 1);
+    final lastSyncPreferences = _settings[_lastSyncPreferencesKey] as DateTime? ?? DateTime.utc(2024, 1, 1);
+    final lastSyncFollowing = _settings[_lastSyncFollowingKey] as DateTime? ?? DateTime.utc(2024, 1, 1);
+    final lastSyncConversation = _settings[_lastSyncConversationKey] as DateTime? ?? DateTime.utc(2024, 1, 1);
 
     await Future.wait([
       _syncLikes(lastSyncLikes, onlyLoad: onlyLoad),
@@ -138,7 +98,7 @@ class LocalSeenService {
   }
 
   Future<void> syncConversationsIncremental() async {
-    final lastSyncConversation = _settingsBox.get(_lastSyncConversationKey) as DateTime? ?? DateTime.utc(2024, 1, 1);
+    final lastSyncConversation = _settings[_lastSyncConversationKey] as DateTime? ?? DateTime.utc(2024, 1, 1);
     await _syncConversations(lastSyncConversation);
   }
 
@@ -149,9 +109,9 @@ class LocalSeenService {
   Future<void> _syncLikes(DateTime lastSync, {required bool onlyLoad}) async {
     if (!onlyLoad) {
       final payload = <Map<String, dynamic>>[];
-      for (final key in _likeValsBox.keys) {
-        final videoId = key as String;
-        if (_likeValsBox.get(videoId) != true) continue;
+      for (final entry in _likeVals.entries) {
+        final videoId = entry.key;
+        if (entry.value != true) continue;
         final parsedVideoId = int.tryParse(videoId);
         if (parsedVideoId == null) continue;
         payload.add({'user_id': userId, 'video_id': parsedVideoId});
@@ -172,17 +132,17 @@ class LocalSeenService {
       return;
     }
 
-    await _likeValsBox.putAll({for (final row in snapshot) row['video_id'].toString(): true});
+    _likeVals.addAll({for (final row in snapshot) row['video_id'].toString(): true});
 
-    await _settingsBox.put(_lastSyncLikesKey, DateTime.parse(snapshot.first['created_at'] as String).toLocal());
+    _settings[_lastSyncLikesKey] = DateTime.parse(snapshot.first['created_at'] as String).toLocal();
   }
 
   Future<void> _syncDislikes(DateTime lastSync, {required bool onlyLoad}) async {
     if (!onlyLoad) {
       final payload = <Map<String, dynamic>>[];
-      for (final key in _likeValsBox.keys) {
-        final videoId = key as String;
-        if (_likeValsBox.get(videoId) != false) continue;
+      for (final entry in _likeVals.entries) {
+        final videoId = entry.key;
+        if (entry.value != false) continue;
         final parsedVideoId = int.tryParse(videoId);
         if (parsedVideoId == null) continue;
         payload.add({'user_id': userId, 'video_id': parsedVideoId});
@@ -203,53 +163,53 @@ class LocalSeenService {
       return;
     }
 
-    await _likeValsBox.putAll({for (final row in snapshot) row['video_id'].toString(): false});
+    _likeVals.addAll({for (final row in snapshot) row['video_id'].toString(): false});
 
-    await _settingsBox.put(_lastSyncDislikesKey, DateTime.parse(snapshot.first['created_at'] as String).toLocal());
+    _settings[_lastSyncDislikesKey] = DateTime.parse(snapshot.first['created_at'] as String).toLocal();
   }
 
   Future<void> _syncPreferences(DateTime lastSync, {required bool onlyLoad}) async {
     if (!onlyLoad) {
       print('Skipping remote preference sync because the provided Supabase schema has no user_preferences table.');
     }
-    await _settingsBox.put(_lastSyncPreferencesKey, DateTime.now());
+    _settings[_lastSyncPreferencesKey] = DateTime.now();
   }
 
   // ---------------------------------------------------------------------------
   // Cursor helpers
   // ---------------------------------------------------------------------------
 
-  DateTime? getNewestSeenTimestamp() => _cursorBox.get('newestSeenTimestamp') as DateTime?;
+  DateTime? getNewestSeenTimestamp() => _cursor['newestSeenTimestamp'];
 
   Future<void> saveNewestSeenTimestamp(DateTime timestamp) async {
-    await _cursorBox.put('newestSeenTimestamp', timestamp);
-    await _cursorDirtyBox.put('newestSeenTimestamp', DateTime.now());
+    _cursor['newestSeenTimestamp'] = timestamp;
+    _cursorDirty['newestSeenTimestamp'] = DateTime.now();
   }
 
-  DateTime? getOldestSeenTimestamp() => _cursorBox.get('oldestSeenTimestamp') as DateTime?;
+  DateTime? getOldestSeenTimestamp() => _cursor['oldestSeenTimestamp'];
 
   Future<void> saveOldestSeenTimestamp(DateTime timestamp) async {
-    await _cursorBox.put('oldestSeenTimestamp', timestamp);
-    await _cursorDirtyBox.put('oldestSeenTimestamp', DateTime.now());
+    _cursor['oldestSeenTimestamp'] = timestamp;
+    _cursorDirty['oldestSeenTimestamp'] = DateTime.now();
   }
 
-  DateTime? getTrendingCursor() => _cursorBox.get('trendingCursor') as DateTime?;
+  DateTime? getTrendingCursor() => _cursor['trendingCursor'];
 
   Future<void> saveTrendingCursor(DateTime timestamp) async {
-    await _cursorBox.put('trendingCursor', timestamp);
-    await _cursorDirtyBox.put('trendingCursor', DateTime.now());
+    _cursor['trendingCursor'] = timestamp;
+    _cursorDirty['trendingCursor'] = DateTime.now();
   }
 
   Future<void> resetCursors() async {
-    await _cursorBox.clear();
-    await _cursorDirtyBox.clear();
+    _cursor.clear();
+    _cursorDirty.clear();
   }
 
-  DateTime? getTagCursor(String tag) => _cursorBox.get('tag_cursor_$tag') as DateTime?;
+  DateTime? getTagCursor(String tag) => _cursor['tag_cursor_$tag'];
 
   Future<void> saveTagCursor(String tag, DateTime timestamp) async {
-    await _cursorBox.put('tag_cursor_$tag', timestamp);
-    await _cursorDirtyBox.put('tag_cursor_$tag', DateTime.now());
+    _cursor['tag_cursor_$tag'] = timestamp;
+    _cursorDirty['tag_cursor_$tag'] = DateTime.now();
   }
 
   // ---------------------------------------------------------------------------
@@ -257,11 +217,11 @@ class LocalSeenService {
   // ---------------------------------------------------------------------------
 
   Future<void> saveBlacklistedTag(String tag, DateTime timestamp) async {
-    await _blacklistedTagsBox.put(tag, timestamp);
+    _blacklistedTags[tag] = timestamp;
   }
 
   List<String> getBlacklistedTags() {
-    return _blacklistedTagsBox.keys.map((e) => e.toString()).toList();
+    return _blacklistedTags.keys.toList();
   }
 
   // ---------------------------------------------------------------------------
@@ -269,24 +229,24 @@ class LocalSeenService {
   // ---------------------------------------------------------------------------
 
   Future<void> saveLike(String videoId) async {
-    await _likeValsBox.put(videoId, true);
+    _likeVals[videoId] = true;
   }
 
   Future<void> removeLike(String videoId) async {
-    await _likeValsBox.delete(videoId);
+    _likeVals.remove(videoId);
   }
 
   Future<void> saveDislike(String videoId) async {
-    await _likeValsBox.put(videoId, false);
+    _likeVals[videoId] = false;
   }
 
   Future<void> removeDislike(String videoId) async {
-    await _likeValsBox.delete(videoId);
+    _likeVals.remove(videoId);
   }
 
-  bool isLiked(String videoId) => _likeValsBox.get(videoId) == true;
+  bool isLiked(String videoId) => _likeVals[videoId] == true;
 
-  bool isDisliked(String videoId) => _likeValsBox.get(videoId) == false;
+  bool isDisliked(String videoId) => _likeVals[videoId] == false;
 
   // ---------------------------------------------------------------------------
   // Following  →  users/{uid}/following/{followedUserId}/followedAt
@@ -295,9 +255,9 @@ class LocalSeenService {
   Future<void> _syncFollowing(DateTime lastSync, {required bool onlyLoad}) async {
     if (!onlyLoad) {
       final payload = <Map<String, dynamic>>[];
-      for (final key in _followingBox.keys) {
-        final followedUserId = key as String;
-        final followedAt = _followingBox.get(followedUserId)!;
+      for (final entry in _following.entries) {
+        final followedUserId = entry.key;
+        final followedAt = entry.value;
         if (!followedAt.isAfter(lastSync)) continue;
         payload.add({'follower_id': userId, 'following_id': followedUserId, 'created_at': followedAt.toIso8601String()});
       }
@@ -320,7 +280,7 @@ class LocalSeenService {
     for (final row in snapshot) {
       final followedAt = DateTime.parse(row['created_at'] as String).toLocal();
       final followedUserId = row['following_id'] as String;
-      final local = _followingBox.get(followedUserId);
+      final local = _following[followedUserId];
       if (local == null || followedAt.isAfter(local)) {
         toWrite[followedUserId] = followedAt;
       }
@@ -328,17 +288,17 @@ class LocalSeenService {
     }
 
     if (toWrite.isNotEmpty) {
-      await _followingBox.putAll(toWrite);
+      _following.addAll(toWrite);
     }
 
-    await _settingsBox.put(_lastSyncFollowingKey, DateTime.parse(snapshot.first['created_at'] as String).toLocal());
+    _settings[_lastSyncFollowingKey] = DateTime.parse(snapshot.first['created_at'] as String).toLocal();
   }
 
   Future<void> _syncConversations(DateTime lastSync) async {
     final memberships = await supabaseClient.from('conversation_members').select('conversation_id').eq('profile_id', userId);
     final conversationIds = memberships.map((row) => row['conversation_id'] as int).toList();
     if (conversationIds.isEmpty) {
-      await _settingsBox.put(_lastSyncConversationKey, DateTime.now());
+      _settings[_lastSyncConversationKey] = DateTime.now();
       return;
     }
 
@@ -350,7 +310,7 @@ class LocalSeenService {
         .order('updated_at', ascending: false);
 
     if (conversations.isEmpty) {
-      await _settingsBox.put(_lastSyncConversationKey, DateTime.now());
+      _settings[_lastSyncConversationKey] = DateTime.now();
       return;
     }
 
@@ -361,21 +321,23 @@ class LocalSeenService {
         .select('conversation_id, profile_id, profiles!conversation_members_profile_id_fkey(id, username, display_name, avatar_url, bio, created_at)')
         .inFilter('conversation_id', conversations.map((e) => e['id']).toList());
 
+    final membersByConversation = <int, Map<String, dynamic>>{};
+    for (final rawRow in memberRows) {
+      final row = Map<String, dynamic>.from(rawRow);
+      final rowConversationId = row['conversation_id'] as int?;
+      final profileId = row['profile_id'] as String?;
+      if (rowConversationId == null || profileId == null || profileId == userId) continue;
+      membersByConversation[rowConversationId] = row;
+    }
+
     for (final conversation in conversations) {
       final conversationId = conversation['id'] as int;
-      Map<String, dynamic>? partner;
-      for (final rawRow in memberRows) {
-        final row = Map<String, dynamic>.from(rawRow);
-        if (row['conversation_id'] == conversationId && row['profile_id'] != userId) {
-          partner = row;
-          break;
-        }
-      }
+      final partner = membersByConversation[conversationId];
       if (partner == null) continue;
       final partnerId = partner['profile_id'] as String;
-      final existingLocal = _conversationBox.get(partnerId) as Map?;
+      final existingLocal = _conversations[partnerId];
       final lastMessageAt = DateTime.parse(conversation['updated_at'] as String).toLocal();
-      final localLastMessageAt = existingLocal != null ? (existingLocal['lastMessageAt']) : null;
+      final localLastMessageAt = existingLocal?['lastMessageAt'] as DateTime?;
       final rawLastMessage = (conversation['last_message'] as String?) ?? '';
       String lastMessageContent = existingLocal?['lastMessage'] ?? '';
       bool lastMessageByMe = existingLocal?['lastMessageByMe'] ?? false;
@@ -386,7 +348,8 @@ class LocalSeenService {
       }
 
       if (localLastMessageAt == null || lastMessageAt.isAfter(localLastMessageAt)) {
-        final partnerProfile = Map<String, dynamic>.from((partner['profiles'] as Map?)?.cast<String, dynamic>() ?? {});
+        final rawProfile = partner['profiles'];
+        final partnerProfile = rawProfile is Map ? Map<String, dynamic>.from(rawProfile) : <String, dynamic>{};
         toWrite[partnerId] = {
           'conversationId': conversationId,
           'partnerId': partnerId,
@@ -399,19 +362,19 @@ class LocalSeenService {
           'lastMessageByMe': lastMessageByMe,
         };
 
-        final cursor = _chatCursorBox.get(_conversationId(partnerId));
+        final cursor = _chatCursors[_conversationId(partnerId)];
         if (cursor == null || lastMessageAt.isAfter(cursor)) {
-          await _chatCursorBox.put(_conversationId(partnerId), lastMessageAt);
+          _chatCursors[_conversationId(partnerId)] = lastMessageAt;
         }
       }
     }
 
     if (toWrite.isNotEmpty) {
-      await _conversationBox.putAll(toWrite);
+      _conversations.addAll(toWrite);
     }
 
     final latestConversation = DateTime.parse(conversations.first['updated_at'] as String).toLocal();
-    await _settingsBox.put(_lastSyncConversationKey, latestConversation);
+    _settings[_lastSyncConversationKey] = latestConversation;
   }
 
   // ---------------------------------------------------------------------------
@@ -420,18 +383,18 @@ class LocalSeenService {
 
   Future<void> followUser(String followedUserId) async {
     final now = DateTime.now();
-    await _followingBox.put(followedUserId, now);
+    _following[followedUserId] = now;
   }
 
   Future<void> unfollowUser(String followedUserId) async {
-    await _followingBox.delete(followedUserId);
+    _following.remove(followedUserId);
   }
 
-  bool isFollowing(String followedUserId) => _followingBox.containsKey(followedUserId);
+  bool isFollowing(String followedUserId) => _following.containsKey(followedUserId);
 
-  Set<String> get allFollowingIds => _followingBox.keys.cast<String>().toSet();
+  Set<String> get allFollowingIds => _following.keys.toSet();
 
-  DateTime? followedAt(String followedUserId) => _followingBox.get(followedUserId);
+  DateTime? followedAt(String followedUserId) => _following[followedUserId];
 
   String _conversationId(String otherUserId) {
     final ids = [userId, otherUserId]..sort();
@@ -458,43 +421,41 @@ class LocalSeenService {
 
   bool hasChatWith(String otherUserId) {
     final conversationId = _conversationId(otherUserId);
-    return _chatCursorBox.containsKey(conversationId);
+    return _chatCursors.containsKey(conversationId);
   }
 
   List<Chat> getChats() {
-    List<Chat> chats = _conversationBox.toMap().values.map((e) {
-      return Chat.fromJson(e);
-    }).toList();
+    final chats = _conversations.values.map((e) => Chat.fromJson(e)).toList();
     return chats;
   }
 
   Chat? getChatWith(String userId) {
-    if (!_conversationBox.containsKey(userId)) return null;
-    Chat chat = Chat.fromJson(_conversationBox.get(userId));
-    return chat;
+    final raw = _conversations[userId];
+    if (raw == null) return null;
+    return Chat.fromJson(raw);
   }
 
   Future<void> sendMessageLocal(Chat chat, ChatMessage message) async {
     final conversationId = _conversationId(chat.partnerId);
     final key = _chatKey(conversationId, message.id);
 
-    await _chatBox.put(key, _messageToMap(message, conversationId));
+    _chatMessages[key] = _messageToMap(message, conversationId);
 
-    final existing = _chatCursorBox.get(conversationId);
+    final existing = _chatCursors[conversationId];
     if (existing == null || message.timestamp.isAfter(existing)) {
-      await _chatCursorBox.put(conversationId, message.timestamp);
+      _chatCursors[conversationId] = message.timestamp;
     }
 
     chat.lastMessage = message.text;
     chat.lastMessageAt = message.timestamp;
     chat.lastMessageByMe = message.isMe;
-    await _conversationBox.put(chat.partnerId, chat.toJson());
+    _conversations[chat.partnerId] = chat.toJson();
   }
 
   ChatMessage? getMessage(String otherUserId, String messageId) {
     final conversationId = _conversationId(otherUserId);
     final key = _chatKey(conversationId, messageId);
-    final raw = _chatBox.get(key) as Map?;
+    final raw = _chatMessages[key];
     if (raw == null) return null;
     return _messageFromMap(raw, conversationId);
   }
@@ -503,14 +464,15 @@ class LocalSeenService {
     final conversationId = _conversationId(otherUserId);
 
     final localMessages =
-        _chatBox
-            .toMap()
+        _chatMessages
             .entries
-            .where((e) => (e.key as String).startsWith('$conversationId:'))
+            .where((e) => e.key.startsWith('$conversationId:'))
             .where((element) {
-              return ((element.value['createdAt'] ?? DateTime(0)) as DateTime).isBefore(startOffset ?? DateTime.now());
+              final createdAt = element.value['createdAt'];
+              if (createdAt is! DateTime) return false;
+              return createdAt.isBefore(startOffset ?? DateTime.now());
             })
-            .map((e) => _messageFromMap(e.value as Map, conversationId))
+            .map((e) => _messageFromMap(e.value, conversationId))
             .toList()
           ..sort((a, b) => a.timestamp.compareTo(b.timestamp));
     return localMessages.length > limit ? localMessages.sublist(localMessages.length - limit) : localMessages;
@@ -521,35 +483,35 @@ class LocalSeenService {
     DateTime? latestTimestamp;
 
     for (final message in messages) {
-      await _chatBox.put(_chatKey(conversationId, message.id), _messageToMap(message, conversationId));
+      _chatMessages[_chatKey(conversationId, message.id)] = _messageToMap(message, conversationId);
       if (latestTimestamp == null || message.timestamp.isAfter(latestTimestamp)) {
         latestTimestamp = message.timestamp;
       }
     }
 
     if (latestTimestamp != null) {
-      final existing = _chatCursorBox.get(conversationId);
+      final existing = _chatCursors[conversationId];
       if (existing == null || latestTimestamp.isAfter(existing)) {
-        await _chatCursorBox.put(conversationId, latestTimestamp);
+        _chatCursors[conversationId] = latestTimestamp;
       }
     }
   }
 
   Future<void> saveChatsLocal(Iterable<Chat> chats) async {
     for (final chat in chats) {
-      final existingRaw = _conversationBox.get(chat.partnerId) as Map?;
+      final existingRaw = _conversations[chat.partnerId];
       final existing = existingRaw == null ? null : Chat.fromJson(Map<String, dynamic>.from(existingRaw));
       final existingTimestamp = existing?.lastMessageAt ?? existing?.createdAt;
       final incomingTimestamp = chat.lastMessageAt ?? chat.createdAt;
 
       if (existingTimestamp == null || incomingTimestamp.isAfter(existingTimestamp)) {
-        await _conversationBox.put(chat.partnerId, chat.toJson());
+        _conversations[chat.partnerId] = chat.toJson();
       }
 
       final conversationId = _conversationId(chat.partnerId);
-      final currentCursor = _chatCursorBox.get(conversationId);
+      final currentCursor = _chatCursors[conversationId];
       if (currentCursor == null || incomingTimestamp.isAfter(currentCursor)) {
-        await _chatCursorBox.put(conversationId, incomingTimestamp);
+        _chatCursors[conversationId] = incomingTimestamp;
       }
     }
   }
@@ -570,11 +532,11 @@ class LocalSeenService {
   }
 
   Future<void> saveAuthor(UserProfile user) async {
-    await _authorBox.put(user.id, user.toJson());
+    _authorCache[user.id] = user.toJson();
   }
 
   UserProfile? getAuthorFromCache(String id) {
-    Map<String, dynamic>? json = _authorBox.get(id);
+    final json = _authorCache[id];
     if (json == null) return null;
     return UserProfile.fromJson(json);
   }
