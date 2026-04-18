@@ -292,6 +292,7 @@ class CustomThemeModel {
   final String name;
   final CustomThemeColors colors;
   final String? createdBy;
+  final String? originalThemeId;
   final int likesCount;
   final bool isPublic;
   final DateTime? createdAt;
@@ -305,7 +306,8 @@ class CustomThemeModel {
     this.createdBy,
     this.likesCount = 0,
     this.isPublic = false,
-    this.createdAt,
+    this.createdAt, 
+    this.originalThemeId,
   });
 
   factory CustomThemeModel.fromJson(Map<String, dynamic> json) {
@@ -317,6 +319,7 @@ class CustomThemeModel {
       likesCount: json['likes_count'] as int? ?? 0,
       isPublic: json['is_public'] as bool? ?? false,
       createdAt: json['created_at'] != null ? DateTime.parse(json['created_at'] as String) : null,
+      originalThemeId: json['original_theme_id'] as String?,
     );
   }
 
@@ -351,9 +354,10 @@ class CustomThemeModel {
     'is_public': isPublic,
     'created_by': createdBy ?? currentUser.id,
     'created_at': createdAt?.toIso8601String() ?? DateTime.now().toIso8601String(),
+    'original_theme_id': originalThemeId,
   };
 
-  CustomThemeModel copyWith({String? id, String? name, CustomThemeColors? colors, Color? primaryColor, bool? isPublic, int? likesCount, String? createdBy}) => CustomThemeModel(
+  CustomThemeModel copyWith({String? id, String? originalThemeId, String? name, CustomThemeColors? colors, Color? primaryColor, bool? isPublic, int? likesCount, String? createdBy}) => CustomThemeModel(
     id: id ?? this.id,
     name: name ?? this.name,
     colors: colors ?? (primaryColor != null ? CustomThemeColors.fromPrimary(primaryColor) : this.colors),
@@ -361,5 +365,6 @@ class CustomThemeModel {
     likesCount: likesCount ?? this.likesCount,
     isPublic: isPublic ?? this.isPublic,
     createdAt: createdAt,
+    originalThemeId: originalThemeId ?? this.originalThemeId,
   );
 }

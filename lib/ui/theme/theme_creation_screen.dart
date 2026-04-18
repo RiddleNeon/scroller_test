@@ -5,7 +5,6 @@ import 'package:flutter/material.dart';
 import 'package:flutter_web_file_saver/flutter_web_file_saver.dart';
 import 'package:supabase_flutter/supabase_flutter.dart';
 import 'package:uuid/uuid.dart';
-import 'package:wurp/base_logic.dart';
 import 'package:wurp/base_ui.dart';
 import 'package:wurp/logic/themes/theme_model.dart';
 import 'package:wurp/ui/theme/theme_editor_screen.dart';
@@ -24,6 +23,8 @@ class _ThemeManagerScreenState extends State<ThemeManagerScreen> with TickerProv
 
   List<CustomThemeModel> _myThemes = [];
   List<CustomThemeModel> _communityThemes = [];
+  final Set<String> _savedThemeIds = {};
+  final Set<String> _ownedThemeIds = {};
   String? _selectedThemeId;
   bool _loadingMine = true;
   bool _loadingCommunity = true;
@@ -42,9 +43,16 @@ class _ThemeManagerScreenState extends State<ThemeManagerScreen> with TickerProv
     colors: CustomThemeColors.fromPrimary(AppTheme.lightScheme.primary, dark: true),
   );
 
+  String _normalizeThemeId(String id) {
+    if (id == defaultLightThemeId) return 'default';
+    if (id == defaultDarkThemeId) return 'default-dark';
+    return id;
+  }
+
   @override
   void initState() {
     super.initState();
+    _selectedThemeId = _normalizeThemeId(appThemeNotifier.value.$2);
     _loadMyThemes();
     _loadCommunityThemes();
     _loadLikedIds();
@@ -52,13 +60,70 @@ class _ThemeManagerScreenState extends State<ThemeManagerScreen> with TickerProv
 
   String? get _uid => _supabase.auth.currentUser?.id;
 
-  Future<void> _loadMyThemes() async {
-    if (_uid == null) return;
+  bool _isOwnedTheme(CustomThemeModel theme) => _ownedThemeIds.contains(theme.id);
+
+  Future<bool> _saveThemeReference(String themeId) async {
+    if (_uid == null) return false;
     try {
-      final res = await _supabase.from('themes').select().eq('created_by', _uid!);
+      await _supabase.from('saved_themes').upsert({'user_id': _uid, 'theme_id': themeId}, onConflict: 'user_id,theme_id');
+      _savedThemeIds.add(themeId);
+      return true;
+    } catch (_) {
+      final alreadySaved =
+          await _supabase.from('saved_themes').select('theme_id').eq('user_id', _uid!).eq('theme_id', themeId).maybeSingle() != null;
+      if (alreadySaved) {
+        _savedThemeIds.add(themeId);
+        return false;
+      }
+
+      try {
+        await _supabase.from('saved_themes').insert({'user_id': _uid, 'theme_id': themeId});
+      } catch (_) {
+        await _supabase.from('saved_themes').insert({'user_id': _uid, 'theme_id': themeId});
+      }
+
+      _savedThemeIds.add(themeId);
+      return true;
+    }
+  }
+
+  Future<void> _loadMyThemes() async {
+    if (_uid == null) {
+      if (mounted) setState(() => _loadingMine = false);
+      return;
+    }
+    try {
+      final savedRows = await _supabase.from('saved_themes').select('theme_id').eq('user_id', _uid!);
+      final savedIds = (savedRows as List).map((e) => e['theme_id'] as String).toSet();
+
+      final ownedRows = await _supabase.from('themes').select().eq('created_by', _uid!);
+      final ownedThemes = (ownedRows as List)
+          .where((e) => e['id'] != defaultLightThemeId && e['id'] != defaultDarkThemeId)
+          .map((e) => CustomThemeModel.fromJson(e))
+          .toList();
+      final ownedIds = ownedThemes.map((e) => e.id).toSet();
+
+      final savedThemes = savedIds.isEmpty
+          ? <CustomThemeModel>[]
+          : ((await _supabase.from('themes').select().inFilter('id', savedIds.toList())) as List)
+              .where((e) => e['id'] != defaultLightThemeId && e['id'] != defaultDarkThemeId)
+              .map((e) => CustomThemeModel.fromJson(e))
+              .toList();
+
+      final mergedById = <String, CustomThemeModel>{
+        for (final t in savedThemes) t.id: t,
+        for (final t in ownedThemes) t.id: t,
+      };
+
       if (mounted) {
         setState(() {
-          _myThemes = (res..removeWhere((element) => (element['id'] == defaultLightThemeId || element['id'] == defaultDarkThemeId))).map((e) => CustomThemeModel.fromJson(e)).toList();
+          _savedThemeIds
+            ..clear()
+            ..addAll(savedIds);
+          _ownedThemeIds
+            ..clear()
+            ..addAll(ownedIds);
+          _myThemes = mergedById.values.toList();
           _loadingMine = false;
         });
       }
@@ -92,6 +157,7 @@ class _ThemeManagerScreenState extends State<ThemeManagerScreen> with TickerProv
       final res = await _supabase.from('theme_likes').select('theme_id').eq('user_id', _uid!);
       if (mounted) {
         setState(() {
+          _likedIds.clear();
           _likedIds.addAll((res as List).map((e) => e['theme_id'] as String));
         });
       }
@@ -100,31 +166,33 @@ class _ThemeManagerScreenState extends State<ThemeManagerScreen> with TickerProv
 
   Future<void> _saveTheme(CustomThemeModel theme) async {
     try {
-      final existing = await _supabase.from('themes').select().eq('id', theme.id).maybeSingle() != null;
+      if (_uid == null) return;
 
-      if (!existing) {
-        await _supabase.from('themes').insert(theme.toJson());
-      } else {
-        await _supabase.from('themes').update(theme.toJson()).eq('id', theme.id);
-      }
+      final toSave = theme.copyWith(createdBy: _uid);
+      await _supabase.from('themes').upsert(toSave.toJson(), onConflict: 'id');
+      await _saveThemeReference(toSave.id);
+
       await _loadMyThemes();
       await _loadCommunityThemes();
-      if (_selectedThemeId == theme.id) await applyTheme(theme.id, false);
+      if (_selectedThemeId == toSave.id) {
+        await applyTheme(toSave.id, pushToServer: false, force: true);
+      }
       if (!mounted) return;
-      showSnackBar(context, 'Theme Uploaded!');
+      showSnackBar(context, 'Theme saved.');
     } catch (e) {
-      debugPrint('Error uploading theme: $e');
+      debugPrint('Error saving theme: $e');
       if (!mounted) return;
-      showSnackBar(context, 'Error when saving: $e');
+      showSnackBar(context, 'Error while saving: $e');
     }
   }
 
   Future<void> _deleteTheme(CustomThemeModel theme) async {
+    final isOwned = _isOwnedTheme(theme);
     final confirm = await showDialog<bool>(
       context: context,
       builder: (ctx) => AlertDialog(
-        title: const Text('delete theme?'),
-        content: Text('"${theme.name}" will be deleted permanently.'),
+        title: Text(isOwned ? 'delete theme?' : 'remove from gallery?'),
+        content: Text(isOwned ? '"${theme.name}" will be deleted permanently.' : '"${theme.name}" will only be removed from your gallery.'),
         actions: [
           TextButton(onPressed: () => Navigator.pop(ctx, false), child: const Text('Cancel')),
           FilledButton(
@@ -138,11 +206,16 @@ class _ThemeManagerScreenState extends State<ThemeManagerScreen> with TickerProv
     if (confirm != true) return;
 
     try {
-      await _supabase.from('themes').delete().eq('id', theme.id);
+      await _supabase.from('saved_themes').delete().eq('theme_id', theme.id).eq('user_id', _uid!);
+      if (isOwned) {
+        await _supabase.from('themes').delete().eq('id', theme.id).eq('created_by', _uid!);
+      }
       setState(() {
+        _savedThemeIds.remove(theme.id);
         _myThemes.removeWhere((t) => t.id == theme.id);
         if (_selectedThemeId == theme.id) _selectedThemeId = null;
       });
+      await _loadCommunityThemes();
     } catch (e) {
       debugPrint('Error deleting theme: $e');
     }
@@ -181,16 +254,23 @@ class _ThemeManagerScreenState extends State<ThemeManagerScreen> with TickerProv
     }
   }
 
-  Future<void> applyTheme(String id, [bool pushToServer = true]) async {
-    if(_selectedThemeId == id) return;
-    setState(() => _selectedThemeId = id);
-    appThemeNotifier.value = (getTheme(id), id);
-    if (id == 'default' || id == defaultLightThemeId) {
-      await _supabase.from("applied_themes").upsert({'user_id': _uid, 'theme_id': defaultLightThemeId});
-    } else if (id == 'default-dark' || id == defaultDarkThemeId) {
-      await _supabase.from("applied_themes").upsert({'user_id': _uid, 'theme_id': defaultDarkThemeId});
-    } else {
-      await _supabase.from("applied_themes").upsert({'user_id': _uid, 'theme_id': id});
+  Future<void> applyTheme(String id, {bool pushToServer = true, bool force = false}) async {
+    final normalizedId = _normalizeThemeId(id);
+    if (!force && _selectedThemeId == normalizedId) return;
+
+    if (mounted) {
+      setState(() => _selectedThemeId = normalizedId);
+    }
+
+    final serverThemeId = normalizedId == 'default'
+        ? defaultLightThemeId
+        : normalizedId == 'default-dark'
+            ? defaultDarkThemeId
+            : normalizedId;
+
+    appThemeNotifier.value = (getTheme(normalizedId), serverThemeId);
+    if (pushToServer && _uid != null) {
+      await _supabase.from("applied_themes").upsert({'user_id': _uid, 'theme_id': serverThemeId});
     }
 
     if (!mounted) return;
@@ -236,7 +316,7 @@ class _ThemeManagerScreenState extends State<ThemeManagerScreen> with TickerProv
   ThemeData getTheme(String id) {
     if (id == 'default' || id == defaultLightThemeId) return AppTheme.light;
     if (id == 'default-dark' || id == defaultDarkThemeId) return AppTheme.dark;
-    final theme = _myThemes.firstWhere((t) => t.id == id, orElse: () => _defaultTheme);
+    final theme = [..._myThemes, ..._communityThemes].firstWhere((t) => t.id == id, orElse: () => _defaultTheme);
     return theme.colors.toThemeData();
   }
 
@@ -282,6 +362,7 @@ class _ThemeManagerScreenState extends State<ThemeManagerScreen> with TickerProv
         final theme = all[i];
         final isSelected = _selectedThemeId == theme.id;
         final isDefault = theme.id == 'default' || theme.id == 'default-dark';
+        final isOwned = _isOwnedTheme(theme);
         final c = theme.colors;
 
         return GestureDetector(
@@ -297,9 +378,30 @@ class _ThemeManagerScreenState extends State<ThemeManagerScreen> with TickerProv
               c: c,
               theme: theme,
               isDefault: isDefault,
-              openEditor: _openEditor,
-              saveTheme: _saveTheme,
-              deleteTheme: _deleteTheme,
+              openEditor: isDefault
+                  ? null
+                  : ({required CustomThemeModel existing}) async {
+                      if (!_isOwnedTheme(existing)) {
+                        showSnackBar(context, 'Create a local copy to edit themes from other creators.');
+                        final result = await Navigator.push<CustomThemeModel>(
+                          context,
+                          MaterialPageRoute(builder: (_) => ThemeEditorScreen(existingTheme: existing)),
+                        );
+                        if (result == null) return;
+                        final fork = result.copyWith(
+                          id: const Uuid().v4(),
+                          createdBy: _uid,
+                          isPublic: false,
+                          likesCount: 0,
+                          originalThemeId: existing.id,
+                        );
+                        await _saveTheme(fork);
+                        return;
+                      }
+                      await _openEditor(existing: existing);
+                    },
+              saveTheme: isOwned ? _saveTheme : null,
+              deleteTheme: isDefault ? null : _deleteTheme,
               isSelected: isSelected,
             ),
           ),
@@ -326,9 +428,21 @@ class _ThemeManagerScreenState extends State<ThemeManagerScreen> with TickerProv
 
         return GestureDetector(
           onTap: () async {
-            final newId = const Uuid().v4();
-            await _saveTheme(theme.copyWith(name: "${theme.name} - ${theme.createdBy}", id: newId, isPublic: false, likesCount: 0, createdBy: currentUser.id));
-            applyTheme(newId);
+            try {
+              final wasSavedNow = await _saveThemeReference(theme.id);
+              if (wasSavedNow) {
+                await _loadMyThemes();
+              }
+              await applyTheme(theme.id);
+              if (context.mounted && wasSavedNow) {
+                showSnackBar(context, 'Added to your gallery.');
+              }
+            } catch (e) {
+              print("Error applying community theme: $e");
+              if (context.mounted) {
+                showSnackBar(context, 'Unable to save/apply this theme right now.');
+              }
+            }
           },
           child: AnimatedContainer(
             duration: const Duration(milliseconds: 200),
@@ -360,7 +474,7 @@ class ThemePreview extends StatefulWidget {
   final CustomThemeColors c;
   final CustomThemeModel theme;
   final bool isDefault;
-  final Future<void> Function({CustomThemeModel existing})? openEditor;
+  final Future<void> Function({required CustomThemeModel existing})? openEditor;
   final Future<void> Function(CustomThemeModel)? saveTheme;
   final Future<void> Function(CustomThemeModel)? deleteTheme;
   final bool isSelected;
@@ -391,6 +505,14 @@ class ThemePreview extends StatefulWidget {
 
 class _ThemePreviewState extends State<ThemePreview> {
   late bool isLiked = widget.initiallyLiked;
+
+  @override
+  void didUpdateWidget(covariant ThemePreview oldWidget) {
+    super.didUpdateWidget(oldWidget);
+    if (oldWidget.initiallyLiked != widget.initiallyLiked) {
+      isLiked = widget.initiallyLiked;
+    }
+  }
 
   @override
   Widget build(BuildContext context) {
@@ -473,7 +595,7 @@ class _ThemePreviewState extends State<ThemePreview> {
                   const SizedBox(height: 4),
                   Row(
                     mainAxisSize: MainAxisSize.max,
-                    mainAxisAlignment: .spaceBetween,
+                    mainAxisAlignment: MainAxisAlignment.spaceBetween,
                     children: [
                       Flexible(
                         child: FractionallySizedBox(
@@ -496,7 +618,6 @@ class _ThemePreviewState extends State<ThemePreview> {
                                 setState(() {
                                   isLiked = !isLiked;
                                 });
-                                print("Liked ${widget.theme.name}: $isLiked");
                               },
                               child: AnimatedSwitcher(
                                 duration: const Duration(milliseconds: 200),
@@ -534,18 +655,23 @@ class _ThemePreviewState extends State<ThemePreview> {
               child: PopupMenuButton<String>(
                 icon: Icon(Icons.more_horiz, size: 18, color: widget.c.isDark ? Colors.white : Colors.black),
                 onSelected: (val) async {
-                  switch (val) {
-                    case 'edit':
-                      await widget.openEditor!(existing: widget.theme);
-                    case 'share':
-                      await widget.saveTheme!(widget.theme.copyWith(isPublic: true));
-                      if (context.mounted) {
-                        showSnackBar(context, 'Shared with the Community!');
-                      }
-                    case 'details':
-                      _showThemeDetails(context, widget.theme);
-                    case 'delete':
-                      await widget.deleteTheme!(widget.theme);
+                  if (val == 'edit' && widget.openEditor != null) {
+                    await widget.openEditor!(existing: widget.theme);
+                    return;
+                  }
+                  if (val == 'share' && widget.saveTheme != null) {
+                    await widget.saveTheme!(widget.theme.copyWith(isPublic: true));
+                    if (context.mounted) {
+                      showSnackBar(context, 'Shared with the Community!');
+                    }
+                    return;
+                  }
+                  if (val == 'details') {
+                    _showThemeDetails(context, widget.theme);
+                    return;
+                  }
+                  if (val == 'delete' && widget.deleteTheme != null) {
+                    await widget.deleteTheme!(widget.theme);
                   }
                 },
                 itemBuilder: (_) => [

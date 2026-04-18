@@ -71,17 +71,27 @@ Future<void> applyThemeFromServer() async {
   
   final themeId = response['theme_id'] as String? ?? defaultDarkThemeId;
   
-  final ThemeData theme;
+  ThemeData resolvedTheme;
+  String resolvedThemeId = themeId;
   if (themeId == 'default' || themeId == defaultLightThemeId) {
-    theme = AppTheme.light;
+    resolvedTheme = AppTheme.light;
+    resolvedThemeId = defaultLightThemeId;
   } else if (themeId == 'default-dark' || themeId == defaultDarkThemeId) {
-    theme = AppTheme.dark;
+    resolvedTheme = AppTheme.dark;
+    resolvedThemeId = defaultDarkThemeId;
   } else {
-    final themeData = await supabaseClient.from('themes').select().eq('id', themeId).single();
-    theme = CustomThemeModel.fromJson(themeData).colors.toThemeData();
+    try {
+      final themeData = await supabaseClient.from('themes').select().eq('id', themeId).single();
+      resolvedTheme = CustomThemeModel.fromJson(themeData).colors.toThemeData();
+    } catch (_) {
+      final isDark = WidgetsBinding.instance.platformDispatcher.platformBrightness == Brightness.dark;
+      resolvedTheme = isDark ? AppTheme.dark : AppTheme.light;
+      resolvedThemeId = isDark ? defaultDarkThemeId : defaultLightThemeId;
+      await supabaseClient.from('applied_themes').upsert({'user_id': currentUser.id, 'theme_id': resolvedThemeId});
+    }
   }
-  
-  appThemeNotifier.value = (theme, themeId);
+
+  appThemeNotifier.value = (resolvedTheme, resolvedThemeId);
 }
 
 String currentAuthUserId() => auth.currentUser?.id ?? currentUser.id;
