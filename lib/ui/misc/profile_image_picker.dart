@@ -11,17 +11,19 @@ import 'package:wurp/logic/repositories/user_repository.dart';
 import '../../base_logic.dart';
 import '../widgets/camera/camera_dialog.dart';
 
-Future<String?> showProfileImagePicker(BuildContext context) {
+Future<String?> showProfileImagePicker(BuildContext context, {bool persistToCurrentUser = true}) {
   return showModalBottomSheet<String>(
     context: context,
     isScrollControlled: true,
     backgroundColor: Colors.transparent,
-    builder: (_) => const _ProfileImagePickerSheet(),
+    builder: (_) => _ProfileImagePickerSheet(persistToCurrentUser: persistToCurrentUser),
   );
 }
 
 class _ProfileImagePickerSheet extends StatefulWidget {
-  const _ProfileImagePickerSheet();
+  const _ProfileImagePickerSheet({required this.persistToCurrentUser});
+
+  final bool persistToCurrentUser;
 
   @override
   State<_ProfileImagePickerSheet> createState() => _ProfileImagePickerSheetState();
@@ -108,7 +110,9 @@ class _ProfileImagePickerSheetState extends State<_ProfileImagePickerSheet> with
         }
         url = await _uploadToCloudinary(_pickedBytes!);
       }
-      await userRepository.updateProfileImageUrl(currentUser, url);
+      if (widget.persistToCurrentUser) {
+        await userRepository.updateProfileImageUrl(currentUser, url);
+      }
       if (mounted) Navigator.of(context).pop(url);
     } catch (e) {
       _showSnack('Error: $e');

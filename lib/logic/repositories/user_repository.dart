@@ -75,46 +75,115 @@ class UserRepository {
 
   Future<UserProfile> createCurrentUser({String? username, String? profileImageUrl, String bio = ''}) async {
     final userId = currentAuthUserId();
-    final name = username ?? currentAuthUsername();
-    final avatar = profileImageUrl ?? createUserProfileImageUrl(name);
+    final uniqueUsername = await suggestUniqueUsername(username ?? currentAuthUsername());
+    final displayName = username ?? uniqueUsername;
+    final avatar = profileImageUrl ?? createUserProfileImageUrl(uniqueUsername);
 
-    await supabaseClient.from("profiles").insert({"id": userId, "username": name, "display_name": name, "avatar_url": avatar, "bio": bio});
+    await supabaseClient.from("profiles").insert({"id": userId, "username": uniqueUsername, "display_name": displayName, "avatar_url": avatar, "bio": bio});
 
-    final created = UserProfile(id: userId, username: name, profileImageUrl: avatar, bio: bio, createdAt: DateTime.now(), followersCount: 0);
+    final created = UserProfile(
+      id: userId,
+      username: uniqueUsername,
+      displayName: displayName,
+      profileImageUrl: avatar,
+      bio: bio,
+      createdAt: DateTime.now(),
+      followersCount: 0,
+    );
     _userCache[userId] = _CachedUserProfile(created);
     return created;
   }
 
   Future<void> upsertCurrentUserProfile(UserProfile user) async {
-    await supabaseClient.from("profiles").upsert({
+    await supabaseClient.from("profiles").update({
       "id": user.id,
       "username": user.username,
-      "display_name": user.username,
+      "display_name": user.displayName,
       "avatar_url": user.profileImageUrl,
       "bio": user.bio,
-    });
+      "accepted_eula": user.acceptedEula,
+      "accepted_data_processing": user.acceptedDataProcessing,
+      "onboarding_completed": user.onboardingCompleted,
+    }).eq('id', user.id);
     _userCache[user.id] = _CachedUserProfile(user);
   }
 
   Future<UserProfile> createUser({required String id, required String username, String? profileImageUrl, String bio = ''}) async {
+    final uniqueUsername = await suggestUniqueUsername(username);
     await supabaseClient.from("profiles").upsert({
       "id": id,
-      "username": username,
+      "username": uniqueUsername,
       "display_name": username,
-      "avatar_url": profileImageUrl ?? createUserProfileImageUrl(username),
+      "avatar_url": profileImageUrl ?? createUserProfileImageUrl(uniqueUsername),
       "bio": bio,
     });
 
     final created = UserProfile(
       id: id,
-      username: username,
-      profileImageUrl: profileImageUrl ?? createUserProfileImageUrl(username),
+      username: uniqueUsername,
+      displayName: username,
+      profileImageUrl: profileImageUrl ?? createUserProfileImageUrl(uniqueUsername),
       bio: bio,
       createdAt: DateTime.now(),
       followersCount: 0,
     );
     _userCache[id] = _CachedUserProfile(created);
     return created;
+  }
+
+  Future<bool> isUsernameAvailable(String username, {String? excludingUserId}) async {
+    final normalized = _normalizeUsername(username);
+    if (normalized.isEmpty) return false;
+
+    final existing = await supabaseClient.from('profiles').select('id').eq('username', normalized).maybeSingle();
+    if (existing == null) return true;
+    if (excludingUserId != null && existing['id'] == excludingUserId) return true;
+    return false;
+  }
+
+  Future<String> suggestUniqueUsername(String desired, {String? excludingUserId}) async {
+    final base = _normalizeUsername(desired);
+    if (base.isEmpty) return _fallbackUsernameFromAuth();
+    if (await isUsernameAvailable(base, excludingUserId: excludingUserId)) return base;
+
+    for (var i = 1; i <= 9999; i++) {
+      final candidate = '$base$i';
+      if (await isUsernameAvailable(candidate, excludingUserId: excludingUserId)) {
+        return candidate;
+      }
+    }
+    return '${base}${DateTime.now().millisecondsSinceEpoch % 100000}';
+  }
+
+  Future<UserProfile> completeCurrentUserOnboarding({
+    required String displayName,
+    required String requestedUsername,
+    String? avatarUrl,
+    String bio = '',
+    required bool acceptedEula,
+    required bool acceptedDataProcessing,
+  }) async {
+    final userId = currentAuthUserId();
+    final resolvedDisplayName = displayName.trim().isEmpty ? currentAuthUsername() : displayName.trim();
+    final resolvedUsername = await suggestUniqueUsername(requestedUsername, excludingUserId: userId);
+    final resolvedAvatar = (avatarUrl?.trim().isNotEmpty ?? false) ? avatarUrl!.trim() : createUserProfileImageUrl(resolvedUsername);
+
+    await supabaseClient.from('profiles').upsert({
+      'id': userId,
+      'username': resolvedUsername,
+      'display_name': resolvedDisplayName,
+      'avatar_url': resolvedAvatar,
+      'bio': bio.trim(),
+      'accepted_eula': acceptedEula,
+      'accepted_data_processing': acceptedDataProcessing,
+      'onboarding_completed': acceptedEula && acceptedDataProcessing,
+    });
+
+    final refreshed = await getUserSupabase(userId);
+    if (refreshed == null) {
+      throw const AuthException('Unable to complete onboarding.');
+    }
+    return refreshed;
   }
 
   ///returns if the user is followed after the operation
@@ -677,6 +746,20 @@ class UserRepository {
 }
 
 String createUserProfileImageUrl(String? seed) => "https://api.dicebear.com/7.x/miniavs/png?seed=${seed ?? "_"}";
+
+String _normalizeUsername(String username) {
+  final lower = username.toLowerCase().trim();
+  final normalized = lower.replaceAll(RegExp(r'[^a-z0-9_.]'), '_').replaceAll(RegExp(r'_+'), '_');
+  final trimmed = normalized.replaceAll(RegExp(r'^[_\.]+|[_\.]+$'), '');
+  if (trimmed.isEmpty) return '';
+  return trimmed.length <= 30 ? trimmed : trimmed.substring(0, 30);
+}
+
+String _fallbackUsernameFromAuth() {
+  final fromAuth = _normalizeUsername(currentAuthUsername());
+  if (fromAuth.isNotEmpty) return fromAuth;
+  return 'user${DateTime.now().millisecondsSinceEpoch % 100000}';
+}
 
 class _CachedUserProfile {
   final UserProfile profile;

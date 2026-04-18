@@ -4,6 +4,7 @@ import 'package:wurp/ui/router.dart';
 import 'package:wurp/ui/theme/app_theme.dart';
 
 import 'base_logic.dart';
+import 'logic/repositories/user_repository.dart';
 
 void startApp() async {
   final session = auth.currentSession;
@@ -11,11 +12,16 @@ void startApp() async {
     final authUser = session.user;
     try {
       final user = await userRepository.getUserSupabase(authUser.id);
-      if(user == null) throw const AuthException("User not found in database");
-      await onUserLogin(user, false);
+      if (user != null) {
+        await onUserLogin(user, false);
+      } else {
+        print('Authenticated session found without profile. Waiting for onboarding completion.');
+      }
+    } on BanAuthException catch (e) {
+      print("Banned user session: $e");
+      await auth.signOut();
     } on AuthException catch (e) {
       print("Error fetching user profile: $e");
-      await auth.signOut();
     }
   }
 

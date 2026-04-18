@@ -5,6 +5,7 @@ import 'package:wurp/logic/video/video.dart';
 class UserProfile {
   final String id;
   final String username;
+  final String displayName;
   final String profileImageUrl;
   final String bio;
   final DateTime createdAt;
@@ -12,10 +13,14 @@ class UserProfile {
   final int? followingCount;
   final int? totalVideosCount;
   final int? totalLikesCount;
+  final bool acceptedEula;
+  final bool acceptedDataProcessing;
+  final bool onboardingCompleted;
 
   const UserProfile({
     required this.id,
     required this.username,
+    required this.displayName,
     required this.profileImageUrl,
     required this.bio,
     required this.createdAt,
@@ -23,12 +28,16 @@ class UserProfile {
     this.followingCount,
     this.totalVideosCount,
     this.totalLikesCount,
+    this.acceptedEula = false,
+    this.acceptedDataProcessing = false,
+    this.onboardingCompleted = false,
   });
 
   factory UserProfile.fromSupabase(Map<String, dynamic> data) {
     return UserProfile(
       id: data['id'],
-      username: data['display_name'] ?? data['username'] ?? '',
+      username: data['username'] ?? '',
+      displayName: data['display_name'] ?? data['username'] ?? '',
       profileImageUrl: data['avatar_url'] ?? data['profileImageUrl'] ?? createUserProfileImageUrl(_avatarSeed(data)),
       bio: data['bio'] ?? '',
       createdAt: _parseDateTime(data['created_at'] ?? data['createdAt']),
@@ -36,13 +45,17 @@ class UserProfile {
       followingCount: data['following_count'] ?? data['followingCount'],
       totalVideosCount: data['total_videos_count'] ?? data['totalVideosCount'],
       totalLikesCount: data['total_likes_count'] ?? data['totalLikesCount'],
+      acceptedEula: data['accepted_eula'] ?? data['acceptedEula'] ?? false,
+      acceptedDataProcessing: data['accepted_data_processing'] ?? data['acceptedDataProcessing'] ?? false,
+      onboardingCompleted: data['onboarding_completed'] ?? data['onboardingCompleted'] ?? false,
     );
   }
 
   factory UserProfile.fromJson(Map<String, dynamic> data) {
     return UserProfile(
       id: data['id'],
-      username: data['display_name'] ?? data['username'] ?? '',
+      username: data['username'] ?? '',
+      displayName: data['display_name'] ?? data['username'] ?? '',
       profileImageUrl: data['profileImageUrl'] ?? data['avatar_url'] ?? createUserProfileImageUrl(_avatarSeed(data)),
       bio: data['bio'] ?? '',
       createdAt: _parseDateTime(data['createdAt'] ?? data['created_at']),
@@ -50,6 +63,9 @@ class UserProfile {
       followingCount: data['followingCount'] ?? data['following_count'],
       totalVideosCount: data['totalVideosCount'] ?? data['total_videos_count'],
       totalLikesCount: data['totalLikesCount'] ?? data['total_likes_count'],
+      acceptedEula: data['acceptedEula'] ?? data['accepted_eula'] ?? false,
+      acceptedDataProcessing: data['acceptedDataProcessing'] ?? data['accepted_data_processing'] ?? false,
+      onboardingCompleted: data['onboardingCompleted'] ?? data['onboarding_completed'] ?? false,
     );
   }
 
@@ -57,6 +73,7 @@ class UserProfile {
     return {
       "id": id,
       "username": username,
+      "displayName": displayName,
       "profileImageUrl": profileImageUrl,
       "bio": bio,
       "createdAt": createdAt,
@@ -64,21 +81,29 @@ class UserProfile {
       "followingCount": followingCount,
       "totalVideosCount": totalVideosCount,
       "totalLikesCount": totalLikesCount,
+      "acceptedEula": acceptedEula,
+      "acceptedDataProcessing": acceptedDataProcessing,
+      "onboardingCompleted": onboardingCompleted,
     };
   }
 
   UserProfile copyWith({
     String? username,
+    String? displayName,
     String? profileImageUrl,
     String? bio,
     int? followersCount,
     int? followingCount,
     int? totalVideosCount,
     int? totalLikesCount,
+    bool? acceptedEula,
+    bool? acceptedDataProcessing,
+    bool? onboardingCompleted,
   }) {
     return UserProfile(
       id: id,
       username: username ?? this.username,
+      displayName: displayName ?? this.displayName,
       profileImageUrl: profileImageUrl ?? this.profileImageUrl,
       bio: bio ?? this.bio,
       createdAt: createdAt,
@@ -86,12 +111,17 @@ class UserProfile {
       followingCount: followingCount ?? this.followingCount,
       totalVideosCount: totalVideosCount ?? this.totalVideosCount,
       totalLikesCount: totalLikesCount ?? this.totalLikesCount,
+      acceptedEula: acceptedEula ?? this.acceptedEula,
+      acceptedDataProcessing: acceptedDataProcessing ?? this.acceptedDataProcessing,
+      onboardingCompleted: onboardingCompleted ?? this.onboardingCompleted,
     );
   }
 
+  bool get hasAcceptedRequiredAgreements => acceptedEula && acceptedDataProcessing;
+
   @override
   String toString() =>
-      'UserProfile{id: $id, username: $username, profileImageUrl: $profileImageUrl, bio: $bio, createdAt: $createdAt, followersCount: $followersCount}';
+      'UserProfile{id: $id, username: $username, displayName: $displayName, profileImageUrl: $profileImageUrl, bio: $bio, createdAt: $createdAt, followersCount: $followersCount}';
 }
 
 DateTime _parseDateTime(Object? value) {
@@ -108,6 +138,7 @@ class CreatorUserProfile extends UserProfile {
   const CreatorUserProfile({
     required super.id,
     required super.username,
+    required super.displayName,
     required super.profileImageUrl,
     required super.bio,
     required super.createdAt,
@@ -115,6 +146,9 @@ class CreatorUserProfile extends UserProfile {
     super.followingCount,
     super.totalVideosCount,
     super.totalLikesCount,
+    super.acceptedEula,
+    super.acceptedDataProcessing,
+    super.onboardingCompleted,
     required this.publishedVideoIds,
   });
 

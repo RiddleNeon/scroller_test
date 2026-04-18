@@ -44,15 +44,22 @@ void initRouter() {
 
       final onLogin = path == '/login';
       final onResetPassword = path == '/reset-password';
+      final onSignupOnboarding = path == '/signup-onboarding';
+      final hasSession = auth.currentSession != null;
+      final onboardingDone = userLoggedIn && currentUser.onboardingCompleted && currentUser.hasAcceptedRequiredAgreements;
 
-      if (!userLoggedIn && !onResetPassword) {
+      if (!hasSession && !onLogin && !onResetPassword) {
         return '/login';
       }
-      if (userLoggedIn && onLogin) {
-        print("user is already logged in, redirecting to profile");
+      if (hasSession && !userLoggedIn && !onSignupOnboarding && !onResetPassword) {
+        return '/signup-onboarding';
+      }
+      if (userLoggedIn && !onboardingDone && !onSignupOnboarding) {
+        return '/signup-onboarding';
+      }
+      if (userLoggedIn && onboardingDone && (onLogin || onSignupOnboarding || state.matchedLocation == '/')) {
         return '/profile';
       }
-      if (userLoggedIn && state.matchedLocation == '/') return '/profile';
       return null;
     },
     routes: [
@@ -125,6 +132,12 @@ void initRouter() {
         path: '/login',
         pageBuilder: (context, state) {
           return SlideMorphTransitions.page<void>(key: state.pageKey, child: const LoginScreen(), beginOffset: const Offset(0.0, 0.07), beginScale: 0.985);
+        },
+      ),
+      GoRoute(
+        path: '/signup-onboarding',
+        pageBuilder: (context, state) {
+          return NoTransitionPage<void>(key: state.pageKey, child: const SignupOnboardingScreen());
         },
       ),
       GoRoute(
