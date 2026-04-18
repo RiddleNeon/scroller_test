@@ -220,7 +220,7 @@ class _VideoFeedState extends State<VideoFeed> with TickerProviderStateMixin {
   @override
   void initState() {
     super.initState();
-    _pageController = PreloadPageController(initialPage: 0, viewportFraction: 1);
+    _pageController = PreloadPageController(initialPage: feedViewModel.currentIndex, viewportFraction: 1);
   }
 
   @override
@@ -245,6 +245,7 @@ class _VideoFeedState extends State<VideoFeed> with TickerProviderStateMixin {
         this,
         widget.videoProvider ?? videoProvider,
         context,
+        initialPage: feedViewModel.currentIndex,
         pageController: _pageController,
       ),
     );

@@ -1,3 +1,5 @@
+import 'dart:async';
+
 import 'package:flutter/cupertino.dart';
 import 'package:flutter/material.dart';
 import 'package:go_router/go_router.dart';
@@ -165,9 +167,26 @@ List<({IconData icon, String label, String id})> _navigationBarItems = [
 ];
 
 class RouteObserver extends NavigatorObserver {
+  Timer? _resumeFeedTimer;
+  int _resumeFeedToken = 0;
+
   @override
   void didChangeTop(Route<dynamic> topRoute, Route<dynamic>? previousTopRoute) {
     super.didChangeTop(topRoute, previousTopRoute);
-    WidgetsBinding.instance.addPostFrameCallback((timeStamp) => navBarKey.currentState?.switchToId((topRoute.settings.name?..replaceFirst("/", "")) ?? ''));
+    _resumeFeedTimer?.cancel();
+    WidgetsBinding.instance.addPostFrameCallback((timeStamp) {
+      final routeName = topRoute.settings.name ?? '';
+      navBarKey.currentState?.switchToId(routeName.replaceFirst("/", ""));
+
+      final activePath = routeName.isNotEmpty ? routeName : routerConfig.routeInformationProvider.value.uri.path;
+      if (activePath == '/feed') {
+        final token = ++_resumeFeedToken;
+        _resumeFeedTimer = Timer(const Duration(milliseconds: 250), () {
+          if (token != _resumeFeedToken) return;
+          if (routerConfig.routeInformationProvider.value.uri.path != '/feed') return;
+          unawaited(feedViewModel.ensureCurrentVideoPlays());
+        });
+      }
+    });
   }
 }
