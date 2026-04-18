@@ -21,7 +21,8 @@ class _ThemeEditorScreenState extends State<ThemeEditorScreen> {
     super.initState();
     final t = widget.existingTheme;
     _nameController = TextEditingController(text: t?.name ?? '');
-    _colors = t?.colors ?? CustomThemeColors.fromPrimary(const Color(0xFF6C5443));
+    _colors =
+        t?.colors ?? CustomThemeColors.fromPrimary(const Color(0xFF6C5443));
   }
 
   @override
@@ -30,7 +31,11 @@ class _ThemeEditorScreenState extends State<ThemeEditorScreen> {
     super.dispose();
   }
 
-  Future<void> _pickColor({required String label, required Color current, required ValueChanged<Color> onPicked}) async {
+  Future<void> _pickColor({
+    required String label,
+    required Color current,
+    required ValueChanged<Color> onPicked,
+  }) async {
     Color temp = current;
     final result = await showDialog<Color>(
       context: context,
@@ -51,8 +56,14 @@ class _ThemeEditorScreenState extends State<ThemeEditorScreen> {
           ),
         ),
         actions: [
-          TextButton(onPressed: () => Navigator.pop(ctx), child: const Text('Cancel')),
-          FilledButton(onPressed: () => Navigator.pop(ctx, temp), child: const Text('Apply')),
+          TextButton(
+            onPressed: () => Navigator.pop(ctx),
+            child: const Text('Cancel'),
+          ),
+          FilledButton(
+            onPressed: () => Navigator.pop(ctx, temp),
+            child: const Text('Apply'),
+          ),
         ],
       ),
     );
@@ -66,11 +77,36 @@ class _ThemeEditorScreenState extends State<ThemeEditorScreen> {
     bool useDark = _colors.isDark;
     bool useSecondary = false;
     bool useTertiary = false;
+    double themeVibrance = 0;
+    double themeSaturation = 1;
+    double themeTone = 0;
+    double accentBoost = 0.65;
+    double surfaceDepth = 0.5;
+    double surfaceTintStrength = 0.35;
+    double secondaryShift = 30;
+    double tertiaryShift = 62;
+    bool blendTertiaryWithSecondary = true;
 
     await showDialog<void>(
       context: context,
       builder: (ctx) => StatefulBuilder(
         builder: (ctx, setLocal) {
+          final previewColors = CustomThemeColors.fromSeeds(
+            primary: seedPrimary,
+            secondary: useSecondary ? seedSecondary : null,
+            tertiary: useTertiary ? seedTertiary : null,
+            dark: useDark,
+            themeVibrance: themeVibrance,
+            themeSaturation: themeSaturation,
+            themeTone: themeTone,
+            accentBoost: accentBoost,
+            surfaceDepth: surfaceDepth,
+            surfaceTintStrength: surfaceTintStrength,
+            secondaryHueShift: secondaryShift,
+            tertiaryHueShift: tertiaryShift,
+            blendTertiaryWithSecondary: blendTertiaryWithSecondary,
+          );
+
           return AlertDialog(
             title: const Text('Auto-Generate Theme'),
             content: SingleChildScrollView(
@@ -79,8 +115,15 @@ class _ThemeEditorScreenState extends State<ThemeEditorScreen> {
                 crossAxisAlignment: CrossAxisAlignment.start,
                 children: [
                   const Text(
-                    'Choose 1-3 seed colors to generate a matching palette. Secondary and tertiary seeds are optional; if left empty, they will be automatically derived from the primary seed.',
+                    'Choose 1-3 seed colors and tweak generation controls. If only primary is set, secondary/tertiary are derived automatically.',
                     style: TextStyle(fontSize: 13, color: Colors.grey),
+                  ),
+                  const SizedBox(height: 12),
+                  _AutoGeneratePreview(
+                    colors: previewColors,
+                    name: _nameController.text.trim().isEmpty
+                        ? 'Auto Theme'
+                        : _nameController.text.trim(),
                   ),
                   const SizedBox(height: 16),
 
@@ -107,7 +150,12 @@ class _ThemeEditorScreenState extends State<ThemeEditorScreen> {
                               ),
                             ),
                           ),
-                          actions: [FilledButton(onPressed: () => Navigator.pop(c2), child: const Text('OK'))],
+                          actions: [
+                            FilledButton(
+                              onPressed: () => Navigator.pop(c2),
+                              child: const Text('OK'),
+                            ),
+                          ],
                         ),
                       );
                       setLocal(() => seedPrimary = temp);
@@ -117,11 +165,19 @@ class _ThemeEditorScreenState extends State<ThemeEditorScreen> {
 
                   _SeedRow(
                     label: 'Secondary (optional)',
-                    color: seedSecondary ?? HSLColor.fromColor(seedPrimary).withHue((HSLColor.fromColor(seedPrimary).hue + 30) % 360).toColor(),
+                    color:
+                        seedSecondary ??
+                        HSLColor.fromColor(seedPrimary)
+                            .withHue(
+                              (HSLColor.fromColor(seedPrimary).hue + 30) % 360,
+                            )
+                            .toColor(),
                     enabled: useSecondary,
                     onToggle: (v) => setLocal(() {
                       useSecondary = v;
-                      seedSecondary = v ? seedSecondary ?? _colors.secondary : null;
+                      seedSecondary = v
+                          ? seedSecondary ?? _colors.secondary
+                          : null;
                     }),
                     onColorTap: !useSecondary
                         ? null
@@ -143,7 +199,12 @@ class _ThemeEditorScreenState extends State<ThemeEditorScreen> {
                                     ),
                                   ),
                                 ),
-                                actions: [FilledButton(onPressed: () => Navigator.pop(c2), child: const Text('OK'))],
+                                actions: [
+                                  FilledButton(
+                                    onPressed: () => Navigator.pop(c2),
+                                    child: const Text('OK'),
+                                  ),
+                                ],
                               ),
                             );
                             setLocal(() => seedSecondary = temp);
@@ -153,11 +214,19 @@ class _ThemeEditorScreenState extends State<ThemeEditorScreen> {
 
                   _SeedRow(
                     label: 'Tertiary (optional)',
-                    color: seedTertiary ?? HSLColor.fromColor(seedPrimary).withHue((HSLColor.fromColor(seedPrimary).hue + 60) % 360).toColor(),
+                    color:
+                        seedTertiary ??
+                        HSLColor.fromColor(seedPrimary)
+                            .withHue(
+                              (HSLColor.fromColor(seedPrimary).hue + 60) % 360,
+                            )
+                            .toColor(),
                     enabled: useTertiary,
                     onToggle: (v) => setLocal(() {
                       useTertiary = v;
-                      seedTertiary = v ? seedTertiary ?? _colors.tertiary : null;
+                      seedTertiary = v
+                          ? seedTertiary ?? _colors.tertiary
+                          : null;
                     }),
                     onColorTap: !useTertiary
                         ? null
@@ -170,7 +239,7 @@ class _ThemeEditorScreenState extends State<ThemeEditorScreen> {
                                 content: SizedBox(
                                   width: 300,
                                   child: SingleChildScrollView(
-                                    scrollDirection: .vertical,
+                                    scrollDirection: Axis.vertical,
                                     child: ColorPicker(
                                       pickerColor: temp,
                                       portraitOnly: true,
@@ -180,7 +249,12 @@ class _ThemeEditorScreenState extends State<ThemeEditorScreen> {
                                     ),
                                   ),
                                 ),
-                                actions: [FilledButton(onPressed: () => Navigator.pop(c2), child: const Text('OK'))],
+                                actions: [
+                                  FilledButton(
+                                    onPressed: () => Navigator.pop(c2),
+                                    child: const Text('OK'),
+                                  ),
+                                ],
                               ),
                             );
                             setLocal(() => seedTertiary = temp);
@@ -188,32 +262,128 @@ class _ThemeEditorScreenState extends State<ThemeEditorScreen> {
                   ),
                   const SizedBox(height: 20),
                   const Divider(),
+                  const SizedBox(height: 12),
+
+                  _AutoOptionSlider(
+                    label: 'General Vibrance',
+                    value: themeVibrance,
+                    min: -1,
+                    max: 1,
+                    divisions: 40,
+                    valueLabel: '${(themeVibrance * 100).round()}%',
+                    hint:
+                        'Boosts muted colors first; negative values make the whole palette calmer.',
+                    onChanged: (v) => setLocal(() => themeVibrance = v),
+                  ),
+                  _AutoOptionSlider(
+                    label: 'General Saturation',
+                    value: themeSaturation,
+                    min: 0.6,
+                    max: 1.6,
+                    divisions: 50,
+                    valueLabel: '${(themeSaturation * 100).round()}%',
+                    hint:
+                        'Applies an overall saturation multiplier to generated and manual seeds.',
+                    onChanged: (v) => setLocal(() => themeSaturation = v),
+                  ),
+                  _AutoOptionSlider(
+                    label: 'General Tone',
+                    value: themeTone,
+                    min: -0.14,
+                    max: 0.14,
+                    divisions: 56,
+                    valueLabel: '${(themeTone * 100).round()}%',
+                    hint:
+                        'Shifts the full palette lighter or darker on top of the selected colors.',
+                    onChanged: (v) => setLocal(() => themeTone = v),
+                  ),
+
+                  _AutoOptionSlider(
+                    label: 'Accent Vibrance',
+                    value: accentBoost,
+                    valueLabel: '${(accentBoost * 100).round()}%',
+                    hint:
+                        'Higher values create richer secondary/tertiary colors.',
+                    onChanged: (v) => setLocal(() => accentBoost = v),
+                  ),
                   const SizedBox(height: 8),
+                  _AutoOptionSlider(
+                    label: 'Surface Depth',
+                    value: surfaceDepth,
+                    valueLabel: '${(surfaceDepth * 100).round()}%',
+                    hint: 'Controls how deep/bright generated surfaces feel.',
+                    onChanged: (v) => setLocal(() => surfaceDepth = v),
+                  ),
+                  _AutoOptionSlider(
+                    label: 'Surface Tint',
+                    value: surfaceTintStrength,
+                    valueLabel: '${(surfaceTintStrength * 100).round()}%',
+                    hint:
+                        'Adds more seed color into backgrounds and surfaces, especially in light mode.',
+                    onChanged: (v) => setLocal(() => surfaceTintStrength = v),
+                  ),
+                  if (!useSecondary)
+                    _AutoOptionSlider(
+                      label: 'Secondary Hue Shift',
+                      value: secondaryShift,
+                      min: 12,
+                      max: 120,
+                      divisions: 36,
+                      valueLabel: '${secondaryShift.round()} deg',
+                      hint:
+                          'Used only when a manual secondary seed is not set.',
+                      onChanged: (v) => setLocal(() => secondaryShift = v),
+                    ),
+                  if (!useTertiary)
+                    _AutoOptionSlider(
+                      label: 'Tertiary Hue Shift',
+                      value: tertiaryShift,
+                      min: 24,
+                      max: 170,
+                      divisions: 73,
+                      valueLabel: '${tertiaryShift.round()} deg',
+                      hint:
+                          'Fallback shift when tertiary is auto-derived from primary.',
+                      onChanged: (v) => setLocal(() => tertiaryShift = v),
+                    ),
+
+                  SwitchListTile.adaptive(
+                    value: blendTertiaryWithSecondary,
+                    contentPadding: EdgeInsets.zero,
+                    title: const Text('Blend tertiary with secondary'),
+                    subtitle: const Text(
+                      'When secondary is present, derive tertiary from both hues.',
+                    ),
+                    onChanged: useTertiary
+                        ? null
+                        : (v) => setLocal(() => blendTertiaryWithSecondary = v),
+                  ),
 
                   Row(
                     children: [
                       const Icon(Icons.dark_mode_outlined, size: 20),
                       const SizedBox(width: 10),
                       const Expanded(child: Text('Dark Mode')),
-                      Switch(value: useDark, onChanged: (v) => setLocal(() => useDark = v)),
+                      Switch(
+                        value: useDark,
+                        onChanged: (v) => setLocal(() => useDark = v),
+                      ),
                     ],
                   ),
                 ],
               ),
             ),
             actions: [
-              TextButton(onPressed: () => Navigator.pop(ctx), child: const Text('Cancel')),
+              TextButton(
+                onPressed: () => Navigator.pop(ctx),
+                child: const Text('Cancel'),
+              ),
               FilledButton.icon(
-                icon: const Icon(Icons.auto_fix_high, size: 16),
+                icon: const Icon(Icons.color_lens_rounded, size: 16),
                 label: const Text('Generate'),
                 onPressed: () {
                   setState(() {
-                    _colors = CustomThemeColors.fromSeeds(
-                      primary: seedPrimary,
-                      secondary: useSecondary ? seedSecondary : null,
-                      tertiary: useTertiary ? seedTertiary : null,
-                      dark: useDark,
-                    );
+                    _colors = previewColors;
                   });
                   Navigator.pop(ctx);
                 },
@@ -246,12 +416,20 @@ class _ThemeEditorScreenState extends State<ThemeEditorScreen> {
     final cs = Theme.of(context).colorScheme;
     return Scaffold(
       appBar: AppBar(
-        title: Text(widget.existingTheme == null ? 'Create theme' : 'Edit theme'),
+        title: Text(
+          widget.existingTheme == null ? 'Create theme' : 'Edit theme',
+        ),
         actions: [
           Tooltip(
-            message: _colors.isDark ? 'Switch to Light mode' : 'Switch to Dark mode',
+            message: _colors.isDark
+                ? 'Switch to Light mode'
+                : 'Switch to Dark mode',
             child: IconButton(
-              icon: Icon(_colors.isDark ? Icons.light_mode_outlined : Icons.dark_mode_outlined),
+              icon: Icon(
+                _colors.isDark
+                    ? Icons.light_mode_outlined
+                    : Icons.dark_mode_outlined,
+              ),
               onPressed: () => setState(() {
                 _colors = CustomThemeColors.fromSeeds(
                   primary: _colors.primary,
@@ -272,7 +450,12 @@ class _ThemeEditorScreenState extends State<ThemeEditorScreen> {
       ),
       body: Column(
         children: [
-          _ThemePreview(colors: _colors, name: _nameController.text.isEmpty ? 'My Theme' : _nameController.text),
+          _ThemePreview(
+            colors: _colors,
+            name: _nameController.text.isEmpty
+                ? 'My Theme'
+                : _nameController.text,
+          ),
 
           Expanded(
             child: ListView(
@@ -280,7 +463,11 @@ class _ThemeEditorScreenState extends State<ThemeEditorScreen> {
               children: [
                 TextField(
                   controller: _nameController,
-                  decoration: const InputDecoration(labelText: 'Theme-Name', border: OutlineInputBorder(), prefixIcon: Icon(Icons.label_outline)),
+                  decoration: const InputDecoration(
+                    labelText: 'Theme-Name',
+                    border: OutlineInputBorder(),
+                    prefixIcon: Icon(Icons.label_outline),
+                  ),
                   onChanged: (_) => setState(() {}),
                 ),
                 const SizedBox(height: 4),
@@ -302,16 +489,48 @@ class _ThemeEditorScreenState extends State<ThemeEditorScreen> {
                 ),
 
                 const _SectionHeader('Brand-Colors'),
-                _colorRow('Primary', _colors.primary, (c) => _colors = _colors.copyWith(primary: c)),
-                _colorRow('On Primary', _colors.onPrimary, (c) => _colors = _colors.copyWith(onPrimary: c)),
-                _colorRow('Secondary', _colors.secondary, (c) => _colors = _colors.copyWith(secondary: c)),
-                _colorRow('On Secondary', _colors.onSecondary, (c) => _colors = _colors.copyWith(onSecondary: c)),
-                _colorRow('Tertiary', _colors.tertiary, (c) => _colors = _colors.copyWith(tertiary: c)),
-                _colorRow('On Tertiary', _colors.onTertiary, (c) => _colors = _colors.copyWith(onTertiary: c)),
+                _colorRow(
+                  'Primary',
+                  _colors.primary,
+                  (c) => _colors = _colors.copyWith(primary: c),
+                ),
+                _colorRow(
+                  'On Primary',
+                  _colors.onPrimary,
+                  (c) => _colors = _colors.copyWith(onPrimary: c),
+                ),
+                _colorRow(
+                  'Secondary',
+                  _colors.secondary,
+                  (c) => _colors = _colors.copyWith(secondary: c),
+                ),
+                _colorRow(
+                  'On Secondary',
+                  _colors.onSecondary,
+                  (c) => _colors = _colors.copyWith(onSecondary: c),
+                ),
+                _colorRow(
+                  'Tertiary',
+                  _colors.tertiary,
+                  (c) => _colors = _colors.copyWith(tertiary: c),
+                ),
+                _colorRow(
+                  'On Tertiary',
+                  _colors.onTertiary,
+                  (c) => _colors = _colors.copyWith(onTertiary: c),
+                ),
 
                 const _SectionHeader('Surface-Colors'),
-                _colorRow('Surface', _colors.surface, (c) => _colors = _colors.copyWith(surface: c)),
-                _colorRow('On Surface', _colors.onSurface, (c) => _colors = _colors.copyWith(onSurface: c)),
+                _colorRow(
+                  'Surface',
+                  _colors.surface,
+                  (c) => _colors = _colors.copyWith(surface: c),
+                ),
+                _colorRow(
+                  'On Surface',
+                  _colors.onSurface,
+                  (c) => _colors = _colors.copyWith(onSurface: c),
+                ),
 
                 const _SectionHeader('Container & Outlines'),
                 _colorRow(
@@ -326,30 +545,64 @@ class _ThemeEditorScreenState extends State<ThemeEditorScreen> {
                   (c) => _colors = _colors.copyWith(onSurfaceVariant: c),
                   hint: 'Hint text & secondary icons',
                 ),
-                _colorRow('Outline Variant', _colors.outlineVariant, (c) => _colors = _colors.copyWith(outlineVariant: c), hint: 'Borders, dividers'),
+                _colorRow(
+                  'Outline Variant',
+                  _colors.outlineVariant,
+                  (c) => _colors = _colors.copyWith(outlineVariant: c),
+                  hint: 'Borders, dividers',
+                ),
 
                 const _SectionHeader('Inverse (Snack Bars)'),
-                _colorRow('Inverse Surface', _colors.inverseSurface, (c) => _colors = _colors.copyWith(inverseSurface: c)),
-                _colorRow('On Inverse Surface', _colors.onInverseSurface, (c) => _colors = _colors.copyWith(onInverseSurface: c)),
+                _colorRow(
+                  'Inverse Surface',
+                  _colors.inverseSurface,
+                  (c) => _colors = _colors.copyWith(inverseSurface: c),
+                ),
+                _colorRow(
+                  'On Inverse Surface',
+                  _colors.onInverseSurface,
+                  (c) => _colors = _colors.copyWith(onInverseSurface: c),
+                ),
 
                 const _SectionHeader('Status-Colors'),
-                _colorRow('Error', _colors.error, (c) => _colors = _colors.copyWith(error: c)),
-                _colorRow('On Error', _colors.onError, (c) => _colors = _colors.copyWith(onError: c)),
+                _colorRow(
+                  'Error',
+                  _colors.error,
+                  (c) => _colors = _colors.copyWith(error: c),
+                ),
+                _colorRow(
+                  'On Error',
+                  _colors.onError,
+                  (c) => _colors = _colors.copyWith(onError: c),
+                ),
               ],
             ),
           ),
         ],
       ),
-      floatingActionButton: FloatingActionButton.extended(onPressed: _save, icon: const Icon(Icons.save_rounded), label: const Text('Save')),
+      floatingActionButton: FloatingActionButton.extended(
+        onPressed: _save,
+        icon: const Icon(Icons.save_rounded),
+        label: const Text('Save'),
+      ),
     );
   }
 
-  Widget _colorRow(String label, Color color, void Function(Color) update, {String? hint}) {
+  Widget _colorRow(
+    String label,
+    Color color,
+    void Function(Color) update, {
+    String? hint,
+  }) {
     return _ColorRow(
       label: label,
       hint: hint,
       color: color,
-      onTap: () => _pickColor(label: label, current: color, onPicked: (c) => setState(() => update(c))),
+      onTap: () => _pickColor(
+        label: label,
+        current: color,
+        onPicked: (c) => setState(() => update(c)),
+      ),
     );
   }
 }
@@ -361,7 +614,13 @@ class _SeedRow extends StatelessWidget {
   final ValueChanged<bool>? onToggle;
   final VoidCallback? onColorTap;
 
-  const _SeedRow({required this.label, required this.color, required this.enabled, required this.onToggle, required this.onColorTap});
+  const _SeedRow({
+    required this.label,
+    required this.color,
+    required this.enabled,
+    required this.onToggle,
+    required this.onColorTap,
+  });
 
   @override
   Widget build(BuildContext context) {
@@ -379,18 +638,174 @@ class _SeedRow extends StatelessWidget {
               borderRadius: BorderRadius.circular(10),
               border: Border.all(color: cs.outlineVariant),
             ),
-            child: enabled ? Icon(Icons.colorize, size: 16, color: cs.onSurfaceVariant) : null,
+            child: enabled
+                ? Icon(Icons.colorize, size: 16, color: cs.onSurfaceVariant)
+                : null,
           ),
         ),
         const SizedBox(width: 12),
         Expanded(
           child: Text(
             label,
-            style: TextStyle(color: enabled ? null : cs.onSurfaceVariant.withValues(alpha: 0.7), fontWeight: enabled ? FontWeight.w500 : FontWeight.normal),
+            style: TextStyle(
+              color: enabled
+                  ? null
+                  : cs.onSurfaceVariant.withValues(alpha: 0.7),
+              fontWeight: enabled ? FontWeight.w500 : FontWeight.normal,
+            ),
           ),
         ),
         if (onToggle != null) Switch(value: enabled, onChanged: onToggle),
       ],
+    );
+  }
+}
+
+class _AutoOptionSlider extends StatelessWidget {
+  final String label;
+  final String valueLabel;
+  final String hint;
+  final double value;
+  final double min;
+  final double max;
+  final int? divisions;
+  final ValueChanged<double> onChanged;
+
+  const _AutoOptionSlider({
+    required this.label,
+    required this.valueLabel,
+    required this.hint,
+    required this.value,
+    required this.onChanged,
+    this.min = 0,
+    this.max = 1,
+    this.divisions,
+  });
+
+  @override
+  Widget build(BuildContext context) {
+    final cs = Theme.of(context).colorScheme;
+    return Column(
+      crossAxisAlignment: CrossAxisAlignment.start,
+      children: [
+        Row(
+          children: [
+            Expanded(
+              child: Text(
+                label,
+                style: const TextStyle(fontWeight: FontWeight.w600),
+              ),
+            ),
+            Text(
+              valueLabel,
+              style: TextStyle(color: cs.onSurfaceVariant, fontSize: 12),
+            ),
+          ],
+        ),
+        Slider(
+          value: value,
+          min: min,
+          max: max,
+          divisions: divisions,
+          label: valueLabel,
+          onChanged: onChanged,
+        ),
+        Text(hint, style: TextStyle(fontSize: 11, color: cs.onSurfaceVariant)),
+        const SizedBox(height: 8),
+      ],
+    );
+  }
+}
+
+class _AutoGeneratePreview extends StatelessWidget {
+  final CustomThemeColors colors;
+  final String name;
+
+  const _AutoGeneratePreview({required this.colors, required this.name});
+
+  @override
+  Widget build(BuildContext context) {
+    return Container(
+      width: double.infinity,
+      padding: const EdgeInsets.all(10),
+      decoration: BoxDecoration(
+        color: colors.surfaceContainerHighest,
+        borderRadius: BorderRadius.circular(14),
+        border: Border.all(color: colors.outlineVariant.withValues(alpha: 0.7)),
+      ),
+      child: Column(
+        crossAxisAlignment: CrossAxisAlignment.start,
+        children: [
+          Row(
+            children: [
+              _seedSwatch(
+                label: 'P',
+                color: colors.primary,
+                onColor: colors.onPrimary,
+              ),
+              const SizedBox(width: 6),
+              _seedSwatch(
+                label: 'S',
+                color: colors.secondary,
+                onColor: colors.onSecondary,
+              ),
+              const SizedBox(width: 6),
+              _seedSwatch(
+                label: 'T',
+                color: colors.tertiary,
+                onColor: colors.onTertiary,
+              ),
+              const SizedBox(width: 6),
+              _seedSwatch(
+                label: 'Bg',
+                color: colors.surface,
+                onColor: colors.onSurface,
+              ),
+              const Spacer(),
+              Text(
+                colors.isDark ? 'Dark' : 'Light',
+                style: TextStyle(
+                  color: colors.onSurfaceVariant,
+                  fontSize: 12,
+                  fontWeight: FontWeight.w600,
+                ),
+              ),
+            ],
+          ),
+          const SizedBox(height: 10),
+          SizedBox(
+            height: 120,
+            child: ClipRRect(
+              borderRadius: BorderRadius.circular(10),
+              child: _MockApp(colors: colors, name: name),
+            ),
+          ),
+        ],
+      ),
+    );
+  }
+
+  Widget _seedSwatch({
+    required String label,
+    required Color color,
+    required Color onColor,
+  }) {
+    return Container(
+      width: 28,
+      height: 22,
+      alignment: Alignment.center,
+      decoration: BoxDecoration(
+        color: color,
+        borderRadius: BorderRadius.circular(6),
+      ),
+      child: Text(
+        label,
+        style: TextStyle(
+          color: onColor,
+          fontSize: 10,
+          fontWeight: FontWeight.bold,
+        ),
+      ),
     );
   }
 }
@@ -406,7 +821,11 @@ class _SectionHeader extends StatelessWidget {
       padding: const EdgeInsets.fromLTRB(0, 20, 0, 6),
       child: Text(
         title.toUpperCase(),
-        style: Theme.of(context).textTheme.labelSmall?.copyWith(color: Theme.of(context).colorScheme.primary, letterSpacing: 1.4, fontWeight: FontWeight.w700),
+        style: Theme.of(context).textTheme.labelSmall?.copyWith(
+          color: Theme.of(context).colorScheme.primary,
+          letterSpacing: 1.4,
+          fontWeight: FontWeight.w700,
+        ),
       ),
     );
   }
@@ -418,12 +837,18 @@ class _ColorRow extends StatelessWidget {
   final Color color;
   final VoidCallback onTap;
 
-  const _ColorRow({required this.label, required this.color, required this.onTap, this.hint});
+  const _ColorRow({
+    required this.label,
+    required this.color,
+    required this.onTap,
+    this.hint,
+  });
 
   @override
   Widget build(BuildContext context) {
     final cs = Theme.of(context).colorScheme;
-    final hex = '#${color.toARGB32().toRadixString(16).padLeft(8, '0').substring(2).toUpperCase()}';
+    final hex =
+        '#${color.toARGB32().toRadixString(16).padLeft(8, '0').substring(2).toUpperCase()}';
     final isLight = color.computeLuminance() > 0.45;
 
     return InkWell(
@@ -439,25 +864,55 @@ class _ColorRow extends StatelessWidget {
               decoration: BoxDecoration(
                 color: color,
                 borderRadius: BorderRadius.circular(12),
-                border: Border.all(color: cs.outlineVariant.withValues(alpha: 0.6)),
-                boxShadow: [BoxShadow(color: color.withValues(alpha: 0.35), blurRadius: 6, offset: const Offset(0, 2))],
+                border: Border.all(
+                  color: cs.outlineVariant.withValues(alpha: 0.6),
+                ),
+                /*                boxShadow: [
+                  BoxShadow(
+                    color: color.withValues(alpha: 0.35),
+                    blurRadius: 6,
+                    offset: const Offset(0, 2),
+                  ),
+                ],*/
               ),
-              child: Icon(Icons.colorize_rounded, size: 18, color: isLight ? cs.onSurfaceVariant : cs.onInverseSurface.withValues(alpha: 0.8)),
+              child: Icon(
+                Icons.colorize_rounded,
+                size: 18,
+                color: isLight
+                    ? cs.onSurfaceVariant
+                    : cs.onInverseSurface.withValues(alpha: 0.8),
+              ),
             ),
             const SizedBox(width: 14),
             Expanded(
               child: Column(
                 crossAxisAlignment: CrossAxisAlignment.start,
                 children: [
-                  Text(label, style: const TextStyle(fontWeight: FontWeight.w600, fontSize: 14)),
-                  if (hint != null) Text(hint!, style: TextStyle(fontSize: 11, color: Colors.grey[600])),
+                  Text(
+                    label,
+                    style: const TextStyle(
+                      fontWeight: FontWeight.w600,
+                      fontSize: 14,
+                    ),
+                  ),
+                  if (hint != null)
+                    Text(
+                      hint!,
+                      style: TextStyle(fontSize: 11, color: Colors.grey[600]),
+                    ),
                 ],
               ),
             ),
             Container(
               padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 4),
-              decoration: BoxDecoration(color: cs.surfaceContainerHigh, borderRadius: BorderRadius.circular(6)),
-              child: Text(hex, style: const TextStyle(fontFamily: 'monospace', fontSize: 11)),
+              decoration: BoxDecoration(
+                color: cs.surfaceContainerHigh,
+                borderRadius: BorderRadius.circular(6),
+              ),
+              child: Text(
+                hex,
+                style: const TextStyle(fontFamily: 'monospace', fontSize: 11),
+              ),
             ),
             const SizedBox(width: 4),
             Icon(Icons.chevron_right, color: cs.onSurfaceVariant, size: 18),
@@ -488,12 +943,23 @@ class _ThemePreview extends StatelessWidget {
             child: Row(
               mainAxisAlignment: MainAxisAlignment.center,
               children: [
-                Text('Preview', style: Theme.of(context).textTheme.labelSmall?.copyWith(color: cs.onSurfaceVariant, letterSpacing: 1.2)),
+                Text(
+                  'Preview',
+                  style: Theme.of(context).textTheme.labelSmall?.copyWith(
+                    color: cs.onSurfaceVariant,
+                    letterSpacing: 1.2,
+                  ),
+                ),
                 const SizedBox(width: 8),
                 Container(
-                  padding: const EdgeInsets.symmetric(horizontal: 6, vertical: 2),
+                  padding: const EdgeInsets.symmetric(
+                    horizontal: 6,
+                    vertical: 2,
+                  ),
                   decoration: BoxDecoration(
-                    color: colors.isDark ? colors.inverseSurface : colors.onSurface,
+                    color: colors.isDark
+                        ? colors.inverseSurface
+                        : colors.onSurface,
                     borderRadius: BorderRadius.circular(6),
                   ),
                   child: Row(
@@ -502,14 +968,18 @@ class _ThemePreview extends StatelessWidget {
                       Icon(
                         colors.isDark ? Icons.dark_mode : Icons.light_mode,
                         size: 11,
-                        color: colors.isDark ? colors.onInverseSurface : colors.tertiary,
+                        color: colors.isDark
+                            ? colors.onInverseSurface
+                            : colors.tertiary,
                       ),
                       const SizedBox(width: 3),
                       Text(
                         colors.isDark ? 'Dark' : 'Light',
                         style: TextStyle(
                           fontSize: 10,
-                          color: colors.isDark ? colors.onInverseSurface : colors.onSurface,
+                          color: colors.isDark
+                              ? colors.onInverseSurface
+                              : colors.onSurface,
                           fontWeight: FontWeight.w600,
                         ),
                       ),
@@ -541,7 +1011,8 @@ class _MockApp extends StatelessWidget {
   final CustomThemeColors c;
   final String name;
 
-  const _MockApp({required CustomThemeColors colors, required this.name}) : c = colors;
+  const _MockApp({required CustomThemeColors colors, required this.name})
+    : c = colors;
 
   @override
   Widget build(BuildContext context) {
@@ -559,7 +1030,11 @@ class _MockApp extends StatelessWidget {
                 Expanded(
                   child: Text(
                     name,
-                    style: TextStyle(color: c.onPrimary, fontWeight: FontWeight.bold, fontSize: 12),
+                    style: TextStyle(
+                      color: c.onPrimary,
+                      fontWeight: FontWeight.bold,
+                      fontSize: 12,
+                    ),
                     overflow: TextOverflow.ellipsis,
                   ),
                 ),
@@ -579,21 +1054,37 @@ class _MockApp extends StatelessWidget {
                 children: [
                   _card(
                     color: c.surfaceContainerHighest,
-                    border: Border.all(color: c.outlineVariant.withValues(alpha: 0.6)),
+                    border: Border.all(
+                      color: c.outlineVariant.withValues(alpha: 0.6),
+                    ),
                     shadow: true,
                     child: Column(
                       crossAxisAlignment: CrossAxisAlignment.start,
                       children: [
                         Text(
                           'Card Title',
-                          style: TextStyle(color: c.onSurface, fontWeight: FontWeight.bold, fontSize: 9),
+                          style: TextStyle(
+                            color: c.onSurface,
+                            fontWeight: FontWeight.bold,
+                            fontSize: 9,
+                          ),
                         ),
                         const SizedBox(height: 3),
-                        Text('Description on the card.', style: TextStyle(color: c.onSurfaceVariant, fontSize: 8)),
+                        Text(
+                          'Description on the card.',
+                          style: TextStyle(
+                            color: c.onSurfaceVariant,
+                            fontSize: 8,
+                          ),
+                        ),
                         const SizedBox(height: 8),
                         Row(
                           mainAxisAlignment: MainAxisAlignment.end,
-                          children: [_outlinedBtn('Cancel', c.primary), const SizedBox(width: 5), _filledBtn('OK', c.primary, c.onPrimary)],
+                          children: [
+                            _outlinedBtn('Cancel', c.primary),
+                            const SizedBox(width: 5),
+                            _filledBtn('OK', c.primary, c.onPrimary),
+                          ],
                         ),
                       ],
                     ),
@@ -604,15 +1095,24 @@ class _MockApp extends StatelessWidget {
                     children: ['Design', 'Colors', 'Theme']
                         .map(
                           (l) => Container(
-                            padding: const EdgeInsets.symmetric(horizontal: 7, vertical: 3),
+                            padding: const EdgeInsets.symmetric(
+                              horizontal: 7,
+                              vertical: 3,
+                            ),
                             decoration: BoxDecoration(
                               color: c.secondary.withValues(alpha: 0.18),
                               borderRadius: BorderRadius.circular(20),
-                              border: Border.all(color: c.secondary.withValues(alpha: 0.45)),
+                              border: Border.all(
+                                color: c.secondary.withValues(alpha: 0.45),
+                              ),
                             ),
                             child: Text(
                               l,
-                              style: TextStyle(color: c.secondary, fontSize: 7, fontWeight: FontWeight.w600),
+                              style: TextStyle(
+                                color: c.secondary,
+                                fontSize: 7,
+                                fontWeight: FontWeight.w600,
+                              ),
                             ),
                           ),
                         )
@@ -621,13 +1121,18 @@ class _MockApp extends StatelessWidget {
                   const SizedBox(height: 6),
                   _card(
                     color: c.tertiary.withValues(alpha: 0.15),
-                    border: Border.all(color: c.tertiary.withValues(alpha: 0.4)),
+                    border: Border.all(
+                      color: c.tertiary.withValues(alpha: 0.4),
+                    ),
                     child: Row(
                       children: [
                         Icon(Icons.info_outline, color: c.tertiary, size: 11),
                         const SizedBox(width: 5),
                         Expanded(
-                          child: Text('Tertiary-Accent', style: TextStyle(color: c.tertiary, fontSize: 8)),
+                          child: Text(
+                            'Tertiary-Accent',
+                            style: TextStyle(color: c.tertiary, fontSize: 8),
+                          ),
                         ),
                       ],
                     ),
@@ -641,7 +1146,10 @@ class _MockApp extends StatelessWidget {
                         Icon(Icons.error_outline, color: c.error, size: 11),
                         const SizedBox(width: 5),
                         Expanded(
-                          child: Text('Error status', style: TextStyle(color: c.error, fontSize: 8)),
+                          child: Text(
+                            'Error status',
+                            style: TextStyle(color: c.error, fontSize: 8),
+                          ),
                         ),
                       ],
                     ),
@@ -660,11 +1168,19 @@ class _MockApp extends StatelessWidget {
                 _navIcon(Icons.person_outline, active: false, c: c),
                 const Spacer(),
                 Container(
-                  padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 5),
+                  padding: const EdgeInsets.symmetric(
+                    horizontal: 8,
+                    vertical: 5,
+                  ),
                   decoration: BoxDecoration(
                     color: c.primary,
                     borderRadius: BorderRadius.circular(12),
-                    boxShadow: [BoxShadow(color: c.primary.withValues(alpha: 0.35), blurRadius: 6)],
+                    /*                    boxShadow: [
+                      BoxShadow(
+                        color: c.primary.withValues(alpha: 0.35),
+                        blurRadius: 6,
+                      ),
+                    ],*/
                   ),
                   child: Row(
                     mainAxisSize: MainAxisSize.min,
@@ -673,7 +1189,11 @@ class _MockApp extends StatelessWidget {
                       const SizedBox(width: 3),
                       Text(
                         'New',
-                        style: TextStyle(color: c.onPrimary, fontSize: 8, fontWeight: FontWeight.bold),
+                        style: TextStyle(
+                          color: c.onPrimary,
+                          fontSize: 8,
+                          fontWeight: FontWeight.bold,
+                        ),
                       ),
                     ],
                   ),
@@ -686,21 +1206,37 @@ class _MockApp extends StatelessWidget {
     );
   }
 
-  Widget _card({required Color color, required Widget child, bool shadow = false, Border? border}) => Container(
+  Widget _card({
+    required Color color,
+    required Widget child,
+    bool shadow = false,
+    Border? border,
+  }) => Container(
     width: double.infinity,
     padding: const EdgeInsets.all(8),
     decoration: BoxDecoration(
       color: color,
       borderRadius: BorderRadius.circular(8),
       border: border,
-      boxShadow: shadow ? [BoxShadow(color: Colors.black.withValues(alpha: 0.08), blurRadius: 4, offset: const Offset(0, 2))] : null,
+      boxShadow: shadow
+          ? [
+              BoxShadow(
+                color: Colors.black.withValues(alpha: 0.08),
+                blurRadius: 4,
+                offset: const Offset(0, 2),
+              ),
+            ]
+          : null,
     ),
     child: child,
   );
 
   Widget _filledBtn(String l, Color bg, Color fg) => Container(
     padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 4),
-    decoration: BoxDecoration(color: bg, borderRadius: BorderRadius.circular(20)),
+    decoration: BoxDecoration(
+      color: bg,
+      borderRadius: BorderRadius.circular(20),
+    ),
     child: Text(
       l,
       style: TextStyle(color: fg, fontSize: 8, fontWeight: FontWeight.bold),
@@ -716,8 +1252,16 @@ class _MockApp extends StatelessWidget {
     child: Text(l, style: TextStyle(color: color, fontSize: 8)),
   );
 
-  Widget _navIcon(IconData icon, {required bool active, required CustomThemeColors c}) => Padding(
+  Widget _navIcon(
+    IconData icon, {
+    required bool active,
+    required CustomThemeColors c,
+  }) => Padding(
     padding: const EdgeInsets.symmetric(horizontal: 5),
-    child: Icon(icon, size: 13, color: active ? c.primary : c.onSurfaceVariant.withValues(alpha: 0.6)),
+    child: Icon(
+      icon,
+      size: 13,
+      color: active ? c.primary : c.onSurfaceVariant.withValues(alpha: 0.6),
+    ),
   );
 }

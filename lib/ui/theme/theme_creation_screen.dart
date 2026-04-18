@@ -673,7 +673,7 @@ class _ThemePreviewState extends State<ThemePreview> {
                     children: [
                       Expanded(
                         child: Text(
-                          widget.showCreatorInline && widget.creatorName != null ? 'by ${widget.creatorName}' : '',
+                          widget.creatorName == 'default' ? "default theme" : widget.showCreatorInline && widget.creatorName != null ? 'by ${widget.creatorName}' : '',
                           maxLines: 1,
                           overflow: TextOverflow.ellipsis,
                           style: TextStyle(fontSize: 9, color: widget.creatorName == 'you' ? Colors.greenAccent : widget.c.onBackground.withValues(alpha: 0.7)),
@@ -722,7 +722,7 @@ class _ThemePreviewState extends State<ThemePreview> {
                 shape: const CircleBorder(),
                 child: PopupMenuButton<String>(
                   tooltip: 'Theme options',
-                  icon: Transform.translate(offset: Offset(-7, -7), child: Icon(Icons.more_horiz, opticalSize: 14, color: _overlayForeground)),
+                  icon: Transform.translate(offset: const Offset(-7, -7), child: Icon(Icons.more_horiz, opticalSize: 14, color: _overlayForeground)),
                   color: Theme.of(context).colorScheme.surface,
                   onSelected: (val) async {
                     if (val == 'edit' && widget.openEditor != null) {
