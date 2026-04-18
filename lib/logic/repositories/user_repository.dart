@@ -1,3 +1,5 @@
+import 'dart:async';
+
 import 'package:supabase_flutter/supabase_flutter.dart';
 import 'package:wurp/tools/supabase_tests/supabase_login_test.dart';
 
@@ -17,6 +19,9 @@ class UserRepository {
   final Map<String, _IncrementalVideoCache> _publishedVideosCache = {};
   final Map<String, _IncrementalUserListCache> _followersCache = {};
   final Map<String, _IncrementalUserListCache> _followingCache = {};
+  final StreamController<FollowChangeEvent> _followChangesController = StreamController<FollowChangeEvent>.broadcast();
+
+  Stream<FollowChangeEvent> get followChanges => _followChangesController.stream;
 
   Future<UserProfile> getUser(String userId) async => (await getUserSupabase(userId)) ?? (throw StateError('User $userId not found'));
 
@@ -152,7 +157,7 @@ class UserRepository {
         return candidate;
       }
     }
-    return '${base}${DateTime.now().millisecondsSinceEpoch % 100000}';
+    return '$base${DateTime.now().millisecondsSinceEpoch % 100000}';
   }
 
   Future<UserProfile> completeCurrentUserOnboarding({
@@ -190,8 +195,9 @@ class UserRepository {
   Future<bool> toggleFollowUser(String followingId) async {
     if (currentUser.id == followingId) throw Exception('Cannot toggle follow yourself');
     String result = await supabaseClient.rpc('toggle_follow', params: {'p_other_id': followingId});
-    bool followed = result == 'followed';
+    final bool followed = result == 'followed';
     currentUser = currentUser.copyWith(followingCount: followed ? (currentUser.followingCount ?? 0) + 1 : (currentUser.followingCount ?? 1) - 1);
+    await _handleFollowChange(followerId: currentUser.id, targetUserId: followingId, followed: followed);
     return followed;
   }
 
@@ -671,6 +677,50 @@ class UserRepository {
     }
   }
 
+  Future<void> _handleFollowChange({
+    required String followerId,
+    required String targetUserId,
+    required bool followed,
+  }) async {
+    UserProfile? targetUser = _userCache[targetUserId]?.profile ?? _safeLocalAuthor(targetUserId);
+    if (followed && targetUser == null) {
+      targetUser = await getUserSupabase(targetUserId);
+    }
+
+    final followingCache = _followingCache[followerId];
+    if (followingCache != null && followingCache.initialized) {
+      if (followed) {
+        final target = targetUser;
+        if (target != null && !followingCache.items.any((u) => u.id == target.id)) {
+          followingCache.items.insert(0, target);
+        }
+      } else {
+        followingCache.items.removeWhere((u) => u.id == targetUserId);
+      }
+    }
+
+    final followerUser = followerId == currentUser.id ? currentUser : _userCache[followerId]?.profile ?? _safeLocalAuthor(followerId);
+    final followersCache = _followersCache[targetUserId];
+    if (followersCache != null && followersCache.initialized) {
+      if (followed) {
+        if (followerUser != null && !followersCache.items.any((u) => u.id == followerUser.id)) {
+          followersCache.items.insert(0, followerUser);
+        }
+      } else {
+        followersCache.items.removeWhere((u) => u.id == followerId);
+      }
+    }
+
+    _followChangesController.add(
+      FollowChangeEvent(
+        followerId: followerId,
+        targetUserId: targetUserId,
+        followed: followed,
+        targetUser: targetUser,
+      ),
+    );
+  }
+
   void _prependUniqueVideos(List<Video> target, List<Video> incoming) {
     final existing = target.map((e) => e.id).toSet();
     final toInsert = incoming.where((e) => !existing.contains(e.id)).toList();
@@ -790,3 +840,18 @@ class _TimedUserProfile {
 
   _TimedUserProfile({required this.profile, required this.createdAt});
 }
+
+class FollowChangeEvent {
+  final String followerId;
+  final String targetUserId;
+  final bool followed;
+  final UserProfile? targetUser;
+
+  const FollowChangeEvent({
+    required this.followerId,
+    required this.targetUserId,
+    required this.followed,
+    this.targetUser,
+  });
+}
+

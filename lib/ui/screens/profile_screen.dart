@@ -1,8 +1,10 @@
+import 'dart:async';
 import 'dart:math';
 
 import 'package:flutter/material.dart';
 import 'package:font_awesome_flutter/font_awesome_flutter.dart';
 import 'package:wurp/logic/chat/chat.dart';
+import 'package:wurp/logic/repositories/user_repository.dart' as user_repo;
 import 'package:wurp/logic/users/user_model.dart';
 import 'package:wurp/logic/video/video.dart';
 import 'package:wurp/ui/animations/slide_morph_transitions.dart';
@@ -57,6 +59,7 @@ class _ProfileScreenState extends State<ProfileScreen> with TickerProviderStateM
   final GlobalKey<AnimatedPreloadingListState<UserProfile>> _followingListKey = GlobalKey<AnimatedPreloadingListState<UserProfile>>();
   final GlobalKey<AnimatedPreloadingListState<UserProfile>> _followersListKey = GlobalKey<AnimatedPreloadingListState<UserProfile>>();
   final GlobalKey<AnimatedPreloadingListState<UserProfile>> _videoListKey = GlobalKey<AnimatedPreloadingListState<UserProfile>>();
+  StreamSubscription<user_repo.FollowChangeEvent>? _followChangesSub;
 
   @override
   void initState() {
@@ -93,12 +96,63 @@ class _ProfileScreenState extends State<ProfileScreen> with TickerProviderStateM
     );
     _followingQuery.preloadMore(limit: 8);
     _followersQuery.preloadMore(limit: 8);
+
+    if (widget.ownProfile) {
+      _followChangesSub = userRepository.followChanges.listen(_onOwnFollowChanged);
+    }
   }
 
   @override
   void dispose() {
+    _followChangesSub?.cancel();
     _tabController.dispose();
     super.dispose();
+  }
+
+  Future<void> _onOwnFollowChanged(user_repo.FollowChangeEvent event) async {
+    if (!mounted || event.followerId != user.id) return;
+
+    final listState = _followingListKey.currentState;
+    final containsInList = listState?.items.any((u) => u.id == event.targetUserId) ?? false;
+
+    if (event.followed) {
+      UserProfile? followedUser = event.targetUser;
+      followedUser ??= _followingQuery.results.where((u) => u.id == event.targetUserId).firstOrNull;
+      followedUser ??= localSeenService.getAuthorFromCache(event.targetUserId);
+      followedUser ??= await userRepository.getUserSupabase(event.targetUserId);
+      if (!mounted || followedUser == null) {
+        _syncOwnFollowingCount();
+        return;
+      }
+      final targetUser = followedUser;
+
+      if (!_followingQuery.results.any((u) => u.id == targetUser.id)) {
+        _followingQuery.results.insert(0, targetUser);
+      }
+
+      if (listState != null && !containsInList) {
+        listState.addItem(targetUser);
+      }
+    } else {
+      _followingQuery.results.removeWhere((u) => u.id == event.targetUserId);
+      if (listState != null) {
+        final currentIndex = listState.items.indexWhere((u) => u.id == event.targetUserId);
+        if (currentIndex != -1) {
+          final removedUser = listState.items[currentIndex];
+          final cs = Theme.of(context).colorScheme;
+          listState.removeItem(currentIndex, (context, anim) => _buildSqueezeItem(removedUser, anim, cs));
+        }
+      }
+    }
+
+    _syncOwnFollowingCount();
+  }
+
+  void _syncOwnFollowingCount() {
+    if (!mounted) return;
+    setState(() {
+      user = user.copyWith(followingCount: currentUser.followingCount ?? user.followingCount);
+    });
   }
 
   @override
