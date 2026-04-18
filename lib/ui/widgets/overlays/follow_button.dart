@@ -1,7 +1,8 @@
+import 'dart:async';
+
 import 'package:flutter/material.dart';
 import 'package:wurp/logic/local_storage/local_seen_service.dart';
 import 'package:wurp/logic/users/user_model.dart';
-import 'package:wurp/ui/animations/slide_morph_transitions.dart';
 
 import '../../../base_logic.dart';
 
@@ -22,38 +23,86 @@ class FollowButton extends StatefulWidget {
 class FollowButtonState extends State<FollowButton> with SingleTickerProviderStateMixin {
   late bool _subscribed = widget.initialSubscribed;
   bool _isLoading = false;
+  bool _showLoadingIndicator = false;
+  Timer? _loadingIndicatorDelayTimer;
   late AnimationController _controller;
-  late Animation<double> _scaleAnimation;
-  late Animation<double> _checkAnimation;
+  late Animation<double> _pressScaleAnimation;
+  late Animation<double> _iconPopAnimation;
 
   @override
   void initState() {
     super.initState();
 
-    _controller = AnimationController(vsync: this, duration: const Duration(milliseconds: 350));
+    _controller = AnimationController(vsync: this, duration: const Duration(milliseconds: 420));
 
-    _scaleAnimation = Tween<double>(begin: 1.0, end: 0.92).animate(CurvedAnimation(parent: _controller, curve: Curves.bounceInOut));
+    _pressScaleAnimation = TweenSequence<double>([
+      TweenSequenceItem(
+        tween: Tween<double>(begin: 1.0, end: 0.94).chain(CurveTween(curve: Curves.easeOutCubic)),
+        weight: 20,
+      ),
+      TweenSequenceItem(
+        tween: Tween<double>(begin: 0.94, end: 1.03).chain(CurveTween(curve: Curves.easeOutBack)),
+        weight: 45,
+      ),
+      TweenSequenceItem(
+        tween: Tween<double>(begin: 1.03, end: 1.0).chain(CurveTween(curve: Curves.easeInOut)),
+        weight: 35,
+      ),
+    ]).animate(_controller);
 
-    _checkAnimation = CurvedAnimation(parent: _controller, curve: Curves.easeIn);
+    _iconPopAnimation = CurvedAnimation(
+      parent: _controller,
+      curve: const Interval(0.12, 0.78, curve: Curves.easeOutBack),
+    );
+  }
+
+  @override
+  void didUpdateWidget(covariant FollowButton oldWidget) {
+    super.didUpdateWidget(oldWidget);
+    if (oldWidget.initialSubscribed != widget.initialSubscribed) {
+      _subscribed = widget.initialSubscribed;
+    }
   }
 
   void _toggle() async {
     if (_isLoading) return;
-    setState(() => _isLoading = true);
-
-    await _controller.forward();
-    _controller.reverse();
-
-    _subscribed = await userRepository.toggleFollowUser(widget.user.id);
-    if (_subscribed) {
-      localSeenService.followUser(widget.user.id);
-    } else {
-      localSeenService.unfollowUser(widget.user.id);
-    }
-    await widget.onChanged?.call(_subscribed);
     setState(() {
-      _isLoading = false;
+      _isLoading = true;
+      _showLoadingIndicator = false;
     });
+
+    _loadingIndicatorDelayTimer?.cancel();
+    _loadingIndicatorDelayTimer = Timer(const Duration(seconds: 1), () {
+      if (!mounted || !_isLoading) return;
+      setState(() {
+        _showLoadingIndicator = true;
+      });
+    });
+
+    await _controller.forward(from: 0);
+
+    try {
+      final subscribed = await userRepository.toggleFollowUser(widget.user.id);
+      if (!mounted) return;
+
+      setState(() {
+        _subscribed = subscribed;
+      });
+
+      if (subscribed) {
+        localSeenService.followUser(widget.user.id);
+      } else {
+        localSeenService.unfollowUser(widget.user.id);
+      }
+
+      await widget.onChanged?.call(subscribed);
+    } finally {
+      _loadingIndicatorDelayTimer?.cancel();
+      setState(() {
+        _isLoading = false;
+        _showLoadingIndicator = false;
+      });
+    }
   }
 
   void setFollowed(bool followed) {
@@ -70,45 +119,81 @@ class FollowButtonState extends State<FollowButton> with SingleTickerProviderSta
 
     final foregroundColor = _subscribed ? theme.colorScheme.onSecondary : theme.colorScheme.onPrimary;
 
-    return GestureDetector(
-      onTap: _toggle,
-      child: AnimatedScale(
-        scale: _scaleAnimation.value,
-        duration: const Duration(milliseconds: 100),
-        child: AnimatedContainer(
-          duration: const Duration(milliseconds: 300),
-          curve: Curves.easeInOut,
-          padding: const EdgeInsets.symmetric(horizontal: 24, vertical: 14),
-          decoration: BoxDecoration(
-            color: backgroundColor,
-            borderRadius: widget.design == FollowButtonDesign.floating
-                ? BorderRadius.circular(16)
-                : const BorderRadius.only(topLeft: Radius.circular(16), topRight: Radius.circular(16)),
-          ),
-          child: AnimatedSwitcher(
-            duration: const Duration(milliseconds: 250),
-            transitionBuilder: (child, animation) {
-              return SlideMorphTransitions.switcher(child, animation, beginOffset: const Offset(0, 0.3), beginScale: 0.92);
-            },
-            child: Row(
-              key: ValueKey(_subscribed),
-              mainAxisSize: MainAxisSize.min,
-              children: [
-                AnimatedBuilder(
-                  animation: _checkAnimation,
-                  builder: (context, child) {
-                    return Transform.scale(
-                      scale: _subscribed ? 1 - _checkAnimation.value : 1 - _checkAnimation.value,
-                      child: Icon(_subscribed ? Icons.check_circle : Icons.notifications, color: foregroundColor),
-                    );
-                  },
-                ),
-                const SizedBox(width: 10),
-                Text(
-                  _subscribed ? "Followed" : "Follow",
-                  style: theme.textTheme.labelLarge?.copyWith(color: foregroundColor, fontWeight: FontWeight.bold),
-                ),
-              ],
+    return AnimatedBuilder(
+      animation: _controller,
+      builder: (context, child) {
+        return Transform.scale(
+          scale: _pressScaleAnimation.value,
+          child: child,
+        );
+      },
+      child: Material(
+        type: MaterialType.transparency,
+        child: InkWell(
+          onTap: _isLoading ? null : _toggle,
+          borderRadius: widget.design == FollowButtonDesign.floating
+              ? BorderRadius.circular(16)
+              : const BorderRadius.only(topLeft: Radius.circular(16), topRight: Radius.circular(16)),
+          child: AnimatedContainer(
+            duration: const Duration(milliseconds: 360),
+            curve: Curves.easeInOutCubic,
+            padding: const EdgeInsets.symmetric(horizontal: 24, vertical: 14),
+            decoration: BoxDecoration(
+              color: backgroundColor,
+              borderRadius: widget.design == FollowButtonDesign.floating
+                  ? BorderRadius.circular(16)
+                  : const BorderRadius.only(topLeft: Radius.circular(16), topRight: Radius.circular(16)),
+            ),
+            child: AnimatedSize(
+              duration: const Duration(milliseconds: 360),
+              curve: Curves.easeInOutCubic,
+              alignment: Alignment.center,
+              clipBehavior: Clip.none,
+              child: AnimatedSwitcher(
+                duration: const Duration(milliseconds: 220),
+                switchInCurve: Curves.easeOutCubic,
+                switchOutCurve: Curves.easeInCubic,
+                transitionBuilder: (child, animation) {
+                  return FadeTransition(opacity: animation, child: child);
+                },
+                layoutBuilder: (currentChild, previousChildren) {
+                  return Stack(
+                    alignment: Alignment.center,
+                    children: <Widget>[
+                      ...previousChildren,
+                      ?currentChild,
+                    ],
+                  );
+                },
+                child: _showLoadingIndicator
+                    ? SizedBox(
+                        key: const ValueKey('loading'),
+                        width: 22,
+                        height: 22,
+                        child: CircularProgressIndicator(
+                          strokeWidth: 2.4,
+                          valueColor: AlwaysStoppedAnimation<Color>(foregroundColor),
+                        ),
+                      )
+                    : Row(
+                        key: const ValueKey('label'),
+                        mainAxisSize: MainAxisSize.min,
+                        children: [
+                          Transform.scale(
+                            scale: 0.92 + (_iconPopAnimation.value * 0.14),
+                            child: Icon(
+                              _subscribed ? Icons.check_circle : Icons.notifications,
+                              color: foregroundColor,
+                            ),
+                          ),
+                          const SizedBox(width: 10),
+                          Text(
+                            _subscribed ? "Followed" : "Follow",
+                            style: theme.textTheme.labelLarge?.copyWith(color: foregroundColor, fontWeight: FontWeight.bold),
+                          ),
+                        ],
+                      ),
+              ),
             ),
           ),
         ),
@@ -118,6 +203,7 @@ class FollowButtonState extends State<FollowButton> with SingleTickerProviderSta
 
   @override
   void dispose() {
+    _loadingIndicatorDelayTimer?.cancel();
     _controller.dispose();
     super.dispose();
   }
