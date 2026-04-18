@@ -25,6 +25,7 @@ class _ThemeManagerScreenState extends State<ThemeManagerScreen> with TickerProv
   List<CustomThemeModel> _communityThemes = [];
   final Set<String> _savedThemeIds = {};
   final Set<String> _ownedThemeIds = {};
+  final Map<String, String> _creatorNamesById = {};
   String? _selectedThemeId;
   bool _loadingMine = true;
   bool _loadingCommunity = true;
@@ -61,6 +62,46 @@ class _ThemeManagerScreenState extends State<ThemeManagerScreen> with TickerProv
   String? get _uid => _supabase.auth.currentUser?.id;
 
   bool _isOwnedTheme(CustomThemeModel theme) => _ownedThemeIds.contains(theme.id);
+
+  String? _creatorNameForTheme(CustomThemeModel theme) {
+    final creatorId = theme.createdBy;
+    if (creatorId == null) return null;
+    if (creatorId == _uid) return 'You';
+    return _creatorNamesById[creatorId] ?? _shortUserId(creatorId);
+  }
+
+  Future<void> _hydrateCreatorNames(Iterable<CustomThemeModel> themes) async {
+    final idsToLookup = themes
+        .map((t) => t.createdBy)
+        .whereType<String>()
+        .where((id) => id.isNotEmpty && !_creatorNamesById.containsKey(id))
+        .toSet();
+    if (idsToLookup.isEmpty) return;
+
+    final resolved = <String, String>{};
+    try {
+      final rows = await _supabase.from('profiles').select('id, username, display_name').inFilter('id', idsToLookup.toList());
+      for (final row in rows as List) {
+        final id = row['id'] as String?;
+        if (id == null || id.isEmpty) continue;
+        final displayName = (row['display_name'] as String?)?.trim();
+        final username = (row['username'] as String?)?.trim();
+        resolved[id] =
+            (displayName != null && displayName.isNotEmpty) ? displayName : (username != null && username.isNotEmpty) ? '@$username' : _shortUserId(id);
+      }
+    } catch (e) {
+      debugPrint('Error loading creator usernames: $e');
+    }
+
+    for (final id in idsToLookup) {
+      resolved.putIfAbsent(id, () => _shortUserId(id));
+    }
+
+    if (!mounted || resolved.isEmpty) return;
+    setState(() {
+      _creatorNamesById.addAll(resolved);
+    });
+  }
 
   Future<bool> _saveThemeReference(String themeId) async {
     if (_uid == null) return false;
@@ -127,6 +168,7 @@ class _ThemeManagerScreenState extends State<ThemeManagerScreen> with TickerProv
           _loadingMine = false;
         });
       }
+      await _hydrateCreatorNames(mergedById.values);
     } catch (e) {
       debugPrint('Error loading my themes: $e');
       if (mounted) setState(() => _loadingMine = false);
@@ -145,6 +187,7 @@ class _ThemeManagerScreenState extends State<ThemeManagerScreen> with TickerProv
           _loadingCommunity = false;
         });
       }
+      await _hydrateCreatorNames(_communityThemes);
     } catch (e) {
       debugPrint('Error loading community themes: $e');
       if (mounted) setState(() => _loadingCommunity = false);
@@ -363,6 +406,7 @@ class _ThemeManagerScreenState extends State<ThemeManagerScreen> with TickerProv
         final isSelected = _selectedThemeId == theme.id;
         final isDefault = theme.id == 'default' || theme.id == 'default-dark';
         final isOwned = _isOwnedTheme(theme);
+        final creatorName = _creatorNameForTheme(theme);
         final c = theme.colors;
 
         return GestureDetector(
@@ -403,6 +447,10 @@ class _ThemeManagerScreenState extends State<ThemeManagerScreen> with TickerProv
               saveTheme: isOwned ? _saveTheme : null,
               deleteTheme: isDefault ? null : _deleteTheme,
               isSelected: isSelected,
+              creatorName: isOwned ? 'you' : isDefault ? 'default' : creatorName,
+              showCreatorInline: true,
+              isPublic: !isDefault && theme.isPublic,
+              showVisibilityBadge: !isDefault,
             ),
           ),
         );
@@ -425,6 +473,7 @@ class _ThemeManagerScreenState extends State<ThemeManagerScreen> with TickerProv
         final c = theme.colors;
         final isSelected = _selectedThemeId == theme.id;
         final isLiked = _likedIds.contains(theme.id);
+        final creatorName = _creatorNameForTheme(theme);
 
         return GestureDetector(
           onTap: () async {
@@ -461,7 +510,10 @@ class _ThemeManagerScreenState extends State<ThemeManagerScreen> with TickerProv
               onLikeToggle: _toggleLike,
               likesCount: theme.likesCount,
               initiallyLiked: isLiked,
-              authorName: theme.createdBy,
+              creatorName: creatorName,
+              showCreatorInline: theme.createdBy != _uid,
+              isPublic: theme.isPublic,
+              showVisibilityBadge: true,
             ),
           ),
         );
@@ -479,7 +531,10 @@ class ThemePreview extends StatefulWidget {
   final Future<void> Function(CustomThemeModel)? deleteTheme;
   final bool isSelected;
 
-  final String? authorName;
+  final String? creatorName;
+  final bool showCreatorInline;
+  final bool isPublic;
+  final bool showVisibilityBadge;
   final int? likesCount;
   final void Function(String)? onLikeToggle;
   final bool initiallyLiked;
@@ -493,7 +548,10 @@ class ThemePreview extends StatefulWidget {
     required this.saveTheme,
     required this.deleteTheme,
     required this.isSelected,
-    this.authorName,
+    this.creatorName,
+    this.showCreatorInline = false,
+    this.isPublic = false,
+    this.showVisibilityBadge = false,
     this.likesCount,
     this.onLikeToggle,
     this.initiallyLiked = false,
@@ -505,6 +563,14 @@ class ThemePreview extends StatefulWidget {
 
 class _ThemePreviewState extends State<ThemePreview> {
   late bool isLiked = widget.initiallyLiked;
+
+  bool get _isLightSurface => widget.c.background.computeLuminance() > 0.55;
+
+  Color get _overlayForeground => _isLightSurface ? Colors.black87 : Colors.white;
+
+  Color get _overlayBackground => _isLightSurface ? Colors.white.withValues(alpha: 0.84) : Colors.black.withValues(alpha: 0.54);
+
+  Color get _overlayBorder => _isLightSurface ? Colors.black.withValues(alpha: 0.12) : Colors.white.withValues(alpha: 0.18);
 
   @override
   void didUpdateWidget(covariant ThemePreview oldWidget) {
@@ -525,88 +591,92 @@ class _ThemePreviewState extends State<ThemePreview> {
         children: [
           Positioned.fill(child: Container(color: widget.c.background)),
 
-          Positioned(
-            top: 12,
-            right: 12,
+          AnimatedPositioned(
+            top: 10,
+            left: widget.isSelected ? 34 : 10,
+            duration: const Duration(milliseconds: 400),
+            curve: Curves.easeIn,
             child: Row(
-              children: [widget.c.primary, widget.c.secondary, widget.c.tertiary]
-                  .map(
-                    (col) => Container(
-                      width: 12,
-                      height: 12,
-                      margin: const EdgeInsets.only(left: 4),
-                      decoration: BoxDecoration(
-                        color: col,
-                        shape: BoxShape.circle,
-                        border: Border.all(color: Colors.white, width: 1.5),
-                      ),
-                    ),
-                  )
-                  .toList(),
+              children: [
+                _OverlayBadge(
+                  icon: widget.c.isDark ? Icons.dark_mode : Icons.light_mode,
+                  label: widget.c.isDark ? 'Dark' : 'Light',
+                  foreground: _overlayForeground,
+                  background: _overlayBackground,
+                  borderColor: _overlayBorder,
+                ),
+                if (widget.showVisibilityBadge) ...[
+                  const SizedBox(width: 6),
+                  _OverlayBadge(
+                    icon: widget.isPublic ? Icons.public : Icons.lock_outline,
+                    label: widget.isPublic ? 'Public' : 'Private',
+                    foreground: _overlayForeground,
+                    background: _overlayBackground,
+                    borderColor: _overlayBorder,
+                  ),
+                ],
+              ],
             ),
           ),
 
-          Padding(
-            padding: const EdgeInsets.all(12),
-            child: Column(
-              crossAxisAlignment: CrossAxisAlignment.start,
-              children: [
-                Container(
-                  height: 20,
-                  decoration: BoxDecoration(color: widget.c.primary, borderRadius: BorderRadius.circular(6)),
-                ),
-
-                const SizedBox(height: 8),
-
-                Container(
-                  height: 8,
-                  width: 80,
-                  decoration: BoxDecoration(color: widget.c.onBackground.withValues(alpha: 0.7), borderRadius: BorderRadius.circular(4)),
-                ),
-                const SizedBox(height: 6),
-                Container(
-                  height: 8,
-                  width: 50,
-                  decoration: BoxDecoration(color: widget.c.onBackground.withValues(alpha: 0.4), borderRadius: BorderRadius.circular(4)),
-                ),
-
-                const Spacer(),
-
-                Container(
-                  height: 26,
-                  decoration: BoxDecoration(color: widget.c.secondary, borderRadius: BorderRadius.circular(8)),
-                  child: Center(
-                    child: Text(
-                      "Button",
-                      style: TextStyle(color: widget.c.onSecondary, fontSize: 10, fontWeight: FontWeight.w600),
+          Positioned.fill(
+            top: 32,
+            child: Padding(
+              padding: const EdgeInsets.all(12),
+              child: Column(
+                crossAxisAlignment: CrossAxisAlignment.start,
+                children: [
+                  Container(
+                    height: 20,
+                    decoration: BoxDecoration(color: widget.c.primary, borderRadius: BorderRadius.circular(6)),
+                  ),
+            
+                  const SizedBox(height: 8),
+            
+                  Container(
+                    height: 8,
+                    width: 80,
+                    decoration: BoxDecoration(color: widget.c.onBackground.withValues(alpha: 0.7), borderRadius: BorderRadius.circular(4)),
+                  ),
+                  const SizedBox(height: 6),
+                  Container(
+                    height: 8,
+                    width: 50,
+                    decoration: BoxDecoration(color: widget.c.onBackground.withValues(alpha: 0.4), borderRadius: BorderRadius.circular(4)),
+                  ),
+            
+                  const Spacer(),
+            
+                  Container(
+                    height: 26,
+                    decoration: BoxDecoration(color: widget.c.secondary, borderRadius: BorderRadius.circular(8)),
+                    child: Center(
+                      child: Text(
+                        "Button",
+                        style: TextStyle(color: widget.c.onSecondary, fontSize: 10, fontWeight: FontWeight.w600),
+                      ),
                     ),
                   ),
-                ),
-
-                const SizedBox(height: 8),
-
-                Text(
-                  widget.theme.name,
-                  maxLines: 1,
-                  overflow: TextOverflow.ellipsis,
-                  style: TextStyle(fontSize: 12, fontWeight: FontWeight.w600, color: widget.c.onBackground),
-                ),
-                if (widget.authorName != null) ...[
+            
+                  const SizedBox(height: 8),
+            
+                  Text(
+                    widget.theme.name,
+                    maxLines: 1,
+                    overflow: TextOverflow.ellipsis,
+                    style: TextStyle(fontSize: 12, fontWeight: FontWeight.w600, color: widget.c.onBackground),
+                  ),
                   const SizedBox(height: 4),
                   Row(
                     mainAxisSize: MainAxisSize.max,
                     mainAxisAlignment: MainAxisAlignment.spaceBetween,
                     children: [
-                      Flexible(
-                        child: FractionallySizedBox(
-                          widthFactor: 0.75,
-                          alignment: Alignment.centerLeft,
-                          child: Text(
-                            'by ${widget.authorName}',
-                            maxLines: 1,
-                            overflow: TextOverflow.ellipsis,
-                            style: TextStyle(fontSize: 9, color: widget.c.onBackground.withValues(alpha: 0.7)),
-                          ),
+                      Expanded(
+                        child: Text(
+                          widget.showCreatorInline && widget.creatorName != null ? 'by ${widget.creatorName}' : '',
+                          maxLines: 1,
+                          overflow: TextOverflow.ellipsis,
+                          style: TextStyle(fontSize: 9, color: widget.creatorName == 'you' ? Colors.greenAccent : widget.c.onBackground.withValues(alpha: 0.7)),
                         ),
                       ),
                       if (widget.likesCount != null)
@@ -630,75 +700,76 @@ class _ThemePreviewState extends State<ThemePreview> {
                               ),
                             ),
                             Text('${widget.likesCount}', style: TextStyle(fontSize: 9, color: widget.c.onBackground.withValues(alpha: 0.7))),
-                            if (!widget.isDefault) const SizedBox(width: 28),
                           ],
                         ),
                     ],
                   ),
                 ],
-              ],
+              ),
             ),
           ),
 
-          Positioned(
-            top: 13,
-            right: 14,
-            child: Icon(widget.c.isDark ? Icons.dark_mode : Icons.light_mode, size: 16, color: widget.c.isDark ? Colors.white : Colors.black),
-          ),
-
-          if (widget.isSelected) const Positioned(top: 10, left: 10, child: Icon(Icons.check_circle_rounded, color: Colors.green, size: 20)),
+          Positioned(top: 10, left: 8, child: AnimatedOpacity(opacity: widget.isSelected ? 1 : 0, duration: const Duration(milliseconds: 400), curve: Curves.fastEaseInToSlowEaseOut, child: const Icon(Icons.check_circle_rounded, color: Colors.green, size: 20))),
 
           if (!widget.isDefault)
             Positioned(
-              bottom: 0,
-              right: 0,
-              child: PopupMenuButton<String>(
-                icon: Icon(Icons.more_horiz, size: 18, color: widget.c.isDark ? Colors.white : Colors.black),
-                onSelected: (val) async {
-                  if (val == 'edit' && widget.openEditor != null) {
-                    await widget.openEditor!(existing: widget.theme);
-                    return;
-                  }
-                  if (val == 'share' && widget.saveTheme != null) {
-                    await widget.saveTheme!(widget.theme.copyWith(isPublic: true));
-                    if (context.mounted) {
-                      showSnackBar(context, 'Shared with the Community!');
+              top: 8,
+              right: 8,
+              width: 26,
+              height: 26,
+              child: Material(
+                color: _overlayBackground,
+                shape: const CircleBorder(),
+                child: PopupMenuButton<String>(
+                  tooltip: 'Theme options',
+                  icon: Transform.translate(offset: Offset(-7, -7), child: Icon(Icons.more_horiz, opticalSize: 14, color: _overlayForeground)),
+                  color: Theme.of(context).colorScheme.surface,
+                  onSelected: (val) async {
+                    if (val == 'edit' && widget.openEditor != null) {
+                      await widget.openEditor!(existing: widget.theme);
+                      return;
                     }
-                    return;
-                  }
-                  if (val == 'details') {
-                    _showThemeDetails(context, widget.theme);
-                    return;
-                  }
-                  if (val == 'delete' && widget.deleteTheme != null) {
-                    await widget.deleteTheme!(widget.theme);
-                  }
-                },
-                itemBuilder: (_) => [
-                  if (widget.openEditor != null)
-                    const PopupMenuItem(
-                      value: 'edit',
-                      child: ListTile(leading: Icon(Icons.edit), title: Text('Edit'), dense: true),
-                    ),
-                  if (widget.saveTheme != null && !widget.theme.isPublic)
-                    const PopupMenuItem(
-                      value: 'share',
-                      child: ListTile(leading: Icon(Icons.public), title: Text('share with Community'), dense: true),
-                    ),
-                  const PopupMenuItem(
-                    value: 'details',
-                    child: ListTile(leading: Icon(Icons.info_outline), title: Text('Details'), dense: true),
-                  ),
-                  if (widget.deleteTheme != null)
-                    const PopupMenuItem(
-                      value: 'delete',
-                      child: ListTile(
-                        leading: Icon(Icons.delete_outline, color: Colors.red),
-                        title: Text('Delete', style: TextStyle(color: Colors.red)),
-                        dense: true,
+                    if (val == 'share' && widget.saveTheme != null) {
+                      await widget.saveTheme!(widget.theme.copyWith(isPublic: true));
+                      if (context.mounted) {
+                        showSnackBar(context, 'Shared with the Community!');
+                      }
+                      return;
+                    }
+                    if (val == 'details') {
+                      _showThemeDetails(context, widget.theme, creatorName: widget.creatorName);
+                      return;
+                    }
+                    if (val == 'delete' && widget.deleteTheme != null) {
+                      await widget.deleteTheme!(widget.theme);
+                    }
+                  },
+                  itemBuilder: (_) => [
+                    if (widget.openEditor != null)
+                      const PopupMenuItem(
+                        value: 'edit',
+                        child: ListTile(leading: Icon(Icons.edit), title: Text('Edit'), dense: true),
                       ),
+                    if (widget.saveTheme != null && !widget.theme.isPublic)
+                      const PopupMenuItem(
+                        value: 'share',
+                        child: ListTile(leading: Icon(Icons.public), title: Text('share with Community'), dense: true),
+                      ),
+                    const PopupMenuItem(
+                      value: 'details',
+                      child: ListTile(leading: Icon(Icons.info_outline), title: Text('Details'), dense: true),
                     ),
-                ],
+                    if (widget.deleteTheme != null)
+                      const PopupMenuItem(
+                        value: 'delete',
+                        child: ListTile(
+                          leading: Icon(Icons.delete_outline, color: Colors.red),
+                          title: Text('Delete', style: TextStyle(color: Colors.red)),
+                          dense: true,
+                        ),
+                      ),
+                  ],
+                ),
               ),
             ),
         ],
@@ -707,7 +778,38 @@ class _ThemePreviewState extends State<ThemePreview> {
   }
 }
 
-void _showThemeDetails(BuildContext context, CustomThemeModel theme) {
+class _OverlayBadge extends StatelessWidget {
+  final IconData icon;
+  final String label;
+  final Color foreground;
+  final Color background;
+  final Color borderColor;
+
+  const _OverlayBadge({required this.icon, required this.label, required this.foreground, required this.background, required this.borderColor});
+
+  @override
+  Widget build(BuildContext context) {
+    return Container(
+      padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 4),
+      decoration: BoxDecoration(
+        color: background,
+        borderRadius: BorderRadius.circular(999),
+        border: Border.all(color: borderColor),
+        boxShadow: [BoxShadow(color: Colors.black.withValues(alpha: 0.14), blurRadius: 4, offset: const Offset(0, 1))],
+      ),
+      child: Row(
+        mainAxisSize: MainAxisSize.min,
+        children: [
+          Icon(icon, size: 12, color: foreground),
+          const SizedBox(width: 4),
+          Text(label, style: TextStyle(fontSize: 9, fontWeight: FontWeight.w600, color: foreground)),
+        ],
+      ),
+    );
+  }
+}
+
+void _showThemeDetails(BuildContext context, CustomThemeModel theme, {String? creatorName}) {
   showModalBottomSheet(
     context: context,
     isScrollControlled: true,
@@ -733,7 +835,8 @@ void _showThemeDetails(BuildContext context, CustomThemeModel theme) {
             const SizedBox(height: 16),
             Text(theme.name, style: Theme.of(ctx).textTheme.titleLarge?.copyWith(fontWeight: FontWeight.bold)),
             const SizedBox(height: 4),
-            Text('Created by: ${theme.createdBy?.substring(0, 6) ?? "Unknown"}', style: Theme.of(ctx).textTheme.bodySmall),
+            Text('Created by: ${creatorName ?? _shortUserId(theme.createdBy)}', style: Theme.of(ctx).textTheme.bodySmall),
+            Text('Visibility: ${theme.isPublic ? "Public" : "Private"}', style: Theme.of(ctx).textTheme.bodySmall),
             Text('Likes: ${theme.likesCount}', style: Theme.of(ctx).textTheme.bodySmall),
             const SizedBox(height: 20),
             Text('Palette', style: Theme.of(ctx).textTheme.titleMedium),
@@ -755,6 +858,12 @@ void _showThemeDetails(BuildContext context, CustomThemeModel theme) {
       );
     },
   );
+}
+
+String _shortUserId(String? id) {
+  if (id == null || id.isEmpty) return 'Unknown';
+  if (id.length <= 8) return id;
+  return '${id.substring(0, 6)}...';
 }
 
 class _DetailSwatch extends StatelessWidget {

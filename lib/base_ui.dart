@@ -32,7 +32,6 @@ void startApp() async {
     ValueListenableBuilder<(ThemeData, String)>(
       valueListenable: appThemeNotifier,
       builder: (context, value, child) {
-        print("building app with theme: ${value.$1.brightness}");
         return MaterialApp.router(
           debugShowCheckedModeBanner: false,
           theme: value.$1,
