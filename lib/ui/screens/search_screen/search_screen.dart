@@ -184,13 +184,15 @@ class _SearchScreenState extends State<SearchScreen> with TickerProviderStateMix
 
   Widget _buildTabContent() {
     if (_tabController.index == 0 && _videoQuery != null) {
+      final query = _videoQuery!;
       return PreloadingSliverList<Video>(
-        key: ValueKey('videos_${_videoQuery!.toString()}'),
-        query: _videoQuery!,
+        key: ValueKey(query),
+        query: query,
         emptyStateLabel: 'No videos found',
         itemBuilder: (context, video) {
-          final videos = _videoQuery!.results;
+          final videos = List<Video>.unmodifiable(query.results);
           final index = videos.indexOf(video);
+          if (index < 0) return const SizedBox.shrink();
           return VideoCard(
             video: video,
             cs: Theme.of(context).colorScheme,
@@ -201,9 +203,10 @@ class _SearchScreenState extends State<SearchScreen> with TickerProviderStateMix
     }
 
     if (_tabController.index == 1 && _userQuery != null) {
+      final query = _userQuery!;
       return PreloadingSliverList<UserProfile>(
-        key: ValueKey('users_${_userQuery!.toString()}'),
-        query: _userQuery!,
+        key: ValueKey(query),
+        query: query,
         emptyStateLabel: 'No creators found',
         itemBuilder: (context, user) => UserCard(initialUser: user, cs: Theme.of(context).colorScheme, key: ValueKey(user.id)),
       );

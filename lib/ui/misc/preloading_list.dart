@@ -165,6 +165,7 @@ class _SliverPreloadingListState<T> extends _PreloadingListState<T> {
 
   Widget _buildSliver(ColorScheme cs) {
     final items = widget.query.results;
+    final loadedCount = _currentLoadedCount.clamp(0, items.length);
     if (items.isEmpty) {
       return SliverFillRemaining(
         child: EmptyState(label: widget.emptyStateLabel ?? 'Nothing found', cs: cs),
@@ -174,11 +175,14 @@ class _SliverPreloadingListState<T> extends _PreloadingListState<T> {
       padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 8),
       sliver: SliverList(
         delegate: SliverChildBuilderDelegate((context, index) {
-          if (index == _currentLoadedCount) {
+          if (index == loadedCount) {
+            return const SizedBox.shrink();
+          }
+          if (index >= items.length) {
             return const SizedBox.shrink();
           }
           return widget.itemBuilder(context, items[index]);
-        }, childCount: _currentLoadedCount + 1),
+        }, childCount: loadedCount + 1),
       ),
     );
   }

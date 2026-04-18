@@ -11,6 +11,9 @@ class FeedViewModel {
   final Set<int> _loading = {};
 
   int _currentIndex = 0;
+  int _switchRequestId = 0;
+
+  int get currentIndex => _currentIndex;
 
 
   Future<VideoContainer> getVideoAt(int index, {VideoProvider? videoSource}) async {
@@ -25,6 +28,8 @@ class FeedViewModel {
 
   Future<void> switchToVideoAt(int index, {VideoProvider? videoSource}) async {
     videoSource ??= this.videoSource;
+    final requestId = ++_switchRequestId;
+
     final previous = _currentIndex;
     _currentIndex = index;
 
@@ -34,24 +39,36 @@ class FeedViewModel {
 
     for (final i in toDispose) {
       await _disposeIndex(i);
+      if (requestId != _switchRequestId) return;
     }
 
     final current = await getVideoAt(index, videoSource: videoSource);
+    if (requestId != _switchRequestId) return;
 
     if (!current.controller!.value.isInitialized) {
       await current.loadController();
+      if (requestId != _switchRequestId) return;
     }
 
     await current.controller?.play();
+    if (requestId != _switchRequestId) {
+      await current.controller?.pause();
+      return;
+    }
 
     if (previous != index && _containers.containsKey(previous)) {
       final prev = _containers[previous];
       await prev?.controller?.pause();
       await prev?.controller?.seekTo(Duration.zero);
+      if (requestId != _switchRequestId) return;
     }
 
     _preload(index + 1, videoSource);
     _preload(index - 1, videoSource);
+  }
+
+  Future<void> ensureCurrentVideoPlays({VideoProvider? videoSource}) async {
+    return switchToVideoAt(_currentIndex, videoSource: videoSource);
   }
 
   Future<void> dispose() async {

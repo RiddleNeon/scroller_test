@@ -18,6 +18,7 @@ Widget feedVideos(
   int itemCount = 5000,
   int initialPage = 0,
   void Function(bool)? onLikeChanged,
+  PreloadPageController? pageController,
 }) {
   feedModel ??= feedViewModel;
   feedModel.switchToVideoAt(
@@ -29,7 +30,7 @@ Widget feedVideos(
       ScrollConfiguration(
         behavior: ScrollConfiguration.of(context).copyWith(scrollbars: false),
         child: PreloadPageView.builder(
-          controller: PreloadPageController(initialPage: initialPage, viewportFraction: 1),
+          controller: pageController ?? PreloadPageController(initialPage: initialPage, viewportFraction: 1),
           itemCount: itemCount,
           preloadPagesCount: 2,
           scrollDirection: Axis.vertical,
@@ -214,6 +215,20 @@ class VideoFeed extends StatefulWidget {
 }
 
 class _VideoFeedState extends State<VideoFeed> with TickerProviderStateMixin {
+  late final PreloadPageController _pageController;
+
+  @override
+  void initState() {
+    super.initState();
+    _pageController = PreloadPageController(initialPage: 0, viewportFraction: 1);
+  }
+
+  @override
+  void dispose() {
+    _pageController.dispose();
+    super.dispose();
+  }
+
   @override
   Widget build(BuildContext context) {
     if(isUsersFirstLogin) {
@@ -221,12 +236,20 @@ class _VideoFeedState extends State<VideoFeed> with TickerProviderStateMixin {
         if(!mounted) return;
         await showWelcomeDialog();
         isUsersFirstLogin = false;
+        await feedViewModel.ensureCurrentVideoPlays(videoSource: widget.videoProvider ?? videoProvider);
       });
     }
-    
-    return Scaffold(body: feedVideos(this, widget.videoProvider ?? videoProvider, context));
+
+    return Scaffold(
+      body: feedVideos(
+        this,
+        widget.videoProvider ?? videoProvider,
+        context,
+        pageController: _pageController,
+      ),
+    );
   }
-  
+
   Future<void> showWelcomeDialog() async {
     return showDialog(
       context: context,
