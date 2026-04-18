@@ -54,7 +54,15 @@ class _CallingScreenState extends State<CallingScreen> with TickerProviderStateM
     super.dispose();
   }
 
-  Widget buildActionButton({required IconData icon, required String label, required Color bg, required VoidCallback onTap, double size = 68}) {
+  Widget buildActionButton({
+    required IconData icon,
+    required String label,
+    required Color bg,
+    required Color fg,
+    required Color labelColor,
+    required VoidCallback onTap,
+    double size = 68,
+  }) {
     return GestureDetector(
       onTap: onTap,
       child: Column(
@@ -83,12 +91,12 @@ class _CallingScreenState extends State<CallingScreen> with TickerProviderStateM
                     end: Alignment.bottomRight,
                   ),
                 ),
-                child: Icon(icon, color: Colors.white, size: 28),
+                child: Icon(icon, color: fg, size: 28),
               ),
             ],
           ),
           const SizedBox(height: 8),
-          Text(label, style: const TextStyle(color: Colors.white70, fontSize: 12)),
+          Text(label, style: TextStyle(color: labelColor, fontSize: 12)),
         ],
       ),
     );
@@ -98,9 +106,9 @@ class _CallingScreenState extends State<CallingScreen> with TickerProviderStateM
   Widget build(BuildContext context) {
     final media = MediaQuery.of(context);
     final theme = Theme.of(context);
-    final primary = theme.colorScheme.primary;
-    final secondary = theme.colorScheme.secondary;
-    const redAccent = Colors.redAccent;
+    final cs = theme.colorScheme;
+    final primary = cs.primary;
+    final secondary = cs.secondary;
 
     return Scaffold(
       body: SafeArea(
@@ -134,7 +142,7 @@ class _CallingScreenState extends State<CallingScreen> with TickerProviderStateM
                         ? Center(
                             child: Text(
                               widget.name.substring(0, 2),
-                              style: const TextStyle(fontWeight: FontWeight.bold, color: Colors.white),
+                              style: TextStyle(fontWeight: FontWeight.bold, color: cs.onPrimary),
                             ),
                           )
                         : Avatar(imageUrl: widget.profileImageUrl, name: widget.name, colorScheme: theme.colorScheme),
@@ -146,14 +154,14 @@ class _CallingScreenState extends State<CallingScreen> with TickerProviderStateM
                       children: [
                         Text(
                           widget.name,
-                          style: const TextStyle(fontSize: 18, fontWeight: FontWeight.bold, color: Colors.white),
+                          style: TextStyle(fontSize: 18, fontWeight: FontWeight.bold, color: cs.onSurface),
                         ),
                       ],
                     ),
                   ),
-                  const Column(
+                  Column(
                     crossAxisAlignment: CrossAxisAlignment.end,
-                    children: [Icon(Icons.more_vert, color: Colors.white54)],
+                    children: [Icon(Icons.more_vert, color: cs.onSurfaceVariant)],
                   ),
                 ],
               ),
@@ -171,8 +179,8 @@ class _CallingScreenState extends State<CallingScreen> with TickerProviderStateM
                       clipBehavior: Clip.hardEdge,
                       decoration: BoxDecoration(
                         borderRadius: BorderRadius.circular(20),
-                        color: Colors.white10,
-                        border: Border.all(color: Colors.white12),
+                        color: cs.surfaceContainerHigh.withValues(alpha: 0.55),
+                        border: Border.all(color: cs.outlineVariant.withValues(alpha: 0.7)),
                       ),
                       child: Center(
                         child: Column(
@@ -180,7 +188,7 @@ class _CallingScreenState extends State<CallingScreen> with TickerProviderStateM
                           children: [
                             SizedBox(width: 32, height: 32, child: CircularProgressIndicator(strokeWidth: 2.6, valueColor: AlwaysStoppedAnimation(primary))),
                             const SizedBox(height: 12),
-                            const Text('Establishing Connection...', style: TextStyle(color: Colors.white54)),
+                            Text('Establishing Connection...', style: TextStyle(color: cs.onSurfaceVariant)),
                           ],
                         ),
                       ),
@@ -200,11 +208,11 @@ class _CallingScreenState extends State<CallingScreen> with TickerProviderStateM
                     decoration: BoxDecoration(
                       borderRadius: BorderRadius.circular(20),
                       gradient: LinearGradient(
-                        colors: [Colors.white.withValues(alpha: 0.03), Colors.white.withValues(alpha: 0.01)],
+                        colors: [cs.surfaceBright.withValues(alpha: 0.08), cs.surfaceDim.withValues(alpha: 0.04)],
                         begin: Alignment.topCenter,
                         end: Alignment.bottomCenter,
                       ),
-                      border: Border.all(color: Colors.white12),
+                      border: Border.all(color: cs.outlineVariant.withValues(alpha: 0.7)),
                     ),
                     child: Transform.scale(
                       scale: 2,
@@ -227,7 +235,15 @@ class _CallingScreenState extends State<CallingScreen> with TickerProviderStateM
                   Row(
                     mainAxisAlignment: MainAxisAlignment.spaceEvenly,
                     children: [
-                      buildActionButton(icon: Icons.mic_off, label: 'Mute', bg: theme.colorScheme.primary, onTap: () {}, size: 60),
+                      buildActionButton(
+                        icon: Icons.mic_off,
+                        label: 'Mute',
+                        bg: cs.primary,
+                        fg: cs.onPrimary,
+                        labelColor: cs.onSurfaceVariant,
+                        onTap: () {},
+                        size: 60,
+                      ),
                       GestureDetector(
                         onTap: () {
                           routerConfig.pop();
@@ -243,7 +259,7 @@ class _CallingScreenState extends State<CallingScreen> with TickerProviderStateM
                                     return Container(
                                       width: 84 + _pulse.value,
                                       height: 84 + _pulse.value,
-                                      decoration: BoxDecoration(shape: BoxShape.circle, color: redAccent.withValues(alpha: 0.12)),
+                                       decoration: BoxDecoration(shape: BoxShape.circle, color: cs.error.withValues(alpha: 0.16)),
                                     );
                                   },
                                 ),
@@ -252,21 +268,23 @@ class _CallingScreenState extends State<CallingScreen> with TickerProviderStateM
                                   height: 84,
                                   decoration: BoxDecoration(
                                     shape: BoxShape.circle,
-                                    gradient: LinearGradient(colors: [redAccent, redAccent.withValues(alpha: 0.9)]),
+                                    gradient: LinearGradient(colors: [cs.error, cs.error.withValues(alpha: 0.88)]),
                                   ),
-                                  child: const Icon(Icons.call_end, color: Colors.white, size: 32),
+                                  child: Icon(Icons.call_end, color: cs.onError, size: 32),
                                 ),
                               ],
                             ),
                             const SizedBox(height: 8),
-                            const Text('Hang Up', style: TextStyle(color: Colors.white70, fontSize: 12)),
+                            Text('Hang Up', style: TextStyle(color: cs.onSurfaceVariant, fontSize: 12)),
                           ],
                         ),
                       ),
                       buildActionButton(
                         icon: Icons.cameraswitch,
                         label: 'Flip Camera',
-                        bg: theme.colorScheme.secondary,
+                        bg: cs.tertiary,
+                        fg: cs.onTertiary,
+                        labelColor: cs.onSurfaceVariant,
                         onTap: () {
                           _cameraKey.currentState?.switchCamera();
                         },
@@ -285,8 +303,8 @@ class _CallingScreenState extends State<CallingScreen> with TickerProviderStateM
                 height: 120,
                 decoration: BoxDecoration(
                   borderRadius: BorderRadius.circular(14),
-                  color: Colors.black.withValues(alpha: 0.5),
-                  border: Border.all(color: Colors.white12),
+                  color: cs.inverseSurface.withValues(alpha: 0.58),
+                  border: Border.all(color: cs.outlineVariant.withValues(alpha: 0.8)),
                 ),
                 child: ClipRRect(
                   borderRadius: const BorderRadiusGeometry.all(Radius.circular(5)),

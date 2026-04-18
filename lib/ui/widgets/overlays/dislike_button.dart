@@ -53,7 +53,8 @@ class _DislikeButtonState extends State<DislikeButton> with SingleTickerProvider
 
   @override
   Widget build(BuildContext context) {
-    final Color iconColor = disliked ? Colors.redAccent : Colors.grey.shade700;
+    final cs = Theme.of(context).colorScheme;
+    final Color iconColor = disliked ? cs.error : cs.onSurfaceVariant;
     final IconData iconData = disliked ? Icons.thumb_down : Icons.thumb_down;
 
     return Padding(

@@ -115,7 +115,7 @@ class _ProfileScreenState extends State<ProfileScreen> with TickerProviderStateM
               automaticallyImplyLeading: widget.hasBackButton,
               expandedHeight: 380,
               backgroundColor: cs.surface,
-              surfaceTintColor: Colors.transparent,
+              surfaceTintColor: cs.surfaceTint.withValues(alpha: 0),
               elevation: 0,
               titleSpacing: 0,
               title: _buildCollapsedTitle(cs),
@@ -655,7 +655,7 @@ class _ActionButton extends StatelessWidget {
         width: width,
         height: 38,
         decoration: BoxDecoration(
-          color: filled ? cs.primary : Colors.transparent,
+          color: filled ? cs.primary : cs.surfaceContainerLowest,
           border: Border.all(color: filled ? cs.primary : cs.outlineVariant, width: 1.5),
           borderRadius: BorderRadius.circular(8),
         ),
@@ -681,7 +681,7 @@ class _ProfileSegmentButton extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     final cs = Theme.of(context).colorScheme;
-    final color = selected ? cs.primary : cs.onSurfaceVariant;
+    final color = selected ? cs.onSecondaryContainer : cs.onSurfaceVariant;
 
     return Tooltip(
       message: tooltip,
@@ -692,7 +692,7 @@ class _ProfileSegmentButton extends StatelessWidget {
           duration: const Duration(milliseconds: 220),
           curve: Curves.easeOutCubic,
           decoration: BoxDecoration(
-            color: selected ? cs.surface : Colors.transparent,
+            color: selected ? cs.secondaryContainer.withValues(alpha: 0.75) : Colors.transparent,
             borderRadius: BorderRadius.circular(14),
             border: selected ? Border.all(color: cs.outlineVariant.withValues(alpha: 0.65)) : null,
           ),

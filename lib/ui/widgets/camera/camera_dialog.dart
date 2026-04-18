@@ -56,8 +56,9 @@ class _WebCameraDialogState extends State<WebCameraDialog> {
 
   @override
   Widget build(BuildContext context) {
+    final cs = Theme.of(context).colorScheme;
     return Dialog(
-      backgroundColor: Colors.black,
+      backgroundColor: cs.inverseSurface,
       insetPadding: const EdgeInsets.all(16),
       shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(24)),
       child: ClipRRect(
@@ -77,8 +78,8 @@ class _WebCameraDialogState extends State<WebCameraDialog> {
                   child: Container(
                     width: 36,
                     height: 36,
-                    decoration: BoxDecoration(color: Colors.black45, borderRadius: BorderRadius.circular(18)),
-                    child: const Icon(Icons.close, color: Colors.white, size: 20),
+                      decoration: BoxDecoration(color: cs.inverseSurface.withValues(alpha: 0.72), borderRadius: BorderRadius.circular(18)),
+                      child: Icon(Icons.close, color: cs.onInverseSurface, size: 20),
                   ),
                 ),
               ),
@@ -92,8 +93,8 @@ class _WebCameraDialogState extends State<WebCameraDialog> {
                     child: Container(
                       width: 36,
                       height: 36,
-                      decoration: BoxDecoration(color: Colors.black45, borderRadius: BorderRadius.circular(18)),
-                      child: const Icon(Icons.flip_camera_ios_outlined, color: Colors.white, size: 20),
+                      decoration: BoxDecoration(color: cs.inverseSurface.withValues(alpha: 0.72), borderRadius: BorderRadius.circular(18)),
+                      child: Icon(Icons.flip_camera_ios_outlined, color: cs.onInverseSurface, size: 20),
                     ),
                   ),
                 ),
@@ -111,11 +112,11 @@ class _WebCameraDialogState extends State<WebCameraDialog> {
                       height: _takingPhoto ? 60 : 70,
                       decoration: BoxDecoration(
                         shape: BoxShape.circle,
-                        color: Colors.white,
-                        border: Border.all(color: Colors.white38, width: 4),
-                        boxShadow: [const BoxShadow(color: Colors.black26, blurRadius: 12, spreadRadius: 2)],
+                        color: cs.surfaceBright,
+                        border: Border.all(color: cs.outlineVariant.withValues(alpha: 0.8), width: 4),
+                        boxShadow: [BoxShadow(color: cs.shadow.withValues(alpha: 0.35), blurRadius: 12, spreadRadius: 2)],
                       ),
-                      child: _takingPhoto ? const Center(child: CircularProgressIndicator(strokeWidth: 2, color: Colors.black54)) : null,
+                      child: _takingPhoto ? Center(child: CircularProgressIndicator(strokeWidth: 2, color: cs.onSurfaceVariant)) : null,
                     ),
                   ),
                 ),

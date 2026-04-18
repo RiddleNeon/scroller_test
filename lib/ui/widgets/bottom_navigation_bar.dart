@@ -61,7 +61,7 @@ class BottomNavBarState extends State<BottomNavBar> with SingleTickerProviderSta
       curve: Curves.easeOutCubic,
       height: 66 + bottomPad,
       padding: EdgeInsets.fromLTRB(10, 8, 10, bottomPad + 6),
-      color: Colors.transparent,
+      color: cs.surface.withValues(alpha: 0.3),
       child: Material(
         color: cs.surfaceContainerHighest.withValues(alpha: 0.98),
         elevation: 10,
@@ -86,7 +86,7 @@ class BottomNavBarState extends State<BottomNavBar> with SingleTickerProviderSta
                   height: constraints.maxHeight - 8,
                   child: DecoratedBox(
                     decoration: BoxDecoration(
-                      color: cs.surface.withValues(alpha: 0.92),
+                      color: cs.secondaryContainer.withValues(alpha: 0.82),
                       borderRadius: BorderRadius.circular(16),
                       border: Border.all(color: cs.outlineVariant.withValues(alpha: 0.7)),
                     ),
@@ -96,7 +96,7 @@ class BottomNavBarState extends State<BottomNavBar> with SingleTickerProviderSta
                   children: List.generate(items.length, (i) {
                     final item = items[i];
                     final selected = currentSelectedIndex == i;
-                    final iconColor = selected ? cs.primary : cs.onSurfaceVariant;
+                    final iconColor = selected ? cs.tertiary : cs.onSurfaceVariant;
                     final isHovered = _hovered[i];
 
                     return MouseRegion(
@@ -143,7 +143,7 @@ class BottomNavBarState extends State<BottomNavBar> with SingleTickerProviderSta
                                 AnimatedDefaultTextStyle(
                                   duration: const Duration(milliseconds: 180),
                                   style: TextStyle(
-                                    color: selected ? cs.onSurface : cs.onSurfaceVariant,
+                                    color: selected ? cs.onSecondaryContainer : cs.onSurfaceVariant,
                                     fontSize: 10,
                                     fontWeight: selected ? FontWeight.w700 : FontWeight.w500,
                                   ),

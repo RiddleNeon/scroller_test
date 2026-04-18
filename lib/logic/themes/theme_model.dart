@@ -52,51 +52,71 @@ class CustomThemeColors {
 
   factory CustomThemeColors.fromSeeds({required Color primary, Color? secondary, Color? tertiary, bool dark = false}) {
     final hsl = HSLColor.fromColor(primary);
+    final baseSaturation = hsl.saturation;
+    final surface = _surfaceFromSeed(hsl, primary, dark: dark);
+    final surfaceHsl = HSLColor.fromColor(surface);
 
-    Color deriveAccent(double hueShift) =>
-        hsl.withHue((hsl.hue + hueShift) % 360).withLightness(hsl.lightness.clamp(0.35, 0.65)).withSaturation(hsl.saturation.clamp(0.3, 0.8)).toColor();
+    final accentSaturation = (baseSaturation < 0.45 ? baseSaturation + 0.34 : baseSaturation + 0.16).clamp(0.48, 0.88).toDouble();
+    final accentLightnessBase = dark ? 0.62 : 0.50;
 
-    final resolvedSecondary = secondary ?? deriveAccent(30);
-    final resolvedTertiary = tertiary ?? deriveAccent(60);
+    Color deriveAccent(double hueShift, {double lightnessNudge = 0}) {
+      final accentLightness = (accentLightnessBase + (0.5 - hsl.lightness) * 0.22 + lightnessNudge)
+          .clamp(dark ? 0.50 : 0.38, dark ? 0.74 : 0.62)
+          .toDouble();
 
-    final bgHsl = hsl.withSaturation(0.04);
-
-    final Color resolvedSurface;
-    final Color resolvedSurfaceContainerHighest;
-    final Color resolvedInverseSurface;
-    final Color resolvedOnInverseSurface;
-    final Color resolvedOnSurface;
-    final Color resolvedOnSurfaceVariant;
-    final Color resolvedOutlineVariant;
-
-    if (dark) {
-      resolvedSurface = _surfaceWithContrast(bgHsl, primary, dark: true);
-      resolvedSurfaceContainerHighest = bgHsl.withLightness((HSLColor.fromColor(resolvedSurface).lightness + 0.12).clamp(0.0, 1.0)).toColor();
-      resolvedInverseSurface = bgHsl.withLightness(0.92).toColor();
-      resolvedOnInverseSurface = const Color(0xFF1A1612);
-      resolvedOnSurface = const Color(0xFFECECEC);
-      resolvedOnSurfaceVariant = const Color(0xFFC6C6C6);
-      resolvedOutlineVariant = hsl.withSaturation((hsl.saturation * 0.25).clamp(0.05, 0.30)).withLightness(0.28).toColor();
-    } else {
-      resolvedSurface = _surfaceWithContrast(bgHsl, primary, dark: false);
-      resolvedSurfaceContainerHighest = bgHsl.withLightness((HSLColor.fromColor(resolvedSurface).lightness - 0.09).clamp(0.0, 1.0)).toColor();
-      resolvedInverseSurface = bgHsl.withLightness(0.14).toColor();
-      resolvedOnInverseSurface = const Color(0xFFF2EDE8);
-      resolvedOnSurface = const Color(0xFF1A1A1A);
-      resolvedOnSurfaceVariant = hsl.withSaturation((hsl.saturation * 0.40).clamp(0.08, 0.45)).withLightness(0.38).toColor();
-      resolvedOutlineVariant = hsl.withSaturation((hsl.saturation * 0.22).clamp(0.05, 0.28)).withLightness(0.78).toColor();
+      return hsl
+          .withHue((hsl.hue + hueShift) % 360)
+          .withSaturation(accentSaturation)
+          .withLightness(accentLightness)
+          .toColor();
     }
 
-    Color contrast(Color c) => c.computeLuminance() > 0.45 ? const Color(0xFF1A1A1A) : Colors.white;
+    final secondaryShift = baseSaturation < 0.35 ? 44.0 : 30.0;
+    final tertiaryShift = baseSaturation < 0.35 ? 88.0 : 62.0;
+    final resolvedSecondary = secondary ?? deriveAccent(secondaryShift);
+    final resolvedTertiary = tertiary ?? deriveAccent(tertiaryShift, lightnessNudge: dark ? -0.04 : 0.03);
+
+    final resolvedSurfaceContainerHighest = dark
+        ? surfaceHsl.withLightness((surfaceHsl.lightness + 0.06).clamp(0.0, 1.0).toDouble()).toColor()
+        : surfaceHsl.withLightness((surfaceHsl.lightness - 0.05).clamp(0.0, 1.0).toDouble()).toColor();
+    final resolvedInverseSurface = dark
+        ? surfaceHsl.withLightness((surfaceHsl.lightness + 0.78).clamp(0.84, 0.94).toDouble()).toColor()
+        : surfaceHsl.withLightness((surfaceHsl.lightness - 0.72).clamp(0.14, 0.26).toDouble()).toColor();
+
+    final resolvedOnSurface = _pickOnColor(surface, minContrast: 4.5);
+    final resolvedOnInverseSurface = _pickOnColor(resolvedInverseSurface, minContrast: 4.5);
+
+    final onSurfaceVariantCandidate = Color.lerp(
+      resolvedOnSurface,
+      surface,
+      dark ? 0.28 : 0.42,
+    )!;
+    final resolvedOnSurfaceVariant = _ensureMinContrast(
+      onSurfaceVariantCandidate,
+      surface,
+      minContrast: 3.4,
+      fallback: resolvedOnSurface,
+    );
+    final outlineCandidate = Color.lerp(resolvedOnSurfaceVariant, surface, dark ? 0.36 : 0.52)!;
+    final resolvedOutlineVariant = _ensureMinContrast(
+      outlineCandidate,
+      surface,
+      minContrast: 1.6,
+      fallback: Color.lerp(resolvedOnSurface, surface, dark ? 0.48 : 0.62)!,
+    );
+
+    final onPrimary = _pickOnColor(primary, minContrast: 4.5);
+    final onSecondary = _pickOnColor(resolvedSecondary, minContrast: 4.5);
+    final onTertiary = _pickOnColor(resolvedTertiary, minContrast: 4.5);
 
     return CustomThemeColors(
       primary: primary,
-      onPrimary: contrast(primary),
+      onPrimary: onPrimary,
       secondary: resolvedSecondary,
-      onSecondary: contrast(resolvedSecondary),
+      onSecondary: onSecondary,
       tertiary: resolvedTertiary,
-      onTertiary: contrast(resolvedTertiary),
-      surface: resolvedSurface,
+      onTertiary: onTertiary,
+      surface: surface,
       onSurface: resolvedOnSurface,
       surfaceContainerHighest: resolvedSurfaceContainerHighest,
       onSurfaceVariant: resolvedOnSurfaceVariant,
@@ -109,25 +129,53 @@ class CustomThemeColors {
     );
   }
 
-  static Color _surfaceWithContrast(HSLColor bgHsl, Color primary, {required bool dark}) {
-    const minContrast = 0.30;
-
+  static Color _surfaceFromSeed(HSLColor seedHsl, Color primary, {required bool dark}) {
+    final tintedNeutral = seedHsl.withSaturation((seedHsl.saturation * 0.16 + 0.02).clamp(0.03, 0.14).toDouble());
     final primaryLum = primary.computeLuminance();
+    final targetLightness = dark
+        ? (0.16 + (1 - primaryLum) * 0.04).clamp(0.13, 0.21).toDouble()
+        : (0.92 - primaryLum * 0.03).clamp(0.88, 0.95).toDouble();
 
-    double targetL = dark ? 0.07 : 0.97;
-    Color candidate = bgHsl.withLightness(targetL).toColor();
+    return tintedNeutral.withLightness(targetLightness).toColor();
+  }
 
-    if ((candidate.computeLuminance() - primaryLum).abs() >= minContrast) {
-      return candidate;
+  static double _contrastRatio(Color a, Color b) {
+    final l1 = a.computeLuminance();
+    final l2 = b.computeLuminance();
+    final lighter = l1 > l2 ? l1 : l2;
+    final darker = l1 > l2 ? l2 : l1;
+    return (lighter + 0.05) / (darker + 0.05);
+  }
+
+  static Color _pickOnColor(Color background, {double minContrast = 4.5}) {
+    const light = Color(0xFFFFFFFF);
+    const dark = Color(0xFF111111);
+    final contrastWithLight = _contrastRatio(background, light);
+    final contrastWithDark = _contrastRatio(background, dark);
+
+    if (contrastWithLight >= minContrast && contrastWithLight >= contrastWithDark) {
+      return light;
+    }
+    if (contrastWithDark >= minContrast) {
+      return dark;
+    }
+    return contrastWithLight >= contrastWithDark ? light : dark;
+  }
+
+  static Color _ensureMinContrast(Color foreground, Color background, {required double minContrast, required Color fallback}) {
+    if (_contrastRatio(foreground, background) >= minContrast) {
+      return foreground;
     }
 
-    if (dark) {
-      targetL = (primaryLum - minContrast).clamp(0.03, 0.18);
-    } else {
-      targetL = (primaryLum + minContrast + 0.35).clamp(0.80, 0.98);
+    var adjusted = foreground;
+    for (var i = 0; i < 6; i++) {
+      adjusted = Color.lerp(adjusted, fallback, 0.35)!;
+      if (_contrastRatio(adjusted, background) >= minContrast) {
+        return adjusted;
+      }
     }
 
-    return bgHsl.withLightness(targetL).toColor();
+    return fallback;
   }
 
   factory CustomThemeColors.fromJson(Map<String, dynamic> json) {

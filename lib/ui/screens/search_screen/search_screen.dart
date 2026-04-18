@@ -114,7 +114,7 @@ class _SearchScreenState extends State<SearchScreen> with TickerProviderStateMix
               },
               child: Text(
                 'Discover',
-                style: TextStyle(fontSize: 48, fontWeight: FontWeight.w900, letterSpacing: -1, color: cs.primary),
+                style: TextStyle(fontSize: 48, fontWeight: FontWeight.w900, letterSpacing: -1, color: cs.secondary),
               ),
             ),
             const SizedBox(height: 8),
@@ -236,13 +236,13 @@ class _SearchScreenState extends State<SearchScreen> with TickerProviderStateMix
           prefixIcon: Icon(Icons.search_rounded, color: cs.onSurfaceVariant, size: 22),
           suffixIcon: GestureDetector(
             onTap: _search,
-            child: Container(
+              child: Container(
               margin: const EdgeInsets.all(8),
-              decoration: BoxDecoration(color: cs.primary, borderRadius: BorderRadius.circular(14)),
+                decoration: BoxDecoration(color: cs.tertiaryContainer, borderRadius: BorderRadius.circular(14)),
               child: AnimatedScale(
                 duration: const Duration(milliseconds: 180),
                 scale: _loading ? 0.92 : 1,
-                child: Icon(Icons.arrow_forward_rounded, color: cs.onPrimary, size: 20),
+                  child: Icon(Icons.arrow_forward_rounded, color: cs.onTertiaryContainer, size: 20),
               ),
             ),
           ),
@@ -299,8 +299,8 @@ Future<int> openVideoPlayer({
                     onTap: () => Navigator.pop(context),
                     child: Container(
                       padding: const EdgeInsets.all(8),
-                      decoration: BoxDecoration(color: Theme.of(context).colorScheme.surface.withValues(alpha: 0.9), shape: BoxShape.circle),
-                      child: Icon(Icons.close_rounded, color: Theme.of(context).colorScheme.onSurface, size: 20),
+                      decoration: BoxDecoration(color: Theme.of(context).colorScheme.inverseSurface.withValues(alpha: 0.85), shape: BoxShape.circle),
+                      child: Icon(Icons.close_rounded, color: Theme.of(context).colorScheme.onInverseSurface, size: 20),
                     ),
                   ),
                 ),
@@ -337,16 +337,16 @@ class _SearchSegmentButton extends StatelessWidget {
         padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 10),
         decoration: BoxDecoration(
           borderRadius: BorderRadius.circular(14),
-          color: selected ? cs.surface : Colors.transparent,
+          color: selected ? cs.secondaryContainer.withValues(alpha: 0.75) : Colors.transparent,
           border: selected ? Border.all(color: cs.outlineVariant.withValues(alpha: 0.65)) : null,
         ),
         child: AnimatedDefaultTextStyle(
           duration: const Duration(milliseconds: 180),
-          style: TextStyle(fontWeight: selected ? FontWeight.w700 : FontWeight.w600, fontSize: 13, color: selected ? cs.primary : cs.onSurfaceVariant),
+          style: TextStyle(fontWeight: selected ? FontWeight.w700 : FontWeight.w600, fontSize: 13, color: selected ? cs.onSecondaryContainer : cs.onSurfaceVariant),
           child: Row(
             mainAxisAlignment: MainAxisAlignment.center,
             children: [
-              Icon(icon, size: 18, color: selected ? cs.primary : cs.onSurfaceVariant),
+              Icon(icon, size: 18, color: selected ? cs.onSecondaryContainer : cs.onSurfaceVariant),
               const SizedBox(width: 6),
               Flexible(child: Text(label, overflow: TextOverflow.ellipsis)),
             ],

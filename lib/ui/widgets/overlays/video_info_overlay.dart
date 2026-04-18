@@ -20,7 +20,7 @@ class VideoInfoOverlay extends StatelessWidget {
         gradient: LinearGradient(
           begin: Alignment.bottomCenter,
           end: Alignment.topCenter,
-          colors: [cs.scrim.withValues(alpha: 0.75), cs.scrim.withValues(alpha: 0.45), Colors.transparent],
+          colors: [cs.scrim.withValues(alpha: 0.75), cs.scrim.withValues(alpha: 0.45), cs.scrim.withValues(alpha: 0)],
         ),
       ),
       child: Align(
@@ -157,7 +157,7 @@ class _ScrollingAudioTextState extends State<ScrollingAudioText> with SingleTick
           return LinearGradient(
             begin: Alignment.centerLeft,
             end: Alignment.centerRight,
-            colors: [Colors.transparent, cs.onSurface, cs.onSurface, Colors.transparent],
+            colors: [cs.onSurface.withValues(alpha: 0), cs.onSurface, cs.onSurface, cs.onSurface.withValues(alpha: 0)],
             stops: [0.0, 0.1, 0.9, 1.0],
           ).createShader(bounds);
         },

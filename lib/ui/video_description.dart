@@ -9,6 +9,7 @@ class VideoDescription extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
+    final cs = Theme.of(context).colorScheme;
     return Expanded(
       child: Container(
         height: 120.0,
@@ -20,15 +21,15 @@ class VideoDescription extends StatelessWidget {
           children: <Widget>[
             Text(
               '@$username',
-              style: const TextStyle(fontSize: 16, color: Colors.white, fontWeight: FontWeight.bold),
+              style: TextStyle(fontSize: 16, color: cs.onInverseSurface, fontWeight: FontWeight.bold),
             ),
             const SizedBox(height: 7),
-            Text(videoTitle, style: const TextStyle(fontSize: 16, color: Colors.white)),
+            Text(videoTitle, style: TextStyle(fontSize: 16, color: cs.onInverseSurface)),
             const SizedBox(height: 7),
             Row(
               children: [
-                const Icon(Icons.music_note, size: 15.0, color: Colors.white),
-                Text(songInfo, style: const TextStyle(color: Colors.white, fontSize: 14.0)),
+                Icon(Icons.music_note, size: 15.0, color: cs.secondaryContainer),
+                Text(songInfo, style: TextStyle(color: cs.onInverseSurface.withValues(alpha: 0.92), fontSize: 14.0)),
               ],
             ),
             const SizedBox(height: 10),

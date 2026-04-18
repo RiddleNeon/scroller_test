@@ -228,6 +228,35 @@ class AppTheme {
       filledButtonTheme: FilledButtonThemeData(
         style: FilledButton.styleFrom(shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(14))),
       ),
+      outlinedButtonTheme: OutlinedButtonThemeData(
+        style: OutlinedButton.styleFrom(
+          foregroundColor: cs.secondary,
+          side: BorderSide(color: cs.outline),
+          shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(14)),
+          padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 12),
+        ),
+      ),
+      chipTheme: ChipThemeData(
+        backgroundColor: cs.secondaryContainer,
+        selectedColor: cs.tertiaryContainer,
+        disabledColor: cs.surfaceContainerHigh,
+        labelStyle: TextStyle(color: cs.onSecondaryContainer),
+        secondaryLabelStyle: TextStyle(color: cs.onTertiaryContainer),
+        side: BorderSide(color: cs.outlineVariant.withValues(alpha: 0.6)),
+        shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(20)),
+      ),
+      floatingActionButtonTheme: FloatingActionButtonThemeData(
+        backgroundColor: cs.tertiaryContainer,
+        foregroundColor: cs.onTertiaryContainer,
+      ),
+      toggleButtonsTheme: ToggleButtonsThemeData(
+        selectedColor: cs.onSecondaryContainer,
+        color: cs.onSurfaceVariant,
+        fillColor: cs.secondaryContainer,
+        borderColor: cs.outlineVariant,
+        selectedBorderColor: cs.secondary,
+        borderRadius: BorderRadius.circular(12),
+      ),
       snackBarTheme: SnackBarThemeData(
         behavior: SnackBarBehavior.floating,
         backgroundColor: cs.inverseSurface,

@@ -344,7 +344,7 @@ class MessagingScreenState extends State<MessagingScreen> with TickerProviderSta
                   ),
                   Text(
                     widget.isOnline ? 'Active now' : 'Offline',
-                    style: TextStyle(fontSize: 11, color: widget.isOnline ? const Color(0xFF20D070) : cs.outline, fontWeight: FontWeight.w500),
+                    style: TextStyle(fontSize: 11, color: widget.isOnline ? cs.tertiary : cs.outline, fontWeight: FontWeight.w500),
                   ),
                 ],
               ),
@@ -631,7 +631,7 @@ class _BubbleBody extends StatelessWidget {
           borderRadius: borderRadius,
           border: Border.all(color: cs.outlineVariant.withValues(alpha: 0.45)),
         ),
-        child: Text(message.text, style: TextStyle(color: isMe ? cs.onPrimary : cs.onSurface, fontSize: 15, height: 1.4)),
+        child: Text(message.text, style: TextStyle(color: isMe ? cs.onPrimary : cs.onSecondary, fontSize: 15, height: 1.4)),
       ),
     );
   }
@@ -653,7 +653,7 @@ class _StatusIcon extends StatelessWidget {
       case MessageStatus.delivered:
         return Icon(Icons.done_all_rounded, size: 12, color: colorScheme.onSurfaceVariant.withValues(alpha: 0.5));
       case MessageStatus.read:
-        return Icon(Icons.done_all_rounded, size: 12, color: colorScheme.primary);
+        return Icon(Icons.done_all_rounded, size: 12, color: colorScheme.tertiary);
     }
   }
 }
@@ -727,7 +727,7 @@ class _AvatarWidget extends StatelessWidget {
               width: radius * 0.55,
               height: radius * 0.55,
               decoration: BoxDecoration(
-                color: const Color(0xFF20D070),
+                color: cs.tertiary,
                 shape: BoxShape.circle,
                 border: Border.all(color: cs.surface, width: 1.5),
               ),

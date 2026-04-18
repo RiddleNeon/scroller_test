@@ -76,7 +76,7 @@ class ChatManagingScreenState extends State<ChatManagingScreen> {
       backgroundColor: theme.colorScheme.surface,
       appBar: AppBar(
         title: const Text("Chats", textAlign: TextAlign.center,),
-        backgroundColor: theme.colorScheme.surfaceContainer,
+        backgroundColor: theme.colorScheme.surfaceContainerLow,
         centerTitle: true,
         elevation: 0,
         shape: const RoundedRectangleBorder(
@@ -131,8 +131,8 @@ class ChatManagingScreenState extends State<ChatManagingScreen> {
       curve: Curves.easeOutCubic,
       decoration: BoxDecoration(
         borderRadius: BorderRadius.circular(18),
-        color: theme.colorScheme.surfaceContainerHigh,
-        border: Border.all(color: theme.colorScheme.outlineVariant.withValues(alpha: 0.7)),
+        color: theme.colorScheme.surfaceContainer,
+        border: Border.all(color: theme.colorScheme.outline.withValues(alpha: 0.35)),
       ),
       clipBehavior: Clip.antiAlias,
       child: Material(
@@ -176,14 +176,14 @@ class ChatManagingScreenState extends State<ChatManagingScreen> {
                 Column(
                   crossAxisAlignment: CrossAxisAlignment.end,
                   children: [
-                    Text(timeString, style: theme.textTheme.bodySmall?.copyWith(color: theme.colorScheme.primary)),
+                    Text(timeString, style: theme.textTheme.bodySmall?.copyWith(color: theme.colorScheme.secondary)),
                     const SizedBox(height: 6),
 
                     if (!chat.lastMessageByMe)
                       Container(
                         width: 8,
                         height: 8,
-                        decoration: BoxDecoration(color: theme.colorScheme.primary, shape: BoxShape.circle),
+                        decoration: BoxDecoration(color: theme.colorScheme.tertiary, shape: BoxShape.circle),
                       ),
                   ],
                 ),

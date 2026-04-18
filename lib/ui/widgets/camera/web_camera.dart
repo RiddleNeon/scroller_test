@@ -80,15 +80,16 @@ class WebCameraState extends State<WebCamera> {
 
   @override
   Widget build(BuildContext context) {
+    final cs = Theme.of(context).colorScheme;
     return _loading
-        ? const Center(child: CircularProgressIndicator(color: Colors.white))
+        ? Center(child: CircularProgressIndicator(color: cs.onInverseSurface))
         : _error != null
         ? Center(
             child: Padding(
               padding: const EdgeInsets.all(24),
               child: Text(
                 _error!,
-                style: const TextStyle(color: Colors.white70),
+                style: TextStyle(color: cs.onInverseSurface.withValues(alpha: 0.8)),
                 textAlign: TextAlign.center,
               ),
             ),
