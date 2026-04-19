@@ -38,6 +38,7 @@ class RecommendationVideoProvider implements VideoProvider {
       return _videoCache[index];
     } else if (retry) {
       await loadingFuture;
+      print("Retrying getVideoByIndex for index $index after preload");
       return getVideoByIndex(index, false);
     }
     return null;

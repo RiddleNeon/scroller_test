@@ -27,15 +27,15 @@ class VideoRecommender extends VideoRecommenderBase {
   Future<Set<Video>> getRecommendedVideos({int limit = 20}) async {
     try {
       // Get user preferences
-      final userPreferences = await getUserPreferences();
+      //final userPreferences = await getUserPreferences();
       
-      final candidateVideos = await _getCandidateVideos(userPreferences: userPreferences, limit: _candidatePoolSize);
+      final candidateVideos = await _getCandidateVideos(limit: _candidatePoolSize);
 
-      final scoredVideos = _scoreVideos(candidateVideos, userPreferences);
+      //final scoredVideos = _scoreVideos(candidateVideos, userPreferences);
 
-      final diversifiedVideos = _applyDiversityFilter(scoredVideos, limit: limit);
+      //final diversifiedVideos = _applyDiversityFilter(scoredVideos, limit: limit);
 
-      return (diversifiedVideos.take(limit).map((vs) => vs.video).toList()..shuffle()).toSet();
+      return (candidateVideos.take(limit).map((vs) => vs).toList()..shuffle()).toSet();
     } catch (e) {
       print('Error getting recommendations: $e. stacktrace: ${StackTrace.current}');
       // Fallback to trending videos
@@ -44,7 +44,7 @@ class VideoRecommender extends VideoRecommenderBase {
   }
 
   /// Get candidate videos with smart filtering based on user preferences
-  Future<Set<Video>> _getCandidateVideos({required UserPreferences userPreferences, required int limit}) async {
+  Future<Set<Video>> _getCandidateVideos({required int limit}) async {
     return fetchTrendingVideos(limit: limit, onlyUnseen: true);
 
     /*final Set<Video> candidates = {}; // old code, can be optimized by fetching directly into a set and avoiding duplicates early on
@@ -95,7 +95,7 @@ class VideoRecommender extends VideoRecommenderBase {
   }
 
   /// Score videos based on multiple factors
-  List<VideoScore> _scoreVideos(Set<Video> videos, UserPreferences userPreferences) {
+  List<VideoScore> scoreVideos(Set<Video> videos, UserPreferences userPreferences) {
     final now = DateTime.now();
     final scoredVideos = <VideoScore>[];
 
@@ -135,7 +135,7 @@ class VideoRecommender extends VideoRecommenderBase {
   }
 
   /// Apply diversity filter to prevent monotony
-  List<VideoScore> _applyDiversityFilter(List<VideoScore> scoredVideos, {int limit = 20}) {
+  List<VideoScore> applyDiversityFilter(List<VideoScore> scoredVideos, {int limit = 20}) {
     final result = <VideoScore>[];
     final authorCount = <String, int>{};
     final tagCombinations = <String, int>{};

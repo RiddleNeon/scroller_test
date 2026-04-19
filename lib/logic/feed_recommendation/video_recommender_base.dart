@@ -70,26 +70,32 @@ abstract class VideoRecommenderBase {
       'p_only_unseen': onlyUnseen,
     }).select(_recommenderVideoSelect);
 
-    return snapshot.map<Video>(_mapVideo).toList();
+    var videos = snapshot.map<Video>(_mapVideo).toList();
+    videos = videos.where((v) => !_willPlaySoonVideoIds.contains(v.id)).toList();
+
+    if (onlyUnseen && videos.isNotEmpty) {
+      await markVideosWillPlaySoon(userId: currentUser.id, videos: videos);
+    }
+
+    return videos;
   }
 
   Future<List<Video>> fetchOldVideos(DateTime? oldestSeen, int limit) async {
     return fetchNewVideos(oldestSeen, limit);
   }
 
-  Future<Set<Video>> fetchTrendingVideos({DateTime? cursor, required int limit, bool onlyUnseen = false}) async {
-    cursor ??= localSeenService.getTrendingCursor();
+  Future<Set<Video>> fetchTrendingVideos({required int limit, bool onlyUnseen = false}) async {
     final snapshot = await supabaseClient.rpc('get_trending_candidates', params: {
       'p_user_id': currentUser.id,
-      'p_cursor': cursor?.toIso8601String(),
+      'p_cursor': null,
       'p_limit': limit * 3,
       'p_only_unseen': onlyUnseen,
-      'p_days_back': 40,
+      'p_days_back': 356,
     }).select(_recommenderVideoSelect);
 
     var videos = snapshot.map<Video>(_mapVideo).toList();
 
-    videos = videos.where((v) => !localSeenService.hasSeen(v.id)).toList();
+    videos = videos.where((v) => !localSeenService.hasSeen(v.id) && !_willPlaySoonVideoIds.contains(v.id)).toList();
 
     if (videos.isNotEmpty) {
       videos.sort((a, b) => a.createdAt.compareTo(b.createdAt));
@@ -98,7 +104,12 @@ abstract class VideoRecommenderBase {
 
     videos.sort((a, b) => calculateGlobalEngagementScore(b).compareTo(calculateGlobalEngagementScore(a)));
 
-    return videos.take(limit).toSet();
+    final selectedVideos = videos.take(limit).toList();
+    if (onlyUnseen && selectedVideos.isNotEmpty) {
+      await markVideosWillPlaySoon(userId: currentUser.id, videos: selectedVideos);
+    }
+
+    return selectedVideos.toSet();
   }
   
   Future<List<Video>> fetchVideosByTag(String tag, {required int limit, required void Function() onTagVideosEmpty, bool onlyUnseen = false}) async {
@@ -112,9 +123,13 @@ abstract class VideoRecommenderBase {
 
     final List<Video> videos = snapshot.map<Video>(_mapVideo).toList();
 
-    final unseen = videos.where((v) => !localSeenService.hasSeen(v.id)).toList();
+    var unseen = videos.where((v) => !localSeenService.hasSeen(v.id) && !_willPlaySoonVideoIds.contains(v.id)).toList();
     if (unseen.isEmpty) {
       onTagVideosEmpty();
+    }
+
+    if (onlyUnseen && unseen.isNotEmpty) {
+      await markVideosWillPlaySoon(userId: currentUser.id, videos: unseen);
     }
 
     return unseen;
@@ -143,11 +158,13 @@ Future<void> trackInteraction({
   bool saved = false,
 }) async {
 
+  _willPlaySoonVideoIds.remove(video.id);
+
   await supabaseClient.from('user_interactions').insert({
     'user_id': userId,
     'video_id': video.id,
     'created_at': DateTime.now().toIso8601String(),
-    'interaction_type': 'view',
+    'interaction_type': _interactionTypeView,
     'liked': liked,
     'watch_time': watchTime,
   });
@@ -158,6 +175,36 @@ Future<void> trackInteraction({
       calculateEngagementScore(liked: liked, disliked: disliked, shared: shared, commented: commented, saved: saved, completionRate: watchTime / videoDuration),
     ),
   );
+}
+
+Future<void> markVideosWillPlaySoon({
+  required String userId,
+  required Iterable<Video> videos,
+}) async {
+  final now = DateTime.now().toIso8601String();
+  final payload = <Map<String, dynamic>>[];
+
+  for (final video in videos) {
+    if (_willPlaySoonVideoIds.contains(video.id)) continue;
+    _willPlaySoonVideoIds.add(video.id);
+    payload.add({
+      'user_id': userId,
+      'video_id': video.id,
+      'created_at': now,
+      'interaction_type': _interactionTypeWillPlaySoon,
+      'liked': false,
+      'watch_time': 0.0,
+    });
+  }
+
+  if (payload.isEmpty) return;
+
+  try {
+    await supabaseClient.from('user_interactions').insert(payload);
+  } catch (error) {
+    // Keep feed loading even if backend has not been migrated to this interaction type yet.
+    print('Failed to reserve play-soon videos: $error');
+  }
 }
 
 Video _mapVideo(Map<String, dynamic> data) {
@@ -181,3 +228,8 @@ const String _recommenderVideoSelectInner = '''
 ''';
 
 const String _recommenderVideoSelect = _recommenderVideoSelectInner;
+
+const String _interactionTypeView = 'view';
+const String _interactionTypeWillPlaySoon = 'will_play_soon';
+final Set<String> _willPlaySoonVideoIds = <String>{};
+

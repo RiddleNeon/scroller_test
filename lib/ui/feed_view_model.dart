@@ -43,6 +43,10 @@ class FeedViewModel {
     }
 
     final current = await getVideoAt(index, videoSource: videoSource);
+    if(current.video == null || current.video!.videoUrl.isEmpty) {
+      // If video is null or has an empty URL, skip playing and return early
+      return;
+    }
     if (requestId != _switchRequestId) return;
 
     if (!current.controller!.value.isInitialized) {

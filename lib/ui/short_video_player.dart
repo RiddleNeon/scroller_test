@@ -126,7 +126,7 @@ Widget feedVideos(
                   );
                 }
 
-                final videoData = snapshot.data?.video;
+                final videoData = snapshot.data!.video;
                 if (videoData == null) {
                   return Center(
                     child: Padding(
