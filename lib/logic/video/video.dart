@@ -98,28 +98,3 @@ class Video {
   @override
   String toString() => 'Video{id: $id, title: $title, authorId: $authorId, author: $authorName, tags: $tags}';
 }
-
-class VideoWithAuthor {
-  final Video video;
-  final UserProfile author;
-
-  VideoWithAuthor({required this.video, required this.author});
-
-  static Future<VideoWithAuthor?> fromVideo(Video video, String currentUserId) async {
-    final author = await video.getAuthorProfile();
-    if (author == null) return null;
-
-    return VideoWithAuthor(video: video, author: author);
-  }
-
-  static Future<Map<String, UserProfile>> fetchAuthorProfiles(List<Video> videos) async {
-    final authorIds = videos.map((v) => v.authorId).toSet().toList();
-    final profiles = await supabaseClient.from('profiles').select().inFilter('id', authorIds);
-    return Map.fromEntries(
-      profiles.map((profile) {
-        final user = UserProfile.fromSupabase(profile);
-        return MapEntry(user.id, user);
-      }),
-    );
-  }
-}

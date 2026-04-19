@@ -384,7 +384,7 @@ class VideoRepository {
   Video _toVideo(Map<String, dynamic> data) {
     final profile = (data['profiles'] as Map<String, dynamic>? ?? <String, dynamic>{});
     final authorName = profile['display_name'] ?? profile['username'] ?? data['display_name'] ?? data['username'] ?? 'Unknown';
-    final tags = (data['video_tags'] as List? ?? const []).map((vt) => vt['tags']?['name'] as String?).whereType<String>().toList();
+    final tags = (data['tags'] as List? ?? const []).map<String>((e) => e.toString()).toList();
     return Video.fromSupabase(data, authorName, tags);
   }
 

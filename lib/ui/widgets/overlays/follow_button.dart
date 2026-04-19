@@ -6,7 +6,7 @@ import 'package:wurp/logic/users/user_model.dart';
 
 import '../../../base_logic.dart';
 
-enum FollowButtonDesign { floating, docked }
+enum FollowButtonDesign { floating, docked, compact }
 
 class FollowButton extends StatefulWidget {
   final bool initialSubscribed;
@@ -114,10 +114,20 @@ class FollowButtonState extends State<FollowButton> with SingleTickerProviderSta
   @override
   Widget build(BuildContext context) {
     final theme = Theme.of(context);
+    final isCompact = widget.design == FollowButtonDesign.compact;
 
     final backgroundColor = _subscribed ? theme.colorScheme.tertiaryContainer : theme.colorScheme.primaryContainer;
 
     final foregroundColor = _subscribed ? theme.colorScheme.onTertiaryContainer : theme.colorScheme.onPrimaryContainer;
+
+    final borderRadius = widget.design == FollowButtonDesign.docked
+        ? const BorderRadius.only(topLeft: Radius.circular(16), topRight: Radius.circular(16))
+        : BorderRadius.circular(isCompact ? 999 : 16);
+
+    final containerPadding = isCompact ? const EdgeInsets.symmetric(horizontal: 11, vertical: 8) : const EdgeInsets.symmetric(horizontal: 24, vertical: 14);
+
+    final iconSize = isCompact ? 14.0 : null;
+    final labelStyle = (isCompact ? theme.textTheme.labelMedium : theme.textTheme.labelLarge)?.copyWith(color: foregroundColor, fontWeight: FontWeight.bold);
 
     return AnimatedBuilder(
       animation: _controller,
@@ -131,18 +141,15 @@ class FollowButtonState extends State<FollowButton> with SingleTickerProviderSta
         type: MaterialType.transparency,
         child: InkWell(
           onTap: _isLoading ? null : _toggle,
-          borderRadius: widget.design == FollowButtonDesign.floating
-              ? BorderRadius.circular(16)
-              : const BorderRadius.only(topLeft: Radius.circular(16), topRight: Radius.circular(16)),
+          borderRadius: borderRadius,
           child: AnimatedContainer(
             duration: const Duration(milliseconds: 360),
             curve: Curves.easeInOutCubic,
-            padding: const EdgeInsets.symmetric(horizontal: 24, vertical: 14),
+            padding: containerPadding,
             decoration: BoxDecoration(
               color: backgroundColor,
-              borderRadius: widget.design == FollowButtonDesign.floating
-                  ? BorderRadius.circular(16)
-                  : const BorderRadius.only(topLeft: Radius.circular(16), topRight: Radius.circular(16)),
+              borderRadius: borderRadius,
+              border: isCompact ? Border.all(color: theme.colorScheme.outlineVariant.withValues(alpha: 0.32)) : null,
             ),
             child: AnimatedSize(
               duration: const Duration(milliseconds: 360),
@@ -182,14 +189,15 @@ class FollowButtonState extends State<FollowButton> with SingleTickerProviderSta
                           Transform.scale(
                             scale: 0.92 + (_iconPopAnimation.value * 0.14),
                             child: Icon(
-                              _subscribed ? Icons.check_circle : Icons.notifications,
+                              _subscribed ? (isCompact ? Icons.check : Icons.check_circle) : Icons.notifications,
                               color: foregroundColor,
+                              size: iconSize,
                             ),
                           ),
-                          const SizedBox(width: 10),
+                          SizedBox(width: isCompact ? 4 : 10),
                           Text(
-                            _subscribed ? "Followed" : "Follow",
-                            style: theme.textTheme.labelLarge?.copyWith(color: foregroundColor, fontWeight: FontWeight.bold),
+                            _subscribed ? (isCompact ? "Following" : "Followed") : "Follow",
+                            style: labelStyle,
                           ),
                         ],
                       ),

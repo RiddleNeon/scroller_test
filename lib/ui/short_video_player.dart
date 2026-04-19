@@ -21,10 +21,12 @@ Widget feedVideos(
   PreloadPageController? pageController,
 }) {
   feedModel ??= feedViewModel;
-  feedModel.switchToVideoAt(
-    initialPage,
-    videoSource: videoProvider,
-  ); //so that the first video starts bc this function only gets called on page switches and the first page hasn't had a switch yet
+  if(feedModel.currentIndex != initialPage) {
+    feedModel.switchToVideoAt(
+      initialPage,
+      videoSource: videoProvider,
+    ); //so that the first video starts bc this function only gets called on page switches and the first page hasn't had a switch yet
+  }
   return Stack(
     children: [
       ScrollConfiguration(
