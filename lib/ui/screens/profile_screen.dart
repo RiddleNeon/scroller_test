@@ -339,10 +339,10 @@ class _ProfileScreenState extends State<ProfileScreen> with TickerProviderStateM
             IconButton(
               icon: Icon(Icons.settings, color: cs.onSurface),
               onPressed: () {
-                showRickDialog(context);
+                routerConfig.push("/themes");
               },
               onLongPress: () {
-                routerConfig.push("/themes");
+                showRickDialog(context);
               },
             ),
             const SizedBox(width: 16),

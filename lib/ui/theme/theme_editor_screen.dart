@@ -319,7 +319,7 @@ class _ThemeEditorScreenState extends State<ThemeEditorScreen> {
                     value: surfaceTintStrength,
                     valueLabel: '${(surfaceTintStrength * 100).round()}%',
                     hint:
-                        'Adds more seed color into backgrounds and surfaces, especially in light mode.',
+                        'Adds more seed color into backgrounds and surfaces',
                     onChanged: (v) => setLocal(() => surfaceTintStrength = v),
                   ),
                   if (!useSecondary)
