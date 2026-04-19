@@ -9,6 +9,7 @@ import 'package:wurp/ui/feed_view_model.dart';
 import 'package:wurp/ui/theme/app_theme.dart';
 
 import 'logic/feed_recommendation/user_preference_manager.dart';
+import 'logic/feed_recommendation/video_recommender_base.dart';
 import 'logic/local_storage/local_seen_service.dart';
 import 'logic/repositories/chat_repository.dart';
 import 'logic/repositories/user_repository.dart';
@@ -54,6 +55,7 @@ Future<void> onUserLogin(UserProfile user, bool firstTime) async {
   print("User logged in: ${user.id}");
   _currentUser = user;
   await onUserLoginSupabaseTest();
+  await clearAllWillPlaySoonReservations(userId: user.id);
   await initLocalSeenService();
   await applyThemeFromServer();
 }
@@ -111,6 +113,10 @@ String currentAuthUsername() {
 }
 
 Future<void> onUserLogout() async {
+  final userId = _currentUser?.id;
+  if (userId != null) {
+    await clearAllWillPlaySoonReservations(userId: userId);
+  }
   await auth.signOut();
   UserPreferenceManager.reset();
   await feedViewModel.dispose();

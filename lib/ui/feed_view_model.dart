@@ -79,6 +79,9 @@ class FeedViewModel {
     for (final container in _containers.values) {
       await container.controller?.dispose();
     }
+    if (videoSource is RecommendationVideoProvider) {
+      (videoSource as RecommendationVideoProvider).clearCache();
+    }
     _containers.clear();
     _loading.clear();
   }

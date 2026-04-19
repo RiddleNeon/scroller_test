@@ -157,8 +157,7 @@ Future<void> trackInteraction({
   bool commented = false,
   bool saved = false,
 }) async {
-
-  _willPlaySoonVideoIds.remove(video.id);
+  await releaseVideosWillPlaySoon(userId: userId, videoIds: [video.id]);
 
   await supabaseClient.from('user_interactions').insert({
     'user_id': userId,
@@ -202,8 +201,46 @@ Future<void> markVideosWillPlaySoon({
   try {
     await supabaseClient.from('user_interactions').insert(payload);
   } catch (error) {
+    for (final row in payload) {
+      final videoId = row['video_id']?.toString();
+      if (videoId != null) _willPlaySoonVideoIds.remove(videoId);
+    }
     // Keep feed loading even if backend has not been migrated to this interaction type yet.
     print('Failed to reserve play-soon videos: $error');
+  }
+}
+
+Future<void> releaseVideosWillPlaySoon({
+  required String userId,
+  required Iterable<String> videoIds,
+}) async {
+  final ids = videoIds.where((id) => id.isNotEmpty).toSet().toList();
+  if (ids.isEmpty) return;
+
+  _willPlaySoonVideoIds.removeAll(ids);
+
+  try {
+    await supabaseClient
+        .from('user_interactions')
+        .delete()
+        .eq('user_id', userId)
+        .eq('interaction_type', _interactionTypeWillPlaySoon)
+        .inFilter('video_id', ids);
+  } catch (error) {
+    print('Failed to release play-soon videos: $error');
+  }
+}
+
+Future<void> clearAllWillPlaySoonReservations({required String userId}) async {
+  _willPlaySoonVideoIds.clear();
+  try {
+    await supabaseClient
+        .from('user_interactions')
+        .delete()
+        .eq('user_id', userId)
+        .eq('interaction_type', _interactionTypeWillPlaySoon);
+  } catch (error) {
+    print('Failed to clear play-soon reservations: $error');
   }
 }
 
