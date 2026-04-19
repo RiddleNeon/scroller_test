@@ -265,28 +265,23 @@ class _ThemeManagerScreenState extends State<ThemeManagerScreen> with TickerProv
   }
 
   Future<void> _toggleLike(String themeId) async {
-    if (_uid == null) return;
-    final isLiked = _likedIds.contains(themeId);
+    if (_uid == null) {
+      print('User not logged in, cannot toggle like.');
+      return;
+    }
     try {
-      final currentLikes = _communityThemes.firstWhere((t) => t.id == themeId, orElse: () => _defaultTheme).likesCount;
-      if (isLiked) {
-        await _supabase.from('theme_likes').delete().eq('theme_id', themeId).eq('user_id', _uid!);
-        await _supabase.from('themes').update({'likes_count': currentLikes - 1}).eq('id', themeId);
-        setState(() {
-          _likedIds.remove(themeId);
-          final idx = _communityThemes.indexWhere((t) => t.id == themeId);
-          if (idx != -1) {
-            _communityThemes[idx] = _communityThemes[idx].copyWith(likesCount: (_communityThemes[idx].likesCount - 1).clamp(0, 999999));
-          }
-        });
+      print('Toggling like for theme $themeId');
+      final toggleResult = (await _supabase.rpc('toggle_theme_like', params: {'p_theme_id': themeId}).select().maybeSingle()) as bool?;
+      if (toggleResult == null) {
+        print('Unexpected toggle result: $toggleResult');
+        return;
       } else {
-        await _supabase.from('theme_likes').insert({'theme_id': themeId, 'user_id': _uid!});
-        await _supabase.from('themes').update({'likes_count': currentLikes + 1}).eq('id', themeId);
+        if (!mounted) return;
         setState(() {
-          _likedIds.add(themeId);
-          final idx = _communityThemes.indexWhere((t) => t.id == themeId);
-          if (idx != -1) {
-            _communityThemes[idx] = _communityThemes[idx].copyWith(likesCount: _communityThemes[idx].likesCount + 1);
+          if (toggleResult) {
+            _likedIds.add(themeId);
+          } else {
+            _likedIds.remove(themeId);
           }
         });
       }
@@ -500,6 +495,7 @@ class _ThemeManagerScreenState extends State<ThemeManagerScreen> with TickerProv
               border: Border.all(color: isSelected ? c.primary : Colors.transparent, width: 2.5),
             ),
             child: ThemePreview(
+              key: ValueKey(theme.id),
               c: c,
               theme: theme,
               isDefault: false,
@@ -575,7 +571,7 @@ class _ThemePreviewState extends State<ThemePreview> {
   @override
   void didUpdateWidget(covariant ThemePreview oldWidget) {
     super.didUpdateWidget(oldWidget);
-    if (oldWidget.initiallyLiked != widget.initiallyLiked) {
+    if (oldWidget.theme.id != widget.theme.id || oldWidget.initiallyLiked != widget.initiallyLiked) {
       isLiked = widget.initiallyLiked;
     }
   }
