@@ -1,11 +1,13 @@
+import 'dart:async';
+
 import 'package:flutter/cupertino.dart';
 import 'package:flutter/material.dart';
 
-/// A simple overlay widget that shows a pause icon when the video is paused.
+/// A simple overlay that briefly appears when playback enters paused state.
 class PauseIndicator extends StatefulWidget {
-  final void Function(bool val)? onToggle;
+  final bool isPaused;
 
-  const PauseIndicator({super.key, this.onToggle});
+  const PauseIndicator({super.key, required this.isPaused});
 
   @override
   State<PauseIndicator> createState() => PauseIndicatorState();
@@ -13,11 +15,43 @@ class PauseIndicator extends StatefulWidget {
 
 class PauseIndicatorState extends State<PauseIndicator> {
   bool visible = false;
+  Timer? _hideTimer;
 
-  void toggleVisibility() {
+
+  @override
+  void didUpdateWidget(covariant PauseIndicator oldWidget) {
+    super.didUpdateWidget(oldWidget);
+    if (oldWidget.isPaused == widget.isPaused) return;
+
+    if (widget.isPaused) {
+      _showAndHideAfterDelay();
+    } else {
+      _hideTimer?.cancel();
+      if (visible) {
+        setState(() {
+          visible = false;
+        });
+      }
+    }
+  }
+
+  @override
+  void dispose() {
+    _hideTimer?.cancel();
+    super.dispose();
+  }
+
+  void _showAndHideAfterDelay() {
+    _hideTimer?.cancel();
     setState(() {
-      visible = !visible;
-      widget.onToggle?.call(visible);
+      visible = true;
+    });
+
+    _hideTimer = Timer(const Duration(seconds: 1), () {
+      if (!mounted) return;
+      setState(() {
+        visible = false;
+      });
     });
   }
 
@@ -40,7 +74,7 @@ class PauseIndicatorState extends State<PauseIndicator> {
             borderRadius: BorderRadius.circular(41),
             border: Border.all(color: cs.outlineVariant.withValues(alpha: 0.8)),
           ),
-          child: Center(child: Icon(visible ? CupertinoIcons.pause_fill : CupertinoIcons.play_fill, color: cs.onSurface, size: 36)),
+          child: Center(child: Icon(widget.isPaused ? CupertinoIcons.pause_fill : CupertinoIcons.play_fill, color: cs.onSurface, size: 36)),
         ),
       ),
     );

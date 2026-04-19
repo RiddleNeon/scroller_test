@@ -84,6 +84,7 @@ class _VideoItemState extends State<VideoItem> {
     } else if (!isPlaying && _wasPlaying) {
       _wasPlaying = false;
       _stopTracking();
+      setState(() {});
     }
   }
 
@@ -231,8 +232,9 @@ class _VideoItemState extends State<VideoItem> {
                       onCommentChanged: onCommentChanged,
                       initiallyLiked: localSeenService.isLiked(widget.video.id),
                       initiallyDisliked: localSeenService.isDisliked(widget.video.id),
-                      onPauseChanged: (isPaused) {
-                        if (isPaused) {
+                      isPaused: !widget.controller.value.isPlaying,
+                      onTogglePause: () {
+                        if (widget.controller.value.isPlaying) {
                           widget.controller.pause();
                         } else {
                           widget.controller.play();

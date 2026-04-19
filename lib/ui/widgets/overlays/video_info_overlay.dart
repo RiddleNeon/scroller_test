@@ -83,180 +83,191 @@ class _VideoInfoOverlayState extends State<VideoInfoOverlay> {
     final hiddenTagsCount = filteredTags.length - visibleTags.length;
     final isOwnProfile = userLoggedIn && currentUser.id == widget.video.authorId;
 
-    return Container(
-      padding: const EdgeInsets.fromLTRB(16, 60, 16, 24),
-      decoration: BoxDecoration(
-        gradient: LinearGradient(
-          begin: Alignment.bottomCenter,
-          end: Alignment.topCenter,
-          colors: [cs.scrim.withValues(alpha: 0.74), cs.scrim.withValues(alpha: 0.44), cs.scrim.withValues(alpha: 0)],
+    return Stack(
+      children: [
+        Positioned.fill(
+          child: IgnorePointer(
+            ignoring: true,
+            child: DecoratedBox(
+              decoration: BoxDecoration(
+                gradient: LinearGradient(
+                  begin: Alignment.bottomCenter,
+                  end: Alignment.topCenter,
+                  colors: [cs.scrim.withValues(alpha: 0.74), cs.scrim.withValues(alpha: 0.44), cs.scrim.withValues(alpha: 0)],
+                ),
+              ),
+            ),
+          ),
         ),
-      ),
-      child: Align(
-        alignment: Alignment.bottomLeft,
-        child: LayoutBuilder(
-          builder: (context, constraints) {
-            final maxCardWidth = math.min(420.0, math.max(260.0, constraints.maxWidth - 22));
-            final maxTagWidth = math.max(64.0, (maxCardWidth - 84) / 3);
-            final maxCardHeight = math.max(120.0, constraints.maxHeight - 8);
-            return ConstrainedBox(
-              constraints: BoxConstraints(maxWidth: maxCardWidth, maxHeight: maxCardHeight),
-              child: GestureDetector(
-                onTap: _toggleExpanded,
-                child: AnimatedContainer(
-                  duration: const Duration(milliseconds: 240),
-                  curve: Curves.easeOutCubic,
-                  padding: const EdgeInsets.fromLTRB(12, 10, 12, 10),
-                  decoration: BoxDecoration(
-                    color: cs.surfaceContainerLow.withValues(alpha: 0.72),
-                    borderRadius: BorderRadius.circular(18),
-                    border: Border.all(color: cs.outlineVariant.withValues(alpha: 0.55)),
-                  ),
-                  child: Column(
-                    crossAxisAlignment: CrossAxisAlignment.start,
-                    mainAxisSize: MainAxisSize.min,
-                    children: [
-                      Row(
-                        crossAxisAlignment: CrossAxisAlignment.center,
+        Padding(
+          padding: const EdgeInsets.fromLTRB(16, 60, 16, 24),
+          child: Align(
+            alignment: Alignment.bottomLeft,
+            child: LayoutBuilder(
+              builder: (context, constraints) {
+                final maxCardWidth = math.min(420.0, math.max(260.0, constraints.maxWidth - 22));
+                final maxTagWidth = math.max(64.0, (maxCardWidth - 84) / 3);
+                final maxCardHeight = math.max(120.0, constraints.maxHeight - 8);
+                return ConstrainedBox(
+                  constraints: BoxConstraints(maxWidth: maxCardWidth, maxHeight: maxCardHeight),
+                  child: GestureDetector(
+                    onTap: _toggleExpanded,
+                    child: AnimatedContainer(
+                      duration: const Duration(milliseconds: 240),
+                      curve: Curves.easeOutCubic,
+                      padding: const EdgeInsets.fromLTRB(12, 10, 12, 10),
+                      decoration: BoxDecoration(
+                        color: cs.surfaceContainerLow.withValues(alpha: 0.72),
+                        borderRadius: BorderRadius.circular(18),
+                        border: Border.all(color: cs.outlineVariant.withValues(alpha: 0.55)),
+                      ),
+                      child: Column(
+                        crossAxisAlignment: CrossAxisAlignment.start,
+                        mainAxisSize: MainAxisSize.min,
                         children: [
-                          Expanded(
-                            child: Padding(
-                              padding: const EdgeInsets.symmetric(vertical: 2),
-                              child: Row(
-                                children: [
-                                  SizedBox(
-                                    width: 34,
-                                    height: 34,
-                                    child: FittedBox(
-                                      fit: BoxFit.cover,
-                                      child: Avatar(
-                                        imageUrl: _author?.profileImageUrl,
-                                        name: _author?.displayName.isNotEmpty == true ? _author!.displayName : widget.video.authorName,
-                                        colorScheme: cs,
+                          Row(
+                            crossAxisAlignment: CrossAxisAlignment.center,
+                            children: [
+                              Expanded(
+                                child: Padding(
+                                  padding: const EdgeInsets.symmetric(vertical: 2),
+                                  child: Row(
+                                    children: [
+                                      SizedBox(
+                                        width: 34,
+                                        height: 34,
+                                        child: FittedBox(
+                                          fit: BoxFit.cover,
+                                          child: Avatar(
+                                            imageUrl: _author?.profileImageUrl,
+                                            name: _author?.displayName.isNotEmpty == true ? _author!.displayName : widget.video.authorName,
+                                            colorScheme: cs,
+                                          ),
+                                        ),
                                       ),
-                                    ),
+                                      const SizedBox(width: 8),
+                                      InkWell(
+                                        onTap: _openProfile,
+                                        child: Text(
+                                          _author?.username.isNotEmpty == true ? _author!.username : widget.video.authorName,
+                                          maxLines: 1,
+                                          overflow: TextOverflow.ellipsis,
+                                          style: TextStyle(color: cs.onSurface, fontWeight: FontWeight.w700, fontSize: 14),
+                                        ),
+                                      ),
+                                      const Spacer(),
+                                    ],
                                   ),
-                                  const SizedBox(width: 8),
-                                  InkWell(
-                                    onTap: _openProfile,
-                                    child: Text(
-                                      _author?.username.isNotEmpty == true ? _author!.username : widget.video.authorName,
-                                      maxLines: 1,
-                                      overflow: TextOverflow.ellipsis,
-                                      style: TextStyle(color: cs.onSurface, fontWeight: FontWeight.w700, fontSize: 14),
-                                    ),
-                                  ),
-                                  const Spacer(),
-                                ],
+                                ),
+                              ),
+                              if (!isOwnProfile && _author != null) ...[
+                                const SizedBox(width: 8),
+                                FollowButton(
+                                  key: ValueKey(widget.video.authorId),
+                                  user: _author!,
+                                  initialSubscribed: localSeenService.isFollowing(widget.video.authorId),
+                                  design: FollowButtonDesign.compact,
+                                ),
+                              ],
+                              const SizedBox(width: 4),
+                              AnimatedRotation(
+                                turns: _expanded ? 0.5 : 0,
+                                duration: const Duration(milliseconds: 220),
+                                curve: Curves.easeOutCubic,
+                                child: Icon(Icons.keyboard_arrow_down_rounded, color: cs.onSurfaceVariant, size: 20),
+                              ),
+                            ],
+                          ),
+                          if (title.isNotEmpty) ...[
+                            const SizedBox(height: 4),
+                            Text(
+                              title,
+                              maxLines: _expanded ? 2 : 1,
+                              overflow: TextOverflow.ellipsis,
+                              style: TextStyle(color: cs.onSurface, fontWeight: FontWeight.w600, fontSize: 14),
+                            ),
+                          ],
+                          Flexible(
+                            child: AnimatedSize(
+                              duration: const Duration(milliseconds: 260),
+                              curve: Curves.easeOutCubic,
+                              child: ClipRect(
+                                child: AnimatedSwitcher(
+                                  duration: const Duration(milliseconds: 220),
+                                  switchInCurve: Curves.easeOutCubic,
+                                  switchOutCurve: Curves.easeInCubic,
+                                  transitionBuilder: (child, animation) {
+                                    return FadeTransition(
+                                      opacity: animation,
+                                      child: SizeTransition(sizeFactor: animation, axisAlignment: -1, child: child),
+                                    );
+                                  },
+                                  child: _expanded
+                                      ? Padding(
+                                          key: ValueKey('expanded_details_$_showAllTags'),
+                                          padding: const EdgeInsets.only(top: 8),
+                                          child: SingleChildScrollView(
+                                            child: Column(
+                                              crossAxisAlignment: CrossAxisAlignment.start,
+                                              mainAxisSize: MainAxisSize.min,
+                                              children: [
+                                                if (description.isNotEmpty)
+                                                  Text(
+                                                    description,
+                                                    style: TextStyle(color: cs.onSurfaceVariant, fontSize: 13, fontWeight: FontWeight.w500),
+                                                  ),
+                                                if (description.isNotEmpty && visibleTags.isNotEmpty) const SizedBox(height: 8),
+                                                if (visibleTags.isNotEmpty)
+                                                  ClipRect(
+                                                    child: Wrap(
+                                                      spacing: 6,
+                                                      runSpacing: 6,
+                                                      children: [
+                                                        ...visibleTags.map((tag) => _TagChip(text: '#$tag', maxWidth: maxTagWidth, isInteractive: false)),
+                                                        if (hiddenTagsCount > 0)
+                                                          _TagChip(
+                                                            text: '+$hiddenTagsCount',
+                                                            isInteractive: true,
+                                                            maxWidth: maxTagWidth,
+                                                            onTap: () {
+                                                              setState(() {
+                                                                _showAllTags = true;
+                                                              });
+                                                            },
+                                                          ),
+                                                        if (_showAllTags && filteredTags.length > 3)
+                                                          _TagChip(
+                                                            isInteractive: true,
+                                                            text: 'Show less',
+                                                            maxWidth: maxTagWidth + 24,
+                                                            onTap: () {
+                                                              setState(() {
+                                                                _showAllTags = false;
+                                                              });
+                                                            },
+                                                          ),
+                                                      ],
+                                                    ),
+                                                  ),
+                                              ],
+                                            ),
+                                          ),
+                                        )
+                                      : const SizedBox(key: ValueKey('collapsed_details')),
+                                ),
                               ),
                             ),
                           ),
-                          if (!isOwnProfile && _author != null) ...[
-                            const SizedBox(width: 8),
-                            FollowButton(
-                              key: ValueKey(widget.video.authorId),
-                              user: _author!,
-                              initialSubscribed: localSeenService.isFollowing(widget.video.authorId),
-                              design: FollowButtonDesign.compact,
-                            ),
-                          ],
-                          const SizedBox(width: 4),
-                          AnimatedRotation(
-                            turns: _expanded ? 0.5 : 0,
-                            duration: const Duration(milliseconds: 220),
-                            curve: Curves.easeOutCubic,
-                            child: Icon(Icons.keyboard_arrow_down_rounded, color: cs.onSurfaceVariant, size: 20),
-                          ),
                         ],
                       ),
-                      if (title.isNotEmpty) ...[
-                        const SizedBox(height: 4),
-                        Text(
-                          title,
-                          maxLines: _expanded ? 2 : 1,
-                          overflow: TextOverflow.ellipsis,
-                          style: TextStyle(color: cs.onSurface, fontWeight: FontWeight.w600, fontSize: 14),
-                        ),
-                      ],
-                      Flexible(
-                        child: AnimatedSize(
-                          duration: const Duration(milliseconds: 260),
-                          curve: Curves.easeOutCubic,
-                          child: ClipRect(
-                            child: AnimatedSwitcher(
-                              duration: const Duration(milliseconds: 220),
-                              switchInCurve: Curves.easeOutCubic,
-                              switchOutCurve: Curves.easeInCubic,
-                              transitionBuilder: (child, animation) {
-                                return FadeTransition(
-                                  opacity: animation,
-                                  child: SizeTransition(sizeFactor: animation, axisAlignment: -1, child: child),
-                                );
-                              },
-                              child: _expanded
-                                  ? Padding(
-                                      key: ValueKey('expanded_details_$_showAllTags'),
-                                      padding: const EdgeInsets.only(top: 8),
-                                      child: SingleChildScrollView(
-                                        child: Column(
-                                          crossAxisAlignment: CrossAxisAlignment.start,
-                                          mainAxisSize: MainAxisSize.min,
-                                          children: [
-                                            if (description.isNotEmpty)
-                                              Text(
-                                                description,
-                                                style: TextStyle(color: cs.onSurfaceVariant, fontSize: 13, fontWeight: FontWeight.w500),
-                                              ),
-                                            if (description.isNotEmpty && visibleTags.isNotEmpty) const SizedBox(height: 8),
-                                            if (visibleTags.isNotEmpty)
-                                              ClipRect(
-                                                child: Wrap(
-                                                  spacing: 6,
-                                                  runSpacing: 6,
-                                                  children: [
-                                                    ...visibleTags.map((tag) => _TagChip(text: '#$tag', maxWidth: maxTagWidth, isInteractive: false)),
-                                                    if (hiddenTagsCount > 0)
-                                                      _TagChip(
-                                                        text: '+$hiddenTagsCount',
-                                                        isInteractive: true,
-                                                        maxWidth: maxTagWidth,
-                                                        onTap: () {
-                                                          setState(() {
-                                                            _showAllTags = true;
-                                                          });
-                                                        },
-                                                      ),
-                                                    if (_showAllTags && filteredTags.length > 3)
-                                                      _TagChip(
-                                                        isInteractive: true,
-                                                        text: 'Show less',
-                                                        maxWidth: maxTagWidth + 24,
-                                                        onTap: () {
-                                                          setState(() {
-                                                            _showAllTags = false;
-                                                          });
-                                                        },
-                                                      ),
-                                                  ],
-                                                ),
-                                              ),
-                                          ],
-                                        ),
-                                      ),
-                                    )
-                                  : const SizedBox(key: ValueKey('collapsed_details')),
-                            ),
-                          ),
-                        ),
-                      ),
-                    ],
+                    ),
                   ),
-                ),
-              ),
-            );
-          },
+                );
+              },
+            ),
+          ),
         ),
-      ),
+      ],
     );
   }
 }

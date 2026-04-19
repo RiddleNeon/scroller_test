@@ -23,7 +23,8 @@ class PageOverlay extends StatefulWidget {
   final void Function(bool hasShared)? onShareChanged;
   final void Function(bool hasSaved)? onSaveChanged;
   final void Function(bool hasCommented)? onCommentChanged;
-  final void Function(bool isPaused) onPauseChanged;
+  final VoidCallback onTogglePause;
+  final bool isPaused;
 
   const PageOverlay({
     super.key,
@@ -37,7 +38,8 @@ class PageOverlay extends StatefulWidget {
     this.onCommentChanged,
     required this.initiallyLiked,
     required this.initiallyDisliked,
-    required this.onPauseChanged,
+    required this.onTogglePause,
+    required this.isPaused,
   });
 
   @override
@@ -50,8 +52,6 @@ class _PageOverlayState extends State<PageOverlay> {
   late bool liked = widget.initiallyLiked;
   late bool disliked = widget.initiallyDisliked;
 
-  GlobalKey<PauseIndicatorState> pauseIndicatorKey = GlobalKey();
-
   @override
   Widget build(BuildContext context) {
     return Stack(
@@ -59,17 +59,14 @@ class _PageOverlayState extends State<PageOverlay> {
         Listener(
           behavior: HitTestBehavior.translucent,
           onPointerDown: (_) {
-            pauseIndicatorKey.currentState?.toggleVisibility();
+            widget.onTogglePause();
           },
           child: const SizedBox.expand(),
         ),
         Positioned.fill(
           child: Center(
             child: PauseIndicator(
-              key: pauseIndicatorKey,
-              onToggle: (val) {
-                widget.onPauseChanged(val);
-              },
+              isPaused: widget.isPaused,
             ),
           ),
         ),
