@@ -12,7 +12,9 @@ import 'package:wurp/ui/theme/theme_editor_screen.dart';
 import 'app_theme.dart';
 
 class ThemeManagerScreen extends StatefulWidget {
-  const ThemeManagerScreen({super.key});
+  const ThemeManagerScreen({super.key, this.initialTabIndex = 0});
+
+  final int initialTabIndex;
 
   @override
   State<ThemeManagerScreen> createState() => _ThemeManagerScreenState();
@@ -361,6 +363,8 @@ class _ThemeManagerScreenState extends State<ThemeManagerScreen> with TickerProv
   @override
   Widget build(BuildContext context) {
     return DefaultTabController(
+      key: ValueKey(widget.initialTabIndex.clamp(0, 1)),
+      initialIndex: widget.initialTabIndex.clamp(0, 1),
       length: 2,
       child: Scaffold(
         appBar: AppBar(

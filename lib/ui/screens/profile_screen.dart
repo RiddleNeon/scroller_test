@@ -3,11 +3,11 @@ import 'dart:math';
 
 import 'package:flutter/material.dart';
 import 'package:font_awesome_flutter/font_awesome_flutter.dart';
-import 'package:wurp/logic/chat/chat.dart';
 import 'package:wurp/logic/repositories/user_repository.dart' as user_repo;
 import 'package:wurp/logic/users/user_model.dart';
 import 'package:wurp/logic/video/video.dart';
 import 'package:wurp/ui/animations/slide_morph_transitions.dart';
+import 'package:wurp/ui/deep_link_builder.dart';
 import 'package:wurp/ui/misc/avatar.dart';
 import 'package:wurp/ui/misc/preloading_list.dart';
 import 'package:wurp/ui/router.dart';
@@ -24,7 +24,6 @@ import '../feed_view_model.dart';
 import '../misc/basic_player.dart';
 import '../misc/profile_image_picker.dart';
 import '../misc/rolling_digit_counter.dart';
-import 'chat/chat_managing_screen.dart';
 
 class ProfileScreen extends StatefulWidget {
   final UserProfile initialProfile;
@@ -32,6 +31,7 @@ class ProfileScreen extends StatefulWidget {
   final bool hasBackButton;
   final void Function(bool followed) onFollowChange;
   final bool initialFollowed;
+  final int initialTabIndex;
 
   const ProfileScreen({
     super.key,
@@ -40,6 +40,7 @@ class ProfileScreen extends StatefulWidget {
     this.hasBackButton = false,
     required this.onFollowChange,
     this.initialFollowed = false,
+    this.initialTabIndex = 0,
   });
 
   @override
@@ -65,6 +66,7 @@ class _ProfileScreenState extends State<ProfileScreen> with TickerProviderStateM
   void initState() {
     super.initState();
     _tabController = TabController(length: 3, vsync: this);
+    _tabController.index = widget.initialTabIndex.clamp(0, 2);
     _tabController.addListener(() {
       if (mounted) setState(() {});
     });
@@ -107,6 +109,13 @@ class _ProfileScreenState extends State<ProfileScreen> with TickerProviderStateM
     _followChangesSub?.cancel();
     _tabController.dispose();
     super.dispose();
+  }
+
+  @override
+  void didUpdateWidget(covariant ProfileScreen oldWidget) {
+    super.didUpdateWidget(oldWidget);
+    if (oldWidget.initialTabIndex == widget.initialTabIndex) return;
+    _tabController.animateTo(widget.initialTabIndex.clamp(0, 2));
   }
 
   Future<void> _onOwnFollowChanged(user_repo.FollowChangeEvent event) async {
@@ -529,23 +538,7 @@ class _ProfileScreenState extends State<ProfileScreen> with TickerProviderStateM
             message: 'Chat with User',
             child: GestureDetector(
               onTap: () {
-                Chat? chat = localSeenService.getChatWith(user.id);
-                chat ??= Chat(
-                  partnerId: user.id,
-                  partnerProfileImageUrl: user.profileImageUrl,
-                  partnerName: user.username,
-                  lastMessage: '',
-                  lastMessageAt: null,
-                  lastMessageByMe: true,
-                  createdAt: DateTime.now(),
-                );
-                Navigator.of(context).push(
-                  MaterialPageRoute(
-                    builder: (context) => buildMessagingScreen(chat!, (message) {
-                      chatManagingScreenKey.currentState?.onMessageUpdate(chat!, message);
-                    }),
-                  ),
-                );
+                routerConfig.go(DeepLinkBuilder.chat(partnerId: user.id));
               },
               child: Container(
                 width: 46,

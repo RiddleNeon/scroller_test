@@ -223,7 +223,10 @@ class _VideoInfoOverlayState extends State<VideoInfoOverlay> {
                                                       spacing: 6,
                                                       runSpacing: 6,
                                                       children: [
-                                                        ...visibleTags.map((tag) => _TagChip(text: '#$tag', maxWidth: maxTagWidth, isInteractive: false)),
+                                                        ...visibleTags.map(
+                                                          (tag) => _TagChip(text: '#$tag', maxWidth: maxTagWidth, isInteractive: false, onTap: () {
+                                                          }),
+                                                        ),
                                                         if (hiddenTagsCount > 0)
                                                           _TagChip(
                                                             text: '+$hiddenTagsCount',

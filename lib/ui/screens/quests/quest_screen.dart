@@ -1,14 +1,22 @@
 //test app for the quest screen
 
 import 'package:flutter/material.dart';
+import 'package:wurp/logic/quests/quest.dart';
 import 'package:wurp/logic/quests/quest_system.dart';
 import 'package:wurp/ui/screens/quests/core/pan.dart';
 import 'package:wurp/ui/screens/quests/version_management/change_screen.dart';
 
 class TestQuestScreen extends StatefulWidget {
   final String subject;
+  final List<int> focusQuestIds;
+  final bool zoomOutIfNeeded;
 
-  const TestQuestScreen({super.key, required this.subject});
+  const TestQuestScreen({
+    super.key,
+    required this.subject,
+    this.focusQuestIds = const [],
+    this.zoomOutIfNeeded = true,
+  });
 
   @override
   State<TestQuestScreen> createState() => _TestQuestScreenState();
@@ -34,7 +42,24 @@ class _TestQuestScreenState extends State<TestQuestScreen> {
     WidgetsBinding.instance.addPostFrameCallback((timeStamp) {
       if (!mounted) return;
       setState(() {
-        _panKey.currentState?.centerOnAllQuests(context.size?.width ?? 1000, context.size?.height ?? 1000);
+        final focusQuests = widget.focusQuestIds
+            .map((id) => questSystem.maybeGetQuestById(id))
+            .whereType<Quest>()
+            .toList();
+
+        if (focusQuests.isEmpty) {
+          _panKey.currentState?.centerOnAllQuests(context.size?.width ?? 1000, context.size?.height ?? 1000);
+          return;
+        }
+
+        final panState = _panKey.currentState;
+        if (panState == null) return;
+        (panState as dynamic).focusOnQuests(
+          focusQuests,
+          context.size?.width ?? 1000,
+          context.size?.height ?? 1000,
+          zoomOutIfNeeded: widget.zoomOutIfNeeded,
+        );
       });
     });
 

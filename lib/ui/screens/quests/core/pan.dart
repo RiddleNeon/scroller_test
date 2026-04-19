@@ -1,6 +1,6 @@
 // ignore_for_file: deprecated_member_use
 
-import 'dart:math' show max;
+import 'dart:math' show max, min;
 
 import 'package:flutter/gestures.dart';
 import 'package:flutter/material.dart';
@@ -667,6 +667,57 @@ class PanWidgetState extends State<PanWidget> {
     _controller.value = Matrix4.identity()
       ..scale(scale)
       ..translate(targetX / scale, targetY / scale);
+  }
+
+  void focusOnQuests(List<Quest> quests, double screenWidth, double screenHeight, {bool zoomOutIfNeeded = true}) {
+    if (quests.isEmpty) {
+      centerOnAllQuests(screenWidth, screenHeight, autoZoom: true);
+      return;
+    }
+
+    if (quests.length == 1 && !zoomOutIfNeeded) {
+      focusOnQuest(quests.first);
+      return;
+    }
+
+    double minX = double.infinity;
+    double minY = double.infinity;
+    double maxX = double.negativeInfinity;
+    double maxY = double.negativeInfinity;
+
+    for (final quest in quests) {
+      minX = min(minX, quest.posX);
+      minY = min(minY, quest.posY);
+      maxX = max(maxX, quest.posX + quest.sizeX);
+      maxY = max(maxY, quest.posY + quest.sizeY);
+    }
+
+    final center = Offset((minX + maxX) / 2, (minY + maxY) / 2);
+    final boundsWidth = (maxX - minX).abs() + 1;
+    final boundsHeight = (maxY - minY).abs() + 1;
+    final scaleX = screenWidth / boundsWidth;
+    final scaleY = screenHeight / boundsHeight;
+
+    double targetScale = _currentScale;
+    if (zoomOutIfNeeded) {
+      targetScale = min(scaleX, scaleY) * 0.85;
+      targetScale = min(targetScale, _currentScale);
+    }
+
+    final targetTx = screenWidth / 2 - center.dx * targetScale;
+    final targetTy = screenHeight / 2 - center.dy * targetScale;
+
+    final viewportRect = Rect.fromLTWH(
+      -targetTx / targetScale,
+      -targetTy / targetScale,
+      screenWidth / targetScale,
+      screenHeight / targetScale,
+    );
+    _questBubbleOverlayKey.currentState?.onScaleChange(targetScale, viewportRect);
+
+    _controller.value = Matrix4.identity()
+      ..scale(targetScale)
+      ..translate(targetTx / targetScale, targetTy / targetScale);
   }
 
   void centerOnAllQuests(double screenWidth, double screenHeight, {bool autoZoom = true}) {

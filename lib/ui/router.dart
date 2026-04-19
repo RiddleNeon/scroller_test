@@ -16,6 +16,7 @@ import 'package:wurp/ui/theme/theme_creation_screen.dart';
 import 'package:wurp/ui/widgets/bottom_navigation_bar.dart';
 
 import '../base_logic.dart';
+import '../logic/repositories/video_repository.dart';
 
 late final GoRouter routerConfig;
 
@@ -23,10 +24,11 @@ void initRouter() {
   routerConfig = GoRouter(
     navigatorKey: appNavigatorKey,
     observers: [RouteObserver()],
-    redirect: (context, state) {
+    redirect: (context, state) async {
       print("navigating to ${state.uri.path}");
 
-      final navBarItem = _navigationBarItems.where((element) => element.id == state.uri.path).firstOrNull;
+      final canonicalNavPath = _canonicalNavPath(state.uri.path);
+      final navBarItem = _navigationBarItems.where((element) => element.id == canonicalNavPath).firstOrNull;
       if (navBarItem != null) {
         int navBarIndex = _navigationBarItems.indexOf(navBarItem);
         if (navBarIndex != -1 && navBarKey.currentState?.currentSelectedIndex != navBarIndex) {
@@ -45,19 +47,35 @@ void initRouter() {
       final onLogin = path == '/login';
       final onResetPassword = path == '/reset-password';
       final onSignupOnboarding = path == '/signup-onboarding';
+      final onLogout = path == '/logout';
       final hasSession = auth.currentSession != null;
       final onboardingDone = userLoggedIn && currentUser.onboardingCompleted && currentUser.hasAcceptedRequiredAgreements;
 
-      if (!hasSession && !onLogin && !onResetPassword) {
+      if (onLogout) {
+        if (hasSession || userLoggedIn) {
+          await onUserLogout();
+        }
         return '/login';
       }
+
+      final from = state.uri.toString();
+      final loginLocation = Uri(path: '/login', queryParameters: {'from': from}).toString();
+      final onboardingLocation = Uri(path: '/signup-onboarding', queryParameters: {'from': from}).toString();
+
+      if (!hasSession && !onLogin && !onResetPassword) {
+        return loginLocation;
+      }
       if (hasSession && !userLoggedIn && !onSignupOnboarding && !onResetPassword) {
-        return '/signup-onboarding';
+        return onboardingLocation;
       }
       if (userLoggedIn && !onboardingDone && !onSignupOnboarding) {
-        return '/signup-onboarding';
+        return onboardingLocation;
       }
       if (userLoggedIn && onboardingDone && (onLogin || onSignupOnboarding || state.matchedLocation == '/')) {
+        final requested = state.uri.queryParameters['from'];
+        if (requested != null && requested.startsWith('/')) {
+          return requested;
+        }
         return '/profile';
       }
       return null;
@@ -74,15 +92,43 @@ void initRouter() {
                 SlideMorphTransitions.page<void>(key: state.pageKey, child: const VideoFeed(), beginOffset: const Offset(0.02, 0.0), beginScale: 0.995),
           ),
           GoRoute(
+            path: '/feed/:videoId',
+            pageBuilder: (context, state) => SlideMorphTransitions.page<void>(
+              key: state.pageKey,
+              child: _DeepLinkVideoScreen(videoId: state.pathParameters['videoId'] ?? ''),
+              beginOffset: const Offset(0.02, 0.0),
+              beginScale: 0.995,
+            ),
+          ),
+          GoRoute(
+            path: '/search',
+            pageBuilder: (context, state) {
+              final scope = _searchScopeFromQuery(state.uri.queryParameters['scope']);
+              final mode = _searchModeFromQuery(state.uri.queryParameters['mode']);
+              return SlideMorphTransitions.page<void>(
+                key: state.pageKey,
+                child: SearchScreen(initialQuery: state.uri.queryParameters['q'], initialScope: scope, initialMode: mode),
+                beginOffset: const Offset(0.03, 0.0),
+                beginScale: 0.993,
+              );
+            },
+          ),
+          GoRoute(
             path: '/search_screen',
-            pageBuilder: (context, state) =>
-                SlideMorphTransitions.page<void>(key: state.pageKey, child: const SearchScreen(), beginOffset: const Offset(0.03, 0.0), beginScale: 0.993),
+            redirect: (context, state) {
+              return Uri(path: '/search', queryParameters: state.uri.queryParameters.isEmpty ? null : state.uri.queryParameters).toString();
+            },
           ),
           GoRoute(
             path: '/profile',
             pageBuilder: (context, state) => SlideMorphTransitions.page<void>(
               key: state.pageKey,
-              child: ProfileScreen(initialProfile: currentUser, ownProfile: true, onFollowChange: (bool followed) {}),
+              child: ProfileScreen(
+                initialProfile: currentUser,
+                ownProfile: true,
+                onFollowChange: (bool followed) {},
+                initialTabIndex: _profileTabIndexFromQuery(state.uri.queryParameters['tab']),
+              ),
               beginOffset: const Offset(0.03, 0.0),
               beginScale: 0.993,
             ),
@@ -93,11 +139,19 @@ void initRouter() {
               key: state.pageKey,
               child: ChatManagingScreen(
                 preloadMoreChats: (current) => chatRepository.getChats(currentUser.id, offset: current ?? 0, limit: 15),
-                key: chatManagingScreenKey,
+                initialChatPartnerId: state.uri.queryParameters['user'],
               ),
               beginOffset: const Offset(0.03, 0.0),
               beginScale: 0.993,
             ),
+          ),
+          GoRoute(
+            path: '/chat/:userId',
+            redirect: (context, state) {
+              final userId = state.pathParameters['userId'];
+              if (userId == null || userId.isEmpty) return '/chat';
+              return Uri(path: '/chat', queryParameters: {'user': userId}).toString();
+            },
           ),
           GoRoute(
             path: '/create',
@@ -110,23 +164,42 @@ void initRouter() {
           ),
           GoRoute(
             path: '/quests',
-            pageBuilder: (context, state) => SlideMorphTransitions.page<void>(
-              key: state.pageKey,
-              child: const TestQuestScreen(subject: 'General'),
-              beginOffset: const Offset(0.03, 0.0),
-              beginScale: 0.993,
-            ),
+            pageBuilder: (context, state) {
+              final focusIds = _parseQuestIds(state.uri.queryParameters['focus']);
+              final zoomOutIfNeeded = _parseZoomOut(state.uri.queryParameters['zoom']);
+              return SlideMorphTransitions.page<void>(
+                key: state.pageKey,
+                child: TestQuestScreen(subject: 'General', focusQuestIds: focusIds, zoomOutIfNeeded: zoomOutIfNeeded),
+                beginOffset: const Offset(0.03, 0.0),
+                beginScale: 0.993,
+              );
+            },
           ),
           GoRoute(
             path: '/themes',
-            pageBuilder: (context, state) => SlideMorphTransitions.page<void>(
-              key: state.pageKey,
-              child: const ThemeManagerScreen(),
-              beginOffset: const Offset(0.03, 0.0),
-              beginScale: 0.993,
-            ),
+            pageBuilder: (context, state) {
+              final tabIndex = _themeTabIndexFromQuery(state.uri.queryParameters['tab']);
+              return SlideMorphTransitions.page<void>(
+                key: state.pageKey,
+                child: ThemeManagerScreen(initialTabIndex: tabIndex),
+                beginOffset: const Offset(0.03, 0.0),
+                beginScale: 0.993,
+              );
+            },
           ),
         ],
+      ),
+      GoRoute(
+        path: '/u/:userId',
+        pageBuilder: (context, state) => SlideMorphTransitions.page<void>(
+          key: state.pageKey,
+          child: _DeepLinkProfileScreen(
+            userId: state.pathParameters['userId'] ?? '',
+            initialTabIndex: _profileTabIndexFromQuery(state.uri.queryParameters['tab']),
+          ),
+          beginOffset: const Offset(0.03, 0.0),
+          beginScale: 0.993,
+        ),
       ),
       GoRoute(
         path: '/login',
@@ -156,6 +229,10 @@ void initRouter() {
           );
         },
       ),
+      GoRoute(
+        path: '/logout',
+        pageBuilder: (context, state) => const NoTransitionPage(child: SizedBox.shrink()),
+      ),
     ],
   );
 }
@@ -172,7 +249,7 @@ final BottomNavBar _bottomNavBar = BottomNavBar(
 
 List<({IconData icon, String label, String id})> _navigationBarItems = [
   (icon: Icons.home, label: 'Home', id: '/feed'),
-  (icon: Icons.search, label: 'Discover', id: '/search_screen'),
+  (icon: Icons.search, label: 'Discover', id: '/search'),
   //(icon: Icons.add_box_outlined, label: '', id: '/create'),
   (icon: Icons.person_outline, label: 'Profile', id: '/profile'),
   (icon: Icons.chat, label: 'Chat', id: '/chat'),
@@ -189,17 +266,137 @@ class RouteObserver extends NavigatorObserver {
     _resumeFeedTimer?.cancel();
     WidgetsBinding.instance.addPostFrameCallback((timeStamp) {
       final routeName = topRoute.settings.name ?? '';
-      navBarKey.currentState?.switchToId(routeName.replaceFirst("/", ""));
-
       final activePath = routeName.isNotEmpty ? routeName : routerConfig.routeInformationProvider.value.uri.path;
-      if (activePath == '/feed') {
+      final navPath = _canonicalNavPath(activePath);
+      navBarKey.currentState?.switchToId(navPath);
+
+      if (activePath.startsWith('/feed')) {
         final token = ++_resumeFeedToken;
         _resumeFeedTimer = Timer(const Duration(milliseconds: 250), () {
           if (token != _resumeFeedToken) return;
-          if (routerConfig.routeInformationProvider.value.uri.path != '/feed') return;
+          if (!routerConfig.routeInformationProvider.value.uri.path.startsWith('/feed')) return;
           unawaited(feedViewModel.ensureCurrentVideoPlays());
         });
       }
     });
   }
 }
+
+class _DeepLinkVideoScreen extends StatelessWidget {
+  const _DeepLinkVideoScreen({required this.videoId});
+
+  final String videoId;
+
+  @override
+  Widget build(BuildContext context) {
+    if (videoId.isEmpty) {
+      return const VideoFeed();
+    }
+
+    return FutureBuilder(
+      future: videoRepo.getVideoById(videoId),
+      builder: (context, snapshot) {
+        if (snapshot.connectionState != ConnectionState.done) {
+          return const Center(child: CircularProgressIndicator());
+        }
+        if (!snapshot.hasData) {
+          return const VideoFeed();
+        }
+
+        return VideoFeed(videoProvider: SingleVideoProvider(snapshot.data!), initialPage: 0);
+      },
+    );
+  }
+}
+
+class _DeepLinkProfileScreen extends StatelessWidget {
+  const _DeepLinkProfileScreen({required this.userId, required this.initialTabIndex});
+
+  final String userId;
+  final int initialTabIndex;
+
+  @override
+  Widget build(BuildContext context) {
+    if (userId.isEmpty) {
+      return const SizedBox.shrink();
+    }
+
+    return FutureBuilder(
+      future: userRepository.getUser(userId),
+      builder: (context, snapshot) {
+        if (snapshot.connectionState != ConnectionState.done) {
+          return const Center(child: CircularProgressIndicator());
+        }
+        if (!snapshot.hasData) {
+          return const SizedBox.shrink();
+        }
+
+        final profile = snapshot.data!;
+        final ownProfile = profile.id == currentUser.id;
+        return ProfileScreen(
+          initialProfile: profile,
+          ownProfile: ownProfile,
+          hasBackButton: true,
+          initialTabIndex: initialTabIndex,
+          onFollowChange: (followed) {},
+        );
+      },
+    );
+  }
+}
+
+String _canonicalNavPath(String path) {
+  if (path.startsWith('/feed')) return '/feed';
+  if (path.startsWith('/search')) return '/search';
+  if (path.startsWith('/chat')) return '/chat';
+  if (path.startsWith('/profile')) return '/profile';
+  if (path.startsWith('/quests')) return '/quests';
+  return path;
+}
+
+SearchScope _searchScopeFromQuery(String? value) {
+  switch (value) {
+    case 'videos':
+      return SearchScope.videos;
+    case 'profiles':
+      return SearchScope.profiles;
+    default:
+      return SearchScope.all;
+  }
+}
+
+SearchMode _searchModeFromQuery(String? value) {
+  switch (value) {
+    case 'tags':
+      return SearchMode.tags;
+    default:
+      return SearchMode.text;
+  }
+}
+
+int _profileTabIndexFromQuery(String? value) {
+  switch (value) {
+    case 'followers':
+      return 1;
+    case 'following':
+      return 2;
+    default:
+      return 0;
+  }
+}
+
+int _themeTabIndexFromQuery(String? value) {
+  if (value == 'community') return 1;
+  return 0;
+}
+
+List<int> _parseQuestIds(String? raw) {
+  if (raw == null || raw.trim().isEmpty) return const [];
+  return raw.split(',').map((id) => int.tryParse(id.trim())).whereType<int>().toList();
+}
+
+bool _parseZoomOut(String? value) {
+  if (value == null) return true;
+  return value == 'out' || value == 'true' || value == '1';
+}
+

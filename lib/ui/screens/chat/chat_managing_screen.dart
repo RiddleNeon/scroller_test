@@ -11,8 +11,9 @@ GlobalKey<ChatManagingScreenState> chatManagingScreenKey = GlobalKey();
 
 class ChatManagingScreen extends StatefulWidget {
   final Future<({List<Chat> result, int? newCurrent})> Function(int? current) preloadMoreChats;
+  final String? initialChatPartnerId;
 
-  const ChatManagingScreen({super.key, required this.preloadMoreChats});
+  const ChatManagingScreen({super.key, required this.preloadMoreChats, this.initialChatPartnerId});
 
   @override
   State<ChatManagingScreen> createState() => ChatManagingScreenState();
@@ -34,6 +35,8 @@ class ChatManagingScreenState extends State<ChatManagingScreen> {
 
   bool noMoreChats = false;
   bool loading = false;
+  bool _handledInitialChat = false;
+  String? _lastHandledDeepLinkPartnerId;
 
   void _onScroll() async {
     if (_scrollController.offset >= _scrollController.position.maxScrollExtent - 60 && !loading && !noMoreChats) {
@@ -57,15 +60,71 @@ class ChatManagingScreenState extends State<ChatManagingScreen> {
       if (preloadedChats.isEmpty || currentLastIndex == null) {
         noMoreChats = true;
       }
+      await _tryOpenInitialChat();
     } finally {
       loading = false;
     }
+  }
+
+  Future<void> _tryOpenInitialChat() async {
+    final partnerId = widget.initialChatPartnerId;
+    if (_handledInitialChat || partnerId == null || partnerId.isEmpty) return;
+    if (_lastHandledDeepLinkPartnerId == partnerId) return;
+    _handledInitialChat = true;
+    _lastHandledDeepLinkPartnerId = partnerId;
+
+    Chat? chat;
+    for (final item in chats) {
+      if (item.partnerId == partnerId) {
+        chat = item;
+        break;
+      }
+    }
+
+    if (chat == null) {
+      try {
+        final partner = await userRepository.getUser(partnerId);
+        if (!mounted) return;
+        chat = Chat(
+          partnerId: partner.id,
+          partnerProfileImageUrl: partner.profileImageUrl,
+          partnerName: partner.username,
+          lastMessage: '',
+          lastMessageAt: null,
+          lastMessageByMe: true,
+          createdAt: DateTime.now(),
+        );
+        chats.insert(0, chat);
+        setState(() {});
+      } catch (_) {
+        _handledInitialChat = false;
+        return;
+      }
+    }
+
+    if (!mounted) return;
+    WidgetsBinding.instance.addPostFrameCallback((_) {
+      if (!mounted) return;
+      _openChat(chat!, (message) => onMessageUpdate(chat!, message));
+    });
   }
 
   @override
   void dispose() {
     _scrollController.dispose();
     super.dispose();
+  }
+
+  @override
+  void didUpdateWidget(covariant ChatManagingScreen oldWidget) {
+    super.didUpdateWidget(oldWidget);
+    if (oldWidget.initialChatPartnerId == widget.initialChatPartnerId) return;
+    if (widget.initialChatPartnerId == null || widget.initialChatPartnerId!.isEmpty) return;
+    _handledInitialChat = false;
+    WidgetsBinding.instance.addPostFrameCallback((_) {
+      if (!mounted) return;
+      _tryOpenInitialChat();
+    });
   }
 
   @override
@@ -236,7 +295,9 @@ Widget buildMessagingScreen(Chat chat, void Function(ChatMessage) onMessageUpdat
   return FutureBuilder(
     future: userRepository.getUser(chat.partnerId),
     builder: (context, asyncSnapshot) {
-      if (!asyncSnapshot.hasData) return const SizedBox.shrink();
+      if (!asyncSnapshot.hasData) {
+        return const Scaffold(body: Center(child: CircularProgressIndicator()));
+      }
 
       return MessagingScreen(
         key: currentOpenChatScreenKey,

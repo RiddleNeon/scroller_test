@@ -1,4 +1,5 @@
 import 'package:flutter/material.dart';
+import 'package:go_router/go_router.dart';
 import 'package:wurp/base_logic.dart';
 import 'package:wurp/logic/feed_recommendation/search_video_result_recommender.dart';
 import 'package:wurp/logic/users/user_model.dart';
@@ -11,10 +12,24 @@ import 'package:wurp/ui/misc/preloading_list.dart';
 import 'package:wurp/ui/screens/search_screen/widgets/search_user_card.dart';
 import 'package:wurp/ui/screens/search_screen/widgets/search_video_card.dart';
 import 'package:wurp/ui/animations/slide_morph_transitions.dart';
+import 'package:wurp/ui/deep_link_builder.dart';
 import 'package:wurp/ui/short_video_player.dart';
 
+enum SearchScope { videos, profiles, all }
+
+enum SearchMode { text, tags }
+
 class SearchScreen extends StatefulWidget {
-  const SearchScreen({super.key});
+  const SearchScreen({
+    super.key,
+    this.initialQuery,
+    this.initialScope = SearchScope.all,
+    this.initialMode = SearchMode.text,
+  });
+
+  final String? initialQuery;
+  final SearchScope initialScope;
+  final SearchMode initialMode;
 
   @override
   State<SearchScreen> createState() => _SearchScreenState();
@@ -47,6 +62,35 @@ class _SearchScreenState extends State<SearchScreen> with TickerProviderStateMix
     _tabController.addListener(() {
       if (mounted) setState(() {});
     });
+
+    _applyDeepLinkState(triggerSearch: true);
+  }
+
+  @override
+  void didUpdateWidget(covariant SearchScreen oldWidget) {
+    super.didUpdateWidget(oldWidget);
+    if (oldWidget.initialQuery == widget.initialQuery && oldWidget.initialScope == widget.initialScope && oldWidget.initialMode == widget.initialMode) {
+      return;
+    }
+    _applyDeepLinkState(triggerSearch: true);
+  }
+
+  void _applyDeepLinkState({required bool triggerSearch}) {
+    if (widget.initialScope == SearchScope.videos) {
+      _tabController.index = 0;
+    } else if (widget.initialScope == SearchScope.profiles) {
+      _tabController.index = 1;
+    }
+
+    final initialQuery = widget.initialQuery?.trim();
+    if (initialQuery == null || initialQuery.isEmpty) return;
+
+    _controller.text = initialQuery;
+    if (!triggerSearch) return;
+    WidgetsBinding.instance.addPostFrameCallback((_) {
+      if (!mounted) return;
+      _search(initialQuery);
+    });
   }
 
   @override
@@ -61,6 +105,21 @@ class _SearchScreenState extends State<SearchScreen> with TickerProviderStateMix
     val ??= _controller.text;
     final trimmedQuery = val.trim();
     if (trimmedQuery.isEmpty) return;
+
+    final scope = widget.initialScope == SearchScope.all
+        ? DeepLinkSearchScope.all
+        : (_tabController.index == 0 ? DeepLinkSearchScope.videos : DeepLinkSearchScope.profiles);
+
+    final targetUrl = DeepLinkBuilder.search(
+      query: trimmedQuery,
+      scope: scope,
+      mode: widget.initialMode == SearchMode.tags ? DeepLinkSearchMode.tags : DeepLinkSearchMode.text,
+    );
+    final currentUri = GoRouterState.of(context).uri.toString();
+    if (currentUri != targetUrl) {
+      context.replace(targetUrl);
+    }
+
     final requestId = ++_searchRequestId;
     FocusScope.of(context).unfocus();
 
@@ -70,17 +129,29 @@ class _SearchScreenState extends State<SearchScreen> with TickerProviderStateMix
       _searchBarVisibility = 1.0;
     });
 
-    final nextUserQuery = SearchQuery<UserProfile>((limit, offset) async {
-      final result = await userRepository.searchUsers(trimmedQuery, limit: limit, offset: offset);
-      return result.users;
-    }, () => userRepository.countSearchUsers(trimmedQuery));
+    SearchQuery<UserProfile>? nextUserQuery;
+    SearchQuery<Video>? nextVideoQuery;
 
-    final nextVideoQuery = SearchQuery<Video>((limit, offset) async {
-      final result = await videoRepo.searchVideos(trimmedQuery, limit: limit, offset: offset, withAuthor: true);
-      return result.videos;
-    }, () => videoRepo.countSearchVideos(trimmedQuery));
+    if (widget.initialScope != SearchScope.profiles) {
+      nextVideoQuery = SearchQuery<Video>((limit, offset) async {
+        final videos = widget.initialMode == SearchMode.tags
+            ? await videoRepo.searchVideosByTagSupabase(trimmedQuery, limit: limit, offset: offset)
+            : (await videoRepo.searchVideos(trimmedQuery, limit: limit, offset: offset, withAuthor: true)).videos;
+        return videos;
+      }, () => videoRepo.countSearchVideos(trimmedQuery));
+    }
 
-    await Future.wait([nextVideoQuery.preloadMore(), nextUserQuery.preloadMore()]);
+    if (widget.initialScope != SearchScope.videos) {
+      nextUserQuery = SearchQuery<UserProfile>((limit, offset) async {
+        final result = await userRepository.searchUsers(trimmedQuery, limit: limit, offset: offset);
+        return result.users;
+      }, () => userRepository.countSearchUsers(trimmedQuery));
+    }
+
+    await Future.wait([
+      if (nextVideoQuery != null) nextVideoQuery.preloadMore(),
+      if (nextUserQuery != null) nextUserQuery.preloadMore(),
+    ]);
     if (requestId != _searchRequestId) return;
     if (!mounted) return;
 

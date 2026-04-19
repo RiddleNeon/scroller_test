@@ -2,6 +2,7 @@ import 'package:cached_network_image/cached_network_image.dart';
 import 'package:flutter/cupertino.dart';
 import 'package:flutter/material.dart';
 import 'package:preload_page_view/preload_page_view.dart';
+import 'package:wurp/logic/video/video.dart';
 import 'package:wurp/logic/video/video_provider.dart';
 import 'package:wurp/ui/feed_view_model.dart';
 import 'package:wurp/ui/router.dart';
@@ -19,6 +20,7 @@ Widget feedVideos(
   int initialPage = 0,
   void Function(bool)? onLikeChanged,
   PreloadPageController? pageController,
+  void Function(int)? onPageChanged,
 }) {
   feedModel ??= feedViewModel;
   if(feedModel.currentIndex != initialPage) {
@@ -121,7 +123,7 @@ Widget feedVideos(
                             style: Theme.of(context).textTheme.bodyMedium,
                           ),
                           const SizedBox(height: 16),
-                          ElevatedButton(onPressed: () => routerConfig.go('/search_screen'), child: const Text('Back')),
+                          ElevatedButton(onPressed: () => routerConfig.go('/search'), child: const Text('Back')),
                         ],
                       ),
                     ),
@@ -146,7 +148,7 @@ Widget feedVideos(
                             style: Theme.of(context).textTheme.bodyMedium,
                           ),
                           const SizedBox(height: 18),
-                          ElevatedButton(onPressed: () => routerConfig.go('/search_screen'), child: const Text('Explore videos')),
+                          ElevatedButton(onPressed: () => routerConfig.go('/search'), child: const Text('Explore videos')),
                         ],
                       ),
                     ),
@@ -172,6 +174,7 @@ Widget feedVideos(
           },
           onPageChanged: (value) {
             feedModel!.switchToVideoAt(value, videoSource: videoProvider);
+            onPageChanged?.call(value);
           },
         ),
       ),
@@ -209,8 +212,9 @@ Widget _buildStopWidget(String label, IconData icon, BuildContext context) {
 
 class VideoFeed extends StatefulWidget {
   final VideoProvider? videoProvider;
+  final int? initialPage;
 
-  const VideoFeed({super.key, this.videoProvider});
+  const VideoFeed({super.key, this.videoProvider, this.initialPage});
 
   @override
   State<VideoFeed> createState() => _VideoFeedState();
@@ -218,11 +222,13 @@ class VideoFeed extends StatefulWidget {
 
 class _VideoFeedState extends State<VideoFeed> with TickerProviderStateMixin {
   late final PreloadPageController _pageController;
+  late final int _initialPage;
 
   @override
   void initState() {
     super.initState();
-    _pageController = PreloadPageController(initialPage: feedViewModel.currentIndex, viewportFraction: 1);
+    _initialPage = widget.initialPage ?? (widget.videoProvider == null ? feedViewModel.currentIndex : 0);
+    _pageController = PreloadPageController(initialPage: _initialPage, viewportFraction: 1);
   }
 
   @override
@@ -238,9 +244,25 @@ class _VideoFeedState extends State<VideoFeed> with TickerProviderStateMixin {
         this,
         widget.videoProvider ?? videoProvider,
         context,
-        initialPage: feedViewModel.currentIndex,
+        initialPage: _initialPage,
         pageController: _pageController,
       ),
     );
   }
 }
+
+class SingleVideoProvider implements VideoProvider {
+  SingleVideoProvider(this.video);
+
+  final Video video;
+
+  @override
+  Future<Video?> getVideoByIndex(int index) async {
+    if (index != 0) return null;
+    return video;
+  }
+
+  @override
+  Future<void> preloadVideos(int count) async {}
+}
+
