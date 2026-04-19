@@ -1,11 +1,16 @@
 import 'package:flutter/cupertino.dart';
+import 'package:wurp/logic/chat/chat.dart';
+import 'package:wurp/logic/chat/chat_message.dart';
 import 'package:wurp/logic/local_storage/local_seen_service.dart';
 import 'package:wurp/logic/repositories/video_repository.dart';
 import 'package:wurp/logic/video/video.dart';
+import 'package:wurp/ui/deep_link_builder.dart';
 import 'package:wurp/ui/screens/comment_overlay.dart';
 import 'package:wurp/ui/widgets/overlays/pause_indicator.dart';
+import 'package:wurp/ui/widgets/overlays/share_button.dart';
 import 'package:wurp/ui/widgets/overlays/video_info_overlay.dart';
 
+import '../../../base_logic.dart';
 import 'comment_button.dart';
 import 'dislike_button.dart';
 import 'like_button.dart';
@@ -52,6 +57,16 @@ class _PageOverlayState extends State<PageOverlay> {
   late bool liked = widget.initiallyLiked;
   late bool disliked = widget.initiallyDisliked;
 
+  List<ShareContact> _shareContacts = const [];
+  final Map<String, Chat> _chatByPartnerId = {};
+  bool _isShareMenuExpanded = false;
+
+  @override
+  void initState() {
+    super.initState();
+    _prepareShareContacts();
+  }
+
   @override
   Widget build(BuildContext context) {
     return Stack(
@@ -59,6 +74,7 @@ class _PageOverlayState extends State<PageOverlay> {
         Listener(
           behavior: HitTestBehavior.translucent,
           onPointerDown: (_) {
+            if (_isShareMenuExpanded) return;
             widget.onTogglePause();
           },
           child: const SizedBox.expand(),
@@ -74,12 +90,24 @@ class _PageOverlayState extends State<PageOverlay> {
           alignment: Alignment.centerRight,
           child: Column(
             mainAxisAlignment: MainAxisAlignment.center,
+            crossAxisAlignment: CrossAxisAlignment.end,
             spacing: 8,
             children: [
               LikeButton(provider: widget.provider, initiallyLiked: liked, onLikeChanged: _onLikeChanged),
               DislikeButton(initiallyDisliked: disliked, onDislikeChanged: _onDislikeChanged),
               CommentButton(onComment: _onCommentButtonPressed),
-              const Icon(CupertinoIcons.share),
+              ShareButton(
+                shareUrl: DeepLinkBuilder.feed(videoId: widget.video.id),
+                contacts: _shareContacts,
+                onShared: () => widget.onShareChanged?.call(true),
+                onShareToContact: _shareToContact,
+                onExpandedChanged: (expanded) {
+                  if (!mounted) return;
+                  setState(() {
+                    _isShareMenuExpanded = expanded;
+                  });
+                },
+              ),
             ],
           ),
         ),
@@ -92,6 +120,66 @@ class _PageOverlayState extends State<PageOverlay> {
         ),
       ],
     );
+  }
+
+  Future<void> _prepareShareContacts() async {
+    final now = DateTime.now();
+    final thirtyDaysAgo = now.subtract(const Duration(days: 30));
+    final currentVideoLink = DeepLinkBuilder.feed(videoId: widget.video.id);
+    final chats = localSeenService.getChats();
+    final contacts = <ShareContact>[];
+    final chatMap = <String, Chat>{};
+
+    for (final chat in chats) {
+      final messages = await localSeenService.getMessagesWithLocal(
+        chat.partnerId,
+        limit: 180,
+        startOffset: now.add(const Duration(seconds: 1)),
+      );
+      final myRecentMessages = messages.where((message) => message.isMe && message.timestamp.isAfter(thirtyDaysAgo)).toList();
+      final mySharesOfCurrentVideo = messages
+          .where((message) => message.isMe && message.text.trim() == currentVideoLink)
+          .toList();
+      final lastSharedAt = myRecentMessages.isEmpty ? chat.lastMessageAt : myRecentMessages.last.timestamp;
+      final lastSharedThisVideoAt = mySharesOfCurrentVideo.isEmpty ? null : mySharesOfCurrentVideo.last.timestamp;
+
+      contacts.add(
+        ShareContact(
+          id: chat.partnerId,
+          name: chat.partnerName,
+          avatarUrl: chat.partnerProfileImageUrl,
+          recentShareCount: myRecentMessages.length,
+          lastSharedAt: lastSharedAt,
+          alreadySharedWithThisVideo: mySharesOfCurrentVideo.isNotEmpty,
+          lastSharedThisVideoAt: lastSharedThisVideoAt,
+        ),
+      );
+      chatMap[chat.partnerId] = chat;
+    }
+
+    if (!mounted) return;
+    setState(() {
+      _shareContacts = contacts;
+      _chatByPartnerId
+        ..clear()
+        ..addAll(chatMap);
+    });
+  }
+
+  Future<void> _shareToContact(ShareContact contact, String link) async {
+    final chat = _chatByPartnerId[contact.id];
+    if (chat == null) return;
+
+    final message = ChatMessage(
+      id: '${contact.id}-${DateTime.now().microsecondsSinceEpoch}',
+      text: link,
+      isMe: true,
+      timestamp: DateTime.now(),
+    );
+
+    await chatRepository.sendNotification(chat: chat, message: message);
+    if (!mounted) return;
+    await _prepareShareContacts();
   }
 
   void _onLikeChanged(bool newLiked) async {
