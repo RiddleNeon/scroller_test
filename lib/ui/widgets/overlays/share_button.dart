@@ -121,10 +121,12 @@ class _ShareButtonState extends State<ShareButton> with SingleTickerProviderStat
     if (_copying || _sendingContactId != null) return;
     setState(() => _copying = true);
     try {
+      final link = Uri.base.origin + widget.shareUrl;
+      
       if (widget.onCopyLink != null) {
-        await widget.onCopyLink!(widget.shareUrl);
+        await widget.onCopyLink!(link);
       } else {
-        await Clipboard.setData(ClipboardData(text: widget.shareUrl));
+        await Clipboard.setData(ClipboardData(text: link));
       }
       if (!mounted) return;
       ScaffoldMessenger.maybeOf(context)?.showSnackBar(const SnackBar(content: Text('Link copied to clipboard')));

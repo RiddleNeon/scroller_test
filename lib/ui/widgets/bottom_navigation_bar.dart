@@ -96,7 +96,7 @@ class BottomNavBarState extends State<BottomNavBar> with SingleTickerProviderSta
                   children: List.generate(items.length, (i) {
                     final item = items[i];
                     final selected = currentSelectedIndex == i;
-                    final iconColor = selected ? cs.tertiary : cs.onSurfaceVariant;
+                    final iconColor = cs.onSurfaceVariant;
                     final isHovered = _hovered[i];
 
                     return MouseRegion(
