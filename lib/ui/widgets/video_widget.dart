@@ -212,42 +212,50 @@ class _VideoItemState extends State<VideoItem> {
 
   @override
   Widget build(BuildContext context) {
+    final controllerValue = widget.controller.value;
+    final videoSize = controllerValue.size;
+
     return RepaintBoundary(
-      child: Center(
-        child: RepaintBoundary(
-          child: AspectRatio(
-            aspectRatio: widget.controller.value.aspectRatio,
-            child: LayoutBuilder(
-              builder: (context, constraints) {
-                return Stack(
-                  children: [
-                    RepaintBoundary(child: VideoPlayer(widget.controller, key: ValueKey(widget.video.id))),
-                    PageOverlay(
-                      provider: widget.provider,
-                      video: widget.video,
-                      onLikeChanged: onLikeChanged,
-                      onDislikeChanged: onDislikeChanged,
-                      onShareChanged: onShareChanged,
-                      onSaveChanged: onSaveChanged,
-                      onCommentChanged: onCommentChanged,
-                      initiallyLiked: localSeenService.isLiked(widget.video.id),
-                      initiallyDisliked: localSeenService.isDisliked(widget.video.id),
-                      isPaused: !widget.controller.value.isPlaying,
-                      onTogglePause: () {
-                        if (widget.controller.value.isPlaying) {
-                          widget.controller.pause();
-                        } else {
-                          widget.controller.play();
-                        }
-                      },
-                      index: widget.index,
-                    ),
-                  ],
-                );
-              },
+      child: Stack(
+        fit: StackFit.expand,
+        children: [
+          ColoredBox(
+            color: Colors.black,
+            child: RepaintBoundary(
+              child: controllerValue.isInitialized && videoSize.width > 0 && videoSize.height > 0
+                  ? FittedBox(
+                      fit: BoxFit.cover,
+                      clipBehavior: Clip.hardEdge,
+                      child: SizedBox(
+                        width: videoSize.width,
+                        height: videoSize.height,
+                        child: VideoPlayer(widget.controller, key: ValueKey(widget.video.id)),
+                      ),
+                    )
+                  : const SizedBox.expand(),
             ),
           ),
-        ),
+          PageOverlay(
+            provider: widget.provider,
+            video: widget.video,
+            onLikeChanged: onLikeChanged,
+            onDislikeChanged: onDislikeChanged,
+            onShareChanged: onShareChanged,
+            onSaveChanged: onSaveChanged,
+            onCommentChanged: onCommentChanged,
+            initiallyLiked: localSeenService.isLiked(widget.video.id),
+            initiallyDisliked: localSeenService.isDisliked(widget.video.id),
+            isPaused: !widget.controller.value.isPlaying,
+            onTogglePause: () {
+              if (widget.controller.value.isPlaying) {
+                widget.controller.pause();
+              } else {
+                widget.controller.play();
+              }
+            },
+            index: widget.index,
+          ),
+        ],
       ),
     );
   }

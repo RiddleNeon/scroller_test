@@ -1,4 +1,5 @@
 import 'package:cached_network_image/cached_network_image.dart';
+import 'dart:async';
 import 'package:flutter/cupertino.dart';
 import 'package:flutter/material.dart';
 import 'package:preload_page_view/preload_page_view.dart';
@@ -23,12 +24,6 @@ Widget feedVideos(
   void Function(int)? onPageChanged,
 }) {
   feedModel ??= feedViewModel;
-  if(feedModel.currentIndex != initialPage) {
-    feedModel.switchToVideoAt(
-      initialPage,
-      videoSource: videoProvider,
-    ); //so that the first video starts bc this function only gets called on page switches and the first page hasn't had a switch yet
-  }
   return Stack(
     children: [
       ScrollConfiguration(
@@ -229,6 +224,10 @@ class _VideoFeedState extends State<VideoFeed> with TickerProviderStateMixin {
     super.initState();
     _initialPage = widget.initialPage ?? (widget.videoProvider == null ? feedViewModel.currentIndex : 0);
     _pageController = PreloadPageController(initialPage: _initialPage, viewportFraction: 1);
+    // Ensure initial page starts playing even when opening the feed at index 0.
+    WidgetsBinding.instance.addPostFrameCallback((_) {
+      unawaited(feedViewModel.switchToVideoAt(_initialPage, videoSource: widget.videoProvider ?? videoProvider));
+    });
   }
 
   @override

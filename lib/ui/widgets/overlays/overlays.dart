@@ -71,9 +71,9 @@ class _PageOverlayState extends State<PageOverlay> {
   Widget build(BuildContext context) {
     return Stack(
       children: [
-        Listener(
+        GestureDetector(
           behavior: HitTestBehavior.translucent,
-          onPointerDown: (_) {
+          onTap: () {
             if (_isShareMenuExpanded) return;
             widget.onTogglePause();
           },
