@@ -76,10 +76,10 @@ class ChatRepository {
       await localSeenService.saveMessagesLocal(otherUserId, serverMessages);
     }
 
-    // 6. Merge: local wins for duplicates (preserves any local-only metadata).
+    // 6. Merge: server wins for duplicates so edits/deletes are reflected quickly.
     final merged = <String, ChatMessage>{
+      for (final m in localMessages) m.id: m,
       for (final m in serverMessages) m.id: m,
-      for (final m in localMessages) m.id: m, // local overwrites server
     };
 
     final result = merged.values.toList()..sort((a, b) => a.timestamp.compareTo(b.timestamp));
@@ -101,7 +101,7 @@ class ChatRepository {
     try {
       var query = supabaseClient
           .from('messages')
-          .select('id, conversation_id, sender_id, content, type, reply_to_message_id, created_at, deleted_at')
+          .select('id, conversation_id, sender_id, content, type, reply_to_message_id, created_at, edited_at, deleted_at')
           .eq('conversation_id', conversationId)
           .isFilter('deleted_at', null); // exclude soft-deleted messages
 
@@ -116,7 +116,7 @@ class ChatRepository {
           .map<Map<String, dynamic>>((row) => Map<String, dynamic>.from(row))
           .toList();
 
-      return rows.map((row) => _rowToChatMessage(row, otherUserId)).toList();
+      return rows.map(_rowToChatMessage).toList();
     } catch (e) {
       print('Error fetching messages from server: $e');
       return [];
@@ -124,7 +124,7 @@ class ChatRepository {
   }
 
   /// Converts a raw Supabase `messages` row into a [ChatMessage].
-  ChatMessage _rowToChatMessage(Map<String, dynamic> row, String otherUserId) {
+  ChatMessage _rowToChatMessage(Map<String, dynamic> row) {
     final senderId = row['sender_id'] as String? ?? '';
     final isMe = senderId == currentUser.id;
     return ChatMessage(
@@ -134,7 +134,33 @@ class ChatRepository {
       isMe: isMe,
       replyToMessageId: (row['reply_to_message_id'] as int?)?.toString(),
       type: row['type'] as String? ?? 'text',
+      editedAt: row['edited_at'] == null ? null : _parseDateTime(row['edited_at']),
+      deletedAt: row['deleted_at'] == null ? null : _parseDateTime(row['deleted_at']),
     );
+  }
+
+  Future<ChatMessage> editMessage({required String otherUserId, required String messageId, required String newText}) async {
+    final updated = await supabaseClient.rpc('edit_message', params: {'p_message_id': int.parse(messageId), 'p_new_content': newText});
+    final row = Map<String, dynamic>.from(updated as Map);
+    final message = _rowToChatMessage(row);
+    await localSeenService.updateMessageLocal(otherUserId, message);
+    return message;
+  }
+
+  Future<void> deleteMessage({required String otherUserId, required String messageId}) async {
+    await supabaseClient.rpc('delete_message', params: {'p_message_id': int.parse(messageId)});
+    await localSeenService.deleteMessageLocal(otherUserId, messageId);
+  }
+
+  Future<List<MessageVersion>> getMessageVersions(String messageId) async {
+    final rows = await supabaseClient.rpc('get_message_versions', params: {'p_message_id': int.parse(messageId)});
+    final data = (rows as List).map<Map<String, dynamic>>((row) => Map<String, dynamic>.from(row)).toList();
+    return data.map(MessageVersion.fromSupabase).toList();
+  }
+
+  Future<bool> canViewMessageHistory() async {
+    final result = await supabaseClient.rpc('is_current_user_admin');
+    return result == true;
   }
 
   ChatMessage? getMessage(String otherUserId, String messageId) {

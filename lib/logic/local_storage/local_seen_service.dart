@@ -405,7 +405,15 @@ class LocalSeenService {
 
   Map<String, dynamic> _messageToMap(ChatMessage message, String conversationId) {
     final isA = currentUser.id.compareTo(conversationId.split('-')[1]) > 0;
-    return {'id': message.id, 'message': message.text, 'isA': isA == message.isMe, 'createdAt': message.timestamp, 'status': message.status.index};
+    return {
+      'id': message.id,
+      'message': message.text,
+      'isA': isA == message.isMe,
+      'createdAt': message.timestamp,
+      'status': message.status.index,
+      'editedAt': message.editedAt,
+      'deletedAt': message.deletedAt,
+    };
   }
 
   ChatMessage _messageFromMap(Map map, String conversationId) {
@@ -416,6 +424,8 @@ class LocalSeenService {
       isMe: (map['isA'] as bool) == isA,
       timestamp: map['createdAt'],
       status: MessageStatus.values[map['status'] as int],
+      editedAt: map['editedAt'] as DateTime?,
+      deletedAt: map['deletedAt'] as DateTime?,
     );
   }
 
@@ -495,6 +505,18 @@ class LocalSeenService {
         _chatCursors[conversationId] = latestTimestamp;
       }
     }
+  }
+
+  Future<void> updateMessageLocal(String otherUserId, ChatMessage message) async {
+    final conversationId = _conversationId(otherUserId);
+    final key = _chatKey(conversationId, message.id);
+    if (!_chatMessages.containsKey(key)) return;
+    _chatMessages[key] = _messageToMap(message, conversationId);
+  }
+
+  Future<void> deleteMessageLocal(String otherUserId, String messageId) async {
+    final conversationId = _conversationId(otherUserId);
+    _chatMessages.remove(_chatKey(conversationId, messageId));
   }
 
   Future<void> saveChatsLocal(Iterable<Chat> chats) async {

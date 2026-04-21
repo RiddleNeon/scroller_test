@@ -1,7 +1,9 @@
 import 'dart:math';
 
+import 'package:flutter/gestures.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
+import 'package:go_router/go_router.dart';
 import 'package:wurp/logic/repositories/user_repository.dart';
 import 'package:wurp/logic/users/user_model.dart';
 import 'package:wurp/logic/repositories/chat_repository.dart';
@@ -13,9 +15,14 @@ import '../../../logic/chat/chat_message.dart';
 import '../../../logic/local_storage/local_seen_service.dart';
 import '../profile_screen.dart';
 import 'calling_screen.dart';
+import 'chat_route_preview.dart';
 
 class MessagingScreen extends StatefulWidget {
   final Future<void> Function(String message) onSend;
+  final Future<ChatMessage> Function(ChatMessage message, String newText) onEditMessage;
+  final Future<void> Function(ChatMessage message) onDeleteMessage;
+  final Future<List<MessageVersion>> Function(ChatMessage message) onLoadMessageVersions;
+  final Future<bool> Function() canViewMessageHistory;
   final void Function(ChatMessage message) onMessageUpdate;
   final Future<List<ChatMessage>> Function(int limit, DateTime? lastVisibleMessage) loadMoreMessages;
 
@@ -32,6 +39,10 @@ class MessagingScreen extends StatefulWidget {
   const MessagingScreen({
     super.key,
     required this.onSend,
+    required this.onEditMessage,
+    required this.onDeleteMessage,
+    required this.onLoadMessageVersions,
+    required this.canViewMessageHistory,
     this.isOnline = true,
     required this.loadMoreMessages,
     required this.onMessageUpdate,
@@ -56,6 +67,8 @@ class MessagingScreenState extends State<MessagingScreen> with TickerProviderSta
   bool _isTyping = false;
   bool _showScrollDown = false;
   bool _partnerTyping = false;
+  String? _editingMessageId;
+  bool _canViewMessageHistory = false;
 
   late AnimationController _typingDotController;
 
@@ -66,6 +79,7 @@ class MessagingScreenState extends State<MessagingScreen> with TickerProviderSta
     _scrollController.addListener(_onScroll);
 
     _typingDotController = AnimationController(vsync: this, duration: const Duration(milliseconds: 1200))..repeat();
+    _loadHistoryPermission();
 
     for (var _ in _messages) {
       _createBubbleController(animate: true);
@@ -77,6 +91,14 @@ class MessagingScreenState extends State<MessagingScreen> with TickerProviderSta
   }
 
   bool preloading = false;
+
+  Future<void> _loadHistoryPermission() async {
+    try {
+      final allowed = await widget.canViewMessageHistory();
+      if (!mounted) return;
+      setState(() => _canViewMessageHistory = allowed);
+    } catch (_) {}
+  }
 
   Future<void> _preloadMore({int limit = 30}) async {
     if (!moreMessagesAvailable || preloading) return;
@@ -190,6 +212,8 @@ class MessagingScreenState extends State<MessagingScreen> with TickerProviderSta
             isMe: element.isMe,
             timestamp: element.timestamp,
             status: element.isMe ? MessageStatus.sent : MessageStatus.delivered,
+            editedAt: element.editedAt,
+            deletedAt: element.deletedAt,
           ),
         )
         .toList();
@@ -224,11 +248,148 @@ class MessagingScreenState extends State<MessagingScreen> with TickerProviderSta
     final text = _textController.text.trim();
     if (text.isEmpty) return;
 
+    if (_editingMessageId != null) {
+      final index = _messages.indexWhere((m) => m.id == _editingMessageId);
+      if (index == -1) {
+        setState(() => _editingMessageId = null);
+        return;
+      }
+      final original = _messages[index];
+      if (text == original.text) {
+        setState(() {
+          _editingMessageId = null;
+          _textController.clear();
+        });
+        return;
+      }
+      try {
+        final updated = await widget.onEditMessage(original, text);
+        if (!mounted) return;
+        setState(() {
+          _messages[index] = ChatMessage(
+            id: updated.id,
+            text: updated.text,
+            isMe: updated.isMe,
+            timestamp: updated.timestamp,
+            status: original.status,
+            editedAt: updated.editedAt,
+            deletedAt: updated.deletedAt,
+          );
+          _editingMessageId = null;
+          _textController.clear();
+        });
+        widget.onMessageUpdate(updated);
+      } catch (e) {
+        if (!mounted) return;
+        ScaffoldMessenger.of(context).showSnackBar(SnackBar(content: Text('Failed to edit message: $e')));
+      }
+      return;
+    }
+
     HapticFeedback.lightImpact();
     _textController.clear();
     Future<void> sendingFuture = widget.onSend(text);
     _addMessage(text: text, isMe: true, sendingFuture: sendingFuture, isNewMessage: true);
     return sendingFuture;
+  }
+
+  Future<void> _deleteMessage(ChatMessage message) async {
+    try {
+      await widget.onDeleteMessage(message);
+      if (!mounted) return;
+      setState(() => _messages.removeWhere((m) => m.id == message.id));
+    } catch (e) {
+      if (!mounted) return;
+      ScaffoldMessenger.of(context).showSnackBar(SnackBar(content: Text('Failed to delete message: $e')));
+    }
+  }
+
+  Future<void> _showMessageHistory(ChatMessage message) async {
+    if (!_canViewMessageHistory) return;
+    try {
+      final versions = await widget.onLoadMessageVersions(message);
+      if (!mounted) return;
+      await showModalBottomSheet<void>(
+        context: context,
+        isScrollControlled: true,
+        builder: (ctx) => SafeArea(
+          child: SizedBox(
+            height: MediaQuery.of(ctx).size.height * 0.7,
+            child: Column(
+              crossAxisAlignment: CrossAxisAlignment.start,
+              children: [
+                const Padding(
+                  padding: EdgeInsets.fromLTRB(16, 16, 16, 8),
+                  child: Text('Message edit history', style: TextStyle(fontSize: 18, fontWeight: FontWeight.w700)),
+                ),
+                Expanded(
+                  child: versions.isEmpty
+                      ? const Center(child: Text('No versions found'))
+                      : ListView.builder(
+                          itemCount: versions.length,
+                          itemBuilder: (context, i) {
+                            final version = versions[i];
+                            return ListTile(
+                              title: Text(version.content),
+                              subtitle: Text('v${version.versionNo} • ${version.changeType} • ${version.editedAt.toLocal()}'),
+                            );
+                          },
+                        ),
+                ),
+              ],
+            ),
+          ),
+        ),
+      );
+    } catch (e) {
+      if (!mounted) return;
+      ScaffoldMessenger.of(context).showSnackBar(SnackBar(content: Text('Failed to load history: $e')));
+    }
+  }
+
+  Future<void> _showMessageActions(ChatMessage message) async {
+    if (!message.isMe && !_canViewMessageHistory) return;
+    await showModalBottomSheet<void>(
+      context: context,
+      builder: (ctx) => SafeArea(
+        child: Wrap(
+          children: [
+            if (message.isMe)
+              ListTile(
+                leading: const Icon(Icons.edit_outlined),
+                title: const Text('Edit message'),
+                onTap: () {
+                  Navigator.pop(ctx);
+                  setState(() {
+                    _editingMessageId = message.id;
+                    _textController.text = message.text;
+                    _textController.selection = TextSelection.collapsed(offset: _textController.text.length);
+                  });
+                  _focusNode.requestFocus();
+                },
+              ),
+            if (message.isMe)
+              ListTile(
+                leading: const Icon(Icons.delete_outline, color: Colors.redAccent),
+                title: const Text('Delete message', style: TextStyle(color: Colors.redAccent)),
+                onTap: () {
+                  Navigator.pop(ctx);
+                  _deleteMessage(message);
+                },
+              ),
+            if (_canViewMessageHistory)
+              ListTile(
+                leading: const Icon(Icons.history),
+                title: const Text('View edit history'),
+                onTap: () {
+                  Navigator.pop(ctx);
+                  _showMessageHistory(message);
+                },
+              ),
+          ],
+        ),
+      ),
+    );
   }
 
   void _onTextChanged() {
@@ -408,6 +569,7 @@ class MessagingScreenState extends State<MessagingScreen> with TickerProviderSta
             theme: theme,
             recipientName: widget.recipientName ?? '',
             recipientAvatarUrl: widget.recipientAvatarUrl,
+            onLongPress: () => _showMessageActions(msg),
           );
         },
       ),
@@ -440,65 +602,96 @@ class MessagingScreenState extends State<MessagingScreen> with TickerProviderSta
         color: cs.surface,
         border: Border(top: BorderSide(color: cs.outlineVariant.withValues(alpha: 0.3), width: 0.5)),
       ),
-      child: Row(
-        crossAxisAlignment: CrossAxisAlignment.end,
+      child: Column(
+        mainAxisSize: MainAxisSize.min,
         children: [
-          _InputIconButton(icon: Icons.add_circle_outline_rounded, color: cs.onSurfaceVariant, onTap: () {}),
-          const SizedBox(width: 6),
-          Expanded(
-            child: AnimatedContainer(
-              duration: const Duration(milliseconds: 180),
-              curve: Curves.easeOutCubic,
-              constraints: const BoxConstraints(maxHeight: 120),
+          if (_editingMessageId != null)
+            Container(
+              margin: const EdgeInsets.only(bottom: 8),
+              padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 8),
               decoration: BoxDecoration(
-                color: cs.surfaceContainerHighest.withValues(alpha: 0.6),
-                borderRadius: BorderRadius.circular(_isTyping ? 22 : 24),
-                border: Border.all(color: cs.outlineVariant.withValues(alpha: _isTyping ? 0.7 : 0.4), width: 1),
+                color: cs.secondaryContainer.withValues(alpha: 0.55),
+                borderRadius: BorderRadius.circular(10),
+                border: Border.all(color: cs.outlineVariant.withValues(alpha: 0.5)),
               ),
               child: Row(
-                crossAxisAlignment: CrossAxisAlignment.end,
                 children: [
-                  Expanded(
-                    child: Focus(
-                      onKeyEvent: (node, event) {
-                        if (event is KeyDownEvent &&
-                            event.logicalKey == LogicalKeyboardKey.enter &&
-                            !HardwareKeyboard.instance.logicalKeysPressed.contains(LogicalKeyboardKey.shiftLeft) &&
-                            !HardwareKeyboard.instance.logicalKeysPressed.contains(LogicalKeyboardKey.shiftRight)) {
-                          _sendMessage();
-                          return KeyEventResult.handled;
-                        }
-                        return KeyEventResult.ignored;
-                      },
-                      child: TextField(
-                        controller: _textController,
-                        onSubmitted: (value) => _sendMessage(),
-                        focusNode: _focusNode,
-                        minLines: 1,
-                        maxLines: 5,
-                        textInputAction: TextInputAction.newline,
-                        style: TextStyle(color: cs.onSurface, fontSize: 15, height: 1.4),
-                        decoration: InputDecoration(
-                          hintText: 'Message…',
-                          hintStyle: TextStyle(color: cs.onSurfaceVariant.withValues(alpha: 0.6), fontSize: 15),
-                          border: InputBorder.none,
-                          contentPadding: const EdgeInsets.symmetric(horizontal: 16, vertical: 10),
-                          isDense: true,
-                        ),
-                      ),
-                    ),
+                  Icon(Icons.edit_outlined, size: 16, color: cs.onSecondaryContainer),
+                  const SizedBox(width: 8),
+                  Expanded(child: Text('Editing message', style: TextStyle(color: cs.onSecondaryContainer, fontWeight: FontWeight.w600))),
+                  GestureDetector(
+                    onTap: () {
+                      setState(() {
+                        _editingMessageId = null;
+                        _textController.clear();
+                      });
+                    },
+                    child: Icon(Icons.close_rounded, size: 18, color: cs.onSecondaryContainer),
                   ),
                 ],
               ),
             ),
-          ),
-          const SizedBox(width: 6),
-          AnimatedSwitcher(
-            duration: const Duration(milliseconds: 200),
-            transitionBuilder: (child, anim) => ScaleTransition(scale: anim, child: child),
-            child: _isTyping
-                ? _SendButton(key: const ValueKey('send'), onTap: _sendMessage, colorScheme: cs)
-                : _InputIconButton(key: const ValueKey('mic'), icon: Icons.mic_none_rounded, color: cs.onSurfaceVariant, onTap: () {}),
+          Row(
+            crossAxisAlignment: CrossAxisAlignment.end,
+            children: [
+              _InputIconButton(icon: Icons.add_circle_outline_rounded, color: cs.onSurfaceVariant, onTap: () {}),
+              const SizedBox(width: 6),
+              Expanded(
+                child: AnimatedContainer(
+                  duration: const Duration(milliseconds: 180),
+                  curve: Curves.easeOutCubic,
+                  constraints: const BoxConstraints(maxHeight: 120),
+                  decoration: BoxDecoration(
+                    color: cs.surfaceContainerHighest.withValues(alpha: 0.6),
+                    borderRadius: BorderRadius.circular(_isTyping ? 22 : 24),
+                    border: Border.all(color: cs.outlineVariant.withValues(alpha: _isTyping ? 0.7 : 0.4), width: 1),
+                  ),
+                  child: Row(
+                    crossAxisAlignment: CrossAxisAlignment.end,
+                    children: [
+                      Expanded(
+                        child: Focus(
+                          onKeyEvent: (node, event) {
+                            if (event is KeyDownEvent &&
+                                event.logicalKey == LogicalKeyboardKey.enter &&
+                                !HardwareKeyboard.instance.logicalKeysPressed.contains(LogicalKeyboardKey.shiftLeft) &&
+                                !HardwareKeyboard.instance.logicalKeysPressed.contains(LogicalKeyboardKey.shiftRight)) {
+                              _sendMessage();
+                              return KeyEventResult.handled;
+                            }
+                            return KeyEventResult.ignored;
+                          },
+                          child: TextField(
+                            controller: _textController,
+                            onSubmitted: (value) => _sendMessage(),
+                            focusNode: _focusNode,
+                            minLines: 1,
+                            maxLines: 5,
+                            textInputAction: TextInputAction.newline,
+                            style: TextStyle(color: cs.onSurface, fontSize: 15, height: 1.4),
+                            decoration: InputDecoration(
+                              hintText: _editingMessageId == null ? 'Message…' : 'Edit message…',
+                              hintStyle: TextStyle(color: cs.onSurfaceVariant.withValues(alpha: 0.6), fontSize: 15),
+                              border: InputBorder.none,
+                              contentPadding: const EdgeInsets.symmetric(horizontal: 16, vertical: 10),
+                              isDense: true,
+                            ),
+                          ),
+                        ),
+                      ),
+                    ],
+                  ),
+                ),
+              ),
+              const SizedBox(width: 6),
+              AnimatedSwitcher(
+                duration: const Duration(milliseconds: 200),
+                transitionBuilder: (child, anim) => ScaleTransition(scale: anim, child: child),
+                child: _isTyping
+                    ? _SendButton(key: const ValueKey('send'), onTap: _sendMessage, colorScheme: cs)
+                    : _InputIconButton(key: const ValueKey('mic'), icon: Icons.mic_none_rounded, color: cs.onSurfaceVariant, onTap: () {}),
+              ),
+            ],
           ),
         ],
       ),
@@ -517,6 +710,7 @@ class _MessageBubble extends StatelessWidget {
   final ThemeData theme;
   final String recipientName;
   final String? recipientAvatarUrl;
+  final VoidCallback? onLongPress;
 
   const _MessageBubble({
     super.key,
@@ -530,6 +724,7 @@ class _MessageBubble extends StatelessWidget {
     required this.theme,
     required this.recipientName,
     this.recipientAvatarUrl,
+    this.onLongPress,
   });
 
   @override
@@ -565,7 +760,14 @@ class _MessageBubble extends StatelessWidget {
                 child: Column(
                   crossAxisAlignment: isMe ? CrossAxisAlignment.end : CrossAxisAlignment.start,
                   children: [
-                    _BubbleBody(message: message, isMe: isMe, isFirst: isFirst, isLast: isLast, colorScheme: cs),
+                    _BubbleBody(
+                      message: message,
+                      isMe: isMe,
+                      isFirst: isFirst,
+                      isLast: isLast,
+                      colorScheme: cs,
+                      onLongPress: onLongPress,
+                    ),
                     if (showTimestamp || (isMe && isLast))
                       Padding(
                         padding: const EdgeInsets.only(top: 4, left: 4, right: 4, bottom: 12),
@@ -604,8 +806,16 @@ class _BubbleBody extends StatelessWidget {
   final bool isFirst;
   final bool isLast;
   final ColorScheme colorScheme;
+  final VoidCallback? onLongPress;
 
-  const _BubbleBody({required this.message, required this.isMe, required this.isFirst, required this.isLast, required this.colorScheme});
+  const _BubbleBody({
+    required this.message,
+    required this.isMe,
+    required this.isFirst,
+    required this.isLast,
+    required this.colorScheme,
+    this.onLongPress,
+  });
 
   @override
   Widget build(BuildContext context) {
@@ -622,7 +832,10 @@ class _BubbleBody extends StatelessWidget {
     }
 
     return GestureDetector(
-      onLongPress: () => HapticFeedback.mediumImpact(),
+      onLongPress: () {
+        HapticFeedback.mediumImpact();
+        onLongPress?.call();
+      },
       child: Container(
         constraints: const BoxConstraints(maxWidth: 280),
         padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 10),
@@ -631,7 +844,243 @@ class _BubbleBody extends StatelessWidget {
           borderRadius: borderRadius,
           border: Border.all(color: cs.outlineVariant.withValues(alpha: 0.45)),
         ),
-        child: Text(message.text, style: TextStyle(color: isMe ? cs.onPrimary : cs.onSecondary, fontSize: 15, height: 1.4)),
+        child: Column(
+          crossAxisAlignment: CrossAxisAlignment.start,
+          children: [
+            _LinkedSelectableText(
+              text: message.text,
+              textColor: isMe ? cs.onPrimary : cs.onSecondary,
+              linkColor: isMe ? cs.onPrimary.withValues(alpha: 0.9) : cs.primary,
+              onRouteTap: (route) => context.push(route),
+            ),
+            if (message.isEdited)
+              Padding(
+                padding: const EdgeInsets.only(top: 4),
+                child: Text(
+                  'edited',
+                  style: TextStyle(
+                    color: (isMe ? cs.onPrimary : cs.onSecondary).withValues(alpha: 0.7),
+                    fontSize: 10,
+                    fontStyle: FontStyle.italic,
+                  ),
+                ),
+              ),
+            _RoutePreviewList(messageText: message.text),
+          ],
+        ),
+      ),
+    );
+  }
+}
+
+class _LinkedSelectableText extends StatefulWidget {
+  final String text;
+  final Color textColor;
+  final Color linkColor;
+  final void Function(String route) onRouteTap;
+
+  const _LinkedSelectableText({
+    required this.text,
+    required this.textColor,
+    required this.linkColor,
+    required this.onRouteTap,
+  });
+
+  @override
+  State<_LinkedSelectableText> createState() => _LinkedSelectableTextState();
+}
+
+class _LinkedSelectableTextState extends State<_LinkedSelectableText> {
+  final List<TapGestureRecognizer> _recognizers = [];
+  List<InlineSpan> _spans = const [];
+  static final RegExp _routeRegex = RegExp(r'(?<!\S)(\/[^\s]+)');
+
+  @override
+  void initState() {
+    super.initState();
+    _rebuildSpans();
+  }
+
+  @override
+  void didUpdateWidget(covariant _LinkedSelectableText oldWidget) {
+    super.didUpdateWidget(oldWidget);
+    if (oldWidget.text != widget.text || oldWidget.textColor != widget.textColor || oldWidget.linkColor != widget.linkColor) {
+      _rebuildSpans();
+    }
+  }
+
+  @override
+  void dispose() {
+    for (final recognizer in _recognizers) {
+      recognizer.dispose();
+    }
+    super.dispose();
+  }
+
+  void _rebuildSpans() {
+    for (final recognizer in _recognizers) {
+      recognizer.dispose();
+    }
+    _recognizers.clear();
+
+    final spans = <InlineSpan>[];
+    final text = widget.text;
+    int cursor = 0;
+    for (final match in _routeRegex.allMatches(text)) {
+      final start = match.start;
+      final end = match.end;
+      final route = match.group(1) ?? '';
+      if (cursor < start) {
+        spans.add(TextSpan(text: text.substring(cursor, start), style: TextStyle(color: widget.textColor, fontSize: 15, height: 1.4)));
+      }
+      if (ChatRoutePreviewResolver.isRoutableToken(route)) {
+        final recognizer = TapGestureRecognizer()..onTap = () => widget.onRouteTap(route);
+        _recognizers.add(recognizer);
+        spans.add(
+          TextSpan(
+            text: route,
+            recognizer: recognizer,
+            style: TextStyle(color: widget.linkColor, fontSize: 15, height: 1.4, decoration: TextDecoration.underline),
+          ),
+        );
+      } else {
+        spans.add(TextSpan(text: route, style: TextStyle(color: widget.textColor, fontSize: 15, height: 1.4)));
+      }
+      cursor = end;
+    }
+    if (cursor < text.length) {
+      spans.add(TextSpan(text: text.substring(cursor), style: TextStyle(color: widget.textColor, fontSize: 15, height: 1.4)));
+    }
+    if (spans.isEmpty) {
+      spans.add(TextSpan(text: text, style: TextStyle(color: widget.textColor, fontSize: 15, height: 1.4)));
+    }
+
+    setState(() {
+      _spans = spans;
+    });
+  }
+
+  @override
+  Widget build(BuildContext context) {
+    return SelectableText.rich(TextSpan(children: _spans));
+  }
+}
+
+class _RoutePreviewList extends StatelessWidget {
+  final String messageText;
+
+  const _RoutePreviewList({required this.messageText});
+
+  @override
+  Widget build(BuildContext context) {
+    final refs = ChatRoutePreviewResolver.extract(messageText);
+    if (refs.isEmpty) return const SizedBox.shrink();
+    return Padding(
+      padding: const EdgeInsets.only(top: 8),
+      child: Column(
+        children: refs
+            .map(
+              (ref) => Padding(
+                padding: const EdgeInsets.only(top: 6),
+                child: FutureBuilder<ChatRoutePreview?>(
+                  future: ChatRoutePreviewResolver.resolve(ref),
+                  builder: (context, snapshot) {
+                    final preview = snapshot.data;
+                    if (snapshot.connectionState != ConnectionState.done) {
+                      return Container(
+                        height: 64,
+                        decoration: BoxDecoration(
+                          color: Theme.of(context).colorScheme.surfaceContainerHighest.withValues(alpha: 0.45),
+                          borderRadius: BorderRadius.circular(12),
+                        ),
+                      );
+                    }
+                    if (preview == null) return const SizedBox.shrink();
+                    return _RoutePreviewCard(preview: preview);
+                  },
+                ),
+              ),
+            )
+            .toList(),
+      ),
+    );
+  }
+}
+
+class _RoutePreviewCard extends StatelessWidget {
+  final ChatRoutePreview preview;
+
+  const _RoutePreviewCard({required this.preview});
+
+  @override
+  Widget build(BuildContext context) {
+    final cs = Theme.of(context).colorScheme;
+    final icon = switch (preview.type) {
+      ChatRoutePreviewType.feed => Icons.play_circle_fill_rounded,
+      ChatRoutePreviewType.quests => Icons.map_outlined,
+      ChatRoutePreviewType.chat => Icons.chat_bubble_outline_rounded,
+      ChatRoutePreviewType.search => Icons.search_rounded,
+      ChatRoutePreviewType.themes => Icons.palette_outlined,
+    };
+
+    return InkWell(
+      onTap: () => context.push(preview.route),
+      borderRadius: BorderRadius.circular(12),
+      child: Container(
+        decoration: BoxDecoration(
+          color: cs.surfaceContainerHigh.withValues(alpha: 0.9),
+          borderRadius: BorderRadius.circular(12),
+          border: Border.all(color: cs.outlineVariant.withValues(alpha: 0.6)),
+        ),
+        child: Row(
+          children: [
+            if (preview.thumbnailUrl != null && preview.thumbnailUrl!.isNotEmpty)
+              ClipRRect(
+                borderRadius: const BorderRadius.only(topLeft: Radius.circular(12), bottomLeft: Radius.circular(12)),
+                child: Image.network(
+                  preview.thumbnailUrl!,
+                  width: 72,
+                  height: 64,
+                  fit: BoxFit.cover,
+                  errorBuilder: (_, _, _) => Container(
+                    width: 72,
+                    height: 64,
+                    color: cs.surfaceContainerHighest,
+                    child: Icon(icon, color: cs.onSurfaceVariant),
+                  ),
+                ),
+              )
+            else
+              Container(
+                width: 56,
+                height: 64,
+                decoration: BoxDecoration(
+                  color: cs.surfaceContainerHighest,
+                  borderRadius: const BorderRadius.only(topLeft: Radius.circular(12), bottomLeft: Radius.circular(12)),
+                ),
+                child: Icon(icon, color: cs.onSurfaceVariant),
+              ),
+            Expanded(
+              child: Padding(
+                padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 8),
+                child: Column(
+                  crossAxisAlignment: CrossAxisAlignment.start,
+                  mainAxisSize: MainAxisSize.min,
+                  children: [
+                    Text(preview.title, maxLines: 1, overflow: TextOverflow.ellipsis, style: TextStyle(fontWeight: FontWeight.w700, color: cs.onSurface)),
+                    const SizedBox(height: 2),
+                    Text(preview.subtitle, maxLines: 2, overflow: TextOverflow.ellipsis, style: TextStyle(fontSize: 12, color: cs.onSurfaceVariant)),
+                  ],
+                ),
+              ),
+            ),
+            if (preview.avatarUrl != null && preview.avatarUrl!.isNotEmpty)
+              Padding(
+                padding: const EdgeInsets.only(right: 10),
+                child: CircleAvatar(radius: 12, backgroundImage: NetworkImage(preview.avatarUrl!)),
+              ),
+          ],
+        ),
       ),
     );
   }

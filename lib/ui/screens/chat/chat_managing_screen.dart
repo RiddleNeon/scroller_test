@@ -303,6 +303,16 @@ Widget buildMessagingScreen(Chat chat, void Function(ChatMessage) onMessageUpdat
         key: currentOpenChatScreenKey,
         user: asyncSnapshot.data!,
         onMessageUpdate: onMessageUpdate,
+        canViewMessageHistory: () => chatRepository.canViewMessageHistory(),
+        onLoadMessageVersions: (message) => chatRepository.getMessageVersions(message.id),
+        onEditMessage: (message, newText) async {
+          final updated = await chatRepository.editMessage(otherUserId: chat.partnerId, messageId: message.id, newText: newText);
+          onMessageUpdate(updated);
+          return updated;
+        },
+        onDeleteMessage: (message) async {
+          await chatRepository.deleteMessage(otherUserId: chat.partnerId, messageId: message.id);
+        },
         onSend: (message) async {
           chatManager.addChat(chat, replaceExisting: false);
           await chatRepository.sendNotification(

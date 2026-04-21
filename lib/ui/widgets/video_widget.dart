@@ -214,26 +214,26 @@ class _VideoItemState extends State<VideoItem> {
   Widget build(BuildContext context) {
     final controllerValue = widget.controller.value;
     final videoSize = controllerValue.size;
+    final screenHeight = MediaQuery.sizeOf(context).height;
+    final aspectRatio = controllerValue.aspectRatio > 0
+        ? controllerValue.aspectRatio
+        : (videoSize.width > 0 && videoSize.height > 0 ? videoSize.width / videoSize.height : 9 / 16);
+    final displayWidth = screenHeight * aspectRatio;
 
     return RepaintBoundary(
       child: Stack(
         fit: StackFit.expand,
         children: [
-          ColoredBox(
-            color: Colors.black,
-            child: RepaintBoundary(
-              child: controllerValue.isInitialized && videoSize.width > 0 && videoSize.height > 0
-                  ? FittedBox(
-                      fit: BoxFit.cover,
-                      clipBehavior: Clip.hardEdge,
-                      child: SizedBox(
-                        width: videoSize.width,
-                        height: videoSize.height,
-                        child: VideoPlayer(widget.controller, key: ValueKey(widget.video.id)),
-                      ),
-                    )
-                  : const SizedBox.expand(),
-            ),
+          RepaintBoundary(
+            child: controllerValue.isInitialized && videoSize.width > 0 && videoSize.height > 0
+                ? Center(
+                    child: SizedBox(
+                      height: screenHeight,
+                      width: displayWidth,
+                      child: VideoPlayer(widget.controller, key: ValueKey(widget.video.id)),
+                    ),
+                  )
+                : const SizedBox.expand(),
           ),
           PageOverlay(
             provider: widget.provider,
