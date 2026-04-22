@@ -75,6 +75,10 @@ class MessagingScreenState extends State<MessagingScreen> with TickerProviderSta
   bool _partnerTyping = false;
   bool _initialViewportAnchored = false;
   bool _keepInitialBottomLock = true;
+  bool _historyLoadArmedByUserScroll = false;
+  static const int _initialHistoryPageSize = 30;
+  static const int _historyPageSize = 20;
+  static const double _historyLoadTopThreshold = 80;
   int _bottomLockSession = 0;
   String? _editingMessageId;
   bool _canViewMessageHistory = false;
@@ -96,7 +100,7 @@ class MessagingScreenState extends State<MessagingScreen> with TickerProviderSta
     for (var _ in _messages) {
       _createBubbleController(animate: true);
     }
-    _preloadMore();
+    _preloadMore(limit: _initialHistoryPageSize);
   }
 
   Future<ChatRoutePreview?> _previewFutureFor(ChatRouteReference ref) {
@@ -622,9 +626,9 @@ class MessagingScreenState extends State<MessagingScreen> with TickerProviderSta
     } else if (atBottom && _showScrollDown) {
       setState(() => _showScrollDown = false);
     }
-    final atTop = _scrollController.offset <= 30;
-    if (_initialViewportAnchored && atTop) {
-      _preloadMore();
+    final atTop = _scrollController.offset <= _historyLoadTopThreshold;
+    if (_initialViewportAnchored && _historyLoadArmedByUserScroll && atTop) {
+      _preloadMore(limit: _historyPageSize);
     }
   }
 
@@ -764,6 +768,10 @@ class MessagingScreenState extends State<MessagingScreen> with TickerProviderSta
         if (notification.direction != ScrollDirection.idle && _keepInitialBottomLock) {
           _keepInitialBottomLock = false;
           _bottomLockSession++;
+        }
+        // Only load older pages after a deliberate upward user scroll.
+        if (notification.direction == ScrollDirection.forward) {
+          _historyLoadArmedByUserScroll = true;
         }
         return false;
       },
