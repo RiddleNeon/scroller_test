@@ -14,7 +14,7 @@ class ChatRepository {
   Future<void>? _conversationSyncTask;
   DateTime? _lastConversationSyncAt;
 
-  Future<void> sendNotification({required Chat chat, required ChatMessage message}) async {
+  Future<ChatMessage> sendNotification({required Chat chat, required ChatMessage message}) async {
     final receiverUid = chat.partnerId;
     final conversationId = await _getOrCreateDirectConversation(
       receiverUid,
@@ -28,20 +28,23 @@ class ChatRepository {
         .update({'updated_at': DateTime.now().toUtc().toIso8601String(), 'last_message': "${currentUser.id}: ${message.text}"})
         .eq('id', conversationId);
 
-    await supabaseClient.from('messages').insert({
+    final List<dynamic> inserted = await supabaseClient.from('messages').insert({
       'conversation_id': conversationId,
       'sender_id': currentUser.id,
       'content': message.text,
       'type': 'text',
       'created_at': message.timestamp.toUtc().toIso8601String(),
       'reply_to_message_id': null,
-    });
+    }).select();
 
-    await localSeenService.sendMessageLocal(chat, message);
-    chat.lastMessage = message.text;
-    chat.lastMessageAt = message.timestamp;
+    final actualMessage = _rowToChatMessage(inserted.first as Map<String, dynamic>);
+
+    await localSeenService.sendMessageLocal(chat, actualMessage);
+    chat.lastMessage = actualMessage.text;
+    chat.lastMessageAt = actualMessage.timestamp;
     chat.lastMessageByMe = true;
     _invalidateChatPagesForUser(currentUser.id);
+    return actualMessage;
   }
 
   /// Loads messages with [otherUserId].

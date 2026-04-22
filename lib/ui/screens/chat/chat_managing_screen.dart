@@ -315,10 +315,11 @@ Widget buildMessagingScreen(Chat chat, void Function(ChatMessage) onMessageUpdat
         },
         onSend: (message) async {
           chatManager.addChat(chat, replaceExisting: false);
-          await chatRepository.sendNotification(
+          final serverMsg = await chatRepository.sendNotification(
             chat: chat,
             message: ChatMessage(id: "${chat.partnerId}-${DateTime.now().microsecondsSinceEpoch}", text: message, isMe: true, timestamp: DateTime.now()),
           );
+          return serverMsg;
         },
         loadMoreMessages: (int limit, DateTime? lastVisibleMessage) async {
           print("Loading more messages for chat ${chat.partnerId} with offset $lastVisibleMessage and limit $limit");

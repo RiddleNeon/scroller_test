@@ -23,7 +23,7 @@ import 'calling_screen.dart';
 import 'chat_route_preview.dart';
 
 class MessagingScreen extends StatefulWidget {
-  final Future<void> Function(String message) onSend;
+  final Future<ChatMessage> Function(String message) onSend;
   final Future<ChatMessage> Function(ChatMessage message, String newText) onEditMessage;
   final Future<void> Function(ChatMessage message) onDeleteMessage;
   final Future<List<MessageVersion>> Function(ChatMessage message) onLoadMessageVersions;
@@ -433,9 +433,37 @@ class MessagingScreenState extends State<MessagingScreen> with TickerProviderSta
 
     HapticFeedback.lightImpact();
     _textController.clear();
-    Future<void> sendingFuture = widget.onSend(text);
-    _addMessage(text: text, isMe: true, sendingFuture: sendingFuture, isNewMessage: true);
-    return sendingFuture;
+    
+    final tempId = DateTime.now().millisecondsSinceEpoch.toString();
+    _addMessage(text: text, isMe: true, isNewMessage: true, id: tempId);
+    
+    try {
+      final serverMessage = await widget.onSend(text);
+      if (mounted) {
+        final index = _messages.indexWhere((m) => m.id == tempId);
+        if (index != -1) {
+          setState(() {
+            _messages[index] = ChatMessage(
+              id: serverMessage.id,
+              text: serverMessage.text,
+              isMe: serverMessage.isMe,
+              timestamp: serverMessage.timestamp,
+              status: MessageStatus.delivered,
+            );
+          });
+        }
+      }
+    } catch (e) {
+      debugPrint('send message failed: $e');
+      if (mounted) {
+        final index = _messages.indexWhere((m) => m.id == tempId);
+        if (index != -1) {
+          setState(() {
+            _messages[index].status = MessageStatus.sent;
+          });
+        }
+      }
+    }
   }
 
   Future<void> _deleteMessage(ChatMessage message) async {
@@ -450,7 +478,7 @@ class MessagingScreenState extends State<MessagingScreen> with TickerProviderSta
   }
 
   Future<void> _showMessageHistory(ChatMessage message) async {
-    if (!_canViewMessageHistory) return;
+    if (!_canViewMessageHistory && !message.isEdited) return;
     try {
       final versions = await widget.onLoadMessageVersions(message);
       if (!mounted) return;
@@ -493,7 +521,7 @@ class MessagingScreenState extends State<MessagingScreen> with TickerProviderSta
   }
 
   Future<void> _showMessageActions(ChatMessage message) async {
-    if (!message.isMe && !_canViewMessageHistory) return;
+    if (!message.isMe && !_canViewMessageHistory && !message.isEdited) return;
     await showModalBottomSheet<void>(
       context: context,
       builder: (ctx) => SafeArea(
@@ -522,7 +550,7 @@ class MessagingScreenState extends State<MessagingScreen> with TickerProviderSta
                   _deleteMessage(message);
                 },
               ),
-            if (_canViewMessageHistory)
+            if (_canViewMessageHistory || message.isEdited)
               ListTile(
                 leading: const Icon(Icons.history),
                 title: const Text('View edit history'),
@@ -988,7 +1016,7 @@ class _BubbleBody extends StatelessWidget {
       borderRadius = BorderRadius.only(topLeft: isFirst ? r : rSmall, topRight: r, bottomLeft: isLast ? const Radius.circular(4) : rSmall, bottomRight: r);
     }
 
-    final hasText = ChatRoutePreviewResolver.hasVisibleText(message.text) || message.isEdited;
+    final hasText = ChatRoutePreviewResolver.hasVisibleText(message.text);
 
     return GestureDetector(
       onLongPress: () {
@@ -1032,6 +1060,18 @@ class _BubbleBody extends StatelessWidget {
               ),
             ),
           _RoutePreviewList(messageText: message.text, onRouteTap: onRouteTap, previewFutureFor: previewFutureFor),
+          if (!hasText && message.isEdited)
+            Padding(
+              padding: const EdgeInsets.only(top: 4, right: 2, left: 2),
+              child: Text(
+                'edited',
+                style: TextStyle(
+                  color: cs.onSurfaceVariant.withValues(alpha: 0.7),
+                  fontSize: 10,
+                  fontStyle: FontStyle.italic,
+                ),
+              ),
+            ),
         ],
       ),
     );
@@ -1109,7 +1149,7 @@ class _LinkedSelectableTextState extends State<_LinkedSelectableText> {
       spans.add(TextSpan(text: text.substring(cursor), style: TextStyle(color: widget.textColor, fontSize: 15, height: 1.4)));
     }
     if (spans.isEmpty) {
-      spans.add(TextSpan(text: text, style: TextStyle(color: widget.textColor, fontSize: 15, height: 1.4)));
+      spans.add(TextSpan(text: '', style: TextStyle(color: widget.textColor, fontSize: 15, height: 1.4)));
     }
 
     setState(() {

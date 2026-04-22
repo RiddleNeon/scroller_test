@@ -34,7 +34,6 @@ class BottomNavBarState extends State<BottomNavBar> with SingleTickerProviderSta
     print("adding post frame callback to switch to index: $index");
     WidgetsBinding.instance.addPostFrameCallback((timeStamp) {
       setState(() {
-        print("Switching to index: $index, which has id: ${items[index].id}");
         currentSelectedIndex = index;
         _selectionSizeAnimationController.reset();
         _selectionSizeAnimationController.animateTo(1.5, curve: Curves.easeOutBack);

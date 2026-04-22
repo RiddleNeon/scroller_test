@@ -284,7 +284,6 @@ class LocalSeenService {
       if (local == null || followedAt.isAfter(local)) {
         toWrite[followedUserId] = followedAt;
       }
-      print("following sync: found new follow for user $followedUserId at $followedAt, local followedAt: $local");
     }
 
     if (toWrite.isNotEmpty) {
