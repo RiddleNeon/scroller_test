@@ -16,7 +16,9 @@ import 'package:wurp/ui/theme/theme_creation_screen.dart';
 import 'package:wurp/ui/widgets/bottom_navigation_bar.dart';
 
 import '../base_logic.dart';
+import '../logic/feed_recommendation/search_video_result_recommender.dart';
 import '../logic/repositories/video_repository.dart';
+import '../logic/video/video.dart';
 
 late final GoRouter routerConfig;
 
@@ -95,7 +97,7 @@ void initRouter() {
             path: '/feed/:videoId',
             pageBuilder: (context, state) => SlideMorphTransitions.page<void>(
               key: state.pageKey,
-              child: _DeepLinkVideoScreen(videoId: state.pathParameters['videoId'] ?? ''),
+              child: _DeepLinkVideoScreen(videoId: state.pathParameters['videoId'] ?? '', sharedVideoIds: _parseVideoIds(state.uri.queryParameters['ids'])),
               beginOffset: const Offset(0.02, 0.0),
               beginScale: 0.995,
             ),
@@ -283,9 +285,41 @@ class RouteObserver extends NavigatorObserver {
 }
 
 class _DeepLinkVideoScreen extends StatelessWidget {
-  const _DeepLinkVideoScreen({required this.videoId});
+  const _DeepLinkVideoScreen({required this.videoId, this.sharedVideoIds = const []});
 
   final String videoId;
+  final List<String> sharedVideoIds;
+
+  Future<({List<Video> videos, int initialIndex})?> _loadSharedFeedContext() async {
+    if (sharedVideoIds.isEmpty) return null;
+
+    final fetched = await videoRepo.fetchVideosByIds(sharedVideoIds);
+    if (fetched.isEmpty) return null;
+
+    final byId = {for (final video in fetched) video.id: video};
+    final ordered = <Video>[];
+    final seen = <String>{};
+    for (final id in sharedVideoIds) {
+      final video = byId[id];
+      if (video != null && seen.add(video.id)) {
+        ordered.add(video);
+      }
+    }
+    if (ordered.isEmpty) return null;
+
+    var initialIndex = ordered.indexWhere((video) => video.id == videoId);
+    if (initialIndex == -1) {
+      final deepLinked = await videoRepo.getVideoByIdSupabase(videoId);
+      if (deepLinked != null && seen.add(deepLinked.id)) {
+        ordered.insert(0, deepLinked);
+        initialIndex = 0;
+      } else {
+        initialIndex = 0;
+      }
+    }
+
+    return (videos: ordered, initialIndex: initialIndex);
+  }
 
   @override
   Widget build(BuildContext context) {
@@ -294,16 +328,33 @@ class _DeepLinkVideoScreen extends StatelessWidget {
     }
 
     return FutureBuilder(
-      future: videoRepo.getVideoById(videoId),
+      future: _loadSharedFeedContext(),
       builder: (context, snapshot) {
         if (snapshot.connectionState != ConnectionState.done) {
           return const Center(child: CircularProgressIndicator());
         }
-        if (!snapshot.hasData) {
-          return const VideoFeed();
+
+        final sharedContext = snapshot.data;
+        if (sharedContext != null && sharedContext.videos.isNotEmpty) {
+          return VideoFeed(
+            videoProvider: SearchVideoResultRecommender(listedVideos: sharedContext.videos),
+            initialPage: sharedContext.initialIndex,
+            itemCount: sharedContext.videos.length,
+          );
         }
 
-        return VideoFeed(videoProvider: SingleVideoProvider(snapshot.data!), initialPage: 0);
+        return FutureBuilder<Video>(
+          future: videoRepo.getVideoById(videoId),
+          builder: (context, fallbackSnapshot) {
+            if (fallbackSnapshot.connectionState != ConnectionState.done) {
+              return const Center(child: CircularProgressIndicator());
+            }
+            if (!fallbackSnapshot.hasData) {
+              return const VideoFeed();
+            }
+            return VideoFeed(videoProvider: SingleVideoProvider(fallbackSnapshot.data!), initialPage: 0, itemCount: 1);
+          },
+        );
       },
     );
   }
@@ -398,5 +449,19 @@ List<int> _parseQuestIds(String? raw) {
 bool _parseZoomOut(String? value) {
   if (value == null) return true;
   return value == 'out' || value == 'true' || value == '1';
+}
+
+List<String> _parseVideoIds(String? raw) {
+  if (raw == null || raw.trim().isEmpty) return const [];
+  final seen = <String>{};
+  final ids = <String>[];
+  for (final part in raw.split(',')) {
+    final id = part.trim();
+    if (id.isEmpty) continue;
+    if (seen.add(id)) {
+      ids.add(id);
+    }
+  }
+  return ids;
 }
 

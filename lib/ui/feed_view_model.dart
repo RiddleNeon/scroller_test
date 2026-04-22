@@ -4,6 +4,7 @@ import '../logic/video/video_provider.dart';
 
 class FeedViewModel {
   VideoProvider? videoSource;
+  VideoProvider? _activeVideoSource;
 
   FeedViewModel([this.videoSource]);
 
@@ -18,6 +19,7 @@ class FeedViewModel {
 
   Future<VideoContainer> getVideoAt(int index, {VideoProvider? videoSource}) async {
     videoSource ??= this.videoSource;
+    await _ensureActiveVideoSource(videoSource);
 
     if (_containers.containsKey(index)) {
       return _containers[index]!;
@@ -28,10 +30,14 @@ class FeedViewModel {
 
   Future<void> switchToVideoAt(int index, {VideoProvider? videoSource}) async {
     videoSource ??= this.videoSource;
+    await _ensureActiveVideoSource(videoSource);
     final requestId = ++_switchRequestId;
 
-    final previous = _currentIndex;
     _currentIndex = index;
+
+    // Stop audio/video from previously visible pages immediately.
+    await _pauseAllExcept(index);
+    if (requestId != _switchRequestId) return;
 
     final toDispose = _containers.keys
         .where((i) => (i - index).abs() > 3)
@@ -60,13 +66,6 @@ class FeedViewModel {
       return;
     }
 
-    if (previous != index && _containers.containsKey(previous)) {
-      final prev = _containers[previous];
-      await prev?.controller?.pause();
-      await prev?.controller?.seekTo(Duration.zero);
-      if (requestId != _switchRequestId) return;
-    }
-
     _preload(index + 1, videoSource);
     _preload(index - 1, videoSource);
   }
@@ -76,14 +75,22 @@ class FeedViewModel {
   }
 
   Future<void> dispose() async {
-    for (final container in _containers.values) {
-      await container.controller?.dispose();
-    }
+    await pauseAll();
+    await _clearContainers();
     if (videoSource is RecommendationVideoProvider) {
       (videoSource as RecommendationVideoProvider).clearCache();
     }
-    _containers.clear();
     _loading.clear();
+    _activeVideoSource = null;
+  }
+
+  Future<void> pauseAll() async {
+    for (final container in _containers.values) {
+      final controller = container.controller;
+      if (controller == null) continue;
+      if (!controller.value.isInitialized) continue;
+      await controller.pause();
+    }
   }
 
 
@@ -121,5 +128,33 @@ class FeedViewModel {
   Future<void> _disposeIndex(int index) async {
     final container = _containers.remove(index);
     await container?.controller?.dispose();
+  }
+
+  Future<void> _ensureActiveVideoSource(VideoProvider? source) async {
+    if (source == null) return;
+    if (identical(_activeVideoSource, source)) return;
+
+    await _clearContainers();
+    _loading.clear();
+    _activeVideoSource = source;
+    videoSource = source;
+  }
+
+  Future<void> _clearContainers() async {
+    for (final container in _containers.values) {
+      await container.controller?.dispose();
+    }
+    _containers.clear();
+  }
+
+  Future<void> _pauseAllExcept(int keepIndex) async {
+    for (final entry in _containers.entries) {
+      if (entry.key == keepIndex) continue;
+      final controller = entry.value.controller;
+      if (controller == null) continue;
+      if (!controller.value.isInitialized) continue;
+      await controller.pause();
+      await controller.seekTo(Duration.zero);
+    }
   }
 }

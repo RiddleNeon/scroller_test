@@ -1,5 +1,6 @@
 import 'dart:math';
 
+import 'package:cached_network_image/cached_network_image.dart';
 import 'package:flutter/gestures.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
@@ -7,8 +8,12 @@ import 'package:go_router/go_router.dart';
 import 'package:wurp/logic/repositories/user_repository.dart';
 import 'package:wurp/logic/users/user_model.dart';
 import 'package:wurp/logic/repositories/chat_repository.dart';
+import 'package:wurp/logic/repositories/video_repository.dart';
+import 'package:wurp/logic/video/video.dart';
 import 'package:wurp/ui/animations/slide_morph_transitions.dart';
+import 'package:wurp/ui/feed_view_model.dart';
 import 'package:wurp/ui/misc/avatar.dart';
+import 'package:wurp/ui/screens/search_screen/search_screen.dart';
 
 import '../../../base_logic.dart';
 import '../../../logic/chat/chat_message.dart';
@@ -69,6 +74,9 @@ class MessagingScreenState extends State<MessagingScreen> with TickerProviderSta
   bool _partnerTyping = false;
   String? _editingMessageId;
   bool _canViewMessageHistory = false;
+  final Map<String, Future<ChatRoutePreview?>> _previewFutureCache = {};
+  List<String>? _sharedFeedVideoIds;
+  Future<List<String>>? _sharedFeedVideoIdsTask;
 
   late AnimationController _typingDotController;
 
@@ -90,6 +98,136 @@ class MessagingScreenState extends State<MessagingScreen> with TickerProviderSta
     });
   }
 
+  Future<ChatRoutePreview?> _previewFutureFor(ChatRouteReference ref) {
+    return _previewFutureCache.putIfAbsent(ref.route, () => ChatRoutePreviewResolver.resolve(ref));
+  }
+
+  List<String> _collectSharedFeedVideoIds() {
+    final seen = <String>{};
+    final ids = <String>[];
+    for (final message in _messages) {
+      for (final ref in ChatRoutePreviewResolver.extract(message.text)) {
+        if (!ref.uri.path.startsWith('/feed/')) continue;
+        final pathId = ref.uri.pathSegments.length > 1 ? ref.uri.pathSegments[1] : '';
+        if (pathId.isNotEmpty && seen.add(pathId)) {
+          ids.add(pathId);
+        }
+      }
+    }
+    return ids;
+  }
+
+  Future<List<String>> _loadSharedFeedVideoIds() {
+    final cached = _sharedFeedVideoIds;
+    if (cached != null) return Future.value(cached);
+
+    final inFlight = _sharedFeedVideoIdsTask;
+    if (inFlight != null) return inFlight;
+
+    final task = chatRepository
+        .getSharedFeedVideoIdsWith(widget.recipientId)
+        .then((ids) {
+          final result = ids.isEmpty ? _collectSharedFeedVideoIds() : ids;
+          _sharedFeedVideoIds = result;
+          return result;
+        })
+        .catchError((_) {
+          final fallback = _collectSharedFeedVideoIds();
+          _sharedFeedVideoIds = fallback;
+          return fallback;
+        })
+        .whenComplete(() {
+          _sharedFeedVideoIdsTask = null;
+        });
+
+    _sharedFeedVideoIdsTask = task;
+    return task;
+  }
+
+  Future<String> _withChatFeedContext(String route) async {
+    final uri = Uri.tryParse(route);
+    if (uri == null || !uri.path.startsWith('/feed/')) return route;
+    final currentVideoId = uri.pathSegments.length > 1 ? uri.pathSegments[1] : '';
+    if (currentVideoId.isEmpty) return route;
+
+    final ids = <String>[currentVideoId, ...await _loadSharedFeedVideoIds()];
+    final unique = <String>[];
+    final seen = <String>{};
+    for (final id in ids) {
+      if (seen.add(id)) {
+        unique.add(id);
+      }
+    }
+    if (unique.length <= 1) return route;
+
+    final query = Map<String, String>.from(uri.queryParameters);
+    query['ids'] = unique.join(',');
+    return uri.replace(queryParameters: query).toString();
+  }
+
+  Future<void> _openRouteFromMessage(String route) async {
+    final targetRoute = await _withChatFeedContext(route);
+    if (!mounted) return;
+
+    final uri = Uri.tryParse(targetRoute);
+    if (uri != null && uri.path.startsWith('/feed/')) {
+      await _openFeedRouteInDialog(uri);
+      return;
+    }
+
+    context.go(targetRoute);
+  }
+
+  Future<void> _openFeedRouteInDialog(Uri uri) async {
+    final routeVideoId = uri.pathSegments.length > 1 ? uri.pathSegments[1] : '';
+    if (routeVideoId.isEmpty) return;
+
+    final queryIds = (uri.queryParameters['ids'] ?? '')
+        .split(',')
+        .map((id) => id.trim())
+        .where((id) => id.isNotEmpty)
+        .toList();
+    final orderedIds = <String>[routeVideoId, ...queryIds];
+
+    final uniqueIds = <String>[];
+    final seen = <String>{};
+    for (final id in orderedIds) {
+      if (seen.add(id)) {
+        uniqueIds.add(id);
+      }
+    }
+
+    List<Video> videos = [];
+    if (uniqueIds.isNotEmpty) {
+      final fetched = await videoRepo.fetchVideosByIds(uniqueIds);
+      final byId = {for (final video in fetched) video.id: video};
+      videos = [for (final id in uniqueIds) if (byId[id] != null) byId[id]!];
+    }
+
+    if (videos.isEmpty) {
+      final single = await videoRepo.getVideoByIdSupabase(routeVideoId);
+      if (single == null || !mounted) return;
+      videos = [single];
+    }
+
+    if (!mounted) return;
+    final index = videos.indexWhere((video) => video.id == routeVideoId);
+    final dialogFeedModel = FeedViewModel();
+    try {
+      await openVideoPlayer(
+        context: context,
+        listedVideos: videos,
+        videoIndex: index >= 0 ? index : 0,
+        feedModel: dialogFeedModel,
+        tickerProvider: this,
+      );
+    } finally {
+      Future.delayed(const Duration(milliseconds: 350), () {
+        dialogFeedModel.dispose();
+      });
+    }
+  }
+
   bool preloading = false;
 
   Future<void> _loadHistoryPermission() async {
@@ -104,23 +242,26 @@ class MessagingScreenState extends State<MessagingScreen> with TickerProviderSta
     if (!moreMessagesAvailable || preloading) return;
     preloading = true;
 
-    print("preloading!");
-    List<ChatMessage> loadedMessages = await widget.loadMoreMessages(limit, currentMessageCursor);
+    try {
+      print("preloading!");
+      final loadedMessages = await widget.loadMoreMessages(limit, currentMessageCursor);
+      if (!mounted) return;
 
-    if (loadedMessages.isEmpty) {
-      moreMessagesAvailable = false;
+      if (loadedMessages.isEmpty) {
+        moreMessagesAvailable = false;
+        return;
+      } else if (loadedMessages.length < limit) {
+        moreMessagesAvailable = false;
+      }
+
+      loadedMessages.sort((a, b) => a.timestamp.compareTo(b.timestamp));
+      _addMessages(loadedMessages, appendToEnd: false, isNewMessage: false);
+      currentMessageCursor = loadedMessages.last.timestamp;
+    } catch (e) {
+      debugPrint('preload messages failed: $e');
+    } finally {
       preloading = false;
-      return;
-    } else if (loadedMessages.length < limit) {
-      moreMessagesAvailable = false;
     }
-
-    loadedMessages.sort((a, b) => a.timestamp.compareTo(b.timestamp));
-
-    _addMessages(loadedMessages, appendToEnd: false, isNewMessage: false);
-
-    currentMessageCursor = loadedMessages.last.timestamp;
-    preloading = false;
   }
 
   void onReceiveMessage(String text) {
@@ -157,6 +298,7 @@ class MessagingScreenState extends State<MessagingScreen> with TickerProviderSta
     DateTime? createdAt,
     String? id,
   }) {
+    if (!mounted) return;
     if (isNewMessage) {
       widget.onMessageUpdate(
         ChatMessage(
@@ -181,6 +323,7 @@ class MessagingScreenState extends State<MessagingScreen> with TickerProviderSta
         _messages.insert(0, msg);
       }
     });
+    _sharedFeedVideoIds = null;
     _createBubbleController(animate: animated);
     _scrollToBottom();
 
@@ -202,6 +345,7 @@ class MessagingScreenState extends State<MessagingScreen> with TickerProviderSta
   }
 
   void _addMessages(List<ChatMessage> messages, {bool appendToEnd = true, bool isNewMessage = true}) {
+    if (!mounted) return;
     if (messages.isEmpty) return;
 
     final newMessages = messages
@@ -231,6 +375,7 @@ class MessagingScreenState extends State<MessagingScreen> with TickerProviderSta
         _messages.insertAll(0, newMessages);
       }
     });
+    _sharedFeedVideoIds = null;
 
     for (var i = 0; i < newMessages.length; i++) {
       _createBubbleController(animate: false);
@@ -570,6 +715,8 @@ class MessagingScreenState extends State<MessagingScreen> with TickerProviderSta
             recipientName: widget.recipientName ?? '',
             recipientAvatarUrl: widget.recipientAvatarUrl,
             onLongPress: () => _showMessageActions(msg),
+            onRouteTap: _openRouteFromMessage,
+            previewFutureFor: _previewFutureFor,
           );
         },
       ),
@@ -711,6 +858,8 @@ class _MessageBubble extends StatelessWidget {
   final String recipientName;
   final String? recipientAvatarUrl;
   final VoidCallback? onLongPress;
+  final void Function(String route) onRouteTap;
+  final Future<ChatRoutePreview?> Function(ChatRouteReference ref) previewFutureFor;
 
   const _MessageBubble({
     super.key,
@@ -725,6 +874,8 @@ class _MessageBubble extends StatelessWidget {
     required this.recipientName,
     this.recipientAvatarUrl,
     this.onLongPress,
+    required this.onRouteTap,
+    required this.previewFutureFor,
   });
 
   @override
@@ -767,6 +918,8 @@ class _MessageBubble extends StatelessWidget {
                       isLast: isLast,
                       colorScheme: cs,
                       onLongPress: onLongPress,
+                      onRouteTap: onRouteTap,
+                      previewFutureFor: previewFutureFor,
                     ),
                     if (showTimestamp || (isMe && isLast))
                       Padding(
@@ -807,6 +960,8 @@ class _BubbleBody extends StatelessWidget {
   final bool isLast;
   final ColorScheme colorScheme;
   final VoidCallback? onLongPress;
+  final void Function(String route) onRouteTap;
+  final Future<ChatRoutePreview?> Function(ChatRouteReference ref) previewFutureFor;
 
   const _BubbleBody({
     required this.message,
@@ -815,6 +970,8 @@ class _BubbleBody extends StatelessWidget {
     required this.isLast,
     required this.colorScheme,
     this.onLongPress,
+    required this.onRouteTap,
+    required this.previewFutureFor,
   });
 
   @override
@@ -831,43 +988,51 @@ class _BubbleBody extends StatelessWidget {
       borderRadius = BorderRadius.only(topLeft: isFirst ? r : rSmall, topRight: r, bottomLeft: isLast ? const Radius.circular(4) : rSmall, bottomRight: r);
     }
 
+    final hasText = ChatRoutePreviewResolver.hasVisibleText(message.text) || message.isEdited;
+
     return GestureDetector(
       onLongPress: () {
         HapticFeedback.mediumImpact();
         onLongPress?.call();
       },
-      child: Container(
-        constraints: const BoxConstraints(maxWidth: 280),
-        padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 10),
-        decoration: BoxDecoration(
-          color: isMe ? cs.primary : cs.secondary,
-          borderRadius: borderRadius,
-          border: Border.all(color: cs.outlineVariant.withValues(alpha: 0.45)),
-        ),
-        child: Column(
-          crossAxisAlignment: CrossAxisAlignment.start,
-          children: [
-            _LinkedSelectableText(
-              text: message.text,
-              textColor: isMe ? cs.onPrimary : cs.onSecondary,
-              linkColor: isMe ? cs.onPrimary.withValues(alpha: 0.9) : cs.primary,
-              onRouteTap: (route) => context.push(route),
-            ),
-            if (message.isEdited)
-              Padding(
-                padding: const EdgeInsets.only(top: 4),
-                child: Text(
-                  'edited',
-                  style: TextStyle(
-                    color: (isMe ? cs.onPrimary : cs.onSecondary).withValues(alpha: 0.7),
-                    fontSize: 10,
-                    fontStyle: FontStyle.italic,
-                  ),
-                ),
+      child: Column(
+        crossAxisAlignment: isMe ? CrossAxisAlignment.end : CrossAxisAlignment.start,
+        children: [
+          if (hasText)
+            Container(
+              constraints: const BoxConstraints(maxWidth: 280),
+              padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 10),
+              decoration: BoxDecoration(
+                color: isMe ? cs.primary : cs.secondary,
+                borderRadius: borderRadius,
+                border: Border.all(color: cs.outlineVariant.withValues(alpha: 0.45)),
               ),
-            _RoutePreviewList(messageText: message.text),
-          ],
-        ),
+              child: Column(
+                crossAxisAlignment: CrossAxisAlignment.start,
+                children: [
+                  _LinkedSelectableText(
+                    text: message.text,
+                    textColor: isMe ? cs.onPrimary : cs.onSecondary,
+                    linkColor: isMe ? cs.onPrimary.withValues(alpha: 0.9) : cs.primary,
+                    onRouteTap: onRouteTap,
+                  ),
+                  if (message.isEdited)
+                    Padding(
+                      padding: const EdgeInsets.only(top: 4),
+                      child: Text(
+                        'edited',
+                        style: TextStyle(
+                          color: (isMe ? cs.onPrimary : cs.onSecondary).withValues(alpha: 0.7),
+                          fontSize: 10,
+                          fontStyle: FontStyle.italic,
+                        ),
+                      ),
+                    ),
+                ],
+              ),
+            ),
+          _RoutePreviewList(messageText: message.text, onRouteTap: onRouteTap, previewFutureFor: previewFutureFor),
+        ],
       ),
     );
   }
@@ -934,15 +1099,7 @@ class _LinkedSelectableTextState extends State<_LinkedSelectableText> {
         spans.add(TextSpan(text: text.substring(cursor, start), style: TextStyle(color: widget.textColor, fontSize: 15, height: 1.4)));
       }
       if (ChatRoutePreviewResolver.isRoutableToken(route)) {
-        final recognizer = TapGestureRecognizer()..onTap = () => widget.onRouteTap(route);
-        _recognizers.add(recognizer);
-        spans.add(
-          TextSpan(
-            text: route,
-            recognizer: recognizer,
-            style: TextStyle(color: widget.linkColor, fontSize: 15, height: 1.4, decoration: TextDecoration.underline),
-          ),
-        );
+        // Skip it. We don't render routable tokens as text anymore.
       } else {
         spans.add(TextSpan(text: route, style: TextStyle(color: widget.textColor, fontSize: 15, height: 1.4)));
       }
@@ -962,14 +1119,16 @@ class _LinkedSelectableTextState extends State<_LinkedSelectableText> {
 
   @override
   Widget build(BuildContext context) {
-    return SelectableText.rich(TextSpan(children: _spans));
+    return SelectableText.rich(TextSpan(children: _spans), selectionColor: Theme.of(context).colorScheme.tertiary);
   }
 }
 
 class _RoutePreviewList extends StatelessWidget {
   final String messageText;
+  final void Function(String route) onRouteTap;
+  final Future<ChatRoutePreview?> Function(ChatRouteReference ref) previewFutureFor;
 
-  const _RoutePreviewList({required this.messageText});
+  const _RoutePreviewList({required this.messageText, required this.onRouteTap, required this.previewFutureFor});
 
   @override
   Widget build(BuildContext context) {
@@ -977,31 +1136,34 @@ class _RoutePreviewList extends StatelessWidget {
     if (refs.isEmpty) return const SizedBox.shrink();
     return Padding(
       padding: const EdgeInsets.only(top: 8),
-      child: Column(
-        children: refs
-            .map(
-              (ref) => Padding(
-                padding: const EdgeInsets.only(top: 6),
-                child: FutureBuilder<ChatRoutePreview?>(
-                  future: ChatRoutePreviewResolver.resolve(ref),
-                  builder: (context, snapshot) {
-                    final preview = snapshot.data;
-                    if (snapshot.connectionState != ConnectionState.done) {
-                      return Container(
-                        height: 64,
-                        decoration: BoxDecoration(
-                          color: Theme.of(context).colorScheme.surfaceContainerHighest.withValues(alpha: 0.45),
-                          borderRadius: BorderRadius.circular(12),
-                        ),
-                      );
-                    }
-                    if (preview == null) return const SizedBox.shrink();
-                    return _RoutePreviewCard(preview: preview);
-                  },
+      child: Container(
+        constraints: const BoxConstraints(maxWidth: 280),
+        child: Column(
+          children: refs
+              .map(
+                (ref) => Padding(
+                  padding: const EdgeInsets.only(top: 6),
+                  child: FutureBuilder<ChatRoutePreview?>(
+                    future: previewFutureFor(ref),
+                    builder: (context, snapshot) {
+                      final preview = snapshot.data;
+                      if (snapshot.connectionState != ConnectionState.done) {
+                        return Container(
+                          height: 64,
+                          decoration: BoxDecoration(
+                            color: Theme.of(context).colorScheme.surfaceContainerHighest.withValues(alpha: 0.45),
+                            borderRadius: BorderRadius.circular(12),
+                          ),
+                        );
+                      }
+                      if (preview == null) return const SizedBox.shrink();
+                      return _RoutePreviewCard(preview: preview, onTap: () => onRouteTap(preview.route));
+                    },
+                  ),
                 ),
-              ),
-            )
-            .toList(),
+              )
+              .toList(),
+        ),
       ),
     );
   }
@@ -1009,8 +1171,9 @@ class _RoutePreviewList extends StatelessWidget {
 
 class _RoutePreviewCard extends StatelessWidget {
   final ChatRoutePreview preview;
+  final VoidCallback onTap;
 
-  const _RoutePreviewCard({required this.preview});
+  const _RoutePreviewCard({required this.preview, required this.onTap});
 
   @override
   Widget build(BuildContext context) {
@@ -1023,8 +1186,71 @@ class _RoutePreviewCard extends StatelessWidget {
       ChatRoutePreviewType.themes => Icons.palette_outlined,
     };
 
+    if (preview.type == ChatRoutePreviewType.feed && preview.thumbnailUrl != null) {
+      return InkWell(
+        onTap: onTap,
+        borderRadius: BorderRadius.circular(16),
+        child: Container(
+          width: double.infinity,
+          decoration: BoxDecoration(
+            color: cs.surfaceContainerHigh.withValues(alpha: 0.9),
+            borderRadius: BorderRadius.circular(16),
+            border: Border.all(color: cs.outlineVariant.withValues(alpha: 0.6)),
+          ),
+          child: Column(
+            crossAxisAlignment: CrossAxisAlignment.start,
+            mainAxisSize: MainAxisSize.min,
+            children: [
+              Stack(
+                alignment: Alignment.center,
+                children: [
+                  ClipRRect(
+                    borderRadius: const BorderRadius.only(topLeft: Radius.circular(16), topRight: Radius.circular(16)),
+                    child: CachedNetworkImage(
+                      imageUrl: preview.thumbnailUrl!,
+                      width: double.infinity,
+                      height: 200,
+                      fit: BoxFit.cover,
+                      errorWidget: (_, _, _) => Container(width: double.infinity, height: 200, color: cs.surfaceContainerHighest, child: Icon(icon, color: cs.onSurfaceVariant)),
+                    ),
+                  ),
+                  Container(
+                    padding: const EdgeInsets.all(12),
+                    decoration: BoxDecoration(color: Colors.black.withValues(alpha: 0.4), shape: BoxShape.circle),
+                    child: const Icon(Icons.play_arrow_rounded, color: Colors.white, size: 36),
+                  ),
+                ],
+              ),
+              Padding(
+                padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 10),
+                child: Row(
+                  children: [
+                    if (preview.avatarUrl != null && preview.avatarUrl!.isNotEmpty)
+                      Padding(
+                        padding: const EdgeInsets.only(right: 10),
+                        child: CircleAvatar(radius: 16, backgroundImage: CachedNetworkImageProvider(preview.avatarUrl!)),
+                      ),
+                    Expanded(
+                      child: Column(
+                        crossAxisAlignment: CrossAxisAlignment.start,
+                        children: [
+                          Text(preview.title, maxLines: 1, overflow: TextOverflow.ellipsis, style: TextStyle(fontWeight: FontWeight.w700, color: cs.onSurface)),
+                          const SizedBox(height: 2),
+                          Text(preview.subtitle, maxLines: 1, overflow: TextOverflow.ellipsis, style: TextStyle(fontSize: 12, color: cs.onSurfaceVariant)),
+                        ],
+                      ),
+                    ),
+                  ],
+                ),
+              ),
+            ],
+          ),
+        ),
+      );
+    }
+
     return InkWell(
-      onTap: () => context.push(preview.route),
+      onTap: onTap,
       borderRadius: BorderRadius.circular(12),
       child: Container(
         decoration: BoxDecoration(
@@ -1037,17 +1263,13 @@ class _RoutePreviewCard extends StatelessWidget {
             if (preview.thumbnailUrl != null && preview.thumbnailUrl!.isNotEmpty)
               ClipRRect(
                 borderRadius: const BorderRadius.only(topLeft: Radius.circular(12), bottomLeft: Radius.circular(12)),
-                child: Image.network(
-                  preview.thumbnailUrl!,
+                child: CachedNetworkImage(
+                  // Stable cached image prevents flashing while list items recycle.
+                  imageUrl: preview.thumbnailUrl!,
                   width: 72,
                   height: 64,
                   fit: BoxFit.cover,
-                  errorBuilder: (_, _, _) => Container(
-                    width: 72,
-                    height: 64,
-                    color: cs.surfaceContainerHighest,
-                    child: Icon(icon, color: cs.onSurfaceVariant),
-                  ),
+                  errorWidget: (_, _, _) => Container(width: 72, height: 64, color: cs.surfaceContainerHighest, child: Icon(icon, color: cs.onSurfaceVariant)),
                 ),
               )
             else
@@ -1077,7 +1299,7 @@ class _RoutePreviewCard extends StatelessWidget {
             if (preview.avatarUrl != null && preview.avatarUrl!.isNotEmpty)
               Padding(
                 padding: const EdgeInsets.only(right: 10),
-                child: CircleAvatar(radius: 12, backgroundImage: NetworkImage(preview.avatarUrl!)),
+                child: CircleAvatar(radius: 12, backgroundImage: CachedNetworkImageProvider(preview.avatarUrl!)),
               ),
           ],
         ),

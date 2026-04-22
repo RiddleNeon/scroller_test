@@ -60,6 +60,25 @@ class ChatRoutePreviewResolver {
     return uri != null && uri.path.isNotEmpty && _isSupportedPath(uri.path);
   }
 
+  static bool isPureRouteMessage(String text) {
+    final trimmed = text.trim();
+    if (trimmed.isEmpty) return false;
+    if (!isRoutableToken(trimmed)) return false;
+    final refs = extract(trimmed);
+    return refs.length == 1 && refs.first.raw == trimmed;
+  }
+
+  static bool hasVisibleText(String text) {
+    String stripped = text;
+    for (final match in _inAppRouteRegex.allMatches(text)) {
+      final raw = match.group(1);
+      if (raw != null && isRoutableToken(raw)) {
+        stripped = stripped.replaceFirst(raw, '');
+      }
+    }
+    return stripped.trim().isNotEmpty;
+  }
+
   static Future<ChatRoutePreview?> resolve(ChatRouteReference routeRef) async {
     final path = routeRef.uri.path;
     if (path.startsWith('/feed/')) {

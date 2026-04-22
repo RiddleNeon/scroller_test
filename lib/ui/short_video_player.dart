@@ -102,6 +102,7 @@ Widget feedVideos(
                 }
 
                 if (snapshot.hasError) {
+                  print("Error loading video at index $index: ${snapshot.error}");
                   return Center(
                     child: Padding(
                       padding: const EdgeInsets.symmetric(horizontal: 24.0),
@@ -208,8 +209,9 @@ Widget _buildStopWidget(String label, IconData icon, BuildContext context) {
 class VideoFeed extends StatefulWidget {
   final VideoProvider? videoProvider;
   final int? initialPage;
+  final int itemCount;
 
-  const VideoFeed({super.key, this.videoProvider, this.initialPage});
+  const VideoFeed({super.key, this.videoProvider, this.initialPage, this.itemCount = 5000});
 
   @override
   State<VideoFeed> createState() => _VideoFeedState();
@@ -218,20 +220,28 @@ class VideoFeed extends StatefulWidget {
 class _VideoFeedState extends State<VideoFeed> with TickerProviderStateMixin {
   late final PreloadPageController _pageController;
   late final int _initialPage;
+  late final FeedViewModel _feedModel;
+  late final bool _ownsFeedModel;
 
   @override
   void initState() {
     super.initState();
-    _initialPage = widget.initialPage ?? (widget.videoProvider == null ? feedViewModel.currentIndex : 0);
+    _ownsFeedModel = widget.videoProvider != null;
+    _feedModel = _ownsFeedModel ? FeedViewModel(widget.videoProvider) : feedViewModel;
+    _initialPage = widget.initialPage ?? (_ownsFeedModel ? 0 : feedViewModel.currentIndex);
     _pageController = PreloadPageController(initialPage: _initialPage, viewportFraction: 1);
     // Ensure initial page starts playing even when opening the feed at index 0.
     WidgetsBinding.instance.addPostFrameCallback((_) {
-      unawaited(feedViewModel.switchToVideoAt(_initialPage, videoSource: widget.videoProvider ?? videoProvider));
+      unawaited(_feedModel.switchToVideoAt(_initialPage, videoSource: widget.videoProvider ?? videoProvider));
     });
   }
 
   @override
   void dispose() {
+    unawaited(_feedModel.pauseAll());
+    if (_ownsFeedModel) {
+      unawaited(_feedModel.dispose());
+    }
     _pageController.dispose();
     super.dispose();
   }
@@ -243,6 +253,8 @@ class _VideoFeedState extends State<VideoFeed> with TickerProviderStateMixin {
         this,
         widget.videoProvider ?? videoProvider,
         context,
+        feedModel: _feedModel,
+        itemCount: widget.itemCount,
         initialPage: _initialPage,
         pageController: _pageController,
       ),

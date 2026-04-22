@@ -7,6 +7,7 @@ import '../local_storage/local_seen_service.dart';
 class ChatRepository {
   static const Duration _chatPageCacheTtl = Duration(seconds: 20);
   static const Duration _conversationSyncMinInterval = Duration(seconds: 4);
+  static final RegExp _feedRouteRegex = RegExp(r'(?<!\S)(/feed/\d+)(?:\?[^\s]*)?');
   final Map<String, _CachedChatsPage> _chatPageCache = {};
   final Map<String, Future<({int? newCurrent, List<Chat> result})>> _inFlightChatPages = {};
   final Map<String, _CachedConversationId> _conversationIdCache = {};
@@ -84,6 +85,48 @@ class ChatRepository {
 
     final result = merged.values.toList()..sort((a, b) => a.timestamp.compareTo(b.timestamp));
     return result.length > limit ? result.sublist(result.length - limit) : result;
+  }
+
+  /// Returns unique video ids from every /feed/:id route ever shared in this direct chat.
+  /// IDs are ordered by message creation time (oldest -> newest), then by appearance within message text.
+  Future<List<String>> getSharedFeedVideoIdsWith(String otherUserId) async {
+    final conversationId = await _findDirectConversationId(otherUserId);
+    if (conversationId == null) return const [];
+
+    const pageSize = 500;
+    var start = 0;
+    final orderedIds = <String>[];
+    final seen = <String>{};
+
+    while (true) {
+      final rows = (await supabaseClient
+              .from('messages')
+              .select('content, created_at')
+              .eq('conversation_id', conversationId)
+              .isFilter('deleted_at', null)
+              .order('created_at', ascending: true)
+              .range(start, start + pageSize - 1) as List)
+          .map<Map<String, dynamic>>((row) => Map<String, dynamic>.from(row))
+          .toList();
+
+      for (final row in rows) {
+        final content = row['content'] as String? ?? '';
+        for (final match in _feedRouteRegex.allMatches(content)) {
+          final routeToken = match.group(1);
+          if (routeToken == null || routeToken.isEmpty) continue;
+          final uri = Uri.tryParse(routeToken);
+          if (uri == null || uri.pathSegments.length < 2) continue;
+          final videoId = uri.pathSegments[1].trim();
+          if (videoId.isEmpty || !seen.add(videoId)) continue;
+          orderedIds.add(videoId);
+        }
+      }
+
+      if (rows.length < pageSize) break;
+      start += rows.length;
+    }
+
+    return orderedIds;
   }
 
   /// Fetches messages from the `messages` table for [conversationId].
