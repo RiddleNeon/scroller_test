@@ -8,6 +8,7 @@ import 'package:wurp/ui/screens/chat/chat_screen.dart';
 import '../../../base_logic.dart';
 import '../../../logic/chat/chat.dart';
 import '../../../util/misc/time_formatting.dart';
+import '../../theme/theme_ui_values.dart';
 import 'chat_route_preview.dart';
 
 GlobalKey<ChatManagingScreenState> chatManagingScreenKey = GlobalKey();
@@ -141,8 +142,8 @@ class ChatManagingScreenState extends State<ChatManagingScreen> {
         backgroundColor: theme.colorScheme.surfaceContainerLow,
         centerTitle: true,
         elevation: 0,
-        shape: const RoundedRectangleBorder(
-          borderRadius: BorderRadiusGeometry.only(bottomLeft: Radius.circular(18), bottomRight: Radius.circular(18)),
+        shape: RoundedRectangleBorder(
+          borderRadius: BorderRadiusGeometry.only(bottomLeft: Radius.circular(context.uiRadiusMd), bottomRight: Radius.circular(context.uiRadiusMd)),
         ),
       ),
       body: Padding(padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 12), child: _buildChatList(chats)),
@@ -205,7 +206,7 @@ class ChatManagingScreenState extends State<ChatManagingScreen> {
       duration: const Duration(milliseconds: 220),
       curve: Curves.easeOutCubic,
       decoration: BoxDecoration(
-        borderRadius: BorderRadius.circular(18),
+        borderRadius: BorderRadius.circular(context.uiRadiusLg),
         color: theme.colorScheme.surfaceContainer,
         border: Border.all(color: theme.colorScheme.outline.withValues(alpha: 0.35)),
       ),
@@ -213,7 +214,7 @@ class ChatManagingScreenState extends State<ChatManagingScreen> {
       child: Material(
         color: Colors.transparent,
         child: InkWell(
-          borderRadius: BorderRadius.circular(18),
+          borderRadius: BorderRadius.circular(context.uiRadiusLg),
           onTap: () => _openChat(chat, onMessageUpdate),
           child: Padding(
             padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 14),

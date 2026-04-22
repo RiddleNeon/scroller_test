@@ -9,6 +9,7 @@ import 'package:http/http.dart' as http;
 import 'package:wurp/logic/repositories/user_repository.dart';
 
 import '../../base_logic.dart';
+import '../theme/theme_ui_values.dart';
 import '../widgets/camera/camera_dialog.dart';
 
 Future<String?> showProfileImagePicker(BuildContext context, {bool persistToCurrentUser = true}) {
@@ -132,7 +133,7 @@ class _ProfileImagePickerSheetState extends State<_ProfileImagePickerSheet> with
       padding: EdgeInsets.only(bottom: bottomInset),
       decoration: BoxDecoration(
         color: cs.surface,
-        borderRadius: const BorderRadius.vertical(top: Radius.circular(32)),
+        borderRadius: BorderRadius.vertical(top: Radius.circular(context.uiRadiusLg)),
       ),
       child: AnimatedSize(
         duration: const Duration(milliseconds: 300),
@@ -144,7 +145,7 @@ class _ProfileImagePickerSheetState extends State<_ProfileImagePickerSheet> with
             Container(
               width: 36,
               height: 4,
-              decoration: BoxDecoration(color: cs.outlineVariant, borderRadius: BorderRadius.circular(2)),
+              decoration: BoxDecoration(color: cs.outlineVariant, borderRadius: BorderRadius.circular(context.uiRadiusSm)),
             ),
             const SizedBox(height: 24),
             Text(
@@ -187,7 +188,7 @@ class _ProfileImagePickerSheetState extends State<_ProfileImagePickerSheet> with
     return Container(
       margin: const EdgeInsets.symmetric(horizontal: 24),
       padding: const EdgeInsets.all(4),
-      decoration: BoxDecoration(color: cs.surfaceContainerHigh, borderRadius: BorderRadius.circular(20)),
+      decoration: BoxDecoration(color: cs.surfaceContainerHigh, borderRadius: BorderRadius.circular(context.uiRadiusLg)),
       child: Row(
         children: List.generate(tabs.length, (i) {
           final selected = _selectedTab == i;
@@ -200,7 +201,7 @@ class _ProfileImagePickerSheetState extends State<_ProfileImagePickerSheet> with
               child: AnimatedContainer(
                 duration: const Duration(milliseconds: 250),
                 padding: const EdgeInsets.symmetric(vertical: 12),
-                decoration: BoxDecoration(color: selected ? cs.primary : Colors.transparent, borderRadius: BorderRadius.circular(16)),
+                decoration: BoxDecoration(color: selected ? cs.primary : Colors.transparent, borderRadius: BorderRadius.circular(context.uiRadiusMd)),
                 child: Row(
                   mainAxisAlignment: MainAxisAlignment.center,
                   children: [
@@ -289,9 +290,9 @@ class _ProfileImagePickerSheetState extends State<_ProfileImagePickerSheet> with
             filled: true,
             fillColor: cs.surfaceContainerHighest.withValues(alpha: 0.5),
             prefixIcon: Icon(Icons.tag, color: cs.primary),
-            border: OutlineInputBorder(borderRadius: BorderRadius.circular(16), borderSide: BorderSide.none),
+            border: OutlineInputBorder(borderRadius: BorderRadius.circular(context.uiRadiusMd), borderSide: BorderSide.none),
             focusedBorder: OutlineInputBorder(
-              borderRadius: BorderRadius.circular(16),
+              borderRadius: BorderRadius.circular(context.uiRadiusMd),
               borderSide: BorderSide(color: cs.primary, width: 2),
             ),
           ),
@@ -340,7 +341,7 @@ class _ProfileImagePickerSheetState extends State<_ProfileImagePickerSheet> with
             child: Container(
               width: double.infinity,
               height: 58,
-              decoration: BoxDecoration(color: cs.primary, borderRadius: BorderRadius.circular(20)),
+              decoration: BoxDecoration(color: cs.primary, borderRadius: BorderRadius.circular(context.uiRadiusLg)),
               child: Center(
                 child: _uploading
                     ? SizedBox(width: 24, height: 24, child: CircularProgressIndicator(color: cs.onPrimary, strokeWidth: 3))
@@ -371,13 +372,13 @@ class _OutlinedActionButton extends StatelessWidget {
       color: Colors.transparent,
       child: InkWell(
         onTap: onTap,
-        borderRadius: BorderRadius.circular(16),
+        borderRadius: BorderRadius.circular(context.uiRadiusMd),
         child: Container(
           width: double.infinity,
           height: 56,
           decoration: BoxDecoration(
             border: Border.all(color: cs.outlineVariant, width: 2),
-            borderRadius: BorderRadius.circular(16),
+            borderRadius: BorderRadius.circular(context.uiRadiusMd),
           ),
           child: Row(
             mainAxisAlignment: MainAxisAlignment.center,

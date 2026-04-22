@@ -1,5 +1,6 @@
 import 'package:camera/camera.dart';
 import 'package:flutter/material.dart';
+import 'package:wurp/ui/theme/theme_ui_values.dart';
 import 'package:wurp/ui/widgets/camera/web_camera.dart';
 
 class WebCameraDialog extends StatefulWidget {
@@ -60,9 +61,9 @@ class _WebCameraDialogState extends State<WebCameraDialog> {
     return Dialog(
       backgroundColor: cs.inverseSurface,
       insetPadding: const EdgeInsets.all(16),
-      shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(24)),
+      shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(context.uiRadiusLg)),
       child: ClipRRect(
-        borderRadius: BorderRadius.circular(24),
+        borderRadius: BorderRadius.circular(context.uiRadiusLg),
         child: SizedBox(
           width: 380,
           height: 520,
@@ -78,7 +79,7 @@ class _WebCameraDialogState extends State<WebCameraDialog> {
                   child: Container(
                     width: 36,
                     height: 36,
-                      decoration: BoxDecoration(color: cs.inverseSurface.withValues(alpha: 0.72), borderRadius: BorderRadius.circular(18)),
+                      decoration: BoxDecoration(color: cs.inverseSurface.withValues(alpha: 0.72), borderRadius: BorderRadius.circular(context.uiRadiusLg)),
                       child: Icon(Icons.close, color: cs.onInverseSurface, size: 20),
                   ),
                 ),
@@ -93,7 +94,7 @@ class _WebCameraDialogState extends State<WebCameraDialog> {
                     child: Container(
                       width: 36,
                       height: 36,
-                      decoration: BoxDecoration(color: cs.inverseSurface.withValues(alpha: 0.72), borderRadius: BorderRadius.circular(18)),
+                      decoration: BoxDecoration(color: cs.inverseSurface.withValues(alpha: 0.72), borderRadius: BorderRadius.circular(context.uiRadiusLg)),
                       child: Icon(Icons.flip_camera_ios_outlined, color: cs.onInverseSurface, size: 20),
                     ),
                   ),

@@ -2,6 +2,7 @@ import 'package:flutter/material.dart';
 import 'package:flutter_colorpicker/flutter_colorpicker.dart';
 import 'package:uuid/uuid.dart';
 import 'package:wurp/logic/themes/theme_model.dart';
+import 'package:wurp/ui/theme/theme_ui_values.dart';
 
 class ThemeEditorScreen extends StatefulWidget {
   final CustomThemeModel? existingTheme;
@@ -105,7 +106,7 @@ class _ThemeEditorScreenState extends State<ThemeEditorScreen> {
             secondaryHueShift: secondaryShift,
             tertiaryHueShift: tertiaryShift,
             blendTertiaryWithSecondary: blendTertiaryWithSecondary,
-          );
+          ).copyWith(style: _colors.style);
 
           return AlertDialog(
             title: const Text('Auto-Generate Theme'),
@@ -413,6 +414,7 @@ class _ThemeEditorScreenState extends State<ThemeEditorScreen> {
 
   @override
   Widget build(BuildContext context) {
+    final radiusMd = context.uiRadiusMd;
     final cs = Theme.of(context).colorScheme;
     return Scaffold(
       appBar: AppBar(
@@ -436,7 +438,7 @@ class _ThemeEditorScreenState extends State<ThemeEditorScreen> {
                   secondary: _colors.secondary,
                   tertiary: _colors.tertiary,
                   dark: !_colors.isDark,
-                );
+                ).copyWith(style: _colors.style);
               }),
             ),
           ),
@@ -463,10 +465,12 @@ class _ThemeEditorScreenState extends State<ThemeEditorScreen> {
               children: [
                 TextField(
                   controller: _nameController,
-                  decoration: const InputDecoration(
+                  decoration: InputDecoration(
                     labelText: 'Theme-Name',
-                    border: OutlineInputBorder(),
-                    prefixIcon: Icon(Icons.label_outline),
+                    border: OutlineInputBorder(
+                      borderRadius: BorderRadius.circular(radiusMd),
+                    ),
+                    prefixIcon: const Icon(Icons.label_outline),
                   ),
                   onChanged: (_) => setState(() {}),
                 ),
@@ -575,6 +579,182 @@ class _ThemeEditorScreenState extends State<ThemeEditorScreen> {
                   _colors.onError,
                   (c) => _colors = _colors.copyWith(onError: c),
                 ),
+
+                const _SectionHeader('Shape & Radius'),
+                _TokenSliderRow(
+                  label: 'Small Radius',
+                  value: _colors.style.radiusSm,
+                  min: 0,
+                  max: 28,
+                  divisions: 28,
+                  valueLabel: '${_colors.style.radiusSm.toStringAsFixed(0)} px',
+                  hint: 'Small controls and compact chips.',
+                  onChanged: (v) => setState(
+                    () => _colors = _colors.copyWith(
+                      style: _colors.style.copyWith(radiusSm: v),
+                    ),
+                  ),
+                ),
+                _TokenSliderRow(
+                  label: 'Medium Radius',
+                  value: _colors.style.radiusMd,
+                  min: 2,
+                  max: 40,
+                  divisions: 38,
+                  valueLabel: '${_colors.style.radiusMd.toStringAsFixed(0)} px',
+                  hint: 'Inputs and buttons.',
+                  onChanged: (v) => setState(
+                    () => _colors = _colors.copyWith(
+                      style: _colors.style.copyWith(radiusMd: v),
+                    ),
+                  ),
+                ),
+                _TokenSliderRow(
+                  label: 'Large Radius',
+                  value: _colors.style.radiusLg,
+                  min: 4,
+                  max: 48,
+                  divisions: 44,
+                  valueLabel: '${_colors.style.radiusLg.toStringAsFixed(0)} px',
+                  hint: 'Cards and larger containers.',
+                  onChanged: (v) => setState(
+                    () => _colors = _colors.copyWith(
+                      style: _colors.style.copyWith(radiusLg: v),
+                    ),
+                  ),
+                ),
+
+                const _SectionHeader('Elevation'),
+                _TokenSliderRow(
+                  label: 'Card Elevation',
+                  value: _colors.style.cardElevation,
+                  min: 0,
+                  max: 16,
+                  divisions: 32,
+                  valueLabel: _colors.style.cardElevation.toStringAsFixed(1),
+                  hint: 'Depth for cards and panels.',
+                  onChanged: (v) => setState(
+                    () => _colors = _colors.copyWith(
+                      style: _colors.style.copyWith(cardElevation: v),
+                    ),
+                  ),
+                ),
+                _TokenSliderRow(
+                  label: 'Button Elevation',
+                  value: _colors.style.buttonElevation,
+                  min: 0,
+                  max: 12,
+                  divisions: 24,
+                  valueLabel: _colors.style.buttonElevation.toStringAsFixed(1),
+                  hint: 'Depth for raised actions.',
+                  onChanged: (v) => setState(
+                    () => _colors = _colors.copyWith(
+                      style: _colors.style.copyWith(buttonElevation: v),
+                    ),
+                  ),
+                ),
+                _TokenSliderRow(
+                  label: 'Dialog Elevation',
+                  value: _colors.style.dialogElevation,
+                  min: 0,
+                  max: 20,
+                  divisions: 40,
+                  valueLabel: _colors.style.dialogElevation.toStringAsFixed(1),
+                  hint: 'Modal and dialog lift.',
+                  onChanged: (v) => setState(
+                    () => _colors = _colors.copyWith(
+                      style: _colors.style.copyWith(dialogElevation: v),
+                    ),
+                  ),
+                ),
+
+                const _SectionHeader('Shadows'),
+                _TokenSliderRow(
+                  label: 'Shadow Opacity',
+                  value: _colors.style.shadowOpacity,
+                  min: 0,
+                  max: 0.45,
+                  divisions: 45,
+                  valueLabel: '${(_colors.style.shadowOpacity * 100).round()}%',
+                  hint: 'How strong shadows appear.',
+                  onChanged: (v) => setState(
+                    () => _colors = _colors.copyWith(
+                      style: _colors.style.copyWith(shadowOpacity: v),
+                    ),
+                  ),
+                ),
+                _TokenSliderRow(
+                  label: 'Shadow Blur',
+                  value: _colors.style.shadowBlur,
+                  min: 0,
+                  max: 32,
+                  divisions: 32,
+                  valueLabel: '${_colors.style.shadowBlur.toStringAsFixed(0)} px',
+                  hint: 'Softness of shadows.',
+                  onChanged: (v) => setState(
+                    () => _colors = _colors.copyWith(
+                      style: _colors.style.copyWith(shadowBlur: v),
+                    ),
+                  ),
+                ),
+                _TokenSliderRow(
+                  label: 'Shadow Y Offset',
+                  value: _colors.style.shadowOffsetY,
+                  min: -4,
+                  max: 20,
+                  divisions: 24,
+                  valueLabel: '${_colors.style.shadowOffsetY.toStringAsFixed(0)} px',
+                  hint: 'Vertical shadow displacement.',
+                  onChanged: (v) => setState(
+                    () => _colors = _colors.copyWith(
+                      style: _colors.style.copyWith(shadowOffsetY: v),
+                    ),
+                  ),
+                ),
+
+                const _SectionHeader('Borders & Density'),
+                _TokenSliderRow(
+                  label: 'Border Width',
+                  value: _colors.style.borderWidth,
+                  min: 0,
+                  max: 3,
+                  divisions: 30,
+                  valueLabel: _colors.style.borderWidth.toStringAsFixed(1),
+                  hint: 'Default line and border thickness.',
+                  onChanged: (v) => setState(
+                    () => _colors = _colors.copyWith(
+                      style: _colors.style.copyWith(borderWidth: v),
+                    ),
+                  ),
+                ),
+                _TokenSliderRow(
+                  label: 'Focused Border Width',
+                  value: _colors.style.focusedBorderWidth,
+                  min: 0.8,
+                  max: 4,
+                  divisions: 32,
+                  valueLabel: _colors.style.focusedBorderWidth.toStringAsFixed(1),
+                  hint: 'Focus ring thickness for active inputs.',
+                  onChanged: (v) => setState(
+                    () => _colors = _colors.copyWith(
+                      style: _colors.style.copyWith(focusedBorderWidth: v),
+                    ),
+                  ),
+                ),
+                _TokenSliderRow(
+                  label: 'Compactness',
+                  value: _colors.style.compactness,
+                  min: -1,
+                  max: 1,
+                  divisions: 20,
+                  valueLabel: _colors.style.compactness.toStringAsFixed(1),
+                  hint: 'Negative is roomier, positive is denser.',
+                  onChanged: (v) => setState(
+                    () => _colors = _colors.copyWith(
+                      style: _colors.style.copyWith(compactness: v),
+                    ),
+                  ),
+                ),
               ],
             ),
           ),
@@ -625,6 +805,7 @@ class _SeedRow extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     final cs = Theme.of(context).colorScheme;
+    final radius = context.uiRadiusMd;
     return Row(
       children: [
         GestureDetector(
@@ -635,7 +816,7 @@ class _SeedRow extends StatelessWidget {
             height: 40,
             decoration: BoxDecoration(
               color: enabled ? color : color.withValues(alpha: 0.3),
-              borderRadius: BorderRadius.circular(10),
+              borderRadius: BorderRadius.circular(radius),
               border: Border.all(color: cs.outlineVariant),
             ),
             child: enabled
@@ -717,6 +898,62 @@ class _AutoOptionSlider extends StatelessWidget {
   }
 }
 
+class _TokenSliderRow extends StatelessWidget {
+  final String label;
+  final String valueLabel;
+  final String hint;
+  final double value;
+  final double min;
+  final double max;
+  final int? divisions;
+  final ValueChanged<double> onChanged;
+
+  const _TokenSliderRow({
+    required this.label,
+    required this.valueLabel,
+    required this.hint,
+    required this.value,
+    required this.min,
+    required this.max,
+    required this.onChanged,
+    this.divisions,
+  });
+
+  @override
+  Widget build(BuildContext context) {
+    final cs = Theme.of(context).colorScheme;
+    return Column(
+      crossAxisAlignment: CrossAxisAlignment.start,
+      children: [
+        Row(
+          children: [
+            Expanded(
+              child: Text(
+                label,
+                style: const TextStyle(fontWeight: FontWeight.w600),
+              ),
+            ),
+            Text(
+              valueLabel,
+              style: TextStyle(color: cs.onSurfaceVariant, fontSize: 12),
+            ),
+          ],
+        ),
+        Slider(
+          value: value,
+          min: min,
+          max: max,
+          divisions: divisions,
+          label: valueLabel,
+          onChanged: onChanged,
+        ),
+        Text(hint, style: TextStyle(fontSize: 11, color: cs.onSurfaceVariant)),
+        const SizedBox(height: 8),
+      ],
+    );
+  }
+}
+
 class _AutoGeneratePreview extends StatelessWidget {
   final CustomThemeColors colors;
   final String name;
@@ -730,7 +967,7 @@ class _AutoGeneratePreview extends StatelessWidget {
       padding: const EdgeInsets.all(10),
       decoration: BoxDecoration(
         color: colors.surfaceContainerHighest,
-        borderRadius: BorderRadius.circular(14),
+        borderRadius: BorderRadius.circular(colors.style.radiusMd),
         border: Border.all(color: colors.outlineVariant.withValues(alpha: 0.7)),
       ),
       child: Column(
@@ -776,7 +1013,7 @@ class _AutoGeneratePreview extends StatelessWidget {
           SizedBox(
             height: 120,
             child: ClipRRect(
-              borderRadius: BorderRadius.circular(10),
+              borderRadius: BorderRadius.circular(colors.style.radiusSm),
               child: _MockApp(colors: colors, name: name),
             ),
           ),
@@ -796,7 +1033,7 @@ class _AutoGeneratePreview extends StatelessWidget {
       alignment: Alignment.center,
       decoration: BoxDecoration(
         color: color,
-        borderRadius: BorderRadius.circular(6),
+        borderRadius: BorderRadius.circular(colors.style.radiusSm),
       ),
       child: Text(
         label,
@@ -846,14 +1083,16 @@ class _ColorRow extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    final cs = Theme.of(context).colorScheme;
+    final theme = Theme.of(context);
+    final cs = theme.colorScheme;
+    final baseRadius = context.uiRadiusMd;
     final hex =
         '#${color.toARGB32().toRadixString(16).padLeft(8, '0').substring(2).toUpperCase()}';
     final isLight = color.computeLuminance() > 0.45;
 
     return InkWell(
       onTap: onTap,
-      borderRadius: BorderRadius.circular(12),
+      borderRadius: BorderRadius.circular(baseRadius),
       child: Padding(
         padding: const EdgeInsets.symmetric(vertical: 6),
         child: Row(
@@ -863,7 +1102,7 @@ class _ColorRow extends StatelessWidget {
               height: 52,
               decoration: BoxDecoration(
                 color: color,
-                borderRadius: BorderRadius.circular(12),
+                borderRadius: BorderRadius.circular(baseRadius),
                 border: Border.all(
                   color: cs.outlineVariant.withValues(alpha: 0.6),
                 ),
@@ -907,7 +1146,7 @@ class _ColorRow extends StatelessWidget {
               padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 4),
               decoration: BoxDecoration(
                 color: cs.surfaceContainerHigh,
-                borderRadius: BorderRadius.circular(6),
+                borderRadius: BorderRadius.circular(baseRadius * 0.5),
               ),
               child: Text(
                 hex,
@@ -960,7 +1199,7 @@ class _ThemePreview extends StatelessWidget {
                     color: colors.isDark
                         ? colors.inverseSurface
                         : colors.onSurface,
-                    borderRadius: BorderRadius.circular(6),
+                    borderRadius: BorderRadius.circular(context.uiRadiusSm),
                   ),
                   child: Row(
                     mainAxisSize: MainAxisSize.min,
@@ -994,7 +1233,7 @@ class _ThemePreview extends StatelessWidget {
               child: AspectRatio(
                 aspectRatio: 9 / 16,
                 child: ClipRRect(
-                  borderRadius: BorderRadius.circular(16),
+                  borderRadius: BorderRadius.circular(colors.style.radiusLg),
                   child: _MockApp(colors: colors, name: name),
                 ),
               ),
@@ -1016,6 +1255,20 @@ class _MockApp extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
+    final s = c.style;
+    final cardRadius = BorderRadius.circular(s.radiusLg);
+    final buttonRadius = BorderRadius.circular(s.radiusMd);
+    final cardShadow = [
+      BoxShadow(
+        color: Colors.black.withValues(
+          alpha: s.shadowOpacity.clamp(0.0, 0.6).toDouble(),
+        ),
+        blurRadius: s.shadowBlur,
+        spreadRadius: s.shadowSpread,
+        offset: Offset(0, s.shadowOffsetY),
+      ),
+    ];
+
     return Container(
       color: c.surface,
       child: Column(
@@ -1054,10 +1307,12 @@ class _MockApp extends StatelessWidget {
                 children: [
                   _card(
                     color: c.surfaceContainerHighest,
+                    radius: cardRadius,
                     border: Border.all(
                       color: c.outlineVariant.withValues(alpha: 0.6),
+                      width: s.borderWidth,
                     ),
-                    shadow: true,
+                    shadow: cardShadow,
                     child: Column(
                       crossAxisAlignment: CrossAxisAlignment.start,
                       children: [
@@ -1101,9 +1356,10 @@ class _MockApp extends StatelessWidget {
                             ),
                             decoration: BoxDecoration(
                               color: c.secondary.withValues(alpha: 0.18),
-                              borderRadius: BorderRadius.circular(20),
+                              borderRadius: BorderRadius.circular(c.style.radiusXl),
                               border: Border.all(
                                 color: c.secondary.withValues(alpha: 0.45),
+                                width: s.borderWidth,
                               ),
                             ),
                             child: Text(
@@ -1121,8 +1377,10 @@ class _MockApp extends StatelessWidget {
                   const SizedBox(height: 6),
                   _card(
                     color: c.tertiary.withValues(alpha: 0.15),
+                    radius: cardRadius,
                     border: Border.all(
                       color: c.tertiary.withValues(alpha: 0.4),
+                      width: s.borderWidth,
                     ),
                     child: Row(
                       children: [
@@ -1140,7 +1398,11 @@ class _MockApp extends StatelessWidget {
                   const SizedBox(height: 6),
                   _card(
                     color: c.error.withValues(alpha: 0.10),
-                    border: Border.all(color: c.error.withValues(alpha: 0.35)),
+                    radius: cardRadius,
+                    border: Border.all(
+                      color: c.error.withValues(alpha: 0.35),
+                      width: s.borderWidth,
+                    ),
                     child: Row(
                       children: [
                         Icon(Icons.error_outline, color: c.error, size: 11),
@@ -1174,7 +1436,8 @@ class _MockApp extends StatelessWidget {
                   ),
                   decoration: BoxDecoration(
                     color: c.primary,
-                    borderRadius: BorderRadius.circular(12),
+                    borderRadius: buttonRadius,
+                    boxShadow: s.buttonElevation > 0 ? cardShadow : null,
                     /*                    boxShadow: [
                       BoxShadow(
                         color: c.primary.withValues(alpha: 0.35),
@@ -1209,24 +1472,17 @@ class _MockApp extends StatelessWidget {
   Widget _card({
     required Color color,
     required Widget child,
-    bool shadow = false,
+    List<BoxShadow>? shadow,
     Border? border,
+    BorderRadius? radius,
   }) => Container(
     width: double.infinity,
     padding: const EdgeInsets.all(8),
     decoration: BoxDecoration(
       color: color,
-      borderRadius: BorderRadius.circular(8),
+      borderRadius: radius ?? BorderRadius.circular(c.style.radiusMd),
       border: border,
-      boxShadow: shadow
-          ? [
-              BoxShadow(
-                color: Colors.black.withValues(alpha: 0.08),
-                blurRadius: 4,
-                offset: const Offset(0, 2),
-              ),
-            ]
-          : null,
+      boxShadow: shadow,
     ),
     child: child,
   );
@@ -1235,7 +1491,19 @@ class _MockApp extends StatelessWidget {
     padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 4),
     decoration: BoxDecoration(
       color: bg,
-      borderRadius: BorderRadius.circular(20),
+      borderRadius: BorderRadius.circular(c.style.radiusMd),
+      boxShadow: c.style.buttonElevation <= 0
+          ? null
+          : [
+              BoxShadow(
+                color: Colors.black.withValues(
+                  alpha: c.style.shadowOpacity.clamp(0.0, 0.6).toDouble(),
+                ),
+                blurRadius: c.style.shadowBlur,
+                spreadRadius: c.style.shadowSpread,
+                offset: Offset(0, c.style.shadowOffsetY),
+              ),
+            ],
     ),
     child: Text(
       l,
@@ -1246,8 +1514,8 @@ class _MockApp extends StatelessWidget {
   Widget _outlinedBtn(String l, Color color) => Container(
     padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 4),
     decoration: BoxDecoration(
-      border: Border.all(color: color),
-      borderRadius: BorderRadius.circular(20),
+      border: Border.all(color: color, width: c.style.borderWidth),
+      borderRadius: BorderRadius.circular(c.style.radiusMd),
     ),
     child: Text(l, style: TextStyle(color: color, fontSize: 8)),
   );

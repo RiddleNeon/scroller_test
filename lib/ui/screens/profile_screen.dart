@@ -24,6 +24,7 @@ import '../feed_view_model.dart';
 import '../misc/basic_player.dart';
 import '../misc/profile_image_picker.dart';
 import '../misc/rolling_digit_counter.dart';
+import '../theme/theme_ui_values.dart';
 
 class ProfileScreen extends StatefulWidget {
   final UserProfile initialProfile;
@@ -328,7 +329,7 @@ class _ProfileScreenState extends State<ProfileScreen> with TickerProviderStateM
     return Container(
       decoration: BoxDecoration(
         color: cs.surfaceContainer.withValues(alpha: 0.95),
-        borderRadius: const BorderRadius.only(bottomLeft: Radius.circular(16), bottomRight: Radius.circular(16)),
+        borderRadius: BorderRadius.only(bottomLeft: Radius.circular(context.uiRadiusMd), bottomRight: Radius.circular(context.uiRadiusMd)),
       ),
       height: kToolbarHeight,
       padding: const EdgeInsets.symmetric(horizontal: 4),
@@ -527,7 +528,7 @@ class _ProfileScreenState extends State<ProfileScreen> with TickerProviderStateM
                 height: 38,
                 decoration: BoxDecoration(
                   border: Border.all(color: cs.outlineVariant),
-                  borderRadius: BorderRadius.circular(8),
+                  borderRadius: BorderRadius.circular(context.uiRadiusSm),
                 ),
                 child: Icon(Icons.flag_rounded, size: 20, color: cs.onSurfaceVariant),
               ),
@@ -545,7 +546,7 @@ class _ProfileScreenState extends State<ProfileScreen> with TickerProviderStateM
                 height: 38,
                 decoration: BoxDecoration(
                   border: Border.all(color: cs.outlineVariant),
-                  borderRadius: BorderRadius.circular(8),
+                  borderRadius: BorderRadius.circular(context.uiRadiusSm),
                 ),
                 child: Icon(Icons.chat, size: 20, color: cs.onSurfaceVariant),
               ),
@@ -563,7 +564,7 @@ class _ProfileScreenState extends State<ProfileScreen> with TickerProviderStateM
       padding: const EdgeInsets.all(4),
       decoration: BoxDecoration(
         color: cs.surfaceContainerHigh,
-        borderRadius: BorderRadius.circular(18),
+        borderRadius: BorderRadius.circular(context.uiRadiusLg),
         border: Border.all(color: cs.outlineVariant.withValues(alpha: 0.65)),
       ),
       child: Row(
@@ -704,7 +705,7 @@ class _ActionButton extends StatelessWidget {
         decoration: BoxDecoration(
           color: filled ? cs.primary : cs.surfaceContainerLowest,
           border: Border.all(color: filled ? cs.primary : cs.outlineVariant, width: 1.5),
-          borderRadius: BorderRadius.circular(8),
+          borderRadius: BorderRadius.circular(context.uiRadiusSm),
         ),
         child: Center(
           child: Text(
@@ -734,13 +735,13 @@ class _ProfileSegmentButton extends StatelessWidget {
       message: tooltip,
       child: InkWell(
         onTap: onTap,
-        borderRadius: BorderRadius.circular(14),
+        borderRadius: BorderRadius.circular(context.uiRadiusMd),
         child: AnimatedContainer(
           duration: const Duration(milliseconds: 220),
           curve: Curves.easeOutCubic,
           decoration: BoxDecoration(
             color: selected ? cs.secondaryContainer.withValues(alpha: 0.75) : Colors.transparent,
-            borderRadius: BorderRadius.circular(14),
+            borderRadius: BorderRadius.circular(context.uiRadiusMd),
             border: selected ? Border.all(color: cs.outlineVariant.withValues(alpha: 0.65)) : null,
           ),
           child: Center(

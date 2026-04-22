@@ -2,6 +2,7 @@ import 'dart:async';
 
 import 'package:flutter/cupertino.dart';
 import 'package:flutter/material.dart';
+import 'package:wurp/ui/theme/theme_ui_values.dart';
 
 /// A simple overlay that briefly appears when playback enters paused state.
 class PauseIndicator extends StatefulWidget {
@@ -71,7 +72,7 @@ class PauseIndicatorState extends State<PauseIndicator> {
           height: 82,
           decoration: BoxDecoration(
             color: cs.surfaceContainerHigh.withValues(alpha: 0.85),
-            borderRadius: BorderRadius.circular(41),
+            borderRadius: BorderRadius.circular(context.uiRadiusXl),
             border: Border.all(color: cs.outlineVariant.withValues(alpha: 0.8)),
           ),
           child: Center(child: Icon(widget.isPaused ? CupertinoIcons.pause_fill : CupertinoIcons.play_fill, color: cs.onSurface, size: 36)),

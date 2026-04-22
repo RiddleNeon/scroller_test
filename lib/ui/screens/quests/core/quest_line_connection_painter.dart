@@ -217,7 +217,7 @@ class QuestLineConnectionPainter extends CustomPainter {
 
     final bodyRRect = RRect.fromRectAndRadius(
       bodyRect,
-      const Radius.circular(9),
+      const Radius.circular(20),
     );
 
     canvas.drawRRect(bodyRRect, bodyPaint);

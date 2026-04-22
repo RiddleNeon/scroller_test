@@ -6,6 +6,7 @@ import 'package:wurp/ui/widgets/overlays/follow_button.dart';
 
 import '../../../../base_logic.dart';
 import '../../../../logic/local_storage/local_seen_service.dart';
+import '../../../theme/theme_ui_values.dart';
 
 class UserCard extends StatefulWidget {
   const UserCard({super.key, required this.initialUser, required this.cs, this.onFollowChange});
@@ -29,7 +30,7 @@ class _UserCardState extends State<UserCard> {
       padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 14),
       decoration: BoxDecoration(
         color: widget.cs.surfaceContainer,
-        borderRadius: BorderRadius.circular(14),
+        borderRadius: BorderRadius.circular(context.uiRadiusMd),
         border: Border.all(color: widget.cs.outlineVariant.withValues(alpha: 0.65)),
       ),
       child: InkWell(

@@ -1,6 +1,8 @@
 import 'package:flutter/material.dart';
 import 'package:wurp/logic/quests/quest_change_manager.dart';
 
+import '../../../theme/theme_ui_values.dart';
+
 class QuestChangeScreen extends StatelessWidget {
   final QuestChangeManager changeManager;
 
@@ -260,7 +262,7 @@ class _ChangeTimelineTile extends StatelessWidget {
                       padding: const EdgeInsets.all(12),
                       decoration: BoxDecoration(
                         color: isError ? cs.errorContainer.withValues(alpha: 0.2) : cs.surface,
-                        borderRadius: BorderRadius.circular(12),
+                        borderRadius: BorderRadius.circular(context.uiRadiusMd),
                         border: isError ? Border.all(color: cs.error.withValues(alpha: 0.5)) : null,
                       ),
                       child: Row(
@@ -326,7 +328,7 @@ class _ChangeDetailsSheet extends StatelessWidget {
     return Container(
       decoration: BoxDecoration(
         color: cs.surface,
-        borderRadius: const BorderRadius.vertical(top: Radius.circular(24)),
+        borderRadius: BorderRadius.vertical(top: Radius.circular(context.uiRadiusLg)),
       ),
       padding: const EdgeInsets.fromLTRB(20, 12, 20, 32),
       child: Column(
@@ -337,13 +339,13 @@ class _ChangeDetailsSheet extends StatelessWidget {
             child: Container(
               width: 40,
               height: 4,
-              decoration: BoxDecoration(color: cs.outlineVariant, borderRadius: BorderRadius.circular(2)),
+              decoration: BoxDecoration(color: cs.outlineVariant, borderRadius: BorderRadius.circular(context.uiRadiusSm)),
             ),
           ),
           const SizedBox(height: 24),
           Row(
             children: [
-              _getIconForChange(change, cs),
+              _getIconForChange(context, change, cs),
               const SizedBox(width: 12),
               Expanded(
                 child: Text(change.updateMessage, style: theme.textTheme.titleLarge?.copyWith(fontWeight: FontWeight.bold)),
@@ -357,7 +359,7 @@ class _ChangeDetailsSheet extends StatelessWidget {
             Container(
               margin: const EdgeInsets.only(top: 12),
               padding: const EdgeInsets.all(12),
-              decoration: BoxDecoration(color: cs.errorContainer, borderRadius: BorderRadius.circular(8)),
+              decoration: BoxDecoration(color: cs.errorContainer, borderRadius: BorderRadius.circular(context.uiRadiusSm)),
               child: Row(
                 children: [
                   Icon(Icons.warning, color: cs.error, size: 16),
@@ -460,7 +462,7 @@ class _ChangeDetailsSheet extends StatelessWidget {
     return Container(
       width: double.infinity,
       padding: const EdgeInsets.all(12),
-      decoration: BoxDecoration(color: cs.surfaceContainerHighest, borderRadius: BorderRadius.circular(8)),
+      decoration: BoxDecoration(color: cs.surfaceContainerHighest, borderRadius: BorderRadius.circular(context.uiRadiusSm)),
       child: Text(change.toString(), style: const TextStyle(fontFamily: 'monospace', fontSize: 11)),
     );
   }
@@ -511,14 +513,14 @@ class _ChangeDetailsSheet extends StatelessWidget {
     );
   }
 
-  Widget _getIconForChange(QuestChange change, ColorScheme cs) {
+  Widget _getIconForChange(BuildContext context, QuestChange change, ColorScheme cs) {
     IconData icon = Icons.edit_note;
     if (change is AddQuestChange) icon = Icons.add_circle_outline;
     if (change is DeleteQuestChange) icon = Icons.delete_outline;
     if (change is AddConnectionChange || change is RemoveConnectionChange) icon = Icons.link;
     return Container(
       padding: const EdgeInsets.all(8),
-      decoration: BoxDecoration(color: cs.primaryContainer, borderRadius: BorderRadius.circular(8)),
+      decoration: BoxDecoration(color: cs.primaryContainer, borderRadius: BorderRadius.circular(context.uiRadiusSm)),
       child: Icon(icon, color: cs.onPrimaryContainer),
     );
   }

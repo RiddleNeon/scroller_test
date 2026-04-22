@@ -3,6 +3,8 @@ import 'package:wurp/logic/quests/quest_change_manager.dart';
 import 'package:wurp/logic/quests/quest_connection.dart';
 import 'package:wurp/logic/quests/quest_system.dart';
 
+import '../../../theme/theme_ui_values.dart';
+
 class QuestConnectionEditScreen extends StatelessWidget {
   final QuestConnection connection;
   final QuestSystem questSystem;
@@ -16,7 +18,7 @@ class QuestConnectionEditScreen extends StatelessWidget {
         widthFactor: 0.45,
         child: Card(
           elevation: 8,
-          shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(20)),
+          shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(context.uiRadiusLg)),
           child: Padding(
             padding: const EdgeInsets.all(24),
             child: Column(
@@ -112,7 +114,7 @@ class QuestConnectionEditScreen extends StatelessWidget {
         labelText: label,
         prefixIcon: Icon(icon),
         filled: true,
-        border: OutlineInputBorder(borderRadius: BorderRadius.circular(12)),
+        border: OutlineInputBorder(borderRadius: BorderRadius.circular(context.uiRadiusMd)),
       ),
       controller: getController(label, initialValue),
       onFieldSubmitted: onSubmitted,

@@ -7,6 +7,143 @@ import 'package:wurp/base_logic.dart';
 const defaultLightThemeId = '0f5309f7-0a82-4842-ae06-79a7251afa6f';
 const defaultDarkThemeId = '3c5ec440-64fd-46ad-ac2c-2ea06821a32f';
 
+class CustomThemeStyleTokens {
+  final double radiusSm;
+  final double radiusMd;
+  final double radiusLg;
+  final double radiusXl;
+  final double cardElevation;
+  final double buttonElevation;
+  final double dialogElevation;
+  final double appBarElevation;
+  final double bottomSheetElevation;
+  final double shadowBlur;
+  final double shadowSpread;
+  final double shadowOffsetY;
+  final double shadowOpacity;
+  final double borderWidth;
+  final double focusedBorderWidth;
+  final double compactness;
+
+  const CustomThemeStyleTokens({
+    this.radiusSm = 10,
+    this.radiusMd = 14,
+    this.radiusLg = 18,
+    this.radiusXl = 24,
+    this.cardElevation = 0,
+    this.buttonElevation = 0,
+    this.dialogElevation = 2,
+    this.appBarElevation = 0,
+    this.bottomSheetElevation = 2,
+    this.shadowBlur = 8,
+    this.shadowSpread = 0,
+    this.shadowOffsetY = 2,
+    this.shadowOpacity = 0.10,
+    this.borderWidth = 1,
+    this.focusedBorderWidth = 1.4,
+    this.compactness = 0,
+  });
+
+  factory CustomThemeStyleTokens.defaults({required bool dark}) {
+    return CustomThemeStyleTokens(
+      shadowOpacity: dark ? 0.18 : 0.10,
+      dialogElevation: dark ? 3 : 2,
+      bottomSheetElevation: dark ? 3 : 2,
+    );
+  }
+
+  static double _readNum(Map<String, dynamic> json, String key, double fallback) {
+    final value = json[key];
+    if (value is num) return value.toDouble();
+    return fallback;
+  }
+
+  factory CustomThemeStyleTokens.fromJson(
+    Map<String, dynamic> json, {
+    required bool dark,
+  }) {
+    return CustomThemeStyleTokens(
+      radiusSm: _readNum(json, 'radius_sm', 10),
+      radiusMd: _readNum(json, 'radius_md', 14),
+      radiusLg: _readNum(json, 'radius_lg', 18),
+      radiusXl: _readNum(json, 'radius_xl', 24),
+      cardElevation: _readNum(json, 'card_elevation', 0),
+      buttonElevation: _readNum(json, 'button_elevation', 0),
+      dialogElevation: _readNum(json, 'dialog_elevation', dark ? 3 : 2),
+      appBarElevation: _readNum(json, 'app_bar_elevation', 0),
+      bottomSheetElevation: _readNum(
+        json,
+        'bottom_sheet_elevation',
+        dark ? 3 : 2,
+      ),
+      shadowBlur: _readNum(json, 'shadow_blur', 8),
+      shadowSpread: _readNum(json, 'shadow_spread', 0),
+      shadowOffsetY: _readNum(json, 'shadow_offset_y', 2),
+      shadowOpacity: _readNum(json, 'shadow_opacity', dark ? 0.18 : 0.10),
+      borderWidth: _readNum(json, 'border_width', 1),
+      focusedBorderWidth: _readNum(json, 'focused_border_width', 1.4),
+      compactness: _readNum(json, 'compactness', 0),
+    );
+  }
+
+  Map<String, dynamic> toJson() => {
+    'radius_sm': radiusSm,
+    'radius_md': radiusMd,
+    'radius_lg': radiusLg,
+    'radius_xl': radiusXl,
+    'card_elevation': cardElevation,
+    'button_elevation': buttonElevation,
+    'dialog_elevation': dialogElevation,
+    'app_bar_elevation': appBarElevation,
+    'bottom_sheet_elevation': bottomSheetElevation,
+    'shadow_blur': shadowBlur,
+    'shadow_spread': shadowSpread,
+    'shadow_offset_y': shadowOffsetY,
+    'shadow_opacity': shadowOpacity,
+    'border_width': borderWidth,
+    'focused_border_width': focusedBorderWidth,
+    'compactness': compactness,
+  };
+
+  CustomThemeStyleTokens copyWith({
+    double? radiusSm,
+    double? radiusMd,
+    double? radiusLg,
+    double? radiusXl,
+    double? cardElevation,
+    double? buttonElevation,
+    double? dialogElevation,
+    double? appBarElevation,
+    double? bottomSheetElevation,
+    double? shadowBlur,
+    double? shadowSpread,
+    double? shadowOffsetY,
+    double? shadowOpacity,
+    double? borderWidth,
+    double? focusedBorderWidth,
+    double? compactness,
+  }) {
+    return CustomThemeStyleTokens(
+      radiusSm: radiusSm ?? this.radiusSm,
+      radiusMd: radiusMd ?? this.radiusMd,
+      radiusLg: radiusLg ?? this.radiusLg,
+      radiusXl: radiusXl ?? this.radiusXl,
+      cardElevation: cardElevation ?? this.cardElevation,
+      buttonElevation: buttonElevation ?? this.buttonElevation,
+      dialogElevation: dialogElevation ?? this.dialogElevation,
+      appBarElevation: appBarElevation ?? this.appBarElevation,
+      bottomSheetElevation: bottomSheetElevation ?? this.bottomSheetElevation,
+      shadowBlur: shadowBlur ?? this.shadowBlur,
+      shadowSpread: shadowSpread ?? this.shadowSpread,
+      shadowOffsetY: shadowOffsetY ?? this.shadowOffsetY,
+      shadowOpacity: shadowOpacity ?? this.shadowOpacity,
+      borderWidth: borderWidth ?? this.borderWidth,
+      focusedBorderWidth: focusedBorderWidth ?? this.focusedBorderWidth,
+      compactness: compactness ?? this.compactness,
+    );
+  }
+}
+
 /// Holds all customizable colors of a theme.
 class CustomThemeColors {
   final Color primary;
@@ -25,6 +162,7 @@ class CustomThemeColors {
   final Color error;
   final Color onError;
   final bool isDark;
+  final CustomThemeStyleTokens style;
 
   Color get background => surface;
 
@@ -47,6 +185,7 @@ class CustomThemeColors {
     required this.error,
     required this.onError,
     this.isDark = false,
+    this.style = const CustomThemeStyleTokens(),
   });
 
   factory CustomThemeColors.fromPrimary(Color primary, {bool dark = false}) =>
@@ -234,6 +373,7 @@ class CustomThemeColors {
       error: dark ? const Color(0xFFCF6679) : const Color(0xFFB00020),
       onError: Colors.white,
       isDark: dark,
+      style: CustomThemeStyleTokens.defaults(dark: dark),
     );
   }
 
@@ -406,6 +546,19 @@ class CustomThemeColors {
               .toColor()
               .toARGB32();
 
+    final rawStyle = json['style_tokens'];
+    final style = rawStyle is String
+        ? CustomThemeStyleTokens.fromJson(
+            jsonDecode(rawStyle) as Map<String, dynamic>,
+            dark: isDark,
+          )
+        : rawStyle is Map
+        ? CustomThemeStyleTokens.fromJson(
+            Map<String, dynamic>.from(rawStyle),
+            dark: isDark,
+          )
+        : CustomThemeStyleTokens.fromJson(json, dark: isDark);
+
     return CustomThemeColors(
       primary: Color(c('primary', 0xFF6C5443)),
       onPrimary: Color(c('on_primary', 0xFFFFFFFF)),
@@ -433,6 +586,7 @@ class CustomThemeColors {
       error: Color(c('error', isDark ? 0xFFCF6679 : 0xFFB00020)),
       onError: Color(c('on_error', 0xFFFFFFFF)),
       isDark: isDark,
+      style: style,
     );
   }
 
@@ -453,6 +607,7 @@ class CustomThemeColors {
     'error': error.toARGB32(),
     'on_error': onError.toARGB32(),
     'is_dark': isDark,
+    'style_tokens': style.toJson(),
   };
 
   CustomThemeColors copyWith({
@@ -472,6 +627,7 @@ class CustomThemeColors {
     Color? error,
     Color? onError,
     bool? isDark,
+    CustomThemeStyleTokens? style,
   }) => CustomThemeColors(
     primary: primary ?? this.primary,
     onPrimary: onPrimary ?? this.onPrimary,
@@ -490,9 +646,24 @@ class CustomThemeColors {
     error: error ?? this.error,
     onError: onError ?? this.onError,
     isDark: isDark ?? this.isDark,
+    style: style ?? this.style,
   );
 
   ThemeData toThemeData() {
+    final s = style;
+    final baseRadius = BorderRadius.circular(s.radiusMd);
+    final cardRadius = BorderRadius.circular(s.radiusLg);
+    final largeRadius = BorderRadius.circular(s.radiusXl);
+    final chipRadius = BorderRadius.circular(s.radiusXl);
+    final componentShadow = BoxShadow(
+      color: Colors.black.withValues(
+        alpha: s.shadowOpacity.clamp(0.0, 0.6).toDouble(),
+      ),
+      blurRadius: s.shadowBlur.clamp(0.0, 32.0).toDouble(),
+      spreadRadius: s.shadowSpread.clamp(-8.0, 12.0).toDouble(),
+      offset: Offset(0, s.shadowOffsetY.clamp(-12.0, 18.0).toDouble()),
+    );
+
     final scheme = ColorScheme(
       brightness: isDark ? Brightness.dark : Brightness.light,
       primary: primary,
@@ -527,20 +698,35 @@ class CustomThemeColors {
       colorScheme: scheme,
       useMaterial3: true,
       brightness: isDark ? Brightness.dark : Brightness.light,
+      visualDensity: VisualDensity(
+        horizontal: s.compactness.clamp(-1.0, 1.0).toDouble(),
+        vertical: s.compactness.clamp(-1.0, 1.0).toDouble(),
+      ),
       scaffoldBackgroundColor: surface,
       cardColor: surfaceContainerHighest,
+      appBarTheme: AppBarTheme(
+        backgroundColor: surface,
+        foregroundColor: onSurface,
+        elevation: s.appBarElevation,
+        scrolledUnderElevation: s.appBarElevation,
+        centerTitle: true,
+      ),
       cardTheme: CardThemeData(
-        elevation: 0,
+        elevation: s.cardElevation,
+        shadowColor: componentShadow.color,
         color: surfaceContainerHighest,
         margin: EdgeInsets.zero,
         shape: RoundedRectangleBorder(
-          borderRadius: BorderRadius.circular(20),
-          side: BorderSide(color: outlineVariant.withValues(alpha: 0.6)),
+          borderRadius: cardRadius,
+          side: BorderSide(
+            color: outlineVariant.withValues(alpha: 0.6),
+            width: s.borderWidth,
+          ),
         ),
       ),
       dividerTheme: DividerThemeData(
         color: outlineVariant.withValues(alpha: 0.6),
-        thickness: 1,
+        thickness: s.borderWidth,
       ),
       inputDecorationTheme: InputDecorationTheme(
         filled: true,
@@ -549,22 +735,77 @@ class CustomThemeColors {
         prefixIconColor: onSurfaceVariant,
         suffixIconColor: onSurfaceVariant,
         border: OutlineInputBorder(
-          borderRadius: BorderRadius.circular(16),
-          borderSide: BorderSide(color: outlineVariant),
+          borderRadius: baseRadius,
+          borderSide: BorderSide(color: outlineVariant, width: s.borderWidth),
         ),
         enabledBorder: OutlineInputBorder(
-          borderRadius: BorderRadius.circular(16),
-          borderSide: BorderSide(color: outlineVariant),
+          borderRadius: baseRadius,
+          borderSide: BorderSide(color: outlineVariant, width: s.borderWidth),
         ),
         focusedBorder: OutlineInputBorder(
-          borderRadius: BorderRadius.circular(16),
-          borderSide: BorderSide(color: primary, width: 1.4),
+          borderRadius: baseRadius,
+          borderSide: BorderSide(color: primary, width: s.focusedBorderWidth),
         ),
+      ),
+      elevatedButtonTheme: ElevatedButtonThemeData(
+        style: ElevatedButton.styleFrom(
+          backgroundColor: primary,
+          foregroundColor: onPrimary,
+          elevation: s.buttonElevation,
+          shadowColor: componentShadow.color,
+          shape: RoundedRectangleBorder(borderRadius: baseRadius),
+          padding: EdgeInsets.symmetric(
+            horizontal: 18,
+            vertical: 14 + s.compactness.clamp(-1.0, 1.0).toDouble() * -2,
+          ),
+        ),
+      ),
+      filledButtonTheme: FilledButtonThemeData(
+        style: FilledButton.styleFrom(
+          shape: RoundedRectangleBorder(borderRadius: baseRadius),
+        ),
+      ),
+      outlinedButtonTheme: OutlinedButtonThemeData(
+        style: OutlinedButton.styleFrom(
+          foregroundColor: secondary,
+          side: BorderSide(color: outlineVariant, width: s.borderWidth),
+          shape: RoundedRectangleBorder(borderRadius: baseRadius),
+        ),
+      ),
+      chipTheme: ChipThemeData(
+        side: BorderSide(color: outlineVariant.withValues(alpha: 0.6), width: s.borderWidth),
+        shape: RoundedRectangleBorder(borderRadius: chipRadius),
+      ),
+      floatingActionButtonTheme: FloatingActionButtonThemeData(
+        elevation: s.buttonElevation,
+        highlightElevation: s.buttonElevation + 1,
+        shape: RoundedRectangleBorder(borderRadius: cardRadius),
+      ),
+      bottomSheetTheme: BottomSheetThemeData(
+        backgroundColor: surface,
+        elevation: s.bottomSheetElevation,
+        modalElevation: s.bottomSheetElevation,
+        shape: RoundedRectangleBorder(
+          borderRadius: BorderRadius.only(
+            topLeft: Radius.circular(s.radiusXl),
+            topRight: Radius.circular(s.radiusXl),
+          ),
+        ),
+      ),
+      dialogTheme: DialogThemeData(
+        backgroundColor: surface,
+        elevation: s.dialogElevation,
+        shape: RoundedRectangleBorder(borderRadius: largeRadius),
+      ),
+      popupMenuTheme: PopupMenuThemeData(
+        color: surface,
+        shape: RoundedRectangleBorder(borderRadius: cardRadius),
       ),
       snackBarTheme: SnackBarThemeData(
         behavior: SnackBarBehavior.floating,
         backgroundColor: inverseSurface,
         contentTextStyle: TextStyle(color: onInverseSurface),
+        shape: RoundedRectangleBorder(borderRadius: baseRadius),
       ),
     );
   }

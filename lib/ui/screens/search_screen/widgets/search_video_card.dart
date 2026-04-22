@@ -5,6 +5,7 @@ import 'package:flutter/material.dart';
 import 'package:http/http.dart' as http;
 import 'package:shimmer_animation/shimmer_animation.dart';
 import 'package:wurp/logic/video/video.dart';
+import 'package:wurp/ui/theme/theme_ui_values.dart';
 
 class VideoCard extends StatefulWidget {
   const VideoCard({super.key, this.thumbnail, required this.video, required this.onTap, required this.cs});
@@ -52,7 +53,7 @@ class _VideoCardState extends State<VideoCard> {
           margin: const EdgeInsets.symmetric(vertical: 5),
           decoration: BoxDecoration(
             color: _hovered ? cs.surfaceContainerHigh : cs.surfaceContainer,
-            borderRadius: BorderRadius.circular(16),
+            borderRadius: BorderRadius.circular(context.uiRadiusMd),
             border: Border.all(color: _hovered ? cs.primary.withValues(alpha: 0.35) : cs.outlineVariant.withValues(alpha: 0.3)),
           ),
           child: Column(
@@ -62,7 +63,7 @@ class _VideoCardState extends State<VideoCard> {
                 crossAxisAlignment: CrossAxisAlignment.start,
                 children: [
                   ClipRRect(
-                    borderRadius: const BorderRadius.only(topLeft: Radius.circular(16), bottomLeft: Radius.circular(16)),
+                    borderRadius: BorderRadius.only(topLeft: Radius.circular(context.uiRadiusMd), bottomLeft: Radius.circular(context.uiRadiusMd)),
                     child: SizedBox(
                       width: 140,
                       height: 110,
@@ -76,7 +77,7 @@ class _VideoCardState extends State<VideoCard> {
                               right: 5,
                               child: Container(
                                 padding: const EdgeInsets.symmetric(horizontal: 5, vertical: 2),
-                                decoration: BoxDecoration(color: cs.scrim.withValues(alpha: 0.7), borderRadius: BorderRadius.circular(5)),
+                                decoration: BoxDecoration(color: cs.scrim.withValues(alpha: 0.7), borderRadius: BorderRadius.circular(context.uiRadiusSm)),
                                 child: Text(
                                   _formatDuration(video.duration),
                                   style: TextStyle(color: cs.onSurface, fontSize: 10, fontWeight: FontWeight.w600),
@@ -152,7 +153,7 @@ class _VideoCardState extends State<VideoCard> {
                             (tag) => Container(
                               margin: const EdgeInsets.only(right: 6),
                               padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 3),
-                              decoration: BoxDecoration(color: cs.secondaryContainer.withValues(alpha: 0.6), borderRadius: BorderRadius.circular(20)),
+                              decoration: BoxDecoration(color: cs.secondaryContainer.withValues(alpha: 0.6), borderRadius: BorderRadius.circular(context.uiRadiusLg)),
                               child: Text(
                                 '#$tag',
                                 style: TextStyle(color: cs.onSecondaryContainer, fontSize: 11, fontWeight: FontWeight.w500),

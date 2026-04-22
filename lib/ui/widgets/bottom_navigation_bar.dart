@@ -2,6 +2,8 @@ import 'package:flutter/material.dart';
 import 'package:vector_math/vector_math_64.dart' hide Colors;
 import 'package:wurp/base_logic.dart';
 
+import '../theme/theme_ui_values.dart';
+
 class BottomNavBar extends StatefulWidget {
   final void Function(String) onSelectionChange;
   final List<({IconData icon, String id, String label})> items;
@@ -66,7 +68,7 @@ class BottomNavBarState extends State<BottomNavBar> with SingleTickerProviderSta
         elevation: 10,
         shadowColor: cs.shadow.withValues(alpha: 0.35),
         shape: RoundedRectangleBorder(
-          borderRadius: BorderRadius.circular(22),
+          borderRadius: BorderRadius.circular(context.uiRadiusLg),
           side: BorderSide(color: cs.outlineVariant.withValues(alpha: 0.9)),
         ),
         child: LayoutBuilder(
@@ -86,7 +88,7 @@ class BottomNavBarState extends State<BottomNavBar> with SingleTickerProviderSta
                   child: DecoratedBox(
                     decoration: BoxDecoration(
                       color: cs.secondaryContainer.withValues(alpha: 0.82),
-                      borderRadius: BorderRadius.circular(16),
+                      borderRadius: BorderRadius.circular(context.uiRadiusMd),
                       border: Border.all(color: cs.outlineVariant.withValues(alpha: 0.7)),
                     ),
                   ),

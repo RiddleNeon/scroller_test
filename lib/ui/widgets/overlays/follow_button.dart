@@ -5,6 +5,7 @@ import 'package:wurp/logic/local_storage/local_seen_service.dart';
 import 'package:wurp/logic/users/user_model.dart';
 
 import '../../../base_logic.dart';
+import '../../theme/theme_ui_values.dart';
 
 enum FollowButtonDesign { floating, docked, compact }
 
@@ -121,8 +122,8 @@ class FollowButtonState extends State<FollowButton> with SingleTickerProviderSta
     final foregroundColor = _subscribed ? theme.colorScheme.onTertiaryContainer : theme.colorScheme.onPrimaryContainer;
 
     final borderRadius = widget.design == FollowButtonDesign.docked
-        ? const BorderRadius.only(topLeft: Radius.circular(16), topRight: Radius.circular(16))
-        : BorderRadius.circular(isCompact ? 999 : 16);
+        ? BorderRadius.only(topLeft: Radius.circular(context.uiRadiusMd), topRight: Radius.circular(context.uiRadiusMd))
+        : BorderRadius.circular(isCompact ? context.uiRadiusXl : context.uiRadiusMd);
 
     final containerPadding = isCompact ? const EdgeInsets.symmetric(horizontal: 11, vertical: 8) : const EdgeInsets.symmetric(horizontal: 24, vertical: 14);
 

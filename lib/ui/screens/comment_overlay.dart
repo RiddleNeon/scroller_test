@@ -4,6 +4,7 @@ import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
 import 'package:wurp/ui/misc/avatar.dart';
 import 'package:wurp/ui/animations/slide_morph_transitions.dart';
+import 'package:wurp/ui/theme/theme_ui_values.dart';
 
 import '../../base_logic.dart';
 import '../../logic/comments/comment.dart';
@@ -338,7 +339,7 @@ class _CommentsOverlayState extends State<CommentsOverlay> {
     final bottomPadding = MediaQuery.of(context).viewInsets.bottom;
 
     return ClipRRect(
-      borderRadius: const BorderRadius.vertical(top: Radius.circular(24)),
+      borderRadius: BorderRadius.vertical(top: Radius.circular(context.uiRadiusLg)),
       child: Container(
         height: MediaQuery.of(context).size.height * 0.80,
         color: _bgColor,
@@ -372,7 +373,7 @@ class _CommentsOverlayState extends State<CommentsOverlay> {
                     width: 40,
                     height: 4,
                     margin: const EdgeInsets.only(bottom: 12),
-                    decoration: BoxDecoration(color: _dividerColor, borderRadius: BorderRadius.circular(2)),
+                    decoration: BoxDecoration(color: _dividerColor, borderRadius: BorderRadius.circular(context.uiRadiusSm)),
                   ),
                 ),
                 Text(
@@ -561,7 +562,7 @@ class _CommentsOverlayState extends State<CommentsOverlay> {
             child: Container(
               decoration: BoxDecoration(
                 color: _surfaceColor,
-                borderRadius: BorderRadius.circular(24),
+                borderRadius: BorderRadius.circular(context.uiRadiusLg),
                 border: Border.all(color: _dividerColor),
               ),
               child: TextField(

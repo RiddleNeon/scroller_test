@@ -1,6 +1,8 @@
 import 'package:flutter/material.dart';
 import 'package:wurp/base_logic.dart';
 
+import '../theme/theme_ui_values.dart';
+
 class BanAppealScreen extends StatefulWidget {
   final String userId;
   final void Function()? onAppealSuccess;
@@ -77,7 +79,7 @@ class _BanAppealScreenState extends State<BanAppealScreen> {
               constraints: const BoxConstraints(maxWidth: 500),
               child: Card(
                 elevation: 4,
-                shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(16)),
+                shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(context.uiRadiusMd)),
                 child: Padding(
                   padding: const EdgeInsets.all(20),
                   child: Column(
@@ -93,7 +95,7 @@ class _BanAppealScreenState extends State<BanAppealScreen> {
                         maxLines: 6,
                         decoration: InputDecoration(
                           hintText: "Explain why your ban should be lifted...",
-                          border: OutlineInputBorder(borderRadius: BorderRadius.circular(12)),
+                          border: OutlineInputBorder(borderRadius: BorderRadius.circular(context.uiRadiusMd)),
                           errorText: _appealController.text.isEmpty || _isValid ? null : "Minimum 10 characters required",
                         ),
                       ),
@@ -106,7 +108,7 @@ class _BanAppealScreenState extends State<BanAppealScreen> {
                           onPressed: _isValid && !_isSubmitting ? _submitAppeal : null,
                           style: ElevatedButton.styleFrom(
                             padding: const EdgeInsets.symmetric(vertical: 14),
-                            shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
+                            shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(context.uiRadiusMd)),
                           ),
                           child: _isSubmitting
                               ? const SizedBox(height: 20, width: 20, child: CircularProgressIndicator(strokeWidth: 2))

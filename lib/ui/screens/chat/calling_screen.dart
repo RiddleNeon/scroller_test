@@ -4,6 +4,7 @@ import 'package:flutter/material.dart';
 import 'package:wurp/ui/misc/avatar.dart';
 import 'package:wurp/ui/misc/basic_player.dart';
 import 'package:wurp/ui/router.dart';
+import 'package:wurp/ui/theme/theme_ui_values.dart';
 import 'package:wurp/ui/widgets/camera/web_camera.dart';
 
 class CallingApp extends StatelessWidget {
@@ -178,7 +179,7 @@ class _CallingScreenState extends State<CallingScreen> with TickerProviderStateM
                     return Container(
                       clipBehavior: Clip.hardEdge,
                       decoration: BoxDecoration(
-                        borderRadius: BorderRadius.circular(20),
+                        borderRadius: BorderRadius.circular(context.uiRadiusLg),
                         color: cs.surfaceContainerHigh.withValues(alpha: 0.55),
                         border: Border.all(color: cs.outlineVariant.withValues(alpha: 0.7)),
                       ),
@@ -206,7 +207,7 @@ class _CallingScreenState extends State<CallingScreen> with TickerProviderStateM
                   child: Container(
                     clipBehavior: Clip.hardEdge,
                     decoration: BoxDecoration(
-                      borderRadius: BorderRadius.circular(20),
+                      borderRadius: BorderRadius.circular(context.uiRadiusLg),
                       gradient: LinearGradient(
                         colors: [cs.surfaceBright.withValues(alpha: 0.08), cs.surfaceDim.withValues(alpha: 0.04)],
                         begin: Alignment.topCenter,
@@ -302,12 +303,12 @@ class _CallingScreenState extends State<CallingScreen> with TickerProviderStateM
                 width: 96,
                 height: 120,
                 decoration: BoxDecoration(
-                  borderRadius: BorderRadius.circular(14),
+                  borderRadius: BorderRadius.circular(context.uiRadiusMd),
                   color: cs.inverseSurface.withValues(alpha: 0.58),
                   border: Border.all(color: cs.outlineVariant.withValues(alpha: 0.8)),
                 ),
                 child: ClipRRect(
-                  borderRadius: const BorderRadiusGeometry.all(Radius.circular(5)),
+                  borderRadius: BorderRadiusGeometry.all(Radius.circular(context.uiRadiusLg)),
                   child: WebCamera(
                     preferFrontCamera: true,
                     key: _cameraKey,

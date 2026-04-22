@@ -172,7 +172,7 @@ class AppTheme {
   // Theme / scheme builders
   // ---------------------------------------------------------------------------
 
-  static ThemeData _build(ColorScheme cs) {
+  static ThemeData _build(ColorScheme cs, {double uiRadiusMd = 12, double focusedBorderWidth = 1.4, double borderWidth = 1.2}) {
     return ThemeData(
       useMaterial3: true,
       colorScheme: cs,
@@ -192,8 +192,8 @@ class AppTheme {
         color: cs.surfaceContainerHighest,
         margin: EdgeInsets.zero,
         shape: RoundedRectangleBorder(
-          borderRadius: BorderRadius.circular(20),
-          side: BorderSide(color: cs.outlineVariant.withValues(alpha: 0.6)),
+          borderRadius: BorderRadius.circular(uiRadiusMd),
+          side: BorderSide(color: cs.outlineVariant.withValues(alpha: 0.6), width: borderWidth),
         ),
       ),
       dividerTheme: DividerThemeData(color: cs.outlineVariant.withValues(alpha: 0.6), thickness: 1),
@@ -204,16 +204,16 @@ class AppTheme {
         prefixIconColor: cs.onSurfaceVariant,
         suffixIconColor: cs.onSurfaceVariant,
         border: OutlineInputBorder(
-          borderRadius: BorderRadius.circular(16),
-          borderSide: BorderSide(color: cs.outlineVariant),
+          borderRadius: BorderRadius.circular(uiRadiusMd),
+          borderSide: BorderSide(color: cs.outlineVariant, width: borderWidth),
         ),
         enabledBorder: OutlineInputBorder(
-          borderRadius: BorderRadius.circular(16),
-          borderSide: BorderSide(color: cs.outlineVariant),
+          borderRadius: BorderRadius.circular(uiRadiusMd),
+          borderSide: BorderSide(color: cs.outlineVariant, width: borderWidth),
         ),
         focusedBorder: OutlineInputBorder(
-          borderRadius: BorderRadius.circular(16),
-          borderSide: BorderSide(color: cs.primary, width: 1.4),
+          borderRadius: BorderRadius.circular(uiRadiusMd),
+          borderSide: BorderSide(color: cs.primary, width: focusedBorderWidth),
         ),
       ),
       elevatedButtonTheme: ElevatedButtonThemeData(
@@ -221,18 +221,18 @@ class AppTheme {
           backgroundColor: cs.primary,
           foregroundColor: cs.onPrimary,
           elevation: 0,
-          shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(14)),
+          shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(uiRadiusMd)),
           padding: const EdgeInsets.symmetric(horizontal: 18, vertical: 14),
         ),
       ),
       filledButtonTheme: FilledButtonThemeData(
-        style: FilledButton.styleFrom(shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(14))),
+        style: FilledButton.styleFrom(shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(uiRadiusMd))),
       ),
       outlinedButtonTheme: OutlinedButtonThemeData(
         style: OutlinedButton.styleFrom(
           foregroundColor: cs.secondary,
           side: BorderSide(color: cs.outline),
-          shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(14)),
+          shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(uiRadiusMd)),
           padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 12),
         ),
       ),
@@ -243,7 +243,7 @@ class AppTheme {
         labelStyle: TextStyle(color: cs.onSecondaryContainer),
         secondaryLabelStyle: TextStyle(color: cs.onTertiaryContainer),
         side: BorderSide(color: cs.outlineVariant.withValues(alpha: 0.6)),
-        shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(20)),
+        shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(uiRadiusMd)),
       ),
       floatingActionButtonTheme: FloatingActionButtonThemeData(
         backgroundColor: cs.tertiaryContainer,
@@ -255,7 +255,7 @@ class AppTheme {
         fillColor: cs.secondaryContainer,
         borderColor: cs.outlineVariant,
         selectedBorderColor: cs.secondary,
-        borderRadius: BorderRadius.circular(12),
+        borderRadius: BorderRadius.circular(uiRadiusMd),
       ),
       snackBarTheme: SnackBarThemeData(
         behavior: SnackBarBehavior.floating,

@@ -1,5 +1,6 @@
 import 'package:flutter/cupertino.dart';
 import 'package:flutter/material.dart';
+import 'package:wurp/ui/theme/theme_ui_values.dart';
 
 class CommentButton extends StatefulWidget {
   final void Function()? onComment;
@@ -48,7 +49,7 @@ class _CommentButtonState extends State<CommentButton> with SingleTickerProvider
     return Padding(
       padding: const EdgeInsets.all(4),
       child: InkWell(
-        borderRadius: BorderRadius.circular(20),
+        borderRadius: BorderRadius.circular(context.uiRadiusLg),
         onTap: _onTap,
         child: AnimatedBuilder(
           animation: _ctrl,

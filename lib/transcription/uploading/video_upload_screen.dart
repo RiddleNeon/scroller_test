@@ -4,6 +4,8 @@ import 'package:file_picker/file_picker.dart';
 import 'package:flutter/material.dart';
 import 'package:wurp/transcription/generation_service/transcription_service.dart';
 
+import '../../ui/theme/theme_ui_values.dart';
+
 enum _UploadStep { idle, transcribing, done, error }
 
 class VideoUploadWidget extends StatefulWidget {
@@ -91,7 +93,7 @@ class _VideoUploadWidgetState extends State<VideoUploadWidget> {
               const SizedBox(height: 8),
               Container(
                 padding: const EdgeInsets.all(12),
-                decoration: BoxDecoration(color: Colors.grey.shade800, borderRadius: BorderRadius.circular(8)),
+                decoration: BoxDecoration(color: Colors.grey.shade800, borderRadius: BorderRadius.circular(context.uiRadiusSm)),
                 child: Text(_result!.fullText, style: const TextStyle(fontSize: 14)),
               ),
               const SizedBox(height: 4),

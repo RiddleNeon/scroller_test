@@ -1,4 +1,5 @@
 import 'package:flutter/material.dart';
+import 'package:wurp/ui/theme/theme_ui_values.dart';
 
 class DislikeButton extends StatefulWidget {
   final bool initiallyDisliked;
@@ -60,7 +61,7 @@ class _DislikeButtonState extends State<DislikeButton> with SingleTickerProvider
     return Padding(
       padding: const EdgeInsets.all(4),
       child: InkWell(
-        borderRadius: BorderRadius.circular(20),
+        borderRadius: BorderRadius.circular(context.uiRadiusLg),
         onTap: _onTap,
         child: AnimatedBuilder(
           animation: _ctrl,

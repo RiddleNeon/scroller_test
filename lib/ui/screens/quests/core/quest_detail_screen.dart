@@ -5,6 +5,8 @@ import 'package:wurp/logic/quests/quest_change_manager.dart';
 import 'package:wurp/logic/quests/quest_system.dart';
 import 'package:wurp/util/extensions/num_distance.dart';
 
+import '../../../theme/theme_ui_values.dart';
+
 class QuestDetailScreen extends StatefulWidget {
   final Quest quest;
   final bool debugMode;
@@ -418,7 +420,7 @@ class _SubjectBadge extends StatelessWidget {
       padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 6),
       decoration: BoxDecoration(
         color: colorScheme.primary,
-        borderRadius: BorderRadius.circular(20),
+        borderRadius: BorderRadius.circular(context.uiRadiusLg),
         boxShadow: [BoxShadow(color: colorScheme.primary.withValues(alpha: 0.35), blurRadius: 8, offset: const Offset(0, 3))],
       ),
       child: Row(
@@ -482,7 +484,7 @@ class _StatusRow extends StatelessWidget {
           padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 8),
           decoration: BoxDecoration(
             color: isCompleted ? colorScheme.tertiaryContainer : colorScheme.surfaceContainerHighest,
-            borderRadius: BorderRadius.circular(24),
+            borderRadius: BorderRadius.circular(context.uiRadiusLg),
             border: Border.all(color: isCompleted ? colorScheme.tertiary : colorScheme.outline.withValues(alpha: 0.4), width: 1.5),
           ),
           child: Row(
@@ -511,7 +513,7 @@ class _StatusRow extends StatelessWidget {
             padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 8),
             decoration: BoxDecoration(
               color: colorScheme.surfaceContainerHighest,
-              borderRadius: BorderRadius.circular(24),
+              borderRadius: BorderRadius.circular(context.uiRadiusLg),
               border: Border.all(color: colorScheme.outline.withValues(alpha: 0.4), width: 1.5),
             ),
             child: Row(
@@ -545,7 +547,7 @@ class _SectionCard extends StatelessWidget {
       width: double.infinity,
       decoration: BoxDecoration(
         color: colorScheme.surfaceContainerLow,
-        borderRadius: BorderRadius.circular(16),
+        borderRadius: BorderRadius.circular(context.uiRadiusMd),
         border: Border.all(color: colorScheme.outlineVariant.withValues(alpha: 0.5)),
       ),
       child: child,
@@ -578,7 +580,7 @@ class _DescriptionSection extends StatelessWidget {
               style: TextStyle(color: colorScheme.onSurface, fontSize: 15, height: 1.6),
               maxLines: null,
               minLines: 3,
-              decoration: _editInputDecoration(colorScheme, hint: 'Quest description…'),
+              decoration: _editInputDecoration(context, colorScheme, hint: 'Quest description…'),
             )
           else
             Text(description, style: TextStyle(color: colorScheme.onSurface, fontSize: 15, height: 1.6)),
@@ -691,7 +693,7 @@ class _DifficultySectionState extends State<_DifficultySection> {
                   child: Container(
                     height: 8,
                     margin: EdgeInsets.only(right: i < segments - 1 ? 4 : 0),
-                    decoration: BoxDecoration(color: filled ? color : widget.colorScheme.surfaceContainerHighest, borderRadius: BorderRadius.circular(4)),
+                    decoration: BoxDecoration(color: filled ? color : widget.colorScheme.surfaceContainerHighest, borderRadius: BorderRadius.circular(context.uiRadiusSm)),
                   ),
                 );
               }),
@@ -760,7 +762,7 @@ class _PrerequisitesSection extends StatelessWidget {
                   if (debugMode)
                     Container(
                       padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 3),
-                      decoration: BoxDecoration(color: colorScheme.surfaceContainerHighest, borderRadius: BorderRadius.circular(8)),
+                      decoration: BoxDecoration(color: colorScheme.surfaceContainerHighest, borderRadius: BorderRadius.circular(context.uiRadiusSm)),
                       child: Text(
                         '#${prereq.id}',
                         style: TextStyle(color: colorScheme.onSurfaceVariant, fontSize: 11, fontWeight: FontWeight.w600),
@@ -869,7 +871,7 @@ class _MetaReadOnlyRow extends StatelessWidget {
       padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 10),
       decoration: BoxDecoration(
         color: colorScheme.surfaceContainerHighest.withValues(alpha: 0.5),
-        borderRadius: BorderRadius.circular(10),
+        borderRadius: BorderRadius.circular(context.uiRadiusSm),
         border: Border.all(color: colorScheme.outlineVariant.withValues(alpha: 0.3)),
       ),
       child: Row(
@@ -968,7 +970,7 @@ class _NumericField extends StatelessWidget {
       controller: controller,
       keyboardType: const TextInputType.numberWithOptions(decimal: true, signed: true),
       style: TextStyle(color: colorScheme.onSurface, fontSize: 13, fontWeight: FontWeight.w700),
-      decoration: _editInputDecoration(colorScheme).copyWith(
+      decoration: _editInputDecoration(context, colorScheme).copyWith(
         prefixText: '$prefixLabel  ',
         prefixStyle: TextStyle(color: colorScheme.onSurfaceVariant, fontSize: 12, fontWeight: FontWeight.w600),
       ),
@@ -1014,7 +1016,7 @@ class _MetaCell extends StatelessWidget {
   Widget build(BuildContext context) {
     return Container(
       padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 10),
-      decoration: BoxDecoration(color: colorScheme.surfaceContainerHighest, borderRadius: BorderRadius.circular(10)),
+      decoration: BoxDecoration(color: colorScheme.surfaceContainerHighest, borderRadius: BorderRadius.circular(context.uiRadiusSm)),
       child: Row(
         children: [
           Icon(item.icon, size: 18, color: colorScheme.primary),
@@ -1059,7 +1061,7 @@ class _SaveButton extends StatelessWidget {
         label: const Text('Save Changes'),
         style: FilledButton.styleFrom(
           padding: const EdgeInsets.symmetric(vertical: 16),
-          shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(14)),
+          shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(context.uiRadiusMd)),
         ),
       ),
     );
@@ -1083,7 +1085,7 @@ class _DeleteButton extends StatelessWidget {
         label: const Text('Delete Quest'),
         style: OutlinedButton.styleFrom(
           padding: const EdgeInsets.symmetric(vertical: 16),
-          shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(14)),
+          shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(context.uiRadiusMd)),
           side: BorderSide(color: colorScheme.error, width: 1.5),
           foregroundColor: colorScheme.error,
         ),
@@ -1107,7 +1109,7 @@ class _SectionLabel extends StatelessWidget {
   }
 }
 
-InputDecoration _editInputDecoration(ColorScheme cs, {String? hint}) {
+InputDecoration _editInputDecoration(BuildContext context, ColorScheme cs, {String? hint}) {
   return InputDecoration(
     hintText: hint,
     hintStyle: TextStyle(color: cs.onSurfaceVariant.withValues(alpha: 0.45)),
@@ -1116,15 +1118,15 @@ InputDecoration _editInputDecoration(ColorScheme cs, {String? hint}) {
     filled: true,
     fillColor: cs.surfaceContainerHighest,
     border: OutlineInputBorder(
-      borderRadius: BorderRadius.circular(8),
+      borderRadius: BorderRadius.circular(context.uiRadiusSm),
       borderSide: BorderSide(color: cs.outlineVariant),
     ),
     enabledBorder: OutlineInputBorder(
-      borderRadius: BorderRadius.circular(8),
+      borderRadius: BorderRadius.circular(context.uiRadiusSm),
       borderSide: BorderSide(color: cs.outlineVariant),
     ),
     focusedBorder: OutlineInputBorder(
-      borderRadius: BorderRadius.circular(8),
+      borderRadius: BorderRadius.circular(context.uiRadiusSm),
       borderSide: BorderSide(color: cs.primary, width: 1.5),
     ),
   );

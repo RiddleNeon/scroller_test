@@ -8,6 +8,7 @@ import 'package:uuid/uuid.dart';
 import 'package:wurp/base_ui.dart';
 import 'package:wurp/logic/themes/theme_model.dart';
 import 'package:wurp/ui/theme/theme_editor_screen.dart';
+import 'package:wurp/ui/theme/theme_ui_values.dart';
 
 import 'app_theme.dart';
 
@@ -397,8 +398,13 @@ class _ThemeManagerScreenState extends State<ThemeManagerScreen> with TickerProv
     final all = [_defaultTheme, _defaultThemeDark, ..._myThemes];
 
     return GridView.builder(
-      padding: const EdgeInsets.fromLTRB(16, 16, 16, 96),
-      gridDelegate: const SliverGridDelegateWithMaxCrossAxisExtent(maxCrossAxisExtent: 260, crossAxisSpacing: 14, mainAxisSpacing: 14, childAspectRatio: 0.85),
+      padding: EdgeInsets.fromLTRB(context.uiSpace(16), context.uiSpace(16), context.uiSpace(16), context.uiSpace(96)),
+      gridDelegate: SliverGridDelegateWithMaxCrossAxisExtent(
+        maxCrossAxisExtent: 260,
+        crossAxisSpacing: context.uiSpace(14),
+        mainAxisSpacing: context.uiSpace(14),
+        childAspectRatio: 0.85,
+      ),
       itemCount: all.length,
       itemBuilder: (context, i) {
         final theme = all[i];
@@ -414,8 +420,8 @@ class _ThemeManagerScreenState extends State<ThemeManagerScreen> with TickerProv
           child: AnimatedContainer(
             duration: const Duration(milliseconds: 200),
             decoration: BoxDecoration(
-              borderRadius: BorderRadius.circular(20),
-              border: Border.all(color: isSelected ? c.primary : Colors.transparent, width: 2.5),
+              borderRadius: BorderRadius.circular(c.style.radiusLg),
+              border: Border.all(color: isSelected ? c.primary : Colors.transparent, width: context.uiFocusedBorderWidth),
             ),
             child: ThemePreview(
               c: c,
@@ -464,8 +470,13 @@ class _ThemeManagerScreenState extends State<ThemeManagerScreen> with TickerProv
     }
 
     return GridView.builder(
-      padding: const EdgeInsets.fromLTRB(16, 16, 16, 96),
-      gridDelegate: const SliverGridDelegateWithMaxCrossAxisExtent(maxCrossAxisExtent: 260, crossAxisSpacing: 14, mainAxisSpacing: 14, childAspectRatio: 0.85),
+      padding: EdgeInsets.fromLTRB(context.uiSpace(16), context.uiSpace(16), context.uiSpace(16), context.uiSpace(96)),
+      gridDelegate: SliverGridDelegateWithMaxCrossAxisExtent(
+        maxCrossAxisExtent: 260,
+        crossAxisSpacing: context.uiSpace(14),
+        mainAxisSpacing: context.uiSpace(14),
+        childAspectRatio: 0.85,
+      ),
       itemCount: _communityThemes.length,
       itemBuilder: (context, i) {
         final theme = _communityThemes[i];
@@ -495,8 +506,8 @@ class _ThemeManagerScreenState extends State<ThemeManagerScreen> with TickerProv
           child: AnimatedContainer(
             duration: const Duration(milliseconds: 200),
             decoration: BoxDecoration(
-              borderRadius: BorderRadius.circular(20),
-              border: Border.all(color: isSelected ? c.primary : Colors.transparent, width: 2.5),
+              borderRadius: BorderRadius.circular(c.style.radiusLg),
+              border: Border.all(color: isSelected ? c.primary : Colors.transparent, width: context.uiFocusedBorderWidth),
             ),
             child: ThemePreview(
               key: ValueKey(theme.id),
@@ -582,10 +593,13 @@ class _ThemePreviewState extends State<ThemePreview> {
 
   @override
   Widget build(BuildContext context) {
+    final radiusLg = widget.c.style.radiusLg;
+    final radiusMd = widget.c.style.radiusMd;
+    final radiusSm = widget.c.style.radiusSm;
     return Card(
       color: widget.c.background,
       margin: EdgeInsets.zero,
-      shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(18)),
+      shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(radiusLg)),
       clipBehavior: Clip.antiAlias,
       child: Stack(
         children: [
@@ -628,7 +642,7 @@ class _ThemePreviewState extends State<ThemePreview> {
                 children: [
                   Container(
                     height: 20,
-                    decoration: BoxDecoration(color: widget.c.primary, borderRadius: BorderRadius.circular(6)),
+                    decoration: BoxDecoration(color: widget.c.primary, borderRadius: BorderRadius.circular(radiusSm)),
                   ),
             
                   const SizedBox(height: 8),
@@ -636,20 +650,20 @@ class _ThemePreviewState extends State<ThemePreview> {
                   Container(
                     height: 8,
                     width: 80,
-                    decoration: BoxDecoration(color: widget.c.onBackground.withValues(alpha: 0.7), borderRadius: BorderRadius.circular(4)),
+                    decoration: BoxDecoration(color: widget.c.onBackground.withValues(alpha: 0.7), borderRadius: BorderRadius.circular(radiusSm * 0.66)),
                   ),
                   const SizedBox(height: 6),
                   Container(
                     height: 8,
                     width: 50,
-                    decoration: BoxDecoration(color: widget.c.onBackground.withValues(alpha: 0.4), borderRadius: BorderRadius.circular(4)),
+                    decoration: BoxDecoration(color: widget.c.onBackground.withValues(alpha: 0.4), borderRadius: BorderRadius.circular(radiusSm * 0.66)),
                   ),
             
                   const Spacer(),
             
                   Container(
                     height: 26,
-                    decoration: BoxDecoration(color: widget.c.secondary, borderRadius: BorderRadius.circular(8)),
+                    decoration: BoxDecoration(color: widget.c.secondary, borderRadius: BorderRadius.circular(radiusMd)),
                     child: Center(
                       child: Text(
                         "Button",
@@ -789,13 +803,14 @@ class _OverlayBadge extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
+    final radius = context.uiRadiusSm;
     return Container(
-      padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 4),
+      padding: EdgeInsets.symmetric(horizontal: context.uiSpace(8), vertical: context.uiSpace(4)),
       decoration: BoxDecoration(
         color: background,
-        borderRadius: BorderRadius.circular(999),
-        border: Border.all(color: borderColor),
-        boxShadow: [BoxShadow(color: Colors.black.withValues(alpha: 0.14), blurRadius: 4, offset: const Offset(0, 1))],
+        borderRadius: BorderRadius.circular(radius * 8),
+        border: Border.all(color: borderColor, width: context.uiBorderWidth),
+        boxShadow: [BoxShadow(color: Colors.black.withValues(alpha: 0.14), blurRadius: radius, offset: const Offset(0, 1))],
       ),
       child: Row(
         mainAxisSize: MainAxisSize.min,
@@ -813,7 +828,7 @@ void _showThemeDetails(BuildContext context, CustomThemeModel theme, {String? cr
   showModalBottomSheet(
     context: context,
     isScrollControlled: true,
-    shape: const RoundedRectangleBorder(borderRadius: BorderRadius.vertical(top: Radius.circular(24))),
+    shape: RoundedRectangleBorder(borderRadius: BorderRadius.vertical(top: Radius.circular(theme.colors.style.radiusXl))),
     builder: (ctx) {
       final c = theme.colors;
       return DraggableScrollableSheet(
@@ -823,13 +838,13 @@ void _showThemeDetails(BuildContext context, CustomThemeModel theme, {String? cr
         expand: false,
         builder: (_, scrollCtrl) => ListView(
           controller: scrollCtrl,
-          padding: const EdgeInsets.fromLTRB(24, 12, 24, 32),
+          padding: EdgeInsets.fromLTRB(context.uiSpace(24), context.uiSpace(12), context.uiSpace(24), context.uiSpace(32)),
           children: [
             Center(
               child: Container(
                 width: 40,
                 height: 4,
-                decoration: BoxDecoration(color: Colors.grey[300], borderRadius: BorderRadius.circular(2)),
+                decoration: BoxDecoration(color: Colors.grey[300], borderRadius: BorderRadius.circular(theme.colors.style.radiusSm * 0.66)),
               ),
             ),
             const SizedBox(height: 16),
@@ -874,6 +889,7 @@ class _DetailSwatch extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
+    final radius = context.uiRadiusMd;
     final hex = '#${color.toARGB32().toRadixString(16).padLeft(8, '0').substring(2).toUpperCase()}';
     final isLight = color.computeLuminance() > 0.45;
     return Column(
@@ -883,8 +899,8 @@ class _DetailSwatch extends StatelessWidget {
           height: 56,
           decoration: BoxDecoration(
             color: color,
-            borderRadius: BorderRadius.circular(14),
-            border: Border.all(color: Colors.black.withValues(alpha: 0.07)),
+            borderRadius: BorderRadius.circular(radius),
+            border: Border.all(color: Colors.black.withValues(alpha: 0.07), width: context.uiBorderWidth),
           ),
           child: Center(
             child: Text(

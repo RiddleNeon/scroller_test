@@ -15,6 +15,8 @@ import 'package:wurp/ui/animations/slide_morph_transitions.dart';
 import 'package:wurp/ui/deep_link_builder.dart';
 import 'package:wurp/ui/short_video_player.dart';
 
+import '../../theme/theme_ui_values.dart';
+
 enum SearchScope { videos, profiles, all }
 
 enum SearchMode { text, tags }
@@ -226,7 +228,7 @@ class _SearchScreenState extends State<SearchScreen> with TickerProviderStateMix
       padding: const EdgeInsets.all(4),
       decoration: BoxDecoration(
         color: cs.surfaceContainerHigh,
-        borderRadius: BorderRadius.circular(18),
+        borderRadius: BorderRadius.circular(context.uiRadiusLg),
         border: Border.all(color: cs.outlineVariant.withValues(alpha: 0.65)),
       ),
       child: Row(
@@ -292,7 +294,7 @@ class _SearchScreenState extends State<SearchScreen> with TickerProviderStateMix
       height: _kSearchBarHeight,
       decoration: BoxDecoration(
         color: cs.surfaceContainerHigh,
-        borderRadius: BorderRadius.circular(20),
+        borderRadius: BorderRadius.circular(context.uiRadiusLg),
         border: Border.all(color: cs.outlineVariant.withValues(alpha: 0.9)),
       ),
       child: TextField(
@@ -309,7 +311,7 @@ class _SearchScreenState extends State<SearchScreen> with TickerProviderStateMix
             onTap: _search,
               child: Container(
               margin: const EdgeInsets.all(8),
-                decoration: BoxDecoration(color: cs.tertiaryContainer, borderRadius: BorderRadius.circular(14)),
+                decoration: BoxDecoration(color: cs.tertiaryContainer, borderRadius: BorderRadius.circular(context.uiRadiusMd)),
               child: AnimatedScale(
                 duration: const Duration(milliseconds: 180),
                 scale: _loading ? 0.92 : 1,
@@ -348,7 +350,7 @@ Future<int> openVideoPlayer({
             height: MediaQuery.of(context).size.height * 0.88,
             decoration: BoxDecoration(
               color: Theme.of(context).colorScheme.surfaceContainerHigh,
-              borderRadius: BorderRadius.circular(20),
+              borderRadius: BorderRadius.circular(context.uiRadiusLg),
               border: Border.all(color: Theme.of(context).colorScheme.outlineVariant),
             ),
             clipBehavior: Clip.hardEdge,
@@ -401,13 +403,13 @@ class _SearchSegmentButton extends StatelessWidget {
     final cs = Theme.of(context).colorScheme;
     return InkWell(
       onTap: onTap,
-      borderRadius: BorderRadius.circular(14),
+      borderRadius: BorderRadius.circular(context.uiRadiusMd),
       child: AnimatedContainer(
         duration: const Duration(milliseconds: 220),
         curve: Curves.easeOutCubic,
         padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 10),
         decoration: BoxDecoration(
-          borderRadius: BorderRadius.circular(14),
+          borderRadius: BorderRadius.circular(context.uiRadiusMd),
           color: selected ? cs.secondaryContainer.withValues(alpha: 0.75) : Colors.transparent,
           border: selected ? Border.all(color: cs.outlineVariant.withValues(alpha: 0.65)) : null,
         ),

@@ -2,6 +2,7 @@ import 'dart:math' as math;
 
 import 'package:flutter/material.dart';
 import 'package:wurp/logic/users/user_model.dart';
+import 'package:wurp/ui/theme/theme_ui_values.dart';
 
 import '../../../base_logic.dart';
 import '../../../logic/local_storage/local_seen_service.dart';
@@ -118,7 +119,7 @@ class _VideoInfoOverlayState extends State<VideoInfoOverlay> {
                       padding: const EdgeInsets.fromLTRB(12, 10, 12, 10),
                       decoration: BoxDecoration(
                         color: cs.surfaceContainerLow.withValues(alpha: 0.72),
-                        borderRadius: BorderRadius.circular(18),
+                        borderRadius: BorderRadius.circular(context.uiRadiusLg),
                         border: Border.all(color: cs.outlineVariant.withValues(alpha: 0.55)),
                       ),
                       child: Column(
@@ -292,12 +293,12 @@ class _TagChip extends StatelessWidget {
         color: Colors.transparent,
         child: InkWell(
           onTap: onTap,
-          borderRadius: BorderRadius.circular(999),
+          borderRadius: BorderRadius.circular(context.uiRadiusLg),
           child: Ink(
             padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 3),
             decoration: BoxDecoration(
               color: isInteractive ? cs.tertiary.withValues(alpha: 0.72) : cs.primaryContainer.withValues(alpha: 0.72),
-              borderRadius: BorderRadius.circular(999),
+              borderRadius: BorderRadius.circular(context.uiRadiusLg),
               border: Border.all(color: isInteractive ? cs.tertiaryFixedDim : cs.primaryContainer.withValues(alpha: 0.32)),
             ),
             child: Text(

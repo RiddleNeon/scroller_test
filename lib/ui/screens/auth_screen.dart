@@ -14,6 +14,7 @@ import 'package:wurp/ui/router.dart';
 
 import '../../base_logic.dart';
 import '../../logic/users/user_model.dart';
+import '../theme/theme_ui_values.dart';
 
 // ─────────────────────────────────────────────
 // Auth mode
@@ -297,7 +298,7 @@ class _LoginScreenState extends State<LoginScreen> with TickerProviderStateMixin
         Container(
           width: 56,
           height: 56,
-          decoration: BoxDecoration(borderRadius: BorderRadius.circular(16), color: cs.primaryContainer),
+          decoration: BoxDecoration(borderRadius: BorderRadius.circular(context.uiRadiusMd), color: cs.primaryContainer),
           child: Icon(Icons.lightbulb, color: cs.onPrimaryContainer, size: 28),
         ),
         const SizedBox(height: 16),
@@ -330,7 +331,7 @@ class _LoginScreenState extends State<LoginScreen> with TickerProviderStateMixin
       elevation: 0,
       color: cs.surfaceContainerLow,
       shape: RoundedRectangleBorder(
-        borderRadius: BorderRadius.circular(24),
+        borderRadius: BorderRadius.circular(context.uiRadiusLg),
         side: BorderSide(color: cs.outlineVariant),
       ),
       child: AnimatedSize(
@@ -402,7 +403,7 @@ class _LoginScreenState extends State<LoginScreen> with TickerProviderStateMixin
   Widget _buildModeTabs(ColorScheme cs, ThemeData theme) {
     return Container(
       height: 42,
-      decoration: BoxDecoration(color: cs.surfaceContainerHighest, borderRadius: BorderRadius.circular(10)),
+      decoration: BoxDecoration(color: cs.surfaceContainerHighest, borderRadius: BorderRadius.circular(context.uiRadiusSm)),
       child: Stack(
         children: [
           AnimatedAlign(
@@ -414,7 +415,7 @@ class _LoginScreenState extends State<LoginScreen> with TickerProviderStateMixin
               child: Container(
                 margin: const EdgeInsets.all(3),
                 decoration: BoxDecoration(
-                  borderRadius: BorderRadius.circular(8),
+                  borderRadius: BorderRadius.circular(context.uiRadiusSm),
                   color: cs.surface,
                   border: Border.all(color: cs.outlineVariant),
                 ),
@@ -464,7 +465,7 @@ class _LoginScreenState extends State<LoginScreen> with TickerProviderStateMixin
                     child: Container(
                       padding: const EdgeInsets.all(14),
                       decoration: BoxDecoration(
-                        borderRadius: BorderRadius.circular(14),
+                        borderRadius: BorderRadius.circular(context.uiRadiusMd),
                         color: cs.errorContainer,
                         border: Border.all(color: cs.error.withValues(alpha: 0.3)),
                       ),
@@ -492,7 +493,7 @@ class _LoginScreenState extends State<LoginScreen> with TickerProviderStateMixin
                               backgroundColor: cs.error.withValues(alpha: 0.15),
                               foregroundColor: cs.onErrorContainer,
                               padding: const EdgeInsets.symmetric(vertical: 10),
-                              shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(9)),
+                              shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(context.uiRadiusSm)),
                             ),
                             onPressed: _openBanAppeal,
                             child: const Row(
@@ -625,7 +626,7 @@ class _LoginScreenState extends State<LoginScreen> with TickerProviderStateMixin
     return SizedBox(
       height: 50,
       child: FilledButton(
-        style: FilledButton.styleFrom(shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12))),
+        style: FilledButton.styleFrom(shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(context.uiRadiusMd))),
         onPressed: _isLoading ? null : _submit,
         child: AnimatedSwitcher(
           duration: const Duration(milliseconds: 180),
@@ -738,19 +739,19 @@ class _AuthFieldState extends State<_AuthField> {
         filled: true,
         fillColor: _focused ? cs.primaryContainer.withValues(alpha: 0.25) : cs.surfaceContainerHighest,
         enabledBorder: OutlineInputBorder(
-          borderRadius: BorderRadius.circular(12),
+          borderRadius: BorderRadius.circular(context.uiRadiusMd),
           borderSide: BorderSide(color: cs.outlineVariant),
         ),
         focusedBorder: OutlineInputBorder(
-          borderRadius: BorderRadius.circular(12),
+          borderRadius: BorderRadius.circular(context.uiRadiusMd),
           borderSide: BorderSide(color: cs.primary, width: 1.5),
         ),
         errorBorder: OutlineInputBorder(
-          borderRadius: BorderRadius.circular(12),
+          borderRadius: BorderRadius.circular(context.uiRadiusMd),
           borderSide: BorderSide(color: cs.error),
         ),
         focusedErrorBorder: OutlineInputBorder(
-          borderRadius: BorderRadius.circular(12),
+          borderRadius: BorderRadius.circular(context.uiRadiusMd),
           borderSide: BorderSide(color: cs.error, width: 1.5),
         ),
         errorStyle: TextStyle(color: cs.error, fontSize: 12),
@@ -780,7 +781,7 @@ class _FeedbackBanner extends StatelessWidget {
 
     return Container(
       padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 11),
-      decoration: BoxDecoration(borderRadius: BorderRadius.circular(12), color: bgColor),
+      decoration: BoxDecoration(borderRadius: BorderRadius.circular(context.uiRadiusMd), color: bgColor),
       child: Row(
         children: [
           Icon(icon, color: fgColor, size: 18),
@@ -1168,7 +1169,7 @@ class _SignupOnboardingScreenState extends State<SignupOnboardingScreen> with Ti
               Container(
                 width: 64,
                 height: 64,
-                decoration: BoxDecoration(borderRadius: BorderRadius.circular(18), color: cs.primaryContainer),
+                decoration: BoxDecoration(borderRadius: BorderRadius.circular(context.uiRadiusLg), color: cs.primaryContainer),
                 child: Icon(_stepHeaderIcon, color: cs.onPrimaryContainer, size: 30),
               ),
               const SizedBox(height: 14),
@@ -1232,7 +1233,7 @@ class _SignupOnboardingScreenState extends State<SignupOnboardingScreen> with Ti
     return Card(
       elevation: 0,
       color: cs.surfaceContainerLow,
-      shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(28), side: BorderSide(color: cs.outlineVariant)),
+      shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(context.uiRadiusLg), side: BorderSide(color: cs.outlineVariant)),
       child: AnimatedContainer(
         duration: const Duration(milliseconds: 220),
         curve: Curves.easeOutCubic,
@@ -1341,7 +1342,7 @@ class _SignupOnboardingScreenState extends State<SignupOnboardingScreen> with Ti
           const SizedBox(height: 20),
           Container(
             padding: const EdgeInsets.all(14),
-            decoration: BoxDecoration(color: cs.surfaceContainerHighest, borderRadius: BorderRadius.circular(14)),
+            decoration: BoxDecoration(color: cs.surfaceContainerHighest, borderRadius: BorderRadius.circular(context.uiRadiusMd)),
             child: Row(
               children: [
                 Icon(Icons.shield_rounded, color: cs.primary, size: 20),
@@ -1374,8 +1375,8 @@ class _SignupOnboardingScreenState extends State<SignupOnboardingScreen> with Ti
               prefixText: '@',
               filled: true,
               fillColor: cs.surfaceContainerHighest,
-              border: OutlineInputBorder(borderRadius: BorderRadius.circular(12), borderSide: BorderSide(color: cs.outlineVariant)),
-              focusedBorder: OutlineInputBorder(borderRadius: BorderRadius.circular(12), borderSide: BorderSide(color: cs.primary, width: 1.5)),
+              border: OutlineInputBorder(borderRadius: BorderRadius.circular(context.uiRadiusMd), borderSide: BorderSide(color: cs.outlineVariant)),
+              focusedBorder: OutlineInputBorder(borderRadius: BorderRadius.circular(context.uiRadiusMd), borderSide: BorderSide(color: cs.primary, width: 1.5)),
             ),
           ),
           const SizedBox(height: 8),
@@ -1437,7 +1438,7 @@ class _SignupOnboardingScreenState extends State<SignupOnboardingScreen> with Ti
               alignLabelWithHint: true,
               filled: true,
               fillColor: cs.surfaceContainerHighest,
-              border: OutlineInputBorder(borderRadius: BorderRadius.circular(12), borderSide: BorderSide(color: cs.outlineVariant)),
+              border: OutlineInputBorder(borderRadius: BorderRadius.circular(context.uiRadiusMd), borderSide: BorderSide(color: cs.outlineVariant)),
             ),
           ),
         ],
@@ -1483,7 +1484,7 @@ class _SignupOnboardingScreenState extends State<SignupOnboardingScreen> with Ti
             padding: const EdgeInsets.all(14),
             decoration: BoxDecoration(
               color: cs.surfaceContainerHighest,
-              borderRadius: BorderRadius.circular(14),
+              borderRadius: BorderRadius.circular(context.uiRadiusMd),
               border: Border.all(color: cs.outlineVariant),
             ),
             child: Text(
@@ -1655,7 +1656,7 @@ class _ResetPasswordScreenState extends State<ResetPasswordScreen> with TickerPr
         Container(
           width: 56,
           height: 56,
-          decoration: BoxDecoration(borderRadius: BorderRadius.circular(16), color: cs.primaryContainer),
+          decoration: BoxDecoration(borderRadius: BorderRadius.circular(context.uiRadiusMd), color: cs.primaryContainer),
           child: Icon(Icons.lock_reset_rounded, color: cs.onPrimaryContainer, size: 28),
         ),
         const SizedBox(height: 16),
@@ -1671,7 +1672,7 @@ class _ResetPasswordScreenState extends State<ResetPasswordScreen> with TickerPr
       elevation: 0,
       color: cs.surfaceContainerLow,
       shape: RoundedRectangleBorder(
-        borderRadius: BorderRadius.circular(24),
+        borderRadius: BorderRadius.circular(context.uiRadiusLg),
         side: BorderSide(color: cs.outlineVariant),
       ),
       child: Padding(

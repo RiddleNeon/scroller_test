@@ -13,6 +13,7 @@ import 'package:wurp/logic/repositories/quest_repository.dart';
 import 'package:wurp/ui/screens/quests/core/quest_bubbles_overlay.dart';
 import 'package:wurp/ui/screens/quests/core/quest_connection_edit_screen.dart';
 import 'package:wurp/ui/screens/quests/core/quest_detail_screen.dart';
+import 'package:wurp/ui/theme/theme_ui_values.dart';
 import 'package:wurp/util/extensions/offset_distance.dart';
 
 import '../../../../logic/quests/quest.dart';
@@ -516,7 +517,7 @@ class PanWidgetState extends State<PanWidget> {
         heightFactor: 0.8,
         child: Card(
           clipBehavior: Clip.antiAlias,
-          shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(20)),
+          shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(context.uiRadiusLg)),
           child: QuestDetailScreen(
             quest: quest,
             debugMode: debugMode,
@@ -557,7 +558,7 @@ class PanWidgetState extends State<PanWidget> {
   void _showConnectionOptionsSheet(int fromId, int toId) {
     showModalBottomSheet<void>(
       context: context,
-      shape: const RoundedRectangleBorder(borderRadius: BorderRadius.vertical(top: Radius.circular(20))),
+      shape: RoundedRectangleBorder(borderRadius: BorderRadius.vertical(top: Radius.circular(context.uiRadiusLg))),
       builder: (ctx) {
         return SafeArea(
           child: Column(
@@ -567,7 +568,7 @@ class PanWidgetState extends State<PanWidget> {
                 margin: const EdgeInsets.symmetric(vertical: 10),
                 width: 40,
                 height: 4,
-                decoration: BoxDecoration(color: Colors.grey.shade400, borderRadius: BorderRadius.circular(2)),
+                decoration: BoxDecoration(color: Colors.grey.shade400, borderRadius: BorderRadius.circular(context.uiRadiusSm)),
               ),
               ListTile(
                 leading: const Icon(Icons.edit_outlined),
@@ -628,7 +629,7 @@ class PanWidgetState extends State<PanWidget> {
             heightFactor: 0.9,
             child: Card(
               clipBehavior: Clip.antiAlias,
-              shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(20)),
+              shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(context.uiRadiusLg)),
               child: QuestDetailScreen(
                 quest: quest,
                 debugMode: true,
@@ -791,7 +792,7 @@ class PanWidgetState extends State<PanWidget> {
           }
         },
         child: ClipRRect(
-          borderRadius: BorderRadius.circular(20),
+          borderRadius: BorderRadius.circular(context.uiRadiusLg),
           child: DecoratedBox(
             decoration: const BoxDecoration(color: Color(0xFF0A1218)),
             child: Stack(

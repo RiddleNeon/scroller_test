@@ -2,6 +2,8 @@ import 'package:flutter/cupertino.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
 
+import '../../theme/theme_ui_values.dart';
+
 /// Lightweight share target used by [ShareButton].
 class ShareContact {
   final String id;
@@ -191,7 +193,7 @@ class _ShareButtonState extends State<ShareButton> with SingleTickerProviderStat
           Material(
             color: Colors.transparent,
             child: InkWell(
-              borderRadius: BorderRadius.circular(18),
+              borderRadius: BorderRadius.circular(context.uiRadiusLg),
               onTap: _toggleExpanded,
               child: Padding(
                 padding: const EdgeInsets.all(6),
@@ -226,7 +228,7 @@ class _ShareButtonState extends State<ShareButton> with SingleTickerProviderStat
         child: DecoratedBox(
           decoration: BoxDecoration(
             color: cs.surfaceContainerHigh.withValues(alpha: 0.95),
-            borderRadius: BorderRadius.circular(20),
+            borderRadius: BorderRadius.circular(context.uiRadiusLg),
             border: Border.all(color: cs.outlineVariant.withValues(alpha: 0.55)),
             boxShadow: [
               BoxShadow(
@@ -314,9 +316,9 @@ class _ActionTile extends StatelessWidget {
 
     return Material(
       color: cs.primaryContainer.withValues(alpha: 0.55),
-      borderRadius: BorderRadius.circular(14),
+      borderRadius: BorderRadius.circular(context.uiRadiusMd),
       child: InkWell(
-        borderRadius: BorderRadius.circular(14),
+        borderRadius: BorderRadius.circular(context.uiRadiusMd),
         onTap: busy ? null : onTap,
         child: Padding(
           padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 11),
@@ -365,9 +367,9 @@ class _ContactChip extends StatelessWidget {
       color: isSending
           ? colorScheme.tertiaryContainer
           : (alreadySharedWithThisVideo ? colorScheme.secondaryContainer : colorScheme.surfaceContainer),
-      borderRadius: BorderRadius.circular(14),
+      borderRadius: BorderRadius.circular(context.uiRadiusMd),
       child: InkWell(
-        borderRadius: BorderRadius.circular(14),
+        borderRadius: BorderRadius.circular(context.uiRadiusMd),
         onTap: isSending ? null : onTap,
         child: Padding(
           padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 8),

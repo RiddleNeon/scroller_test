@@ -15,6 +15,7 @@ import 'package:wurp/ui/animations/slide_morph_transitions.dart';
 import 'package:wurp/ui/feed_view_model.dart';
 import 'package:wurp/ui/misc/avatar.dart';
 import 'package:wurp/ui/screens/search_screen/search_screen.dart';
+import 'package:wurp/ui/theme/theme_ui_values.dart';
 
 import '../../../base_logic.dart';
 import '../../../logic/chat/chat_message.dart';
@@ -22,6 +23,9 @@ import '../../../logic/local_storage/local_seen_service.dart';
 import '../profile_screen.dart';
 import 'calling_screen.dart';
 import 'chat_route_preview.dart';
+
+double _chatBubbleRadius(BuildContext context) => context.uiRadiusLg;
+double _chatBubbleTightRadius(BuildContext context) => context.uiRadiusSm * 0.66;
 
 class MessagingScreen extends StatefulWidget {
   final Future<ChatMessage> Function(String message) onSend;
@@ -686,9 +690,9 @@ class MessagingScreenState extends State<MessagingScreen> with TickerProviderSta
     return AppBar(
       backgroundColor: cs.surfaceContainer,
       elevation: 0,
-      shape: const RoundedRectangleBorder(
-        borderRadius: BorderRadiusGeometry.only(bottomLeft: Radius.circular(18), bottomRight: Radius.circular(18)),
-      ),
+      /*shape: const RoundedRectangleBorder( //fixxme
+        borderRadius: BorderRadiusGeometry.only(bottomLeft: Radius.circular(context.uiRadiusMd), bottomRight: Radius.circular(context.uiRadiusMd)),
+      ),*/
       scrolledUnderElevation: 0,
       toolbarHeight: kToolbarHeight,
       systemOverlayStyle: SystemUiOverlayStyle(statusBarBrightness: theme.brightness == Brightness.dark ? Brightness.dark : Brightness.light),
@@ -710,7 +714,7 @@ class MessagingScreenState extends State<MessagingScreen> with TickerProviderSta
             },
           ),
         ),
-        borderRadius: const BorderRadius.only(bottomLeft: Radius.circular(25), bottomRight: Radius.circular(25)),
+        borderRadius: BorderRadius.only(bottomLeft: Radius.circular(context.uiRadiusLg), bottomRight: Radius.circular(context.uiRadiusLg)),
         child: Padding(
           padding: const EdgeInsets.symmetric(horizontal: 8.0, vertical: 8),
           child: Row(
@@ -848,7 +852,7 @@ class MessagingScreenState extends State<MessagingScreen> with TickerProviderSta
               padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 8),
               decoration: BoxDecoration(
                 color: cs.secondaryContainer.withValues(alpha: 0.55),
-                borderRadius: BorderRadius.circular(10),
+                borderRadius: BorderRadius.circular(context.uiRadiusSm),
                 border: Border.all(color: cs.outlineVariant.withValues(alpha: 0.5)),
               ),
               child: Row(
@@ -1067,15 +1071,15 @@ class _BubbleBody extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     final cs = colorScheme;
-
-    const r = Radius.circular(18);
-    const rSmall = Radius.circular(4);
+    final r = Radius.circular(_chatBubbleRadius(context));
+    final rSmall = Radius.circular(_chatBubbleTightRadius(context));
+    final borderWidth = context.uiBorderWidth;
 
     BorderRadius borderRadius;
     if (isMe) {
-      borderRadius = BorderRadius.only(topLeft: r, topRight: isFirst ? r : rSmall, bottomLeft: r, bottomRight: isLast ? const Radius.circular(4) : rSmall);
+      borderRadius = BorderRadius.only(topLeft: r, topRight: isFirst ? r : rSmall, bottomLeft: r, bottomRight: isLast ? rSmall : rSmall);
     } else {
-      borderRadius = BorderRadius.only(topLeft: isFirst ? r : rSmall, topRight: r, bottomLeft: isLast ? const Radius.circular(4) : rSmall, bottomRight: r);
+      borderRadius = BorderRadius.only(topLeft: isFirst ? r : rSmall, topRight: r, bottomLeft: isLast ? rSmall : rSmall, bottomRight: r);
     }
 
     final hasText = ChatRoutePreviewResolver.hasVisibleText(message.text);
@@ -1091,11 +1095,11 @@ class _BubbleBody extends StatelessWidget {
           if (hasText)
             Container(
               constraints: const BoxConstraints(maxWidth: 280),
-              padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 10),
+              padding: EdgeInsets.symmetric(horizontal: context.uiSpace(14), vertical: context.uiSpace(10)),
               decoration: BoxDecoration(
                 color: isMe ? cs.primary : cs.secondary,
                 borderRadius: borderRadius,
-                border: Border.all(color: cs.outlineVariant.withValues(alpha: 0.45)),
+                border: Border.all(color: cs.outlineVariant.withValues(alpha: 0.45), width: borderWidth),
               ),
               child: Column(
                 crossAxisAlignment: CrossAxisAlignment.start,
@@ -1108,7 +1112,7 @@ class _BubbleBody extends StatelessWidget {
                   ),
                   if (message.isEdited)
                     Padding(
-                      padding: const EdgeInsets.only(top: 4),
+                      padding: EdgeInsets.only(top: context.uiSpace(4)),
                       child: Text(
                         'edited',
                         style: TextStyle(
@@ -1124,7 +1128,7 @@ class _BubbleBody extends StatelessWidget {
           _RoutePreviewList(messageText: message.text, onRouteTap: onRouteTap, previewFutureFor: previewFutureFor),
           if (!hasText && message.isEdited)
             Padding(
-              padding: const EdgeInsets.only(top: 4, right: 2, left: 2),
+              padding: EdgeInsets.only(top: context.uiSpace(4), right: context.uiSpace(2), left: context.uiSpace(2)),
               child: Text(
                 'edited',
                 style: TextStyle(
@@ -1254,7 +1258,7 @@ class _RoutePreviewList extends StatelessWidget {
                           height: 64,
                           decoration: BoxDecoration(
                             color: Theme.of(context).colorScheme.surfaceContainerHighest.withValues(alpha: 0.45),
-                            borderRadius: BorderRadius.circular(12),
+                            borderRadius: BorderRadius.circular(context.uiRadiusMd),
                           ),
                         );
                       }
@@ -1291,12 +1295,12 @@ class _RoutePreviewCard extends StatelessWidget {
     if (preview.type == ChatRoutePreviewType.feed && preview.thumbnailUrl != null) {
       return InkWell(
         onTap: onTap,
-        borderRadius: BorderRadius.circular(16),
+        borderRadius: BorderRadius.circular(context.uiRadiusMd),
         child: Container(
           width: double.infinity,
           decoration: BoxDecoration(
             color: cs.surfaceContainerHigh.withValues(alpha: 0.9),
-            borderRadius: BorderRadius.circular(16),
+            borderRadius: BorderRadius.circular(context.uiRadiusMd),
             border: Border.all(color: cs.outlineVariant.withValues(alpha: 0.6)),
           ),
           child: Column(
@@ -1307,7 +1311,7 @@ class _RoutePreviewCard extends StatelessWidget {
                 alignment: Alignment.center,
                 children: [
                   ClipRRect(
-                    borderRadius: const BorderRadius.only(topLeft: Radius.circular(16), topRight: Radius.circular(16)),
+                    borderRadius: BorderRadius.only(topLeft: Radius.circular(context.uiRadiusMd), topRight: Radius.circular(context.uiRadiusMd)),
                     child: CachedNetworkImage(
                       imageUrl: preview.thumbnailUrl!,
                       width: double.infinity,
@@ -1353,18 +1357,18 @@ class _RoutePreviewCard extends StatelessWidget {
 
     return InkWell(
       onTap: onTap,
-      borderRadius: BorderRadius.circular(12),
+      borderRadius: BorderRadius.circular(context.uiRadiusMd),
       child: Container(
         decoration: BoxDecoration(
           color: cs.surfaceContainerHigh.withValues(alpha: 0.9),
-          borderRadius: BorderRadius.circular(12),
+          borderRadius: BorderRadius.circular(context.uiRadiusMd),
           border: Border.all(color: cs.outlineVariant.withValues(alpha: 0.6)),
         ),
         child: Row(
           children: [
             if (preview.thumbnailUrl != null && preview.thumbnailUrl!.isNotEmpty)
               ClipRRect(
-                borderRadius: const BorderRadius.only(topLeft: Radius.circular(12), bottomLeft: Radius.circular(12)),
+                borderRadius: BorderRadius.only(topLeft: Radius.circular(context.uiRadiusMd), bottomLeft: Radius.circular(context.uiRadiusMd)),
                 child: CachedNetworkImage(
                   // Stable cached image prevents flashing while list items recycle.
                   imageUrl: preview.thumbnailUrl!,
@@ -1380,7 +1384,7 @@ class _RoutePreviewCard extends StatelessWidget {
                 height: 64,
                 decoration: BoxDecoration(
                   color: cs.surfaceContainerHighest,
-                  borderRadius: const BorderRadius.only(topLeft: Radius.circular(12), bottomLeft: Radius.circular(12)),
+                  borderRadius: BorderRadius.only(topLeft: Radius.circular(context.uiRadiusMd), bottomLeft: Radius.circular(context.uiRadiusMd)),
                 ),
                 child: Icon(icon, color: cs.onSurfaceVariant),
               ),
@@ -1440,16 +1444,18 @@ class _TypingBubble extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     final cs = colorScheme;
+    final radiusLg = context.uiRadiusLg;
+    final radiusSm = context.uiRadiusSm;
     return Container(
-      margin: const EdgeInsets.only(bottom: 4),
-      padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 12),
+      margin: EdgeInsets.only(bottom: context.uiSpace(4)),
+      padding: EdgeInsets.symmetric(horizontal: context.uiSpace(16), vertical: context.uiSpace(12)),
       decoration: BoxDecoration(
         color: cs.surfaceContainerHigh,
-        borderRadius: const BorderRadius.only(
-          topLeft: Radius.circular(4),
-          topRight: Radius.circular(18),
-          bottomLeft: Radius.circular(18),
-          bottomRight: Radius.circular(18),
+        borderRadius: BorderRadius.only(
+          topLeft: Radius.circular(radiusSm),
+          topRight: Radius.circular(radiusLg),
+          bottomLeft: Radius.circular(radiusLg),
+          bottomRight: Radius.circular(radiusLg),
         ),
       ),
       child: Row(
@@ -1463,9 +1469,9 @@ class _TypingBubble extends StatelessWidget {
               return Transform.translate(
                 offset: Offset(0, -offset.abs()),
                 child: Container(
-                  width: 7,
-                  height: 7,
-                  margin: EdgeInsets.only(right: i < 2 ? 4 : 0),
+                  width: context.uiSpace(7),
+                  height: context.uiSpace(7),
+                  margin: EdgeInsets.only(right: i < 2 ? context.uiSpace(4) : 0),
                   decoration: BoxDecoration(color: cs.onSurfaceVariant.withValues(alpha: 0.5), shape: BoxShape.circle),
                 ),
               );
@@ -1541,6 +1547,7 @@ class _SendButtonState extends State<_SendButton> with SingleTickerProviderState
   @override
   Widget build(BuildContext context) {
     final cs = widget.colorScheme;
+    final buttonSize = context.uiSpace(42);
     return GestureDetector(
       onTapDown: (_) => _ctrl.forward(),
       onTapUp: (_) {
@@ -1551,12 +1558,12 @@ class _SendButtonState extends State<_SendButton> with SingleTickerProviderState
       child: ScaleTransition(
         scale: _scaleAnim,
         child: Container(
-          width: 42,
-          height: 42,
+          width: buttonSize,
+          height: buttonSize,
           decoration: BoxDecoration(
             color: cs.primary,
             shape: BoxShape.circle,
-            border: Border.all(color: cs.outlineVariant.withValues(alpha: 0.45)),
+            border: Border.all(color: cs.outlineVariant.withValues(alpha: 0.45), width: context.uiBorderWidth),
           ),
           child: Icon(Icons.send_rounded, color: cs.onPrimary, size: 20),
         ),
@@ -1574,15 +1581,16 @@ class _ScrollDownButton extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     final cs = colorScheme;
+    final size = context.uiSpace(36);
     return GestureDetector(
       onTap: onTap,
       child: Container(
-        width: 36,
-        height: 36,
+        width: size,
+        height: size,
         decoration: BoxDecoration(
           color: cs.surfaceContainerHigh,
           shape: BoxShape.circle,
-          border: Border.all(color: cs.outlineVariant, width: 1),
+          border: Border.all(color: cs.outlineVariant, width: context.uiBorderWidth),
         ),
         child: Icon(Icons.keyboard_arrow_down_rounded, color: cs.onSurface, size: 20),
       ),
@@ -1599,9 +1607,10 @@ class _InputIconButton extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
+    final size = context.uiSpace(36);
     return GestureDetector(
       onTap: onTap,
-      child: SizedBox(width: 36, height: 36, child: Icon(icon, color: color, size: 24)),
+      child: SizedBox(width: size, height: size, child: Icon(icon, color: color, size: context.uiSpace(24))),
     );
   }
 }
