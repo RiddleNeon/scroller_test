@@ -3,6 +3,7 @@ import 'dart:math';
 import 'package:cached_network_image/cached_network_image.dart';
 import 'package:flutter/gestures.dart';
 import 'package:flutter/material.dart';
+import 'package:flutter/rendering.dart';
 import 'package:flutter/services.dart';
 import 'package:go_router/go_router.dart';
 import 'package:wurp/logic/repositories/user_repository.dart';
@@ -72,6 +73,9 @@ class MessagingScreenState extends State<MessagingScreen> with TickerProviderSta
   bool _isTyping = false;
   bool _showScrollDown = false;
   bool _partnerTyping = false;
+  bool _initialViewportAnchored = false;
+  bool _keepInitialBottomLock = true;
+  int _bottomLockSession = 0;
   String? _editingMessageId;
   bool _canViewMessageHistory = false;
   final Map<String, Future<ChatRoutePreview?>> _previewFutureCache = {};
@@ -93,9 +97,6 @@ class MessagingScreenState extends State<MessagingScreen> with TickerProviderSta
       _createBubbleController(animate: true);
     }
     _preloadMore();
-    WidgetsBinding.instance.addPostFrameCallback((timeStamp) {
-      _scrollController.animateTo(_scrollController.position.maxScrollExtent, duration: Duration.zero, curve: Curves.linear);
-    });
   }
 
   Future<ChatRoutePreview?> _previewFutureFor(ChatRouteReference ref) {
@@ -244,6 +245,9 @@ class MessagingScreenState extends State<MessagingScreen> with TickerProviderSta
 
     try {
       print("preloading!");
+      final wasEmpty = _messages.isEmpty;
+      final beforeOffset = _scrollController.hasClients ? _scrollController.offset : 0.0;
+      final beforeMaxScrollExtent = _scrollController.hasClients ? _scrollController.position.maxScrollExtent : 0.0;
       final loadedMessages = await widget.loadMoreMessages(limit, currentMessageCursor);
       if (!mounted) return;
 
@@ -256,12 +260,52 @@ class MessagingScreenState extends State<MessagingScreen> with TickerProviderSta
 
       loadedMessages.sort((a, b) => a.timestamp.compareTo(b.timestamp));
       _addMessages(loadedMessages, appendToEnd: false, isNewMessage: false);
-      currentMessageCursor = loadedMessages.last.timestamp;
+      currentMessageCursor = loadedMessages.first.timestamp;
+      if (wasEmpty) {
+        WidgetsBinding.instance.addPostFrameCallback((_) {
+          if (_scrollController.hasClients) {
+            _scrollController.jumpTo(_scrollController.position.maxScrollExtent);
+          }
+          _initialViewportAnchored = true;
+          _startInitialBottomLock();
+        });
+      } else {
+        WidgetsBinding.instance.addPostFrameCallback((_) {
+          if (!_scrollController.hasClients) return;
+          final afterMaxScrollExtent = _scrollController.position.maxScrollExtent;
+          final delta = afterMaxScrollExtent - beforeMaxScrollExtent;
+          final target = (beforeOffset + delta).clamp(0.0, afterMaxScrollExtent);
+          _scrollController.jumpTo(target);
+        });
+      }
     } catch (e) {
       debugPrint('preload messages failed: $e');
     } finally {
       preloading = false;
     }
+  }
+
+  void _startInitialBottomLock() {
+    if (!_keepInitialBottomLock) return;
+    final session = ++_bottomLockSession;
+    int ticks = 0;
+
+    void tick() {
+      if (!mounted || !_keepInitialBottomLock || session != _bottomLockSession) return;
+      if (_scrollController.hasClients) {
+        final maxScroll = _scrollController.position.maxScrollExtent;
+        if ((_scrollController.offset - maxScroll).abs() > 1) {
+          _scrollController.jumpTo(maxScroll);
+        }
+      }
+      if (ticks++ >= 10) return;
+      Future.delayed(const Duration(milliseconds: 120), () {
+        if (!mounted || !_keepInitialBottomLock || session != _bottomLockSession) return;
+        WidgetsBinding.instance.addPostFrameCallback((_) => tick());
+      });
+    }
+
+    tick();
   }
 
   void onReceiveMessage(String text) {
@@ -571,6 +615,7 @@ class MessagingScreenState extends State<MessagingScreen> with TickerProviderSta
   }
 
   void _onScroll() {
+    if (!_scrollController.hasClients) return;
     final atBottom = _scrollController.offset >= _scrollController.position.maxScrollExtent - 80;
     if (!atBottom && !_showScrollDown) {
       setState(() => _showScrollDown = true);
@@ -578,7 +623,7 @@ class MessagingScreenState extends State<MessagingScreen> with TickerProviderSta
       setState(() => _showScrollDown = false);
     }
     final atTop = _scrollController.offset <= 30;
-    if (atTop) {
+    if (_initialViewportAnchored && atTop) {
       _preloadMore();
     }
   }
@@ -714,39 +759,48 @@ class MessagingScreenState extends State<MessagingScreen> with TickerProviderSta
   }
 
   Widget _buildMessageList(ThemeData theme, ColorScheme cs) {
-    return GestureDetector(
-      onTap: () => _focusNode.unfocus(),
-      child: ListView.builder(
-        controller: _scrollController,
-        padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 8),
-        itemCount: _messages.length,
-        itemBuilder: (ctx, i) {
-          final msg = _messages[i];
-          final prevMsg = i > 0 ? _messages[i - 1] : null;
-          final nextMsg = i < _messages.length - 1 ? _messages[i + 1] : null;
+    return NotificationListener<UserScrollNotification>(
+      onNotification: (notification) {
+        if (notification.direction != ScrollDirection.idle && _keepInitialBottomLock) {
+          _keepInitialBottomLock = false;
+          _bottomLockSession++;
+        }
+        return false;
+      },
+      child: GestureDetector(
+        onTap: () => _focusNode.unfocus(),
+        child: ListView.builder(
+          controller: _scrollController,
+          padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 8),
+          itemCount: _messages.length,
+          itemBuilder: (ctx, i) {
+            final msg = _messages[i];
+            final prevMsg = i > 0 ? _messages[i - 1] : null;
+            final nextMsg = i < _messages.length - 1 ? _messages[i + 1] : null;
 
-          final showAvatar = !msg.isMe && (nextMsg == null || nextMsg.isMe || _isNewGroup(msg, nextMsg));
-          final showTimestamp = nextMsg == null || msg.timestamp.difference(nextMsg.timestamp).abs() > const Duration(minutes: 10);
+            final showAvatar = !msg.isMe && (nextMsg == null || nextMsg.isMe || _isNewGroup(msg, nextMsg));
+            final showTimestamp = nextMsg == null || msg.timestamp.difference(nextMsg.timestamp).abs() > const Duration(minutes: 10);
 
-          final ctrl = i < _bubbleControllers.length ? _bubbleControllers[i] : AnimationController(vsync: this, value: 1.0);
+            final ctrl = i < _bubbleControllers.length ? _bubbleControllers[i] : AnimationController(vsync: this, value: 1.0);
 
-          return _MessageBubble(
-            key: ValueKey(msg.id),
-            message: msg,
-            showAvatar: showAvatar,
-            showTimestamp: showTimestamp,
-            isFirst: prevMsg == null || prevMsg.isMe != msg.isMe,
-            isLast: nextMsg == null || nextMsg.isMe != msg.isMe,
-            animationController: ctrl,
-            colorScheme: cs,
-            theme: theme,
-            recipientName: widget.recipientName ?? '',
-            recipientAvatarUrl: widget.recipientAvatarUrl,
-            onLongPress: () => _showMessageActions(msg),
-            onRouteTap: _openRouteFromMessage,
-            previewFutureFor: _previewFutureFor,
-          );
-        },
+            return _MessageBubble(
+              key: ValueKey(msg.id),
+              message: msg,
+              showAvatar: showAvatar,
+              showTimestamp: showTimestamp,
+              isFirst: prevMsg == null || prevMsg.isMe != msg.isMe,
+              isLast: nextMsg == null || nextMsg.isMe != msg.isMe,
+              animationController: ctrl,
+              colorScheme: cs,
+              theme: theme,
+              recipientName: widget.recipientName ?? '',
+              recipientAvatarUrl: widget.recipientAvatarUrl,
+              onLongPress: () => _showMessageActions(msg),
+              onRouteTap: _openRouteFromMessage,
+              previewFutureFor: _previewFutureFor,
+            );
+          },
+        ),
       ),
     );
   }

@@ -1,3 +1,5 @@
+// ignore_for_file: curly_braces_in_flow_control_structures
+
 import 'package:flutter/material.dart';
 import 'package:wurp/logic/chat/chat_message.dart';
 import 'package:wurp/ui/misc/avatar.dart';
@@ -6,6 +8,7 @@ import 'package:wurp/ui/screens/chat/chat_screen.dart';
 import '../../../base_logic.dart';
 import '../../../logic/chat/chat.dart';
 import '../../../util/misc/time_formatting.dart';
+import 'chat_route_preview.dart';
 
 GlobalKey<ChatManagingScreenState> chatManagingScreenKey = GlobalKey();
 
@@ -185,6 +188,19 @@ class ChatManagingScreenState extends State<ChatManagingScreen> {
     final lastMessageTime = chat.lastMessageAt ?? chat.createdAt;
     final timeString = formatTime(lastMessageTime);
 
+    String formattedMessage = chat.lastMessage;
+    if (ChatRoutePreviewResolver.isPureRouteMessage(formattedMessage)) {
+      final uri = Uri.tryParse(formattedMessage.trim());
+      if (uri != null) {
+        if (uri.path.startsWith('/feed/')) formattedMessage = '▶ Shared a video';
+        else if (uri.path.startsWith('/quests')) formattedMessage = '🗺 Shared a quest';
+        else if (uri.path.startsWith('/themes')) formattedMessage = '🎨 Shared a theme';
+        else if (uri.path.startsWith('/search')) formattedMessage = '🔍 Shared a search';
+        else if (uri.path.startsWith('/chat')) formattedMessage = '💬 Shared a chat';
+        else formattedMessage = '🔗 Shared a link';
+      }
+    }
+
     return AnimatedContainer(
       duration: const Duration(milliseconds: 220),
       curve: Curves.easeOutCubic,
@@ -219,7 +235,7 @@ class ChatManagingScreenState extends State<ChatManagingScreen> {
                       const SizedBox(height: 4),
 
                       Text(
-                        "${chat.lastMessageByMe ? "You: " : ""}${chat.lastMessage}",
+                        "${chat.lastMessageByMe ? "You: " : ""}$formattedMessage",
                         style: theme.textTheme.bodyMedium?.copyWith(
                           color: theme.colorScheme.onSurfaceVariant,
                           fontWeight: chat.lastMessageByMe ? FontWeight.w400 : FontWeight.w500,

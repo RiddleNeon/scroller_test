@@ -59,12 +59,17 @@ class ChatRepository {
       return result.length > limit ? result.sublist(result.length - limit) : result;
     }
     
+    // startOffset == null => initial/recent load: sync newer server messages after latest local.
+    // startOffset != null => upward pagination: fetch only older messages before the cursor.
     DateTime? syncFrom;
-    if (localMessages.isNotEmpty) {
-      final latestLocal = localMessages.map((m) => m.timestamp).reduce((a, b) => a.isAfter(b) ? a : b);
-      syncFrom = latestLocal;
+    DateTime? before;
+    if (startOffset == null) {
+      if (localMessages.isNotEmpty) {
+        final latestLocal = localMessages.map((m) => m.timestamp).reduce((a, b) => a.isAfter(b) ? a : b);
+        syncFrom = latestLocal;
+      }
     } else {
-      syncFrom = startOffset;
+      before = startOffset;
     }
 
     final serverMessages = await _fetchMessagesFromServer(
@@ -72,7 +77,7 @@ class ChatRepository {
       otherUserId: otherUserId,
       limit: limit,
       after: syncFrom,
-      before: localMessages.isEmpty ? startOffset : null,
+      before: before,
     );
 
     if (serverMessages.isNotEmpty) {
