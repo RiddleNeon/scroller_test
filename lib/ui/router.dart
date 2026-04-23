@@ -8,6 +8,7 @@ import 'package:wurp/transcription/uploading/video_upload_screen.dart';
 import 'package:wurp/ui/animations/slide_morph_transitions.dart';
 import 'package:wurp/ui/screens/auth_screen.dart';
 import 'package:wurp/ui/screens/chat/chat_managing_screen.dart';
+import 'package:wurp/ui/screens/home/home_screen.dart';
 import 'package:wurp/ui/screens/profile_screen.dart';
 import 'package:wurp/ui/screens/quests/quest_screen.dart';
 import 'package:wurp/ui/screens/search_screen/search_screen.dart';
@@ -121,6 +122,18 @@ void initRouter() {
               return Uri(path: '/search', queryParameters: state.uri.queryParameters.isEmpty ? null : state.uri.queryParameters).toString();
             },
           ),
+
+          GoRoute(
+            path: '/home',
+            pageBuilder: (context, state) =>
+                SlideMorphTransitions.page<void>(
+                  key: state.pageKey,
+                  child: const HomeScreen(),
+                  beginOffset: const Offset(0.03, 0.0),
+                  beginScale: 0.993,
+                ),
+          ),
+          
           GoRoute(
             path: '/profile',
             pageBuilder: (context, state) => SlideMorphTransitions.page<void>(
@@ -250,9 +263,9 @@ final BottomNavBar _bottomNavBar = BottomNavBar(
 );
 
 List<({IconData icon, String label, String id})> _navigationBarItems = [
-  (icon: Icons.home, label: 'Home', id: '/feed'),
+  (icon: Icons.swipe_up_rounded, label: 'Home', id: '/feed'),
   (icon: Icons.search, label: 'Discover', id: '/search'),
-  //(icon: Icons.add_box_outlined, label: '', id: '/create'),
+  (icon: Icons.home, label: 'Home', id: '/home'),
   (icon: Icons.person_outline, label: 'Profile', id: '/profile'),
   (icon: Icons.chat, label: 'Chat', id: '/chat'),
   (icon: CupertinoIcons.map, label: 'Quests', id: '/quests'),
@@ -398,6 +411,7 @@ class _DeepLinkProfileScreen extends StatelessWidget {
 
 String _canonicalNavPath(String path) {
   if (path.startsWith('/feed')) return '/feed';
+  if (path.startsWith('/home')) return '/home1';
   if (path.startsWith('/search')) return '/search';
   if (path.startsWith('/chat')) return '/chat';
   if (path.startsWith('/profile')) return '/profile';

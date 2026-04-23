@@ -257,7 +257,7 @@ class VideoRepository {
         .from('videos')
         .select(_videoSelect)
         .eq('is_published', true)
-        .gte('created_at', DateTime.now().subtract(const Duration(days: 1)).toIso8601String())
+        .gte('created_at', DateTime.now().subtract(const Duration(days: 300)).toIso8601String())
         .order('view_count', ascending: false)
         .limit(limit);
     return result.map<Video>(_toVideo).toList();

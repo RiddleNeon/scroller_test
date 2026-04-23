@@ -153,7 +153,10 @@ class _VideoCardState extends State<VideoCard> {
                             (tag) => Container(
                               margin: const EdgeInsets.only(right: 6),
                               padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 3),
-                              decoration: BoxDecoration(color: cs.secondaryContainer.withValues(alpha: 0.6), borderRadius: BorderRadius.circular(context.uiRadiusLg)),
+                              decoration: BoxDecoration(
+                                color: cs.secondaryContainer.withValues(alpha: 0.6),
+                                borderRadius: BorderRadius.circular(context.uiRadiusLg),
+                              ),
                               child: Text(
                                 '#$tag',
                                 style: TextStyle(color: cs.onSecondaryContainer, fontSize: 11, fontWeight: FontWeight.w500),
