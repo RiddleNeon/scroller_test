@@ -153,7 +153,7 @@ class VideoRepository {
         'p_video_id': videoId,
         'p_current_user': currentUser.id,
         'p_parent_id': parentCommentId,
-        'p_limit': 20, //fixme: hardcoded limit in the RPC function, should be passed as parameter
+        'p_limit': limit,
         'p_offset': offset,
       },
     );
