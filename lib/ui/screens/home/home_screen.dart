@@ -3,13 +3,13 @@ import 'package:go_router/go_router.dart';
 import 'package:wurp/base_logic.dart';
 import 'package:wurp/logic/repositories/video_repository.dart';
 import 'package:wurp/logic/video/video.dart';
-import 'package:wurp/ui/screens/search_screen/search_screen.dart';
-import 'package:wurp/ui/screens/search_screen/widgets/search_video_card.dart';
 import 'package:wurp/ui/deep_link_builder.dart';
 import 'package:wurp/ui/misc/avatar.dart';
-import '../../theme/theme_ui_values.dart';
 
-/// Home screen that aggregates primary app features: search, discover, following and quests.
+import '../../theme/theme_ui_values.dart';
+import '../search_screen/search_screen.dart';
+import '../search_screen/widgets/search_video_card.dart';
+
 class HomeScreen extends StatefulWidget {
   const HomeScreen({super.key});
 
@@ -20,6 +20,10 @@ class HomeScreen extends StatefulWidget {
 class _HomeScreenState extends State<HomeScreen> with TickerProviderStateMixin {
   List<Video>? _discoverVideos;
   List<Video>? _followingVideos;
+
+  // TODO
+  // List<Quest>? _activeQuests; 
+
   bool _loading = true;
 
   @override
@@ -34,25 +38,27 @@ class _HomeScreenState extends State<HomeScreen> with TickerProviderStateMixin {
       final discover = await videoRepo.getTrendingVideos(limit: 8);
       List<Video> following = [];
       try {
-        following = await videoRepo.getFollowingFeed(currentUser.id, limit: 8);
+        following = await videoRepo.getFollowingFeed(currentUser.id, limit: 12);
       } catch (_) {
         following = [];
       }
 
+      // TODO: _activeQuests = await questRepo.getActiveQuests(currentUser.id);
+
       if (mounted) {
         setState(() {
-        _discoverVideos = discover;
-        _followingVideos = following;
-        _loading = false;
-      });
+          _discoverVideos = discover;
+          _followingVideos = following;
+          _loading = false;
+        });
       }
     } catch (e) {
       if (mounted) {
         setState(() {
-        _discoverVideos = [];
-        _followingVideos = [];
-        _loading = false;
-      });
+          _discoverVideos = [];
+          _followingVideos = [];
+          _loading = false;
+        });
       }
     }
   }
@@ -60,308 +66,557 @@ class _HomeScreenState extends State<HomeScreen> with TickerProviderStateMixin {
   @override
   Widget build(BuildContext context) {
     final cs = Theme.of(context).colorScheme;
+
     return Scaffold(
       backgroundColor: cs.surface,
       body: SafeArea(
-        child: RefreshIndicator(
-          onRefresh: _loadContent,
-          child: SingleChildScrollView(
-            padding: EdgeInsets.all(context.uiSpace(14)),
-            child: Column(
-              crossAxisAlignment: CrossAxisAlignment.start,
-              children: [
-                _buildHeader(cs),
-                const SizedBox(height: 12),
-                _buildSearchBar(cs),
-                const SizedBox(height: 8),
-                _buildSearchChips(cs),
-                const SizedBox(height: 10),
-                _buildLearningCard(cs),
-                const SizedBox(height: 18),
-                _buildSectionLabel('Discover', cs, subtitle: 'New & trending'),
-                const SizedBox(height: 8),
-                _buildDiscoverGrid(),
-                const SizedBox(height: 12),
-                _buildSectionLabel('Following', cs, subtitle: 'Latest from creators you follow'),
-                const SizedBox(height: 8),
-                _buildFollowingList(),
-                const SizedBox(height: 40),
-              ],
-            ),
-          ),
-        ),
-      ),
-    );
-  }
+        child: LayoutBuilder(
+          builder: (context, constraints) {
+            final isTablet = constraints.maxWidth > 600;
 
-  Widget _buildHeader(ColorScheme cs) {
-    final name = currentUser.username;
-    return Container(
-      padding: EdgeInsets.all(context.uiSpace(12)),
-      decoration: BoxDecoration(
-        color: cs.surfaceContainerHigh,
-        borderRadius: BorderRadius.circular(context.uiRadiusLg),
-        border: Border.all(color: cs.outlineVariant.withValues(alpha: 0.6)),
-        boxShadow: [BoxShadow(color: cs.scrim.withValues(alpha: 0.04), blurRadius: 12, offset: const Offset(0, 6))],
-      ),
-      child: Row(
-        children: [
-          Avatar(imageUrl: currentUser.profileImageUrl, name: currentUser.username, colorScheme: cs),
-          const SizedBox(width: 12),
-          Expanded(
-            child: Column(
-              crossAxisAlignment: CrossAxisAlignment.start,
-              children: [
-                Text(getRandomWelcomeMessageFor(name, 'Lumox'), style: TextStyle(color: cs.onSurface, fontSize: 20, fontWeight: FontWeight.w800, height: 1.05)),
-                const SizedBox(height: 6),
-                Text('Here’s what’s new for you', style: TextStyle(color: cs.onSurfaceVariant, fontSize: 13)),
-              ],
-            ),
-          ),
-          const SizedBox(width: 8),
-          GestureDetector(
-            onTap: () => GoRouter.of(context).go(DeepLinkBuilder.quests()),
-            child: Container(
-              padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 8),
-              decoration: BoxDecoration(
-                color: cs.primaryContainer,
-                borderRadius: BorderRadius.circular(context.uiRadiusMd),
-                boxShadow: [BoxShadow(color: cs.primary.withValues(alpha: 0.12), blurRadius: 8, offset: const Offset(0, 4))],
-              ),
-              child: Row(
-                children: [
-                  Icon(Icons.map_outlined, size: 18, color: cs.onPrimaryContainer),
-                  const SizedBox(width: 8),
-                  Text('Quests', style: TextStyle(color: cs.onPrimaryContainer, fontWeight: FontWeight.w700)),
+            return RefreshIndicator(
+              onRefresh: _loadContent,
+              color: cs.primary,
+              child: CustomScrollView(
+                physics: const BouncingScrollPhysics(parent: AlwaysScrollableScrollPhysics()),
+                slivers: [
+                  _buildSliverAppBar(cs),
+
+                  SliverToBoxAdapter(
+                    child: Padding(
+                      padding: EdgeInsets.symmetric(
+                          horizontal: context.uiSpace(16),
+                          vertical: context.uiSpace(8)
+                      ),
+                      child: _buildInteractiveSearchBar(cs),
+                    ),
+                  ),
+
+                  SliverToBoxAdapter(
+                    child: Padding(
+                      padding: EdgeInsets.only(top: context.uiSpace(24), bottom: context.uiSpace(8)),
+                      child: _buildSectionTitle(cs, 'Your Path', 'Keep progressing'),
+                    ),
+                  ),
+                  SliverToBoxAdapter(
+                    child: _buildHorizontalQuestsList(cs, isTablet),
+                  ),
+
+                  SliverToBoxAdapter(
+                    child: Padding(
+                      padding: EdgeInsets.only(top: context.uiSpace(32), bottom: context.uiSpace(16)),
+                      child: _buildSectionTitle(cs, 'Discover', 'Trending right now',
+                          onSeeAll: () => GoRouter.of(context).push(DeepLinkBuilder.search()) // TODO: Route to full trending page
+                      ),
+                    ),
+                  ),
+                  SliverToBoxAdapter(
+                    child: _buildDiscoverCarousel(cs),
+                  ),
+
+                  SliverToBoxAdapter(
+                    child: Padding(
+                      padding: EdgeInsets.only(top: context.uiSpace(32), bottom: context.uiSpace(16)),
+                      child: _buildSectionTitle(cs, 'Following', 'Latest from your creators'),
+                    ),
+                  ),
+                  _buildFollowingGrid(cs, isTablet),
+
+                  SliverToBoxAdapter(child: SizedBox(height: context.uiSpace(40))),
                 ],
               ),
-            ),
-          )
-        ],
-      ),
-    );
-  }
-
-  Widget _buildSearchBar(ColorScheme cs) {
-    return GestureDetector(
-      onTap: () => GoRouter.of(context).push(DeepLinkBuilder.search()),
-      child: AnimatedContainer(
-        duration: const Duration(milliseconds: 220),
-        height: 52,
-        padding: const EdgeInsets.symmetric(horizontal: 12),
-        decoration: BoxDecoration(
-          color: cs.surfaceContainerHigh,
-          borderRadius: BorderRadius.circular(context.uiRadiusLg),
-          border: Border.all(color: cs.outlineVariant.withValues(alpha: 0.9)),
-        ),
-        child: Row(
-          children: [
-            Icon(Icons.search_rounded, color: cs.onSurfaceVariant),
-            const SizedBox(width: 12),
-            Expanded(child: Text('Search videos, creators, tags…', style: TextStyle(color: cs.onSurfaceVariant))),
-            const SizedBox(width: 6),
-            Icon(Icons.keyboard_voice_outlined, color: cs.onSurfaceVariant),
-          ],
+            );
+          },
         ),
       ),
     );
   }
 
-  Widget _buildLearningCard(ColorScheme cs) {
-    return Container(
-      width: double.infinity,
-      padding: const EdgeInsets.all(14),
-      decoration: BoxDecoration(
-        color: cs.surfaceContainerLow,
-        borderRadius: BorderRadius.circular(context.uiRadiusMd),
-        border: Border.all(color: cs.outlineVariant.withValues(alpha: 0.45)),
+
+  SliverAppBar _buildSliverAppBar(ColorScheme cs) {
+    return SliverAppBar(
+      floating: true,
+      backgroundColor: cs.surface,
+      elevation: 0,
+      expandedHeight: 80,
+      flexibleSpace: FlexibleSpaceBar(
+        background: Padding(
+          padding: EdgeInsets.symmetric(horizontal: context.uiSpace(16)),
+          child: Row(
+            crossAxisAlignment: CrossAxisAlignment.center,
+            children: [
+              Avatar(imageUrl: currentUser.profileImageUrl, name: currentUser.username, colorScheme: cs),
+              SizedBox(width: context.uiSpace(16)),
+              Expanded(
+                child: Column(
+                  mainAxisAlignment: MainAxisAlignment.center,
+                  crossAxisAlignment: CrossAxisAlignment.start,
+                  children: [
+                    Text('Welcome back,', style: TextStyle(color: cs.onSurfaceVariant, fontSize: 14)),
+                    Text(
+                      currentUser.username,
+                      style: TextStyle(color: cs.onSurface, fontSize: 22, fontWeight: FontWeight.w800),
+                    ),
+                  ],
+                ),
+              ),
+              Material(
+                color: cs.surfaceContainerHigh,
+                shape: const CircleBorder(),
+                clipBehavior: Clip.hardEdge,
+                child: InkWell(
+                  onTap: () => GoRouter.of(context).go(DeepLinkBuilder.quests()),
+                  child: Padding(
+                    padding: const EdgeInsets.all(12.0),
+                    child: Icon(Icons.map_outlined, color: cs.primary),
+                  ),
+                ),
+              ),
+            ],
+          ),
+        ),
       ),
-      child: Row(
-        children: [
-          Expanded(
-            child: Column(
-              crossAxisAlignment: CrossAxisAlignment.start,
+    );
+  }
+
+
+  Widget _buildInteractiveSearchBar(ColorScheme cs) {
+    return Hero(
+      tag: 'search_bar', // TODO: Add matching Hero tag to SearchScreen
+      child: Material(
+        color: cs.surfaceContainerHighest.withValues(alpha: 0.5),
+        borderRadius: BorderRadius.circular(context.uiRadiusLg),
+        clipBehavior: Clip.hardEdge,
+        child: InkWell(
+          onTap: () => GoRouter.of(context).push(DeepLinkBuilder.search()),
+          child: Container(
+            height: 56,
+            padding: EdgeInsets.symmetric(horizontal: context.uiSpace(16)),
+            child: Row(
               children: [
-                Text('Continue your learning path', style: TextStyle(color: cs.onSurface, fontWeight: FontWeight.w800)),
-                const SizedBox(height: 6),
-                Text('Resume quests and track your progress', style: TextStyle(color: cs.onSurfaceVariant, fontSize: 13)),
-                const SizedBox(height: 12),
-                LinearProgressIndicator(value: 0.42, color: cs.primary, backgroundColor: cs.surfaceContainerHighest),
+                Icon(Icons.search_rounded, color: cs.onSurfaceVariant),
+                SizedBox(width: context.uiSpace(12)),
+                Expanded(
+                  child: Text(
+                    'Search videos, creators or tags...',
+                    style: TextStyle(color: cs.onSurfaceVariant, fontSize: 16),
+                  ),
+                ),
               ],
             ),
           ),
-          const SizedBox(width: 12),
-          ElevatedButton(
-            onPressed: () => GoRouter.of(context).go('/quests'),
-            style: ElevatedButton.styleFrom(shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(context.uiRadiusSm)), elevation: 0, backgroundColor: cs.primary),
-            child: const Text('Open'),
-          )
+        ),
+      ),
+    );
+  }
+  
+  Widget _buildSectionTitle(ColorScheme cs, String title, String subtitle, {VoidCallback? onSeeAll}) {
+    return Padding(
+      padding: EdgeInsets.symmetric(horizontal: context.uiSpace(16)),
+      child: Row(
+        mainAxisAlignment: MainAxisAlignment.spaceBetween,
+        crossAxisAlignment: CrossAxisAlignment.end,
+        children: [
+          Column(
+            crossAxisAlignment: CrossAxisAlignment.start,
+            children: [
+              Text(
+                title,
+                style: TextStyle(color: cs.onSurface, fontWeight: FontWeight.w900, fontSize: 20, letterSpacing: -0.5),
+              ),
+              const SizedBox(height: 2),
+              Text(
+                subtitle,
+                style: TextStyle(color: cs.onSurfaceVariant, fontSize: 14),
+              ),
+            ],
+          ),
+          if (onSeeAll != null)
+            InkWell(
+              onTap: onSeeAll,
+              borderRadius: BorderRadius.circular(context.uiRadiusSm),
+              child: Padding(
+                padding: const EdgeInsets.all(4.0),
+                child: Text('See all', style: TextStyle(color: cs.primary, fontWeight: FontWeight.bold)),
+              ),
+            ),
         ],
       ),
     );
   }
 
-  Widget _buildSectionLabel(String label, ColorScheme cs, {String? subtitle}) {
-    return Row(
-      mainAxisAlignment: MainAxisAlignment.spaceBetween,
-      children: [
-        Column(crossAxisAlignment: CrossAxisAlignment.start, children: [
-          Text(label, style: TextStyle(color: cs.onSurface, fontWeight: FontWeight.w800, fontSize: 16)),
-          if (subtitle != null) Text(subtitle, style: TextStyle(color: cs.onSurfaceVariant, fontSize: 12)),
-        ]),
-        TextButton(onPressed: () => GoRouter.of(context).push(DeepLinkBuilder.search()), child: Text('See all', style: TextStyle(color: cs.primary))),
-      ],
+
+  Widget _buildHorizontalQuestsList(ColorScheme cs, bool isTablet) {
+    return SizedBox(
+      height: 140,
+      child: ListView(
+        scrollDirection: Axis.horizontal,
+        physics: const BouncingScrollPhysics(),
+        padding: EdgeInsets.symmetric(horizontal: context.uiSpace(16)),
+        children: [
+          _buildQuestCard(
+            cs: cs,
+            title: 'Continue learning',
+            subtitle: 'Basics of Flutter',
+            progress: 0.65,
+            icon: Icons.play_arrow_rounded,
+            color: cs.primaryContainer,
+            onColor: cs.onPrimaryContainer,
+            width: isTablet ? 300 : MediaQuery.of(context).size.width * 0.75,
+          ),
+          SizedBox(width: context.uiSpace(12)),
+          _buildQuestCard(
+            cs: cs,
+            title: 'Daily Goal',
+            subtitle: 'Watch 3 videos',
+            progress: 0.33,
+            icon: Icons.local_fire_department_rounded,
+            color: cs.tertiaryContainer,
+            onColor: cs.onTertiaryContainer,
+            width: isTablet ? 300 : MediaQuery.of(context).size.width * 0.75,
+          ),
+        ],
+      ),
     );
   }
 
-  Widget _buildSearchChips(ColorScheme cs) {
-    final chips = ['test', 'test2', 'test3', 'test4', 'test5'];
-    return Wrap(
-      spacing: 8,
-      runSpacing: 8,
-      children: chips.map((c) {
-        return ActionChip(
-          label: Text('#$c', style: TextStyle(color: cs.onSurface)),
-          onPressed: () => GoRouter.of(context).push(DeepLinkBuilder.search(query: c)),
-          backgroundColor: cs.surfaceContainerHighest,
-          padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 8),
-        );
-      }).toList(),
+  Widget _buildQuestCard({
+    required ColorScheme cs,
+    required String title,
+    required String subtitle,
+    required double progress,
+    required IconData icon,
+    required Color color,
+    required Color onColor,
+    required double width,
+  }) {
+    return Container(
+      width: width,
+      decoration: BoxDecoration(
+        color: color,
+        borderRadius: BorderRadius.circular(context.uiRadiusLg),
+      ),
+      clipBehavior: Clip.hardEdge,
+      child: Material(
+        color: Colors.transparent,
+        child: InkWell(
+          onTap: () => GoRouter.of(context).go('/quests'),
+          child: Padding(
+            padding: EdgeInsets.all(context.uiSpace(16)),
+            child: Column(
+              crossAxisAlignment: CrossAxisAlignment.start,
+              mainAxisAlignment: MainAxisAlignment.spaceBetween,
+              children: [
+                Row(
+                  mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                  children: [
+                    Container(
+                      padding: const EdgeInsets.all(8),
+                      decoration: BoxDecoration(color: onColor.withValues(alpha: 0.1), shape: BoxShape.circle),
+                      child: Icon(icon, color: onColor),
+                    ),
+                    Text('${(progress * 100).toInt()}%', style: TextStyle(color: onColor, fontWeight: FontWeight.bold)),
+                  ],
+                ),
+                Column(
+                  crossAxisAlignment: CrossAxisAlignment.start,
+                  children: [
+                    Text(title, style: TextStyle(color: onColor, fontWeight: FontWeight.w800, fontSize: 16)),
+                    Text(subtitle, style: TextStyle(color: onColor.withValues(alpha: 0.8), fontSize: 13)),
+                    const SizedBox(height: 12),
+                    ClipRRect(
+                      borderRadius: BorderRadius.circular(context.uiRadiusSm),
+                      child: LinearProgressIndicator(
+                        value: progress,
+                        minHeight: 6,
+                        color: onColor,
+                        backgroundColor: onColor.withValues(alpha: 0.2),
+                      ),
+                    ),
+                  ],
+                ),
+              ],
+            ),
+          ),
+        ),
+      ),
     );
   }
 
-  Widget _buildDiscoverGrid() {
-    if (_loading) return const SizedBox(height: 200, child: Center(child: CircularProgressIndicator()));
+
+  Widget _buildDiscoverCarousel(ColorScheme cs) {
+    if (_loading) {
+      return const SizedBox(height: 280, child: Center(child: CircularProgressIndicator()));
+    }
+
     final items = _discoverVideos ?? [];
-    if (items.isEmpty) return SizedBox(height: 140, child: Center(child: Text('No discoverable videos yet', style: TextStyle(color: Theme.of(context).colorScheme.onSurfaceVariant))));
+    if (items.isEmpty) {
+      return Container(
+        height: 200,
+        alignment: Alignment.center,
+        child: Text('Nothing trending right now.', style: TextStyle(color: cs.onSurfaceVariant)),
+      );
+    }
 
     return SizedBox(
-      height: 200,
+      height: 280, 
       child: ListView.separated(
         scrollDirection: Axis.horizontal,
+        physics: const BouncingScrollPhysics(),
+        padding: EdgeInsets.symmetric(horizontal: context.uiSpace(16)),
         itemCount: items.length,
-        separatorBuilder: (_, __) => const SizedBox(width: 12),
+        separatorBuilder: (_, __) => SizedBox(width: context.uiSpace(16)),
         itemBuilder: (context, index) {
-          final v = items[index];
-          return _largeVideoCard(video: v, width: MediaQuery.of(context).size.width * 0.72, ticker: this);
+          final video = items[index];
+          return _LargeCarouselVideoCard(video: video, ticker: this, videos: items);
         },
       ),
     );
   }
 
-  Widget _buildFollowingList() {
-    if (_loading) return const SizedBox(height: 160, child: Center(child: CircularProgressIndicator()));
+
+  Widget _buildFollowingGrid(ColorScheme cs, bool isTablet) {
+    if (_loading) {
+      return const SliverToBoxAdapter(child: Center(child: CircularProgressIndicator()));
+    }
+
     final items = _followingVideos ?? [];
-    if (items.isEmpty) return SizedBox(height: 120, child: Center(child: Text('No new videos from people you follow', style: TextStyle(color: Theme.of(context).colorScheme.onSurfaceVariant))));
-
-    return ListView.separated(
-      shrinkWrap: true,
-      physics: const NeverScrollableScrollPhysics(),
-      itemCount: items.length,
-      separatorBuilder: (_, _) => const SizedBox(height: 12),
-      itemBuilder: (context, index) {
-        final v = items[index];
-        return _RectListVideoCard(video: v, ticker: this);
-      },
-    );
-  }
-
-  Widget _largeVideoCard({required Video video, required double width, required TickerProvider ticker}) {
-    final cs = Theme.of(context).colorScheme;
-    return GestureDetector(
-      onTap: () async {
-        await openVideoPlayer(context: context, listedVideos: _discoverVideos ?? [video], videoIndex: _discoverVideos?.indexOf(video) ?? 0, feedModel: null, tickerProvider: ticker);
-      },
-      child: Container(
-        width: width,
-        decoration: BoxDecoration(
-          borderRadius: BorderRadius.circular(context.uiRadiusLg),
-          color: cs.surfaceContainerHigh,
-          boxShadow: [BoxShadow(color: cs.scrim.withValues(alpha: 0.06), blurRadius: 12, offset: const Offset(0, 6))],
-          border: Border.all(color: cs.outlineVariant.withValues(alpha: 0.35)),
+    if (items.isEmpty) {
+      return SliverToBoxAdapter(
+        child: Center(
+          child: Padding(
+            padding: EdgeInsets.all(context.uiSpace(32)),
+            child: Text('Follow more creators to see their content here.', style: TextStyle(color: cs.onSurfaceVariant)),
+          ),
         ),
-        clipBehavior: Clip.hardEdge,
-        child: Column(
-          crossAxisAlignment: CrossAxisAlignment.start,
-          children: [
-            Expanded(
-              child: FutureBuilder(
-                future: thumbnailFor(video),
-                builder: (context, snap) {
-                  if (snap.hasData && snap.data != null) {
-                    return Stack(fit: StackFit.expand, children: [Image.memory(snap.data!, fit: BoxFit.cover), Positioned(right: 12, bottom: 12, child: Container(padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 4), decoration: BoxDecoration(color: cs.scrim.withValues(alpha: 0.6), borderRadius: BorderRadius.circular(context.uiRadiusSm)), child: Text(video.duration != null ? _formatDuration(video.duration) : '', style: TextStyle(color: cs.onSurface, fontSize: 12))))]);
-                  }
-                  return Container(color: cs.surfaceContainerHighest);
-                },
-              ),
-            ),
-            Padding(
-              padding: const EdgeInsets.all(12),
-              child: Column(crossAxisAlignment: CrossAxisAlignment.start, children: [Text(video.title, maxLines: 2, overflow: TextOverflow.ellipsis, style: TextStyle(color: cs.onSurface, fontWeight: FontWeight.w800)), const SizedBox(height: 6), Text(video.authorName, style: TextStyle(color: cs.onSurfaceVariant))]),
-            ),
-          ],
+      );
+    }
+
+    return SliverPadding(
+      padding: EdgeInsets.symmetric(horizontal: context.uiSpace(16)),
+      sliver: SliverGrid(
+        gridDelegate: SliverGridDelegateWithFixedCrossAxisCount(
+          crossAxisCount: isTablet ? 2 : 1,
+          mainAxisSpacing: context.uiSpace(16),
+          crossAxisSpacing: context.uiSpace(16),
+          childAspectRatio: isTablet ? 2.5 : 3.0,
         ),
-      ),
-    );
-  }
-
-  String _formatDuration(Duration? duration) {
-    if (duration == null) return '';
-    final m = duration.inMinutes.remainder(60).toString().padLeft(2, '0');
-    final s = duration.inSeconds.remainder(60).toString().padLeft(2, '0');
-    final h = duration.inHours;
-    return h > 0 ? '$h:$m:$s' : '$m:$s';
-  }
-
-  Widget _RectListVideoCard({required Video video, required TickerProvider ticker}) {
-    final cs = Theme.of(context).colorScheme;
-    return GestureDetector(
-      onTap: () async {
-        final items = _followingVideos ?? [video];
-        await openVideoPlayer(context: context, listedVideos: items, videoIndex: items.indexOf(video), feedModel: null, tickerProvider: ticker);
-      },
-      child: Container(
-        decoration: BoxDecoration(color: cs.surfaceContainerHigh, borderRadius: BorderRadius.circular(context.uiRadiusMd), border: Border.all(color: cs.outlineVariant.withValues(alpha: 0.35)), boxShadow: [BoxShadow(color: cs.scrim.withValues(alpha: 0.04), blurRadius: 8, offset: const Offset(0,4))]),
-        clipBehavior: Clip.hardEdge,
-        child: Row(
-          children: [
-            SizedBox(width: 160, height: 100, child: FutureBuilder(future: thumbnailFor(video), builder: (context, snap) { if (snap.hasData && snap.data != null) return Image.memory(snap.data!, fit: BoxFit.cover); return Container(color: cs.surfaceContainerHighest);})),
-            Expanded(
-              child: Padding(
-                padding: const EdgeInsets.all(12),
-                child: Column(crossAxisAlignment: CrossAxisAlignment.start, children: [Text(video.title, maxLines: 2, overflow: TextOverflow.ellipsis, style: TextStyle(color: cs.onSurface, fontWeight: FontWeight.w800)), const SizedBox(height: 6), Text(video.authorName, style: TextStyle(color: cs.onSurfaceVariant))]),
-              ),
-            )
-          ],
+        delegate: SliverChildBuilderDelegate(
+              (context, index) => _FeedListVideoCard(video: items[index], ticker: this, videos: items),
+          childCount: items.length,
         ),
       ),
     );
   }
 }
 
-List<String> rawWelcomeMessages = [
-  'Welcome back, {username}! Ready to dive into some new videos?',
-  'Hey {username}, great to see you again! Let\'s find something awesome to watch.',
-  'Welcome back, {username}! Your next favorite video is just a tap away.',
-  'Hi {username}, welcome back! Explore the latest trending videos and creators.',
-  'Welcome back, {username}! Let\'s continue your learning journey with some new content.',
-  'Hey {username}, great to have you back! Check out what\'s new and trending today.',
-  'Welcome back, {username}! How is your learning path going? Let\'s find some videos to help you progress.',
-  'Hi {username}, welcome back to {appName}! Discover new videos and creators to fuel your passion.',
-  'Welcome back, {username}! Your personalized video feed is waiting for you. Let\'s explore together.',
-  'Hey {username}, great to see you again! Dive into the latest videos and continue your learning adventure on {appName}.',
-  'Welcome back, {username}! Let\'s find some inspiring videos to keep your learning momentum going.',
-  'Hi {username}, welcome back! Explore the latest content and continue your journey of discovery on {appName}.',
-  'Welcome back, {username}! Your next learning breakthrough is just a video away. Let\'s find it together.',
-  'Hey {username}, great to have you back! Check out the latest videos and keep progressing on your learning path with {appName}.',
-  'Welcome back, {username}! Let\'s continue your learning adventure with some new and exciting videos on {appName}.',
-  'Hi {username}, welcome back! Your personalized video feed is ready to help you discover new content and keep your learning journey going on {appName}.',
-  'Welcome back, {username}! Let\'s find some amazing videos to fuel your passion and keep your learning momentum going on {appName}.',
-  'Hey {username}, great to see you again! Explore the latest videos and continue your learning adventure on {appName}. Your next breakthrough is just a tap away.',
-  'Welcome back, {username}! What are you in the mood for today? Let\'s find some videos!',
-];
+class _LargeCarouselVideoCard extends StatelessWidget {
+  final Video video;
+  final List<Video> videos;
+  final TickerProvider ticker;
 
-String getRandomWelcomeMessageFor(String username, String appName){
-  final randomIndex = DateTime.now().millisecondsSinceEpoch % rawWelcomeMessages.length;
-  return rawWelcomeMessages[randomIndex].replaceAll('{username}', username).replaceAll('{appName}', appName);
+  const _LargeCarouselVideoCard({required this.video, required this.videos, required this.ticker});
+
+  @override
+  Widget build(BuildContext context) {
+    final cs = Theme.of(context).colorScheme;
+    final isTablet = MediaQuery.of(context).size.width > 600;
+
+    return Container(
+      width: isTablet ? 360 : MediaQuery.of(context).size.width * 0.8,
+      decoration: BoxDecoration(
+        color: cs.surfaceContainerHigh,
+        borderRadius: BorderRadius.circular(context.uiRadiusLg),
+        boxShadow: [
+          BoxShadow(color: cs.shadow.withValues(alpha: 0.05), blurRadius: 10, offset: const Offset(0, 4)),
+        ],
+      ),
+      clipBehavior: Clip.hardEdge,
+      child: Material(
+        color: Colors.transparent,
+        child: InkWell(
+          onTap: () async {
+            // TODO: Ensure your openVideoPlayer handles context and logic correctly
+            await openVideoPlayer(
+              context: context,
+              listedVideos: videos,
+              videoIndex: videos.indexOf(video),
+              feedModel: null,
+              tickerProvider: ticker,
+            );
+          },
+          child: Column(
+            crossAxisAlignment: CrossAxisAlignment.start,
+            children: [
+              Expanded(
+                flex: 3,
+                child: FutureBuilder(
+                  future: thumbnailFor(video),
+                  builder: (context, snap) {
+                    Widget imageWidget = Container(color: cs.surfaceContainerHighest);
+                    if (snap.hasData && snap.data != null) {
+                      imageWidget = Image.memory(snap.data!, fit: BoxFit.cover, width: double.infinity);
+                    }
+                    return Stack(
+                      fit: StackFit.expand,
+                      children: [
+                        imageWidget,
+                        Positioned.fill(
+                          child: DecoratedBox(
+                            decoration: BoxDecoration(
+                              gradient: LinearGradient(
+                                begin: Alignment.topCenter,
+                                end: Alignment.bottomCenter,
+                                colors: [Colors.transparent, Colors.black.withValues(alpha: 0.4)],
+                                stops: const [0.7, 1.0],
+                              ),
+                            ),
+                          ),
+                        ),
+                        if (video.duration != null)
+                          Positioned(
+                            right: 12,
+                            bottom: 12,
+                            child: Container(
+                              padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 4),
+                              decoration: BoxDecoration(
+                                color: Colors.black.withValues(alpha: 0.7),
+                                borderRadius: BorderRadius.circular(context.uiRadiusSm),
+                              ),
+                              child: Text(
+                                _formatDuration(video.duration!),
+                                style: const TextStyle(color: Colors.white, fontSize: 12, fontWeight: FontWeight.bold),
+                              ),
+                            ),
+                          ),
+                      ],
+                    );
+                  },
+                ),
+              ),
+              Expanded(
+                flex: 2,
+                child: Padding(
+                  padding: EdgeInsets.all(context.uiSpace(16)),
+                  child: Column(
+                    crossAxisAlignment: CrossAxisAlignment.start,
+                    mainAxisAlignment: MainAxisAlignment.center,
+                    children: [
+                      Text(
+                        video.title,
+                        maxLines: 2,
+                        overflow: TextOverflow.ellipsis,
+                        style: TextStyle(color: cs.onSurface, fontWeight: FontWeight.w800, fontSize: 16, height: 1.2),
+                      ),
+                      const SizedBox(height: 8),
+                      Row(
+                        children: [
+                          Icon(Icons.person_outline, size: 14, color: cs.primary),
+                          const SizedBox(width: 4),
+                          Text(
+                            video.authorName,
+                            style: TextStyle(color: cs.onSurfaceVariant, fontSize: 14, fontWeight: FontWeight.w500),
+                          ),
+                        ],
+                      ),
+                    ],
+                  ),
+                ),
+              ),
+            ],
+          ),
+        ),
+      ),
+    );
+  }
+
+  String _formatDuration(Duration duration) {
+    final m = duration.inMinutes.remainder(60).toString().padLeft(2, '0');
+    final s = duration.inSeconds.remainder(60).toString().padLeft(2, '0');
+    final h = duration.inHours;
+    return h > 0 ? '$h:$m:$s' : '$m:$s';
+  }
+}
+
+class _FeedListVideoCard extends StatelessWidget {
+  final Video video;
+  final List<Video> videos;
+  final TickerProvider ticker;
+
+  const _FeedListVideoCard({required this.video, required this.videos, required this.ticker});
+
+  @override
+  Widget build(BuildContext context) {
+    final cs = Theme.of(context).colorScheme;
+
+    return Container(
+      decoration: BoxDecoration(
+        color: cs.surfaceContainerLow,
+        borderRadius: BorderRadius.circular(context.uiRadiusMd),
+        border: Border.all(color: cs.outlineVariant.withValues(alpha: 0.3)),
+      ),
+      clipBehavior: Clip.hardEdge,
+      child: Material(
+        color: Colors.transparent,
+        child: InkWell(
+          onTap: () async {
+            await openVideoPlayer(
+              context: context,
+              listedVideos: videos,
+              videoIndex: videos.indexOf(video),
+              feedModel: null,
+              tickerProvider: ticker,
+            );
+          },
+          child: Row(
+            children: [
+              AspectRatio(
+                aspectRatio: 16 / 9,
+                child: FutureBuilder(
+                  future: thumbnailFor(video),
+                  builder: (context, snap) {
+                    if (snap.hasData && snap.data != null) {
+                      return Image.memory(snap.data!, fit: BoxFit.cover);
+                    }
+                    return Container(color: cs.surfaceContainerHighest, child: const Icon(Icons.image_outlined, color: Colors.grey));
+                  },
+                ),
+              ),
+              Expanded(
+                child: Padding(
+                  padding: EdgeInsets.all(context.uiSpace(12)),
+                  child: Column(
+                    crossAxisAlignment: CrossAxisAlignment.start,
+                    mainAxisAlignment: MainAxisAlignment.center,
+                    children: [
+                      Text(
+                        video.title,
+                        maxLines: 2,
+                        overflow: TextOverflow.ellipsis,
+                        style: TextStyle(color: cs.onSurface, fontWeight: FontWeight.w800, fontSize: 14),
+                      ),
+                      const Spacer(),
+                      Text(
+                        video.authorName,
+                        maxLines: 1,
+                        overflow: TextOverflow.ellipsis,
+                        style: TextStyle(color: cs.onSurfaceVariant, fontSize: 13),
+                      ),
+                      if (video.tags.isNotEmpty) ...[
+                        const SizedBox(height: 4),
+                        Text(
+                          '#${video.tags.first}',
+                          style: TextStyle(color: cs.primary, fontSize: 11, fontWeight: FontWeight.bold),
+                        )
+                      ]
+                    ],
+                  ),
+                ),
+              ),
+            ],
+          ),
+        ),
+      ),
+    );
+  }
 }
