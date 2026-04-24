@@ -2,17 +2,17 @@ import 'package:flutter/material.dart';
 import 'package:go_router/go_router.dart';
 import 'package:wurp/base_logic.dart';
 import 'package:wurp/logic/feed_recommendation/search_video_result_recommender.dart';
-import 'package:wurp/logic/users/user_model.dart';
 import 'package:wurp/logic/repositories/video_repository.dart';
+import 'package:wurp/logic/users/user_model.dart';
 import 'package:wurp/logic/video/video.dart';
-import 'package:wurp/ui/feed_view_model.dart';
-import 'package:wurp/ui/screens/search_screen/search_query.dart';
-import 'package:wurp/ui/screens/search_screen/widgets/animated_search_bar.dart';
-import 'package:wurp/ui/misc/preloading_list.dart';
-import 'package:wurp/ui/screens/search_screen/widgets/search_user_card.dart';
-import 'package:wurp/ui/screens/search_screen/widgets/search_video_card.dart';
 import 'package:wurp/ui/animations/slide_morph_transitions.dart';
 import 'package:wurp/ui/deep_link_builder.dart';
+import 'package:wurp/ui/feed_view_model.dart';
+import 'package:wurp/ui/misc/preloading_list.dart';
+import 'package:wurp/ui/screens/search_screen/search_query.dart';
+import 'package:wurp/ui/screens/search_screen/widgets/animated_search_bar.dart';
+import 'package:wurp/ui/screens/search_screen/widgets/search_user_card.dart';
+import 'package:wurp/ui/screens/search_screen/widgets/search_video_card.dart';
 import 'package:wurp/ui/short_video_player.dart';
 
 import '../../theme/theme_ui_values.dart';
@@ -22,12 +22,7 @@ enum SearchScope { videos, profiles, all }
 enum SearchMode { text, tags }
 
 class SearchScreen extends StatefulWidget {
-  const SearchScreen({
-    super.key,
-    this.initialQuery,
-    this.initialScope = SearchScope.all,
-    this.initialMode = SearchMode.text,
-  });
+  const SearchScreen({super.key, this.initialQuery, this.initialScope = SearchScope.all, this.initialMode = SearchMode.text});
 
   final String? initialQuery;
   final SearchScope initialScope;
@@ -150,10 +145,7 @@ class _SearchScreenState extends State<SearchScreen> with TickerProviderStateMix
       }, () => userRepository.countSearchUsers(trimmedQuery));
     }
 
-    await Future.wait([
-      if (nextVideoQuery != null) nextVideoQuery.preloadMore(),
-      if (nextUserQuery != null) nextUserQuery.preloadMore(),
-    ]);
+    await Future.wait([if (nextVideoQuery != null) nextVideoQuery.preloadMore(), if (nextUserQuery != null) nextUserQuery.preloadMore()]);
     if (requestId != _searchRequestId) return;
     if (!mounted) return;
 
@@ -309,13 +301,13 @@ class _SearchScreenState extends State<SearchScreen> with TickerProviderStateMix
           prefixIcon: Icon(Icons.search_rounded, color: cs.onSurfaceVariant, size: 22),
           suffixIcon: GestureDetector(
             onTap: _search,
-              child: Container(
+            child: Container(
               margin: const EdgeInsets.all(8),
-                decoration: BoxDecoration(color: cs.tertiaryContainer, borderRadius: BorderRadius.circular(context.uiRadiusMd)),
+              decoration: BoxDecoration(color: cs.tertiaryContainer, borderRadius: BorderRadius.circular(context.uiRadiusMd)),
               child: AnimatedScale(
                 duration: const Duration(milliseconds: 180),
                 scale: _loading ? 0.92 : 1,
-                  child: Icon(Icons.arrow_forward_rounded, color: cs.onTertiaryContainer, size: 20),
+                child: Icon(Icons.arrow_forward_rounded, color: cs.onTertiaryContainer, size: 20),
               ),
             ),
           ),
@@ -415,7 +407,11 @@ class _SearchSegmentButton extends StatelessWidget {
         ),
         child: AnimatedDefaultTextStyle(
           duration: const Duration(milliseconds: 180),
-          style: TextStyle(fontWeight: selected ? FontWeight.w700 : FontWeight.w600, fontSize: 13, color: selected ? cs.onSecondaryContainer : cs.onSurfaceVariant),
+          style: TextStyle(
+            fontWeight: selected ? FontWeight.w700 : FontWeight.w600,
+            fontSize: 13,
+            color: selected ? cs.onSecondaryContainer : cs.onSurfaceVariant,
+          ),
           child: Row(
             mainAxisAlignment: MainAxisAlignment.center,
             children: [
