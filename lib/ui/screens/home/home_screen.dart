@@ -639,12 +639,12 @@ class _VerticalVideoCardState extends State<_VerticalVideoCard> {
   }
 }
 
-class _LargeCarouselVideoCard extends StatelessWidget {
+class LargeCarouselVideoCard extends StatelessWidget {
   final Video video;
   final List<Video> videos;
   final TickerProvider ticker;
 
-  const _LargeCarouselVideoCard({required this.video, required this.videos, required this.ticker});
+  const LargeCarouselVideoCard({super.key, required this.video, required this.videos, required this.ticker});
 
   @override
   Widget build(BuildContext context) {
@@ -758,29 +758,4 @@ class _FeedListVideoCard extends StatelessWidget {
       ),
     );
   }
-}
-
-Hero _3DEffectHero({required dynamic heroId, required Widget child}) {
-  return Hero(
-    tag: heroId,
-    flightShuttleBuilder: (context, animation, direction, fromContext, toContext) {
-      return AnimatedBuilder(
-        animation: animation,
-        builder: (_, child) {
-          final value = animation.value;
-
-          return Transform(
-            alignment: Alignment.center,
-            transform: Matrix4.identity()
-              ..setEntry(3, 2, 0.001)
-              ..rotateY(value * 1.2)
-              ..scale(1 + value * 0.2),
-            child: child,
-          );
-        },
-        child: (direction == HeroFlightDirection.push ? (fromContext.widget as Hero).child : (toContext.widget as Hero).child),
-      );
-    },
-    child: child,
-  );
 }

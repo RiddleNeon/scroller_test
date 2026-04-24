@@ -1,5 +1,6 @@
 import 'dart:async';
 
+import 'package:cached_network_image/cached_network_image.dart';
 import 'package:flutter/material.dart';
 import 'package:video_player/video_player.dart';
 import 'package:wurp/logic/feed_recommendation/video_recommender_base.dart';
@@ -28,7 +29,7 @@ class VideoItem extends StatefulWidget {
     required this.provider,
     required this.videoProvider,
     required this.index,
-    this.onLikeChanged,
+    this.onLikeChanged, 
   });
 
   @override
@@ -233,7 +234,7 @@ class _VideoItemState extends State<VideoItem> {
                       child: VideoPlayer(widget.controller, key: ValueKey(widget.video.id)),
                     ),
                   )
-                : const SizedBox.expand(),
+                : FittedBox(fit: BoxFit.cover, child: CachedNetworkImage(imageUrl: widget.video.thumbnailUrl!))
           ),
           PageOverlay(
             provider: widget.provider,
