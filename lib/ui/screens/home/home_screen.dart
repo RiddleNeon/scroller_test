@@ -68,7 +68,7 @@ class _HomeScreenState extends State<HomeScreen> with TickerProviderStateMixin {
   Future<void> _loadContent() async {
     setState(() => _loading = true);
     try {
-      final discover = await videoRepo.getTrendingVideos(limit: 8);
+      final discover = await videoRepo.getTrendingVideos(limit: 28);
 
       _followedCreators = await userRepository.getFollowing(currentUser.id, limit: 5);
 
@@ -462,13 +462,21 @@ class _HomeScreenState extends State<HomeScreen> with TickerProviderStateMixin {
     final items = _discoverVideos ?? [];
     if (items.isEmpty) return const SizedBox.shrink();
 
+    //a third of all of the videos
+    final itemsRow1 = items.sublist(0, (items.length / 3).ceil());
+    final itemsRow2 = items.sublist(itemsRow1.length, itemsRow1.length + (items.length / 3).floor());
+    final itemsRow3 = items.sublist(itemsRow1.length + itemsRow2.length, itemsRow1.length + itemsRow2.length + (items.length / 3).floor());
+    
+    
     return SizedBox(
       height: 800,
       child: Column(
         children: [
-          _AutoScrollRow(videos: items, speed: 20, ticker: this),
-          _AutoScrollRow(videos: items, speed: 35, ticker: this),
-          _AutoScrollRow(videos: items, speed: 85, ticker: this),
+          _AutoScrollRow(videos: itemsRow1, speed: 15, ticker: this),
+          const SizedBox(height: 16),
+          _AutoScrollRow(videos: itemsRow2, speed: 45, ticker: this),
+          const SizedBox(height: 16),
+          _AutoScrollRow(videos: itemsRow3, speed: 25, ticker: this),
         ],
       ),
     );
@@ -587,6 +595,7 @@ class _VerticalVideoCardState extends State<_VerticalVideoCard> {
               feedModel: _feedVM,
               tickerProvider: widget.ticker,
             );
+            Future.delayed(const Duration(milliseconds: 800), () => _feedVM!.dispose());
           },
           child: Column(
             crossAxisAlignment: CrossAxisAlignment.start,

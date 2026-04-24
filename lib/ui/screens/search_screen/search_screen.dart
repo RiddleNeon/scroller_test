@@ -261,7 +261,10 @@ class _SearchScreenState extends State<SearchScreen> with TickerProviderStateMix
           return VideoCard(
             video: video,
             cs: Theme.of(context).colorScheme,
-            onTap: () => openVideoPlayer(context: context, listedVideos: videos, videoIndex: index, feedModel: _currentSearchViewModel, tickerProvider: this),
+            onTap: () async {
+              await openVideoPlayer(context: context, listedVideos: videos, videoIndex: index, feedModel: _currentSearchViewModel, tickerProvider: this);
+              Future.delayed(const Duration(milliseconds: 800), () async => await _currentSearchViewModel?.dispose());  
+            },
           );
         },
       );
