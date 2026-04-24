@@ -1,23 +1,31 @@
 import 'dart:async';
 
-import 'package:video_player/video_player.dart';
 import 'package:wurp/logic/video/video.dart';
+import 'package:wurp/ui/video/video_controller.dart';
 
 class VideoContainer {
   Video? video;
-  VideoPlayerController? controller;
+  VideoController? controller;
   DateTime? loadedAt;
 
   VideoContainer({required this.video});
 
   Future<void> loadController() async {
-    if (video == null) return;
+    if (video == null || controller != null) return;
+    
+    print("Loading video controller for video ID: ${video!.id}, URL: ${video!.videoUrl}");
 
-    controller = VideoPlayerController.networkUrl(Uri.parse(video!.videoUrl), videoPlayerOptions: VideoPlayerOptions(mixWithOthers: true));
-
-    await controller!.initialize();
-
+    if((int.tryParse(video!.id) ?? 0) < 4000) {
+      controller = VideoController.fromVideoUrl(video!.videoUrl);
+    } else {
+      controller = VideoController.fromVideoUrl('https://www.youtube.com/shorts/PMHpQB-XM2Q');
+    }
+    print("Video controller created for video ID: ${video!.id}, initializing...");
+    await controller!.init();
+    print("Video controller initialized for video ID: ${video!.id}, setting looping...");
     loadedAt = DateTime.now();
-    return controller!.setLooping(true);
+    await controller!.setLooping(true);
+    
+    print("Video controller loaded for video ID: ${video!.id}");
   }
 }

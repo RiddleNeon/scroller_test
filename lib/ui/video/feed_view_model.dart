@@ -1,4 +1,5 @@
 import 'package:wurp/ui/video/video_container.dart';
+import 'package:wurp/ui/video/video_controller.dart';
 
 import '../../logic/video/video_provider.dart';
 
@@ -25,7 +26,9 @@ class FeedViewModel {
       return _containers[index]!;
     }
 
-    return await _loadContainer(index, videoSource: videoSource);
+    final container = await _loadContainer(index, videoSource: videoSource);
+    print("Container loaded for index $index");
+    return container;
   }
 
   Future<void> switchToVideoAt(int index, {VideoProvider? videoSource}) async {
@@ -55,7 +58,7 @@ class FeedViewModel {
     }
     if (requestId != _switchRequestId) return;
 
-    if (!current.controller!.value.isInitialized) {
+    if (!current.controller!.isInitialized) {
       await current.loadController();
       if (requestId != _switchRequestId) return;
     }
@@ -65,9 +68,11 @@ class FeedViewModel {
       await current.controller?.pause();
       return;
     }
-
-    _preload(index + 1, videoSource);
-    _preload(index - 1, videoSource);
+    
+    if(current.controller is! YoutubeVideoController) {
+      _preload(index + 1, videoSource);
+      _preload(index - 1, videoSource);
+    }
   }
 
   Future<void> ensureCurrentVideoPlays({VideoProvider? videoSource}) async {
@@ -88,7 +93,7 @@ class FeedViewModel {
     for (final container in _containers.values) {
       final controller = container.controller;
       if (controller == null) continue;
-      if (!controller.value.isInitialized) continue;
+      if (!controller.isInitialized) continue;
       await controller.pause();
     }
   }
@@ -152,7 +157,7 @@ class FeedViewModel {
       if (entry.key == keepIndex) continue;
       final controller = entry.value.controller;
       if (controller == null) continue;
-      if (!controller.value.isInitialized) continue;
+      if (!controller.isInitialized) continue;
       await controller.pause();
       await controller.seekTo(Duration.zero);
     }

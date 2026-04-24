@@ -1,10 +1,11 @@
 import 'dart:async';
+import 'dart:ui';
 
 import 'package:cached_network_image/cached_network_image.dart';
 import 'package:flutter/material.dart';
-import 'package:video_player/video_player.dart';
 import 'package:wurp/logic/feed_recommendation/video_recommender_base.dart';
 import 'package:wurp/logic/video/video_provider.dart';
+import 'package:wurp/ui/video/video_controller.dart';
 
 import '../../base_logic.dart';
 import '../../logic/local_storage/local_seen_service.dart';
@@ -13,7 +14,7 @@ import '../../logic/video/video.dart';
 import 'overlays/overlays.dart';
 
 class VideoItem extends StatefulWidget {
-  final VideoPlayerController controller;
+  final VideoController controller;
   final Video video;
   final String userId;
   final TickerProvider provider;
@@ -29,7 +30,7 @@ class VideoItem extends StatefulWidget {
     required this.provider,
     required this.videoProvider,
     required this.index,
-    this.onLikeChanged, 
+    this.onLikeChanged,
   });
 
   @override
@@ -53,7 +54,7 @@ class _VideoItemState extends State<VideoItem> {
   void initState() {
     super.initState();
     widget.controller.addListener(_onControllerUpdate);
-    if (widget.controller.value.isPlaying) {
+    if (widget.controller.isPlaying) {
       _wasPlaying = true;
       _startTracking();
     }
@@ -77,7 +78,8 @@ class _VideoItemState extends State<VideoItem> {
   }
 
   void _onControllerUpdate() {
-    final bool isPlaying = widget.controller.value.isPlaying;
+    if(!mounted) return;
+    final bool isPlaying = widget.controller.isPlaying;
     if (isPlaying && !_wasPlaying) {
       _wasPlaying = true;
       _startTracking();
@@ -95,7 +97,7 @@ class _VideoItemState extends State<VideoItem> {
     // Track view after 3 seconds
     if (!_hasTrackedView) {
       Future.delayed(const Duration(milliseconds: 400), () {
-        if (widget.controller.value.isPlaying) {
+        if (widget.controller.isPlaying && mounted) {
           _trackView();
           _hasTrackedView = true;
         }
@@ -140,7 +142,7 @@ class _VideoItemState extends State<VideoItem> {
       _totalWatchTime += elapsed;
     }
     currentlySaving = true;
-    final videoDuration = widget.controller.value.duration.inSeconds.toDouble();
+    final videoDuration = widget.controller.duration.inSeconds.toDouble();
 
     try {
       // Use VideoRecommender to track interaction
@@ -213,28 +215,29 @@ class _VideoItemState extends State<VideoItem> {
 
   @override
   Widget build(BuildContext context) {
-    final controllerValue = widget.controller.value;
-    final videoSize = controllerValue.size;
+    print("Building VideoItem for video ID: ${widget.video.id}, isPlaying: ${widget.controller.isPlaying}, isInitialized: ${widget.controller.isInitialized}");
     final screenHeight = MediaQuery.sizeOf(context).height;
-    final aspectRatio = controllerValue.aspectRatio > 0
-        ? controllerValue.aspectRatio
-        : (videoSize.width > 0 && videoSize.height > 0 ? videoSize.width / videoSize.height : 9 / 16);
+    final aspectRatio = widget.controller.aspectRatio > 0 ? widget.controller.aspectRatio : 9 / 16;
     final displayWidth = screenHeight * aspectRatio;
 
+    
     return RepaintBoundary(
       child: Stack(
         fit: StackFit.expand,
         children: [
           RepaintBoundary(
-            child: controllerValue.isInitialized && videoSize.width > 0 && videoSize.height > 0
+            child: widget.controller.isInitialized
                 ? Center(
                     child: SizedBox(
                       height: screenHeight,
                       width: displayWidth,
-                      child: VideoPlayer(widget.controller, key: ValueKey(widget.video.id)),
+                      child: widget.controller.buildVideoWidget(context, key: ValueKey(widget.video.id)),
                     ),
                   )
-                : FittedBox(fit: BoxFit.cover, child: CachedNetworkImage(imageUrl: widget.video.thumbnailUrl!))
+                : FittedBox(
+                    fit: BoxFit.cover,
+                    child: BackdropFilter(filter: ImageFilter.blur(sigmaX: 100, sigmaY: 100), child: CachedNetworkImage(imageUrl: widget.video.thumbnailUrl!)),
+                  ),
           ),
           PageOverlay(
             provider: widget.provider,
@@ -246,9 +249,9 @@ class _VideoItemState extends State<VideoItem> {
             onCommentChanged: onCommentChanged,
             initiallyLiked: localSeenService.isLiked(widget.video.id),
             initiallyDisliked: localSeenService.isDisliked(widget.video.id),
-            isPaused: !widget.controller.value.isPlaying,
+            isPaused: !widget.controller.isPlaying,
             onTogglePause: () {
-              if (widget.controller.value.isPlaying) {
+              if (widget.controller.isPlaying) {
                 widget.controller.pause();
               } else {
                 widget.controller.play();

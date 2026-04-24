@@ -32,7 +32,7 @@ Widget feedVideos(
         child: PreloadPageView.builder(
           controller: pageController ?? PreloadPageController(initialPage: initialPage, viewportFraction: 1),
           itemCount: itemCount,
-          preloadPagesCount: 2,
+          preloadPagesCount: 1,
           scrollDirection: Axis.vertical,
           itemBuilder: (context, index) {
             if (index == 50) {
@@ -152,6 +152,8 @@ Widget feedVideos(
                   );
                 }
 
+                print("Building video widget for index $index, video ID: ${videoData.id}");
+                
                 return Stack(
                   fit: StackFit.expand,
                   children: [
