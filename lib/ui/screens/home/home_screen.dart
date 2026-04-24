@@ -7,7 +7,7 @@ import 'package:wurp/base_logic.dart';
 import 'package:wurp/logic/repositories/video_repository.dart';
 import 'package:wurp/logic/users/user_model.dart';
 import 'package:wurp/logic/video/video.dart';
-import 'package:wurp/ui/feed_view_model.dart';
+import 'package:wurp/ui/video/feed_view_model.dart';
 import 'package:wurp/ui/misc/avatar.dart';
 
 import '../../theme/theme_ui_values.dart';

@@ -5,7 +5,7 @@ import 'package:supabase_flutter/supabase_flutter.dart';
 import 'package:wurp/base_ui.dart';
 import 'package:wurp/logic/themes/theme_model.dart';
 import 'package:wurp/tools/supabase_tests/supabase_login_test.dart';
-import 'package:wurp/ui/feed_view_model.dart';
+import 'package:wurp/ui/video/feed_view_model.dart';
 import 'package:wurp/ui/theme/app_theme.dart';
 
 import 'logic/feed_recommendation/user_preference_manager.dart';

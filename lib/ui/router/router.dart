@@ -14,15 +14,15 @@ import 'package:wurp/ui/screens/home/home_screen.dart';
 import 'package:wurp/ui/screens/profile_screen.dart';
 import 'package:wurp/ui/screens/quests/quest_screen.dart';
 import 'package:wurp/ui/screens/search_screen/search_screen.dart';
-import 'package:wurp/ui/short_video_player.dart';
+import 'package:wurp/ui/video/short_video_player.dart';
 import 'package:wurp/ui/theme/theme_creation_screen.dart';
 import 'package:wurp/ui/widgets/bottom_navigation_bar.dart';
 import 'package:youtube_player_iframe/youtube_player_iframe.dart';
 
-import '../base_logic.dart';
-import '../logic/feed_recommendation/search_video_result_recommender.dart';
-import '../logic/repositories/video_repository.dart';
-import '../logic/video/video.dart';
+import '../../base_logic.dart';
+import '../../logic/feed_recommendation/search_video_result_recommender.dart';
+import '../../logic/repositories/video_repository.dart';
+import '../../logic/video/video.dart';
 
 late final GoRouter routerConfig;
 

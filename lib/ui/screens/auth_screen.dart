@@ -10,7 +10,7 @@ import 'package:wurp/logic/repositories/user_repository.dart';
 import 'package:wurp/ui/animations/slide_morph_transitions.dart';
 import 'package:wurp/ui/misc/ban_appeal_screen.dart';
 import 'package:wurp/ui/misc/profile_image_picker.dart';
-import 'package:wurp/ui/router.dart';
+import 'package:wurp/ui/router/router.dart';
 
 import '../../base_logic.dart';
 import '../../logic/users/user_model.dart';

@@ -5,13 +5,13 @@ import 'package:flutter/material.dart';
 import 'package:preload_page_view/preload_page_view.dart';
 import 'package:wurp/logic/video/video.dart';
 import 'package:wurp/logic/video/video_provider.dart';
-import 'package:wurp/ui/feed_view_model.dart';
-import 'package:wurp/ui/router.dart';
+import 'package:wurp/ui/video/feed_view_model.dart';
+import 'package:wurp/ui/router/router.dart';
 import 'package:wurp/ui/screens/auth_screen.dart';
 import 'package:wurp/ui/theme/theme_ui_values.dart';
 
-import '../base_logic.dart';
-import 'widgets/video_widget.dart';
+import '../../base_logic.dart';
+import '../widgets/video_widget.dart';
 
 Widget feedVideos(
   TickerProvider tickerProvider,

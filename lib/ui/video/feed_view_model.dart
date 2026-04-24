@@ -1,6 +1,6 @@
-import 'package:wurp/ui/video_container.dart';
+import 'package:wurp/ui/video/video_container.dart';
 
-import '../logic/video/video_provider.dart';
+import '../../logic/video/video_provider.dart';
 
 class FeedViewModel {
   VideoProvider? videoSource;
