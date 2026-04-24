@@ -143,24 +143,24 @@ class _HomeScreenState extends State<HomeScreen> with TickerProviderStateMixin {
 
               SliverToBoxAdapter(
                 child: Padding(
-                  padding: EdgeInsets.only(top: context.uiSpace(24), bottom: context.uiSpace(8)),
-                  child: _buildSectionTitle(cs, 'Your Path', 'Keep progressing'),
+                  padding: EdgeInsets.only(top: context.uiSpace(24), bottom: context.uiSpace(8), left: 14),
+                  child: _buildSectionTitle(cs, 'Your Path', ' Keep progressing'),
                 ),
               ),
               SliverToBoxAdapter(child: _buildHorizontalQuestsList(cs)),
 
               SliverToBoxAdapter(
                 child: Padding(
-                  padding: EdgeInsets.only(top: context.uiSpace(32), bottom: context.uiSpace(16)),
-                  child: _buildSectionTitle(cs, 'Following', 'Latest from your creators'),
+                  padding: EdgeInsets.only(top: context.uiSpace(32), bottom: context.uiSpace(16), left: 14),
+                  child: _buildSectionTitle(cs, 'Following', ' Latest from your creators'),
                 ),
               ),
               SliverToBoxAdapter(child: _buildFollowingCarousel(cs)),
 
               SliverToBoxAdapter(
                 child: Padding(
-                  padding: EdgeInsets.only(top: context.uiSpace(32), bottom: context.uiSpace(16)),
-                  child: _buildSectionTitle(cs, 'Discover', 'Trending right now', onSeeAll: () => GoRouter.of(context).push('/search')),
+                  padding: EdgeInsets.only(top: context.uiSpace(32), bottom: context.uiSpace(16), left: 14),
+                  child: _buildSectionTitle(cs, 'Discover', ' Trending right now', onSeeAll: () => GoRouter.of(context).push('/feed')),
                 ),
               ),
               SliverToBoxAdapter(child: _buildDiscoverCarouselGrid(cs)),
@@ -348,9 +348,9 @@ class _HomeScreenState extends State<HomeScreen> with TickerProviderStateMixin {
           InkWell(
             onTap: onSeeAll,
             child: Padding(
-              padding: const EdgeInsets.all(4.0),
+              padding: const EdgeInsets.only(bottom: 4.0, top: 4.0, right: 12.0),
               child: Text(
-                'See all',
+                '  See all',
                 style: TextStyle(color: cs.primary, fontWeight: FontWeight.bold),
               ),
             ),
@@ -370,7 +370,7 @@ class _HomeScreenState extends State<HomeScreen> with TickerProviderStateMixin {
           _buildQuestCard(
             cs: cs,
             title: 'Continue learning',
-            subtitle: 'Basics of Flutter',
+            subtitle: 'PLACEHOLDER',
             progress: 0.65,
             icon: Icons.play_arrow_rounded,
             color: cs.primaryContainer,
