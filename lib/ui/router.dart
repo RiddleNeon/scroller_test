@@ -2,6 +2,8 @@ import 'dart:async';
 
 import 'package:flutter/cupertino.dart';
 import 'package:flutter/material.dart';
+import 'package:flutter/services.dart';
+import 'package:font_awesome_flutter/font_awesome_flutter.dart';
 import 'package:go_router/go_router.dart';
 import 'package:wurp/main.dart';
 import 'package:wurp/transcription/uploading/video_upload_screen.dart';
@@ -15,6 +17,7 @@ import 'package:wurp/ui/screens/search_screen/search_screen.dart';
 import 'package:wurp/ui/short_video_player.dart';
 import 'package:wurp/ui/theme/theme_creation_screen.dart';
 import 'package:wurp/ui/widgets/bottom_navigation_bar.dart';
+import 'package:youtube_player_iframe/youtube_player_iframe.dart';
 
 import '../base_logic.dart';
 import '../logic/feed_recommendation/search_video_result_recommender.dart';
@@ -126,14 +129,9 @@ void initRouter() {
           GoRoute(
             path: '/home',
             pageBuilder: (context, state) =>
-                SlideMorphTransitions.page<void>(
-                  key: state.pageKey,
-                  child: const HomeScreen(),
-                  beginOffset: const Offset(0.03, 0.0),
-                  beginScale: 0.993,
-                ),
+                SlideMorphTransitions.page<void>(key: state.pageKey, child: const HomeScreen(), beginOffset: const Offset(0.03, 0.0), beginScale: 0.993),
           ),
-          
+
           GoRoute(
             path: '/profile',
             pageBuilder: (context, state) => SlideMorphTransitions.page<void>(
@@ -202,6 +200,15 @@ void initRouter() {
               );
             },
           ),
+          GoRoute(
+            path: '/yt-test',
+            pageBuilder: (context, state) => SlideMorphTransitions.page<void>(
+              key: state.pageKey,
+              child: const SingleYoutubeVideoScreen(videoId: 'FZbMPtLRr00'),
+              beginOffset: const Offset(0.03, 0.0),
+              beginScale: 0.993,
+            ),
+          ),
         ],
       ),
       GoRoute(
@@ -269,6 +276,7 @@ List<({IconData icon, String label, String id})> _navigationBarItems = [
   (icon: Icons.person_outline, label: 'Profile', id: '/profile'),
   (icon: Icons.chat, label: 'Chat', id: '/chat'),
   (icon: CupertinoIcons.map, label: 'Quests', id: '/quests'),
+  (icon: FontAwesomeIcons.youtube, label: 'Youtube test', id: '/yt-test'),
 ];
 
 class RouteObserver extends NavigatorObserver {
@@ -479,3 +487,82 @@ List<String> _parseVideoIds(String? raw) {
   return ids;
 }
 
+class SingleYoutubeVideoScreen extends StatefulWidget {
+  const SingleYoutubeVideoScreen({super.key, required this.videoId});
+
+  final String videoId;
+
+  @override
+  State<SingleYoutubeVideoScreen> createState() => _SingleYoutubeVideoScreenState();
+}
+
+class _SingleYoutubeVideoScreenState extends State<SingleYoutubeVideoScreen> {
+  late final _controller = YoutubePlayerController.fromVideoId(
+    videoId: widget.videoId,
+    autoPlay: true,
+    params: const YoutubePlayerParams(
+      showControls: false,
+      showVideoAnnotations: false,
+      showFullscreenButton: false,
+      enableCaption: false,
+      pointerEvents: .none,
+      enableKeyboard: false,
+      loop: true,
+    ),
+  );
+  
+  bool isPaused = false;
+
+  final FocusNode _focusNode = FocusNode();
+  
+  @override
+  Widget build(BuildContext context) {
+    _focusNode.requestFocus();
+    _focusNode.addListener(() {
+      print("Focus node has focus: ${_focusNode.hasFocus}");
+      if(!_focusNode.hasFocus) {
+        _controller.pauseVideo();
+        _focusNode.requestFocus();
+      } else {
+        if (!isPaused) {
+          _controller.playVideo();
+        }
+      }
+    },);
+    return Scaffold(
+      body: KeyboardListener(
+        onKeyEvent: (value) {
+          //on space pause / unpause
+          print("Key event: ${value.logicalKey}");
+          if (value.logicalKey.debugName == 'Space' && value is KeyDownEvent) {
+            print("Toggling video playback");
+            if (isPaused) {
+              setState(() {
+                _controller.pauseVideo();
+                _controller.enterFullScreen();
+              });
+            } else {
+              setState(() {
+                _controller.playVideo();
+              });
+            }
+            isPaused = !isPaused;
+          }
+        },
+        focusNode: _focusNode,
+        child: Center(
+          child: YoutubePlayerScaffold(
+            builder: (context, player) {
+              return player;
+            },
+            controller: _controller,
+            enableFullScreenOnVerticalDrag: false,
+            autoFullScreen: false,
+            fullscreenOrientations: [],
+            aspectRatio: 9/16,
+          ),
+        ),
+      ),
+    );
+  }
+}
