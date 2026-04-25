@@ -1,6 +1,4 @@
 import 'package:cached_network_image/cached_network_image.dart';
-import 'package:flutter/foundation.dart';
-import 'package:flutter/gestures.dart';
 import 'package:flutter/material.dart';
 import 'package:pointer_interceptor/pointer_interceptor.dart';
 import 'package:youtube_player_iframe/youtube_player_iframe.dart';
@@ -103,7 +101,11 @@ class ShortVideoPage extends StatefulWidget {
   final YoutubePlayerController controller;
   final String videoId;
 
-  const ShortVideoPage({super.key, required this.controller, required this.videoId});
+  const ShortVideoPage({
+    super.key,
+    required this.controller,
+    required this.videoId,
+  });
 
   @override
   State<ShortVideoPage> createState() => _ShortVideoPageState();
@@ -127,51 +129,48 @@ class _ShortVideoPageState extends State<ShortVideoPage> {
 
   @override
   Widget build(BuildContext context) {
-    return Stack(
-      children: [
-        Center(
-          child: Opacity(
-            opacity: _startedPlaying ? 1.0 : 0.01,
-            child: YoutubePlayer(gestureRecognizers: <Factory<OneSequenceGestureRecognizer>>{}, controller: widget.controller, aspectRatio: 9 / 16),
-          ),
-        ),
-        Positioned.fill(
-          child: Opacity(
-            opacity: _startedPlaying ? 0.0 : 1.0,
-            child: ClipRect(
-              child: FittedBox(
-                fit: BoxFit.cover,
-                alignment: Alignment.center,
-                child: SizedBox(
-                  width: MediaQuery.of(context).size.width,
-                  height: MediaQuery.of(context).size.height,
+    return GestureDetector(
+      onTap: () async {
+        final state = await widget.controller.playerState;
+        if (state == PlayerState.playing) {
+          widget.controller.pauseVideo();
+        } else {
+          widget.controller.playVideo();
+        }
+      },
+      child: Center(
+        child: AspectRatio(
+          aspectRatio: 9 / 16,
+          child: ClipRect(
+            child: Stack(
+              fit: StackFit.expand,
+              children: [
+                AnimatedOpacity(
+                  duration: const Duration(milliseconds: 150),
+                  opacity: _startedPlaying ? 1.0 : 0.01,
+                  child: YoutubePlayer(
+                    controller: widget.controller,
+                    aspectRatio: 9 / 16,
+                  ),
+                ),
+
+                AnimatedOpacity(
+                  duration: const Duration(milliseconds: 150),
+                  opacity: _startedPlaying ? 0.0 : 1.0,
                   child: CachedNetworkImage(
-                    imageUrl: 'https://img.youtube.com/vi/${widget.videoId}/hqdefault.jpg',
+                    imageUrl:
+                    'https://img.youtube.com/vi/${widget.videoId}/hqdefault.jpg',
                     fit: BoxFit.cover,
                   ),
                 ),
-              ),
+                
+                PointerInterceptor(child: const AspectRatio(aspectRatio: 9 / 16)),
+                
+              ],
             ),
           ),
         ),
-        Center(
-          child: PointerInterceptor(child: const AspectRatio(aspectRatio: 9 / 16)),
-        ),
-
-        // tap overlay
-        Positioned.fill(
-          child: GestureDetector(
-            onTap: () async {
-              final state = await widget.controller.playerState;
-              if (state == PlayerState.playing) {
-                widget.controller.pauseVideo();
-              } else {
-                widget.controller.playVideo();
-              }
-            },
-          ),
-        ),
-      ],
+      ),
     );
   }
 }
