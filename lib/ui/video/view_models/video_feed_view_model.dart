@@ -5,12 +5,10 @@ import 'package:wurp/ui/video/video_controller.dart';
 import '../video_container.dart';
 import 'feed_view_model.dart';
 
-class VideoFeedViewModel implements FeedViewModel {
-  @override
-  VideoProvider? videoSource;
+class VideoFeedViewModel extends FeedViewModel {
   VideoProvider? _activeVideoSource;
 
-  VideoFeedViewModel([this.videoSource]);
+  VideoFeedViewModel([super.videoSource]);
 
   final Map<int, VideoContainer> _containers = {};
   final Set<int> _loading = {};

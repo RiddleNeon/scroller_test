@@ -12,7 +12,6 @@ import 'package:wurp/logic/repositories/chat_repository.dart';
 import 'package:wurp/logic/repositories/video_repository.dart';
 import 'package:wurp/logic/video/video.dart';
 import 'package:wurp/ui/animations/slide_morph_transitions.dart';
-import 'package:wurp/ui/video/view_models/feed_view_model.dart';
 import 'package:wurp/ui/misc/avatar.dart';
 import 'package:wurp/ui/screens/search_screen/search_screen.dart';
 import 'package:wurp/ui/theme/theme_ui_values.dart';
