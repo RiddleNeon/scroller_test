@@ -103,8 +103,8 @@ class _VideoItemState extends State<VideoItem> {
       });
     }
 
-    // Update watch time every 5 seconds
-    _trackingTimer = Timer.periodic(const Duration(seconds: 5), (_) {
+    // Update watch time every second
+    _trackingTimer = Timer.periodic(const Duration(seconds: 1), (_) {
       if (mounted) {
         _updateWatchTime();
       }
@@ -214,29 +214,13 @@ class _VideoItemState extends State<VideoItem> {
 
   @override
   Widget build(BuildContext context) {
-    print("Building VideoItem for video ID: ${widget.video.id}, isPlaying: ${widget.controller.isPlaying}, isInitialized: ${widget.controller.isInitialized}");
-    final screenHeight = MediaQuery.sizeOf(context).height;
-    final aspectRatio = widget.controller.aspectRatio > 0 ? widget.controller.aspectRatio : 9 / 16;
-    final displayWidth = screenHeight * aspectRatio;
-
-    
+    print("Building VideoItem for video ID: ${widget.video.id}, isPlaying: ${widget.controller.isPlaying}, isInitialized: ${widget.controller.isInitialized}");    
     return RepaintBoundary(
       child: Stack(
         fit: StackFit.expand,
         children: [
           RepaintBoundary(
-            child: widget.controller.isInitialized
-                ? Center(
-                    child: SizedBox(
-                      height: screenHeight,
-                      width: displayWidth,
-                      child: widget.controller.buildVideoWidget(context, key: ValueKey(widget.video.id)),
-                    ),
-                  )
-                : FittedBox(
-                    fit: BoxFit.cover,
-                    child: BackdropFilter(filter: ImageFilter.blur(sigmaX: 100, sigmaY: 100), child: CachedNetworkImage(imageUrl: widget.video.thumbnailUrl!)),
-                  ),
+            child: widget.controller.buildVideoWidget(context, thumbnailUrl: widget.video.thumbnailUrl),
           ),
           PageOverlay(
             provider: widget.provider,

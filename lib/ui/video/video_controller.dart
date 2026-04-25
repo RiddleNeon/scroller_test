@@ -1,7 +1,9 @@
 import 'dart:async';
 
+import 'package:cached_network_image/cached_network_image.dart';
 import 'package:flutter/material.dart';
 import 'package:video_player/video_player.dart';
+import 'package:wurp/ui/misc/shorts_player.dart';
 import 'package:youtube_player_iframe/youtube_player_iframe.dart';
 
 abstract class VideoController {
@@ -35,7 +37,7 @@ abstract class VideoController {
 
   void removeListener(void Function(bool playing) listener);
 
-  Widget buildVideoWidget(BuildContext context, {Key? key});
+  Widget buildVideoWidget(BuildContext context, {Key? key, String? thumbnailUrl});
 
   factory VideoController.fromVideoUrl(String url, {bool looping = true, bool autoplay = true}) {
     String? videoId = YoutubePlayerController.convertUrlToId(url);
@@ -132,8 +134,8 @@ class MemoryVideoController implements VideoController {
   }
 
   @override
-  Widget buildVideoWidget(BuildContext context, {Key? key}) {
-    return VideoPlayer(controller, key: key);
+  Widget buildVideoWidget(BuildContext context, {Key? key, String? thumbnailUrl}) {
+    return isInitialized ? VideoPlayer(controller, key: key) : CachedNetworkImage(imageUrl: thumbnailUrl ?? '', fit: BoxFit.cover, key: key);
   }
 }
 
@@ -228,8 +230,7 @@ class YoutubeVideoController implements VideoController {
   }
 
   @override
-  Widget buildVideoWidget(BuildContext context, {Key? key}) {
-    print("Building YouTube video widget with aspect ratio: $aspectRatio");
-    return YoutubePlayer(controller: controller, key: key, aspectRatio: aspectRatio, enableFullScreenOnVerticalDrag: false);
+  Widget buildVideoWidget(BuildContext context, {Key? key, String? thumbnailUrl}) {
+    return ShortVideoPage(controller: controller, videoId: controller.metadata.videoId, key: key);
   }
 }

@@ -113,7 +113,9 @@ class FeedViewModel {
       final video = await videoSource!.getVideoByIndex(index);
 
       final container = VideoContainer(video: video);
-      await container.loadController();
+      if(_currentIndex == index || container.controller is! YoutubeVideoController) {
+        await container.loadController();
+      }
 
       _containers[index] = container;
       return container;
