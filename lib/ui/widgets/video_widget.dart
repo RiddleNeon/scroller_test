@@ -77,9 +77,8 @@ class _VideoItemState extends State<VideoItem> {
     super.dispose();
   }
 
-  void _onControllerUpdate() {
+  void _onControllerUpdate(bool isPlaying) {
     if(!mounted) return;
-    final bool isPlaying = widget.controller.isPlaying;
     if (isPlaying && !_wasPlaying) {
       _wasPlaying = true;
       _startTracking();

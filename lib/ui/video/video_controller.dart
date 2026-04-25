@@ -1,6 +1,5 @@
 import 'dart:async';
 
-import 'package:custom_youtube_player/custom_youtube_player.dart';
 import 'package:flutter/material.dart';
 import 'package:video_player/video_player.dart';
 import 'package:youtube_player_iframe/youtube_player_iframe.dart';
@@ -32,13 +31,11 @@ abstract class VideoController {
 
   FutureOr<Duration> get position;
 
-  void addListener(VoidCallback listener);
+  void addListener(void Function(bool playing) listener);
 
-  void removeListener(VoidCallback listener);
-  
-  
+  void removeListener(void Function(bool playing) listener);
+
   Widget buildVideoWidget(BuildContext context, {Key? key});
-  
 
   factory VideoController.fromVideoUrl(String url, {bool looping = true, bool autoplay = true}) {
     String? videoId = YoutubePlayerController.convertUrlToId(url);
@@ -114,11 +111,25 @@ class MemoryVideoController implements VideoController {
   @override
   Size get videoSize => controller.value.size;
 
-  @override
-  void addListener(VoidCallback listener) => controller.addListener(listener);
+  final Map<void Function(bool), VoidCallback> _listeners = {};
 
   @override
-  void removeListener(VoidCallback listener) => controller.removeListener(listener);
+  void addListener(void Function(bool playing) listener) {
+    void internal() {
+      listener(controller.value.isPlaying);
+    }
+
+    _listeners[listener] = internal;
+    controller.addListener(internal);
+  }
+
+  @override
+  void removeListener(void Function(bool playing) listener) {
+    final internal = _listeners.remove(listener);
+    if (internal != null) {
+      controller.removeListener(internal);
+    }
+  }
 
   @override
   Widget buildVideoWidget(BuildContext context, {Key? key}) {
@@ -136,13 +147,14 @@ class YoutubeVideoController implements VideoController {
     if (_disposed) return;
     _disposed = true;
 
-    _subscription?.cancel();
+    _subscriptions.forEach((listener, subscription) => subscription.cancel());
+    _subscriptions.clear();
     controller.close();
   }
 
   @override
   FutureOr<void> init() async {
-/*    controller.cueVideoById(videoId: videoId)
+    /*    controller.cueVideoById(videoId: videoId)
     await controller.playVideo();*/
     _ready = true;
     print("ready!");
@@ -154,7 +166,8 @@ class YoutubeVideoController implements VideoController {
     print("adding listener to YouTube player controller");
     controller.listen((event) {
       print("YouTube player state changed: ${event.playerState}");
-      if (event.playerState != PlayerState.unStarted) {
+      if(!_ready && event.playerState != PlayerState.unStarted &&
+          event.playerState != PlayerState.unknown) {
         _ready = true;
       }
     });
@@ -178,7 +191,7 @@ class YoutubeVideoController implements VideoController {
 
   @override
   FutureOr<void> setLooping(bool looping) {}
-  
+
   @override
   Future<void> seekTo(Duration position) => controller.seekTo(seconds: position.inMilliseconds / 1000.0);
 
@@ -198,30 +211,25 @@ class YoutubeVideoController implements VideoController {
     return Size(double.parse(parts[0]), double.parse(parts[1]));
   }
 
-  StreamSubscription? _subscription;
+  final Map<void Function(bool playing), StreamSubscription> _subscriptions = {};
 
   @override
-  void addListener(VoidCallback listener) {
-    _subscription?.cancel();
-    _subscription = controller.listen((event) {
-      listener();
+  void addListener(void Function(bool playing) listener) {
+    final subscription = controller.listen((event) {
+      listener(event.playerState == PlayerState.playing);
     });
+    _subscriptions[listener] = subscription;
   }
 
   @override
-  void removeListener(VoidCallback listener) {
-    _subscription?.cancel();
-    _subscription = null;
+  void removeListener(void Function(bool playing) listener) {
+    final subscription = _subscriptions.remove(listener);
+    subscription?.cancel();
   }
 
   @override
   Widget buildVideoWidget(BuildContext context, {Key? key}) {
     print("Building YouTube video widget with aspect ratio: $aspectRatio");
-    return YoutubePlayer(
-      controller: controller,
-      key: key,
-      aspectRatio: aspectRatio,
-      enableFullScreenOnVerticalDrag: false,
-    );
+    return YoutubePlayer(controller: controller, key: key, aspectRatio: aspectRatio, enableFullScreenOnVerticalDrag: false);
   }
 }
