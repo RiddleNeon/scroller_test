@@ -1,7 +1,5 @@
 import 'dart:async';
-import 'dart:ui';
 
-import 'package:cached_network_image/cached_network_image.dart';
 import 'package:flutter/material.dart';
 import 'package:wurp/logic/feed_recommendation/video_recommender_base.dart';
 import 'package:wurp/logic/video/video_provider.dart';

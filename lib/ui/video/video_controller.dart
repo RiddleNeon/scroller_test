@@ -39,21 +39,22 @@ abstract class VideoController {
 
   Widget buildVideoWidget(BuildContext context, {Key? key, String? thumbnailUrl});
 
-  factory VideoController.fromVideoUrl(String url, {bool looping = true, bool autoplay = true}) {
+  factory VideoController.fromVideoUrl(String url, {bool looping = true}) {
     String? videoId = YoutubePlayerController.convertUrlToId(url);
     if (videoId != null) {
       print("getting YouTube video ID: $videoId from URL: $url");
       return YoutubeVideoController(
         YoutubePlayerController.fromVideoId(
           videoId: videoId,
-          autoPlay: autoplay,
-          params: YoutubePlayerParams(
-            loop: looping,
-            enableCaption: false,
-            showFullscreenButton: false,
-            showVideoAnnotations: false,
+          autoPlay: true,
+          params: const YoutubePlayerParams(
             showControls: false,
-            strictRelatedVideos: true,
+            showFullscreenButton: false,
+            mute: false,
+            loop: true,
+            playsInline: true,
+            pointerEvents: .none,
+            enableCaption: false,
           ),
         ),
       );
@@ -177,7 +178,7 @@ class YoutubeVideoController implements VideoController {
   }
 
   @override
-  bool get isInitialized => _ready;
+  bool get isInitialized => controller.metadata.videoId.isNotEmpty;
 
   @override
   FutureOr<bool> get isLooping => controller.params.loop;

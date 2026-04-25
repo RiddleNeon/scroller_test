@@ -2,7 +2,6 @@ import 'dart:async';
 
 import 'package:flutter/cupertino.dart';
 import 'package:flutter/material.dart';
-import 'package:flutter/services.dart';
 import 'package:font_awesome_flutter/font_awesome_flutter.dart';
 import 'package:go_router/go_router.dart';
 import 'package:wurp/main.dart';
@@ -18,7 +17,6 @@ import 'package:wurp/ui/screens/search_screen/search_screen.dart';
 import 'package:wurp/ui/video/short_video_player.dart';
 import 'package:wurp/ui/theme/theme_creation_screen.dart';
 import 'package:wurp/ui/widgets/bottom_navigation_bar.dart';
-import 'package:youtube_player_iframe/youtube_player_iframe.dart';
 
 import '../../base_logic.dart';
 import '../../logic/feed_recommendation/search_video_result_recommender.dart';

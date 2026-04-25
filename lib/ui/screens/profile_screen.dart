@@ -20,11 +20,12 @@ import 'package:wurp/ui/widgets/overlays/follow_button.dart';
 
 import '../../base_logic.dart';
 import '../../logic/local_storage/local_seen_service.dart';
-import '../video/feed_view_model.dart';
+import '../video/view_models/feed_view_model.dart';
 import '../misc/basic_player.dart';
 import '../misc/profile_image_picker.dart';
 import '../misc/rolling_digit_counter.dart';
 import '../theme/theme_ui_values.dart';
+import '../video/view_models/video_feed_view_model.dart';
 
 class ProfileScreen extends StatefulWidget {
   final UserProfile initialProfile;
@@ -71,7 +72,7 @@ class _ProfileScreenState extends State<ProfileScreen> with TickerProviderStateM
     _tabController.addListener(() {
       if (mounted) setState(() {});
     });
-    _currentSearchViewModel = FeedViewModel();
+    _currentSearchViewModel = VideoFeedViewModel();
 
     _videoQuery = SearchQuery(
       (limit, offset) {

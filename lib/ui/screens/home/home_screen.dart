@@ -7,10 +7,11 @@ import 'package:wurp/base_logic.dart';
 import 'package:wurp/logic/repositories/video_repository.dart';
 import 'package:wurp/logic/users/user_model.dart';
 import 'package:wurp/logic/video/video.dart';
-import 'package:wurp/ui/video/feed_view_model.dart';
+import 'package:wurp/ui/video/view_models/feed_view_model.dart';
 import 'package:wurp/ui/misc/avatar.dart';
 
 import '../../theme/theme_ui_values.dart';
+import '../../video/view_models/video_feed_view_model.dart';
 import '../search_screen/search_screen.dart';
 import '../search_screen/widgets/search_video_card.dart';
 
@@ -587,7 +588,7 @@ class _VerticalVideoCardState extends State<_VerticalVideoCard> {
         clipBehavior: Clip.hardEdge,
         child: InkWell(
           onTap: () async {
-            _feedVM ??= FeedViewModel();
+            _feedVM ??= VideoFeedViewModel();
             await openVideoPlayer(
               context: context,
               listedVideos: widget.videos,

@@ -1,13 +1,16 @@
-import 'package:wurp/ui/video/video_container.dart';
+
+import 'package:wurp/logic/video/video_provider.dart';
 import 'package:wurp/ui/video/video_controller.dart';
 
-import '../../logic/video/video_provider.dart';
+import '../video_container.dart';
+import 'feed_view_model.dart';
 
-class FeedViewModel {
+class VideoFeedViewModel implements FeedViewModel {
+  @override
   VideoProvider? videoSource;
   VideoProvider? _activeVideoSource;
 
-  FeedViewModel([this.videoSource]);
+  VideoFeedViewModel([this.videoSource]);
 
   final Map<int, VideoContainer> _containers = {};
   final Set<int> _loading = {};
@@ -15,9 +18,11 @@ class FeedViewModel {
   int _currentIndex = 0;
   int _switchRequestId = 0;
 
+  @override
   int get currentIndex => _currentIndex;
 
 
+  @override
   Future<VideoContainer> getVideoAt(int index, {VideoProvider? videoSource}) async {
     videoSource ??= this.videoSource;
     await _ensureActiveVideoSource(videoSource);
@@ -31,6 +36,7 @@ class FeedViewModel {
     return container;
   }
 
+  @override
   Future<void> switchToVideoAt(int index, {VideoProvider? videoSource}) async {
     videoSource ??= this.videoSource;
     await _ensureActiveVideoSource(videoSource);
@@ -68,17 +74,19 @@ class FeedViewModel {
       await current.controller?.pause();
       return;
     }
-    
+
     if(current.controller is! YoutubeVideoController) {
       _preload(index + 1, videoSource);
       _preload(index - 1, videoSource);
     }
   }
 
+  @override
   Future<void> ensureCurrentVideoPlays({VideoProvider? videoSource}) async {
     return switchToVideoAt(_currentIndex, videoSource: videoSource);
   }
 
+  @override
   Future<void> dispose() async {
     await pauseAll();
     await _clearContainers();
@@ -89,6 +97,7 @@ class FeedViewModel {
     _activeVideoSource = null;
   }
 
+  @override
   Future<void> pauseAll() async {
     for (final container in _containers.values) {
       final controller = container.controller;

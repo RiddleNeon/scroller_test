@@ -5,10 +5,11 @@ import 'package:flutter/material.dart';
 import 'package:preload_page_view/preload_page_view.dart';
 import 'package:wurp/logic/video/video.dart';
 import 'package:wurp/logic/video/video_provider.dart';
-import 'package:wurp/ui/video/feed_view_model.dart';
+import 'package:wurp/ui/video/view_models/feed_view_model.dart';
 import 'package:wurp/ui/router/router.dart';
 import 'package:wurp/ui/screens/auth_screen.dart';
 import 'package:wurp/ui/theme/theme_ui_values.dart';
+import 'package:wurp/ui/video/view_models/video_feed_view_model.dart';
 
 import '../../base_logic.dart';
 import '../widgets/video_widget.dart';
@@ -18,6 +19,7 @@ Widget feedVideos(
   VideoProvider videoProvider,
   BuildContext context, {
   FeedViewModel? feedModel,
+  FeedViewModel? youtubeFeedModel,
   int itemCount = 5000,
   int initialPage = 0,
   void Function(bool)? onLikeChanged,
@@ -230,7 +232,7 @@ class _VideoFeedState extends State<VideoFeed> with TickerProviderStateMixin {
   void initState() {
     super.initState();
     _ownsFeedModel = widget.videoProvider != null;
-    _feedModel = _ownsFeedModel ? FeedViewModel(widget.videoProvider) : feedViewModel;
+    _feedModel = _ownsFeedModel ? VideoFeedViewModel(widget.videoProvider) : feedViewModel;
     _initialPage = widget.initialPage ?? (_ownsFeedModel ? 0 : feedViewModel.currentIndex);
     _pageController = PreloadPageController(initialPage: _initialPage, viewportFraction: 1);
     // Ensure initial page starts playing even when opening the feed at index 0.

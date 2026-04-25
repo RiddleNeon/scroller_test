@@ -7,7 +7,7 @@ import 'package:wurp/logic/users/user_model.dart';
 import 'package:wurp/logic/video/video.dart';
 import 'package:wurp/ui/animations/slide_morph_transitions.dart';
 import 'package:wurp/ui/router/deep_link_builder.dart';
-import 'package:wurp/ui/video/feed_view_model.dart';
+import 'package:wurp/ui/video/view_models/feed_view_model.dart';
 import 'package:wurp/ui/misc/preloading_list.dart';
 import 'package:wurp/ui/screens/search_screen/search_query.dart';
 import 'package:wurp/ui/screens/search_screen/widgets/animated_search_bar.dart';
@@ -16,6 +16,7 @@ import 'package:wurp/ui/screens/search_screen/widgets/search_video_card.dart';
 import 'package:wurp/ui/video/short_video_player.dart';
 
 import '../../theme/theme_ui_values.dart';
+import '../../video/view_models/video_feed_view_model.dart';
 
 enum SearchScope { videos, profiles, all }
 
@@ -152,7 +153,7 @@ class _SearchScreenState extends State<SearchScreen> with TickerProviderStateMix
     setState(() {
       _videoQuery = nextVideoQuery;
       _userQuery = nextUserQuery;
-      _currentSearchViewModel = FeedViewModel();
+      _currentSearchViewModel = VideoFeedViewModel();
       _loading = false;
     });
   }

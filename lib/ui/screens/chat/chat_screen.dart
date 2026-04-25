@@ -12,7 +12,7 @@ import 'package:wurp/logic/repositories/chat_repository.dart';
 import 'package:wurp/logic/repositories/video_repository.dart';
 import 'package:wurp/logic/video/video.dart';
 import 'package:wurp/ui/animations/slide_morph_transitions.dart';
-import 'package:wurp/ui/video/feed_view_model.dart';
+import 'package:wurp/ui/video/view_models/feed_view_model.dart';
 import 'package:wurp/ui/misc/avatar.dart';
 import 'package:wurp/ui/screens/search_screen/search_screen.dart';
 import 'package:wurp/ui/theme/theme_ui_values.dart';
@@ -20,6 +20,7 @@ import 'package:wurp/ui/theme/theme_ui_values.dart';
 import '../../../base_logic.dart';
 import '../../../logic/chat/chat_message.dart';
 import '../../../logic/local_storage/local_seen_service.dart';
+import '../../video/view_models/video_feed_view_model.dart';
 import '../profile_screen.dart';
 import 'calling_screen.dart';
 import 'chat_route_preview.dart';
@@ -221,7 +222,7 @@ class MessagingScreenState extends State<MessagingScreen> with TickerProviderSta
 
     if (!mounted) return;
     final index = videos.indexWhere((video) => video.id == routeVideoId);
-    final dialogFeedModel = FeedViewModel();
+    final dialogFeedModel = VideoFeedViewModel();
     try {
       await openVideoPlayer(
         context: context,
