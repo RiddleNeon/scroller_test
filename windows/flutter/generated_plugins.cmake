@@ -4,6 +4,7 @@
 
 list(APPEND FLUTTER_PLUGIN_LIST
   app_links
+  flutter_inappwebview_windows
   fvp
   url_launcher_windows
 )
