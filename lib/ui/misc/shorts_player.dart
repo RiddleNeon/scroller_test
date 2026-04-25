@@ -165,7 +165,17 @@ class _ShortVideoPageState extends State<ShortVideoPage> {
                 ),
                 
                 PointerInterceptor(child: const AspectRatio(aspectRatio: 9 / 16)),
-                
+                GestureDetector(
+                  behavior: HitTestBehavior.translucent,
+                  onTap: () async {
+                    final state = await widget.controller.playerState;
+                    if (state == PlayerState.playing) {
+                      widget.controller.pauseVideo();
+                    } else {
+                      widget.controller.playVideo();
+                    }
+                  },
+                )
               ],
             ),
           ),
