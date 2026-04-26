@@ -42,7 +42,6 @@ abstract class VideoController {
   factory VideoController.fromVideoUrl(String url, {bool looping = true}) {
     String? videoId = YoutubePlayerController.convertUrlToId(url);
     if (videoId != null) {
-      print("getting YouTube video ID: $videoId from URL: $url");
       return YoutubeVideoController(
         YoutubePlayerController.fromVideoId(
           videoId: videoId,
@@ -150,30 +149,37 @@ class YoutubeVideoController implements VideoController {
     if (_disposed) return;
     _disposed = true;
 
+    if (!_initCompleter.isCompleted) {
+      _initCompleter.completeError(StateError('Disposed before ready'));
+    }
+
     _subscriptions.forEach((listener, subscription) => subscription.cancel());
     _subscriptions.clear();
     controller.close();
   }
 
-  @override
-  FutureOr<void> init() async {
-    await controller.playVideo();
-    _ready = true;
-    print("ready!");
-  }
-
-  bool _ready = false;
-
+  
+  
   YoutubeVideoController(this.controller) {
-    print("adding listener to YouTube player controller");
+    bool ready = false;
     controller.listen((event) {
       print("YouTube player state changed: ${event.playerState}");
-      if(!_ready && event.playerState != PlayerState.unStarted &&
+      if (!ready &&
           event.playerState != PlayerState.unknown) {
-        _ready = true;
+        ready = true;
+        if (!_initCompleter.isCompleted) _initCompleter.complete();
       }
     });
-    print("YouTube video controller created for video ID: ${controller.metadata.videoId}");
+  }
+  
+  
+  
+  final Completer<void> _initCompleter = Completer<void>();
+  @override
+  Future<void> init() async {
+    print("starting the vid");
+    await _initCompleter.future;
+    print("ready!");
   }
 
   @override

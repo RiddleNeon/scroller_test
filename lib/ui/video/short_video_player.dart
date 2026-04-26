@@ -1,4 +1,5 @@
 import 'dart:async';
+
 import 'package:flutter/cupertino.dart';
 import 'package:flutter/material.dart';
 import 'package:preload_page_view/preload_page_view.dart';
@@ -41,7 +42,18 @@ Widget feedVideos(
               future: generalFeedViewModel.getVideoContainerAt(index),
               builder: (context, snapshot) {
                 if (snapshot.connectionState != ConnectionState.done) {
-                  return const SizedBox();
+                  return const Center(
+                    child: ClipRRect(
+                      borderRadius: .all(Radius.circular(12)),
+                      child: ColoredBox(
+                        color: Colors.lime,
+                        child: Padding(
+                          padding: EdgeInsets.all(24.0),
+                          child: Text("Loading...", style: TextStyle(color: Colors.black)),
+                        ),
+                      ),
+                    ),
+                  );
                   /*return FutureBuilder(
                     future: videoProvider.getVideoByIndex(index),
                     builder: (context, snapshot) {
@@ -107,7 +119,7 @@ Widget feedVideos(
                 }
 
                 print("Building video widget for index $index, video ID: ${videoData.id}");
-                
+
                 return Stack(
                   fit: StackFit.expand,
                   children: [
@@ -211,7 +223,7 @@ Widget? _checkForSpecialIndex(int index, BuildContext context) {
   if (index > 450) {
     return _buildStopWidget('Bye!', Icons.door_back_door_outlined, context);
   }
-  
+
   return null; // no special widget for this index
 }
 
@@ -247,7 +259,7 @@ class _VideoFeedState extends State<VideoFeed> with TickerProviderStateMixin {
   void dispose() {
     unawaited(_feedModel.pauseAll());
     unawaited(_feedModel.dispose());
-    
+
     _pageController.dispose();
     super.dispose();
   }
@@ -281,4 +293,3 @@ class SingleVideoProvider implements VideoProvider {
   @override
   Future<void> preloadVideos(int count) async {}
 }
-
