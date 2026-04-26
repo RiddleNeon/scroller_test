@@ -1,21 +1,18 @@
+import 'package:wurp/logic/video/video.dart';
 import 'package:wurp/ui/video/video_container.dart';
-
-import '../../../logic/video/video_provider.dart';
 
 
 abstract class FeedViewModel {
-  VideoProvider? videoSource;
-
-  FeedViewModel([this.videoSource]);
+  FeedViewModel();
 
   int get currentIndex;
 
 
-  Future<VideoContainer> getVideoAt(int index, {VideoProvider? videoSource});
+  Future<VideoContainer> getVideoContainerAt(int index, Video video);
 
-  Future<void> switchToVideoAt(int index, {VideoProvider? videoSource});
+  Future<void> switchToVideoContainerAt(int index, Video video);
 
-  Future<void> ensureCurrentVideoPlays({VideoProvider? videoSource});
+  Future<void> ensureCurrentVideoPlays(Video video);
 
   Future<void> dispose();
 

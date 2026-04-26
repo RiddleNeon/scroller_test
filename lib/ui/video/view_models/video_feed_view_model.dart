@@ -1,14 +1,12 @@
 
-import 'package:wurp/logic/video/video_provider.dart';
+import 'package:wurp/logic/video/video.dart';
 import 'package:wurp/ui/video/video_controller.dart';
 
 import '../video_container.dart';
 import 'feed_view_model.dart';
 
 class VideoFeedViewModel extends FeedViewModel {
-  VideoProvider? _activeVideoSource;
-
-  VideoFeedViewModel([super.videoSource]);
+  VideoFeedViewModel();
 
   final Map<int, VideoContainer> _containers = {};
   final Set<int> _loading = {};
@@ -21,23 +19,19 @@ class VideoFeedViewModel extends FeedViewModel {
 
 
   @override
-  Future<VideoContainer> getVideoAt(int index, {VideoProvider? videoSource}) async {
-    videoSource ??= this.videoSource;
-    await _ensureActiveVideoSource(videoSource);
-
+  Future<VideoContainer> getVideoContainerAt(int index, Video video) async {
     if (_containers.containsKey(index)) {
       return _containers[index]!;
     }
 
-    final container = await _loadContainer(index, videoSource: videoSource);
+    final container = await _loadContainer(index, video);
     print("Container loaded for index $index");
     return container;
   }
 
   @override
-  Future<void> switchToVideoAt(int index, {VideoProvider? videoSource}) async {
-    videoSource ??= this.videoSource;
-    await _ensureActiveVideoSource(videoSource);
+  Future<void> switchToVideoContainerAt(int index, Video video, {Video? nextVideo, Video? lastVideo}) async {
+    if(index == _currentIndex) return;
     final requestId = ++_switchRequestId;
 
     _currentIndex = index;
@@ -55,7 +49,7 @@ class VideoFeedViewModel extends FeedViewModel {
       if (requestId != _switchRequestId) return;
     }
 
-    final current = await getVideoAt(index, videoSource: videoSource);
+    final current = await getVideoContainerAt(index, video);
     if(current.video == null || current.video!.videoUrl.isEmpty) {
       // If video is null or has an empty URL, skip playing and return early
       return;
@@ -64,35 +58,36 @@ class VideoFeedViewModel extends FeedViewModel {
 
     if (!current.controller!.isInitialized) {
       await current.loadController();
-      if (requestId != _switchRequestId) return;
+      print("Controller loaded for index $index, isInitialized: ${current.controller!.isInitialized}");
+      if (requestId != _switchRequestId){
+        print("Switch request ID mismatch after loading controller, expected $requestId but got $_switchRequestId. Pausing video at index $index.");
+        return;
+      }
     }
 
-    await current.controller?.play();
+    await current.controller!.play();
     if (requestId != _switchRequestId) {
-      await current.controller?.pause();
+      await current.controller!.pause();
+      print("Switch request ID mismatch after play, expected $requestId but got $_switchRequestId. Pausing video at index $index.");
       return;
     }
 
     if(current.controller is! YoutubeVideoController) {
-      _preload(index + 1, videoSource);
-      _preload(index - 1, videoSource);
+      if(nextVideo != null) _preload(index + 1, nextVideo);
+      if(lastVideo != null) _preload(index - 1, lastVideo);
     }
   }
 
   @override
-  Future<void> ensureCurrentVideoPlays({VideoProvider? videoSource}) async {
-    return switchToVideoAt(_currentIndex, videoSource: videoSource);
+  Future<void> ensureCurrentVideoPlays(Video video) async {
+    return switchToVideoContainerAt(_currentIndex, video);
   }
 
   @override
   Future<void> dispose() async {
     await pauseAll();
     await _clearContainers();
-    if (videoSource is RecommendationVideoProvider) {
-      (videoSource as RecommendationVideoProvider).clearCache();
-    }
     _loading.clear();
-    _activeVideoSource = null;
   }
 
   @override
@@ -106,7 +101,7 @@ class VideoFeedViewModel extends FeedViewModel {
   }
 
 
-  Future<VideoContainer> _loadContainer(int index, {VideoProvider? videoSource}) async {
+  Future<VideoContainer> _loadContainer(int index, Video video) async {
     if (_loading.contains(index)) {
       while (_loading.contains(index)) {
         await Future.delayed(const Duration(milliseconds: 10));
@@ -117,8 +112,6 @@ class VideoFeedViewModel extends FeedViewModel {
     _loading.add(index);
 
     try {
-      final video = await videoSource!.getVideoByIndex(index);
-
       final container = VideoContainer(video: video);
       if(_currentIndex == index || container.controller is! YoutubeVideoController) {
         await container.loadController();
@@ -131,29 +124,19 @@ class VideoFeedViewModel extends FeedViewModel {
     }
   }
 
-  void _preload(int index, VideoProvider? videoSource) {
+  void _preload(int index, Video video) {
     if (index < 0) return;
     if (_containers.containsKey(index)) return;
     if (_loading.contains(index)) return;
 
-    _loadContainer(index, videoSource: videoSource);
+    _loadContainer(index, video);
   }
 
   Future<void> _disposeIndex(int index) async {
     final container = _containers.remove(index);
     await container?.controller?.dispose();
   }
-
-  Future<void> _ensureActiveVideoSource(VideoProvider? source) async {
-    if (source == null) return;
-    if (identical(_activeVideoSource, source)) return;
-
-    await _clearContainers();
-    _loading.clear();
-    _activeVideoSource = source;
-    videoSource = source;
-  }
-
+  
   Future<void> _clearContainers() async {
     for (final container in _containers.values) {
       await container.controller?.dispose();

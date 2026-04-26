@@ -14,6 +14,7 @@ import 'package:wurp/ui/screens/search_screen/widgets/animated_search_bar.dart';
 import 'package:wurp/ui/screens/search_screen/widgets/search_user_card.dart';
 import 'package:wurp/ui/screens/search_screen/widgets/search_video_card.dart';
 import 'package:wurp/ui/video/short_video_player.dart';
+import 'package:wurp/ui/video/view_models/general_feed_view_model.dart';
 
 import '../../theme/theme_ui_values.dart';
 import '../../video/view_models/video_feed_view_model.dart';
@@ -263,7 +264,7 @@ class _SearchScreenState extends State<SearchScreen> with TickerProviderStateMix
             video: video,
             cs: Theme.of(context).colorScheme,
             onTap: () async {
-              await openVideoPlayer(context: context, listedVideos: videos, videoIndex: index, feedModel: _currentSearchViewModel, tickerProvider: this);
+              await openVideoPlayer(context: context, listedVideos: videos, videoIndex: index, feedModel: GeneralFeedViewModel(videoProvider: SearchVideoResultRecommender(listedVideos: videos)), tickerProvider: this);
               Future.delayed(const Duration(milliseconds: 800), () async => await _currentSearchViewModel?.dispose());  
             },
           );
@@ -327,7 +328,7 @@ Future<int> openVideoPlayer({
   required BuildContext context,
   required List<Video> listedVideos,
   required int videoIndex,
-  required FeedViewModel? feedModel,
+  required GeneralFeedViewModel feedModel,
   required TickerProvider tickerProvider,
 }) async {
   int likes = 0;
@@ -354,9 +355,8 @@ Future<int> openVideoPlayer({
               children: [
                 feedVideos(
                   tickerProvider,
-                  SearchVideoResultRecommender(listedVideos: listedVideos),
                   context,
-                  feedModel: feedModel,
+                  generalFeedViewModel: feedModel.copyWith(videoProvider: SearchVideoResultRecommender(listedVideos: listedVideos)),
                   itemCount: listedVideos.length,
                   initialPage: videoIndex,
                   onLikeChanged: (liked) => likes += liked ? 1 : -1,

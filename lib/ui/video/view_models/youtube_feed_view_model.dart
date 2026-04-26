@@ -1,16 +1,13 @@
-import 'package:wurp/logic/video/video_provider.dart';
+import 'package:wurp/logic/video/video.dart';
 
 import 'package:wurp/ui/video/video_container.dart';
 
 import 'feed_view_model.dart';
 
 class YoutubeFeedViewModel extends FeedViewModel {
-  VideoProvider? _activeVideoSource;
   final Map<int, VideoContainer> _containers = {};
-
   
-  
-  YoutubeFeedViewModel([super.videoSource]);
+  YoutubeFeedViewModel();
 
 
   @override
@@ -26,7 +23,7 @@ class YoutubeFeedViewModel extends FeedViewModel {
   }
 
   @override
-  Future<void> ensureCurrentVideoPlays({VideoProvider? videoSource}) {
+  Future<void> ensureCurrentVideoPlays(Video? video) {
     if (_containers.containsKey(currentIndex)) {
       _containers[currentIndex]?.controller?.play();
     }
@@ -34,8 +31,13 @@ class YoutubeFeedViewModel extends FeedViewModel {
   }
 
   @override
-  Future<VideoContainer> getVideoAt(int index, {VideoProvider? videoSource}) async {
-    _containers[index] ??= VideoContainer(video: await videoSource!.getVideoByIndex(index)); //fixme
+  Future<VideoContainer> getVideoContainerAt(int index, Video video) async {
+    print("getting video at index $index");
+    _containers[index] ??= VideoContainer(video: video); //fixme
+    if (_containers[index]!.controller == null) {
+      await _containers[index]!.loadController();
+      print("Controller loaded for video at index $index");
+    }
     return Future.value(_containers[index]!);
   }
 
@@ -48,13 +50,13 @@ class YoutubeFeedViewModel extends FeedViewModel {
   }
 
   @override
-  Future<void> switchToVideoAt(int index, {VideoProvider? videoSource}) async {
+  Future<void> switchToVideoContainerAt(int index, Video video) async {
     if (index == currentIndex) return;
 
     _containers[currentIndex]?.controller?.dispose();
     _containers.remove(currentIndex);
 
-    _containers[index] ??= VideoContainer(video: await videoSource!.getVideoByIndex(index));
+    _containers[index] ??= VideoContainer(video: video);
     await _containers[index]!.loadController();
     _containers[index]!.controller?.play();
 

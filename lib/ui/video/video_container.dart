@@ -22,7 +22,7 @@ class VideoContainer {
     }
     print("Video controller created for video ID: ${video!.id}, initializing...");
     await controller!.init();
-    print("Video controller initialized for video ID: ${video!.id}, setting looping...");
+    print("Video controller initialized for video ID: ${video!.id}, setting looping... is initialized: ${controller!.isInitialized}");
     loadedAt = DateTime.now();
     await controller!.setLooping(true);
     

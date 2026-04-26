@@ -14,8 +14,8 @@ import 'package:wurp/ui/screens/home/home_screen.dart';
 import 'package:wurp/ui/screens/profile_screen.dart';
 import 'package:wurp/ui/screens/quests/quest_screen.dart';
 import 'package:wurp/ui/screens/search_screen/search_screen.dart';
-import 'package:wurp/ui/video/short_video_player.dart';
 import 'package:wurp/ui/theme/theme_creation_screen.dart';
+import 'package:wurp/ui/video/short_video_player.dart';
 import 'package:wurp/ui/widgets/bottom_navigation_bar.dart';
 
 import '../../base_logic.dart';
@@ -201,12 +201,8 @@ void initRouter() {
           ),
           GoRoute(
             path: '/yt-test',
-            pageBuilder: (context, state) => SlideMorphTransitions.page<void>(
-              key: state.pageKey,
-              child: const ShortsFeed(),
-              beginOffset: const Offset(0.03, 0.0),
-              beginScale: 0.993,
-            ),
+            pageBuilder: (context, state) =>
+                SlideMorphTransitions.page<void>(key: state.pageKey, child: const ShortsFeed(), beginOffset: const Offset(0.03, 0.0), beginScale: 0.993),
           ),
         ],
       ),
@@ -297,7 +293,11 @@ class RouteObserver extends NavigatorObserver {
         _resumeFeedTimer = Timer(const Duration(milliseconds: 250), () {
           if (token != _resumeFeedToken) return;
           if (!routerConfig.routeInformationProvider.value.uri.path.startsWith('/feed')) return;
-          unawaited(feedViewModel.ensureCurrentVideoPlays());
+          unawaited(
+            Future.microtask(() async {
+              feedViewModel.ensureCurrentVideoPlays((await videoProvider.getVideoByIndex(feedViewModel.currentIndex))!);
+            }),
+          );
         });
       }
     });
@@ -357,7 +357,7 @@ class _DeepLinkVideoScreen extends StatelessWidget {
         final sharedContext = snapshot.data;
         if (sharedContext != null && sharedContext.videos.isNotEmpty) {
           return VideoFeed(
-            videoProvider: SearchVideoResultRecommender(listedVideos: sharedContext.videos),
+            customVideoProvider: SearchVideoResultRecommender(listedVideos: sharedContext.videos),
             initialPage: sharedContext.initialIndex,
             itemCount: sharedContext.videos.length,
           );
@@ -372,7 +372,7 @@ class _DeepLinkVideoScreen extends StatelessWidget {
             if (!fallbackSnapshot.hasData) {
               return const VideoFeed();
             }
-            return VideoFeed(videoProvider: SingleVideoProvider(fallbackSnapshot.data!), initialPage: 0, itemCount: 1);
+            return VideoFeed(customVideoProvider: SingleVideoProvider(fallbackSnapshot.data!), initialPage: 0, itemCount: 1);
           },
         );
       },

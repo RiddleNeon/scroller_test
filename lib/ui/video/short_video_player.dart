@@ -1,32 +1,27 @@
-import 'package:cached_network_image/cached_network_image.dart';
 import 'dart:async';
 import 'package:flutter/cupertino.dart';
 import 'package:flutter/material.dart';
 import 'package:preload_page_view/preload_page_view.dart';
 import 'package:wurp/logic/video/video.dart';
 import 'package:wurp/logic/video/video_provider.dart';
-import 'package:wurp/ui/video/view_models/feed_view_model.dart';
 import 'package:wurp/ui/router/router.dart';
 import 'package:wurp/ui/screens/auth_screen.dart';
 import 'package:wurp/ui/theme/theme_ui_values.dart';
-import 'package:wurp/ui/video/view_models/video_feed_view_model.dart';
+import 'package:wurp/ui/video/view_models/general_feed_view_model.dart';
 
 import '../../base_logic.dart';
 import '../widgets/video_widget.dart';
 
 Widget feedVideos(
   TickerProvider tickerProvider,
-  VideoProvider videoProvider,
   BuildContext context, {
-  FeedViewModel? feedModel,
-  FeedViewModel? youtubeFeedModel,
+  required GeneralFeedViewModel generalFeedViewModel,
   int itemCount = 5000,
   int initialPage = 0,
   void Function(bool)? onLikeChanged,
   PreloadPageController? pageController,
   void Function(int)? onPageChanged,
 }) {
-  feedModel ??= feedViewModel;
   return Stack(
     children: [
       ScrollConfiguration(
@@ -37,60 +32,17 @@ Widget feedVideos(
           preloadPagesCount: 1,
           scrollDirection: Axis.vertical,
           itemBuilder: (context, index) {
-            if (index == 50) {
-              return _buildStopWidget('why are you still watching? Is it really THAT interesting???', CupertinoIcons.question_diamond_fill, context);
-            }
-            if (index == 100) return _buildStopWidget('come on man, are you still doing this?', CupertinoIcons.exclamationmark, context);
-            if (index == 150) {
-              return _buildStopWidget('dont you have better things to do???', CupertinoIcons.exclamationmark_circle_fill, context); //
-            }
-            if (index == 200) return _buildStopWidget('ok this is getting out of hand', Icons.warning_amber_outlined, context);
-            if (index == 250) {
-              return _buildStopWidget(
-                'alright thats it, stop watching videos and go touch some grass or something',
-                Icons.warning_amber_outlined,
-                context,
-              ); // also at this point you should probably seek help, maybe you have an addiction or something
-            }
-            if (index == 300) {
-              return _buildStopWidget(
-                'bro wtf',
-                Icons.warning_amber_outlined,
-                context,
-              ); // 300 is the point of no return, if you watch 300 videos in a row you are officially a lost cause
-            }
-            if (index == 350) return _buildStopWidget('this is just sad now', Icons.warning, context);
-            if (index == 400) return _buildStopWidget('ok you win, you can keep watching but I will pray for you', Icons.warning, context);
-            if (index == 449) return _buildStopWidget('congrats you made it to the end of the feed, you can stop now', Icons.warning_sharp, context);
-            if (index == 450) {
-              Future.delayed(const Duration(seconds: 4), () {
-                userRepository.selfBanUserSupabase();
-                if (context.mounted) {
-                  Navigator.of(context).push(
-                    MaterialPageRoute(
-                      builder: (context) {
-                        return const LoginScreen();
-                      },
-                    ),
-                  );
-                }
-              });
-              return _buildStopWidget(
-                'well youre banned now. invest your time into something better, like therapy or sth. idk. \n Here is the number of the National Rehab Hotline of the Us: 866-210-1303. lol',
-                Icons.celebration_outlined,
-                context,
-              );
-            }
-            if (index > 450) {
-              feedModel?.switchToVideoAt(index + 1, videoSource: videoProvider);
-              return _buildStopWidget('Bye!', Icons.door_back_door_outlined, context);
+            Widget? specialWidget = _checkForSpecialIndex(index, context);
+            if (specialWidget != null) {
+              return specialWidget;
             }
 
             return FutureBuilder(
-              future: feedModel!.getVideoAt(index, videoSource: videoProvider),
+              future: generalFeedViewModel.getVideoContainerAt(index),
               builder: (context, snapshot) {
                 if (snapshot.connectionState != ConnectionState.done) {
-                  return FutureBuilder(
+                  return const SizedBox();
+                  /*return FutureBuilder(
                     future: videoProvider.getVideoByIndex(index),
                     builder: (context, snapshot) {
                       if (!snapshot.hasData || snapshot.data?.thumbnailUrl == null) {
@@ -101,7 +53,7 @@ Widget feedVideos(
                         child: CachedNetworkImage(imageUrl: snapshot.data!.thumbnailUrl!),
                       );
                     },
-                  );
+                  );*/
                 }
 
                 if (snapshot.hasError) {
@@ -174,7 +126,7 @@ Widget feedVideos(
             );
           },
           onPageChanged: (value) {
-            feedModel!.switchToVideoAt(value, videoSource: videoProvider);
+            generalFeedViewModel.switchToVideoContainerAt(value);
             onPageChanged?.call(value);
           },
         ),
@@ -211,12 +163,64 @@ Widget _buildStopWidget(String label, IconData icon, BuildContext context) {
   );
 }
 
+Widget? _checkForSpecialIndex(int index, BuildContext context) {
+  if (index == 50) {
+    return _buildStopWidget('why are you still watching? Is it really THAT interesting???', CupertinoIcons.question_diamond_fill, context);
+  }
+  if (index == 100) return _buildStopWidget('come on man, are you still doing this?', CupertinoIcons.exclamationmark, context);
+  if (index == 150) {
+    return _buildStopWidget('dont you have better things to do???', CupertinoIcons.exclamationmark_circle_fill, context); //
+  }
+  if (index == 200) return _buildStopWidget('ok this is getting out of hand', Icons.warning_amber_outlined, context);
+  if (index == 250) {
+    return _buildStopWidget(
+      'alright thats it, stop watching videos and go touch some grass or something',
+      Icons.warning_amber_outlined,
+      context,
+    ); // also at this point you should probably seek help, maybe you have an addiction or something
+  }
+  if (index == 300) {
+    return _buildStopWidget(
+      'bro wtf',
+      Icons.warning_amber_outlined,
+      context,
+    ); // 300 is the point of no return, if you watch 300 videos in a row you are officially a lost cause
+  }
+  if (index == 350) return _buildStopWidget('this is just sad now', Icons.warning, context);
+  if (index == 400) return _buildStopWidget('ok you win, you can keep watching but I will pray for you', Icons.warning, context);
+  if (index == 449) return _buildStopWidget('congrats you made it to the end of the feed, you can stop now', Icons.warning_sharp, context);
+  if (index == 450) {
+    Future.delayed(const Duration(seconds: 4), () {
+      userRepository.selfBanUserSupabase();
+      if (context.mounted) {
+        Navigator.of(context).push(
+          MaterialPageRoute(
+            builder: (context) {
+              return const LoginScreen();
+            },
+          ),
+        );
+      }
+    });
+    return _buildStopWidget(
+      'well youre banned now. invest your time into something better, like therapy or sth. idk. \n Here is the number of the National Rehab Hotline of the Us: 866-210-1303. lol',
+      Icons.celebration_outlined,
+      context,
+    );
+  }
+  if (index > 450) {
+    return _buildStopWidget('Bye!', Icons.door_back_door_outlined, context);
+  }
+  
+  return null; // no special widget for this index
+}
+
 class VideoFeed extends StatefulWidget {
-  final VideoProvider? videoProvider;
   final int? initialPage;
   final int itemCount;
+  final VideoProvider? customVideoProvider;
 
-  const VideoFeed({super.key, this.videoProvider, this.initialPage, this.itemCount = 5000});
+  const VideoFeed({super.key, this.initialPage, this.itemCount = 5000, this.customVideoProvider});
 
   @override
   State<VideoFeed> createState() => _VideoFeedState();
@@ -225,28 +229,25 @@ class VideoFeed extends StatefulWidget {
 class _VideoFeedState extends State<VideoFeed> with TickerProviderStateMixin {
   late final PreloadPageController _pageController;
   late final int _initialPage;
-  late final FeedViewModel _feedModel;
-  late final bool _ownsFeedModel;
+  late final GeneralFeedViewModel _feedModel;
 
   @override
   void initState() {
     super.initState();
-    _ownsFeedModel = widget.videoProvider != null;
-    _feedModel = _ownsFeedModel ? VideoFeedViewModel(widget.videoProvider) : feedViewModel;
-    _initialPage = widget.initialPage ?? (_ownsFeedModel ? 0 : feedViewModel.currentIndex);
+    _feedModel = GeneralFeedViewModel(videoProvider: widget.customVideoProvider ?? videoProvider);
+    _initialPage = widget.initialPage ?? (feedViewModel.currentIndex);
     _pageController = PreloadPageController(initialPage: _initialPage, viewportFraction: 1);
     // Ensure initial page starts playing even when opening the feed at index 0.
     WidgetsBinding.instance.addPostFrameCallback((_) {
-      unawaited(_feedModel.switchToVideoAt(_initialPage, videoSource: widget.videoProvider ?? videoProvider));
+      unawaited(_feedModel.switchToVideoContainerAt(_initialPage));
     });
   }
 
   @override
   void dispose() {
     unawaited(_feedModel.pauseAll());
-    if (_ownsFeedModel) {
-      unawaited(_feedModel.dispose());
-    }
+    unawaited(_feedModel.dispose());
+    
     _pageController.dispose();
     super.dispose();
   }
@@ -256,9 +257,8 @@ class _VideoFeedState extends State<VideoFeed> with TickerProviderStateMixin {
     return Scaffold(
       body: feedVideos(
         this,
-        widget.videoProvider ?? videoProvider,
         context,
-        feedModel: _feedModel,
+        generalFeedViewModel: _feedModel,
         itemCount: widget.itemCount,
         initialPage: _initialPage,
         pageController: _pageController,

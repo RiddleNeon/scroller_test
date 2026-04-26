@@ -91,7 +91,7 @@ class _ShortsFeedState extends State<ShortsFeed> {
       itemBuilder: (context, index) {
         _controllers[index] ??= _createController(videos[index].id);
 
-        return ShortVideoPage(controller: _controllers[index]!, videoId: videos[index].id);
+        return ShortVideoPage(controller: _controllers[index]!);
       },
     );
   }
@@ -99,12 +99,12 @@ class _ShortsFeedState extends State<ShortsFeed> {
 
 class ShortVideoPage extends StatefulWidget {
   final YoutubePlayerController controller;
-  final String videoId;
+  final String? thumbnailUrl;
 
   const ShortVideoPage({
     super.key,
     required this.controller,
-    required this.videoId,
+    this.thumbnailUrl,
   });
 
   @override
@@ -149,8 +149,7 @@ class _ShortVideoPageState extends State<ShortVideoPage> {
                   duration: const Duration(milliseconds: 150),
                   opacity: _startedPlaying ? 0.0 : 1.0,
                   child: CachedNetworkImage(
-                    imageUrl:
-                    'https://img.youtube.com/vi/${widget.videoId}/hqdefault.jpg',
+                    imageUrl: widget.thumbnailUrl ?? 'https://img.youtube.com/vi/${widget.controller.metadata.videoId}/hqdefault.jpg',
                     fit: BoxFit.cover,
                   ),
                 ),

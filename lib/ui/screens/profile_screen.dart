@@ -15,17 +15,16 @@ import 'package:wurp/ui/screens/search_screen/search_query.dart';
 import 'package:wurp/ui/screens/search_screen/search_screen.dart';
 import 'package:wurp/ui/screens/search_screen/widgets/search_user_card.dart';
 import 'package:wurp/ui/screens/search_screen/widgets/search_video_card.dart';
+import 'package:wurp/ui/video/view_models/general_feed_view_model.dart';
 import 'package:wurp/ui/widgets/logout_button.dart';
 import 'package:wurp/ui/widgets/overlays/follow_button.dart';
 
 import '../../base_logic.dart';
 import '../../logic/local_storage/local_seen_service.dart';
-import '../video/view_models/feed_view_model.dart';
 import '../misc/basic_player.dart';
 import '../misc/profile_image_picker.dart';
 import '../misc/rolling_digit_counter.dart';
 import '../theme/theme_ui_values.dart';
-import '../video/view_models/video_feed_view_model.dart';
 
 class ProfileScreen extends StatefulWidget {
   final UserProfile initialProfile;
@@ -53,7 +52,7 @@ class _ProfileScreenState extends State<ProfileScreen> with TickerProviderStateM
   bool _editingMode = false;
   late final TabController _tabController;
   late UserProfile user = widget.initialProfile;
-  FeedViewModel? _currentSearchViewModel;
+  late GeneralFeedViewModel _currentSearchViewModel;
 
   late final SearchQuery<UserProfile> _followingQuery;
   late final SearchQuery<UserProfile> _followersQuery;
@@ -72,7 +71,7 @@ class _ProfileScreenState extends State<ProfileScreen> with TickerProviderStateM
     _tabController.addListener(() {
       if (mounted) setState(() {});
     });
-    _currentSearchViewModel = VideoFeedViewModel();
+    _currentSearchViewModel = GeneralFeedViewModel();
 
     _videoQuery = SearchQuery(
       (limit, offset) {

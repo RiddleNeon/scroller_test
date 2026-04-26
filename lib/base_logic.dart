@@ -5,7 +5,6 @@ import 'package:supabase_flutter/supabase_flutter.dart';
 import 'package:wurp/base_ui.dart';
 import 'package:wurp/logic/themes/theme_model.dart';
 import 'package:wurp/tools/supabase_tests/supabase_login_test.dart';
-import 'package:wurp/ui/video/view_models/feed_view_model.dart';
 import 'package:wurp/ui/theme/app_theme.dart';
 import 'package:wurp/ui/video/view_models/video_feed_view_model.dart';
 import 'package:wurp/ui/video/view_models/youtube_feed_view_model.dart';
@@ -36,9 +35,10 @@ UserProfile? _currentUser;
 
 bool get userLoggedIn => _currentUser != null;
 
-FeedViewModel get feedViewModel => _feedViewModel ??= VideoFeedViewModel(videoProvider);
-FeedViewModel get youtubeFeedViewModel => _feedViewModel ??= YoutubeFeedViewModel(videoProvider);
-FeedViewModel? _feedViewModel;
+VideoFeedViewModel get feedViewModel => _feedViewModel ??= VideoFeedViewModel();
+YoutubeFeedViewModel get youtubeFeedViewModel => _youtubeFeedViewModel ??= YoutubeFeedViewModel();
+VideoFeedViewModel? _feedViewModel;
+YoutubeFeedViewModel? _youtubeFeedViewModel;
 
 RecommendationVideoProvider? _videoProvider;
 
@@ -123,6 +123,7 @@ Future<void> onUserLogout() async {
   await auth.signOut();
   UserPreferenceManager.reset();
   await feedViewModel.dispose();
+  await youtubeFeedViewModel.dispose();
   _currentUser = null;
 }
 

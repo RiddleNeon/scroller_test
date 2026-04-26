@@ -4,14 +4,14 @@ import 'package:flutter/material.dart';
 import 'package:flutter/scheduler.dart';
 import 'package:go_router/go_router.dart';
 import 'package:wurp/base_logic.dart';
+import 'package:wurp/logic/feed_recommendation/search_video_result_recommender.dart';
 import 'package:wurp/logic/repositories/video_repository.dart';
 import 'package:wurp/logic/users/user_model.dart';
 import 'package:wurp/logic/video/video.dart';
-import 'package:wurp/ui/video/view_models/feed_view_model.dart';
 import 'package:wurp/ui/misc/avatar.dart';
+import 'package:wurp/ui/video/view_models/general_feed_view_model.dart';
 
 import '../../theme/theme_ui_values.dart';
-import '../../video/view_models/video_feed_view_model.dart';
 import '../search_screen/search_screen.dart';
 import '../search_screen/widgets/search_video_card.dart';
 
@@ -467,8 +467,7 @@ class _HomeScreenState extends State<HomeScreen> with TickerProviderStateMixin {
     final itemsRow1 = items.sublist(0, (items.length / 3).ceil());
     final itemsRow2 = items.sublist(itemsRow1.length, itemsRow1.length + (items.length / 3).floor());
     final itemsRow3 = items.sublist(itemsRow1.length + itemsRow2.length, itemsRow1.length + itemsRow2.length + (items.length / 3).floor());
-    
-    
+
     return SizedBox(
       height: 800,
       child: Column(
@@ -575,7 +574,7 @@ class _VerticalVideoCard extends StatefulWidget {
 }
 
 class _VerticalVideoCardState extends State<_VerticalVideoCard> {
-  FeedViewModel? _feedVM;
+  GeneralFeedViewModel? _feedVM;
 
   @override
   Widget build(BuildContext context) {
@@ -588,12 +587,12 @@ class _VerticalVideoCardState extends State<_VerticalVideoCard> {
         clipBehavior: Clip.hardEdge,
         child: InkWell(
           onTap: () async {
-            _feedVM ??= VideoFeedViewModel();
+            _feedVM ??= GeneralFeedViewModel();
             await openVideoPlayer(
               context: context,
               listedVideos: widget.videos,
               videoIndex: widget.videos.indexOf(widget.video),
-              feedModel: _feedVM,
+              feedModel: _feedVM!,
               tickerProvider: widget.ticker,
             );
             Future.delayed(const Duration(milliseconds: 800), () => _feedVM!.dispose());
@@ -664,8 +663,13 @@ class LargeCarouselVideoCard extends StatelessWidget {
       decoration: BoxDecoration(color: cs.surfaceContainerHigh, borderRadius: BorderRadius.circular(context.uiRadiusLg)),
       clipBehavior: Clip.hardEdge,
       child: InkWell(
-        onTap: () async =>
-            await openVideoPlayer(context: context, listedVideos: videos, videoIndex: videos.indexOf(video), feedModel: null, tickerProvider: ticker),
+        onTap: () async => await openVideoPlayer(
+          context: context,
+          listedVideos: videos,
+          videoIndex: videos.indexOf(video),
+          feedModel: GeneralFeedViewModel(videoProvider: SearchVideoResultRecommender(listedVideos: videos)),
+          tickerProvider: ticker,
+        ),
         child: Column(
           crossAxisAlignment: CrossAxisAlignment.start,
           children: [
@@ -725,8 +729,13 @@ class _FeedListVideoCard extends StatelessWidget {
       ),
       clipBehavior: Clip.hardEdge,
       child: InkWell(
-        onTap: () async =>
-            await openVideoPlayer(context: context, listedVideos: videos, videoIndex: videos.indexOf(video), feedModel: null, tickerProvider: ticker),
+        onTap: () async => await openVideoPlayer(
+          context: context,
+          listedVideos: videos,
+          videoIndex: videos.indexOf(video),
+          feedModel: GeneralFeedViewModel(videoProvider: SearchVideoResultRecommender(listedVideos: videos)),
+          tickerProvider: ticker,
+        ),
         child: Row(
           children: [
             AspectRatio(

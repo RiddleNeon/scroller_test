@@ -157,8 +157,7 @@ class YoutubeVideoController implements VideoController {
 
   @override
   FutureOr<void> init() async {
-    /*    controller.cueVideoById(videoId: videoId)
-    await controller.playVideo();*/
+    await controller.playVideo();
     _ready = true;
     print("ready!");
   }
@@ -232,6 +231,6 @@ class YoutubeVideoController implements VideoController {
 
   @override
   Widget buildVideoWidget(BuildContext context, {Key? key, String? thumbnailUrl}) {
-    return ShortVideoPage(controller: controller, videoId: controller.metadata.videoId, key: key);
+    return ShortVideoPage(controller: controller, thumbnailUrl: thumbnailUrl, key: key);
   }
 }
