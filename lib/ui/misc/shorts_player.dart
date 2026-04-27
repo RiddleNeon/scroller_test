@@ -3,7 +3,6 @@ import 'package:flutter/material.dart';
 import 'package:pointer_interceptor/pointer_interceptor.dart';
 import 'package:wurp/logic/video/video.dart';
 import 'package:wurp/logic/video/video_provider.dart';
-import 'package:wurp/ui/video/video_controller.dart';
 import 'package:wurp/ui/widgets/overlays/overlays.dart';
 import 'package:youtube_player_iframe/youtube_player_iframe.dart';
 

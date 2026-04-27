@@ -2,6 +2,7 @@ import 'dart:convert';
 
 import 'package:flutter/cupertino.dart';
 import 'package:flutter/services.dart';
+import 'package:http/http.dart' as http;
 import 'package:wurp/logic/repositories/user_repository.dart';
 import 'package:wurp/logic/repositories/video_repository.dart';
 import 'package:wurp/tools/supabase_tests/supabase_login_test.dart';
@@ -9,8 +10,29 @@ import 'package:wurp/tools/supabase_tests/supabase_login_test.dart';
 ///   to make the import idempotent.
 
 void main() async {
-  WidgetsFlutterBinding.ensureInitialized();
-  await publishTest();
+  const String key = String.fromEnvironment("YOUTUBE_API_KEY");
+  YouTubeShortsFetcher fetcher = YouTubeShortsFetcher(key);
+  final channelId = await getChannelIdFromName(key, "MrWissen2go");
+  print("Channel ID for IncandescentGames: $channelId");
+  print(await fetcher.fetchFromChannels([channelId!]));
+}
+
+Future<String?> getChannelIdFromName(
+    String apiKey, String channelName) async {
+  final url =
+      "https://www.googleapis.com/youtube/v3/search"
+      "?part=snippet"
+      "&q=$channelName"
+      "&type=channel"
+      "&maxResults=1"
+      "&key=$apiKey";
+
+  final res = await http.get(Uri.parse(url));
+  final data = jsonDecode(res.body);
+
+  if (data["items"].isEmpty) return null;
+
+  return data["items"][0]["snippet"]["channelId"];
 }
 
 /// Tool to bulk-import videos from a JSON file into Supabase.
@@ -239,5 +261,177 @@ class BulkVideoImporter {
   String _deterministicUuid(int seed) {
     final paddedId = seed.toRadixString(16).padLeft(12, '0');
     return '00000000-0000-4000-8000-$paddedId';
+  }
+}
+
+
+class YouTubeShort {
+  final String url;
+  final String title;
+  final String description;
+  final List<String> tags;
+  final String author;
+  final String authorId;
+  final int views;
+  final int likes;
+  final int duration;
+  final int width;
+  final int height;
+  final String thumbnailUrl;
+  final String videoId;
+
+  YouTubeShort({
+    required this.url,
+    required this.title,
+    required this.description,
+    required this.tags,
+    required this.author,
+    required this.authorId,
+    required this.views,
+    required this.likes,
+    required this.duration,
+    required this.width,
+    required this.height,
+    required this.thumbnailUrl,
+    required this.videoId,
+  });
+
+  Map<String, dynamic> toJson() => {
+    "url": url,
+    "title": title,
+    "description": description,
+    "tags": tags,
+    "author": author,
+    "author_id": authorId,
+    "views": views,
+    "likes": likes,
+    "duration": duration,
+    "width": width,
+    "height": height,
+    "thumbnail_url": thumbnailUrl,
+    "video_id": videoId,
+  };
+}
+
+class YouTubeShortsFetcher {
+  final String apiKey;
+
+  YouTubeShortsFetcher(this.apiKey);
+
+  Future<String> fetchFromChannels(List<String> channelIds) async {
+    List<YouTubeShort> results = [];
+
+    for (var channelId in channelIds) {
+      final uploadsPlaylistId =
+      await _getUploadsPlaylistId(channelId);
+
+      final videoIds =
+      await _getAllVideoIdsFromPlaylist(uploadsPlaylistId);
+
+      final videos = await _getVideoDetails(videoIds);
+
+      results.addAll(videos.where((v) => v.duration <= 60));
+    }
+
+    return jsonEncode(results.map((e) => e.toJson()).toList());
+  }
+
+  Future<String> _getUploadsPlaylistId(String channelId) async {
+    final url =
+        "https://www.googleapis.com/youtube/v3/channels?part=contentDetails&id=$channelId&key=$apiKey";
+
+    final res = await http.get(Uri.parse(url));
+    print("RESPONSE: ${res.body}");
+    final data = jsonDecode(res.body);
+
+    return data["items"][0]["contentDetails"]["relatedPlaylists"]
+    ["uploads"];
+  }
+
+  Future<List<String>> _getAllVideoIdsFromPlaylist(
+      String playlistId) async {
+    List<String> videoIds = [];
+    String? nextPageToken;
+
+    do {
+      final url =
+          "https://www.googleapis.com/youtube/v3/playlistItems"
+          "?part=contentDetails"
+          "&playlistId=$playlistId"
+          "&maxResults=50"
+          "&pageToken=${nextPageToken ?? ""}"
+          "&key=$apiKey";
+
+      final res = await http.get(Uri.parse(url));
+      final data = jsonDecode(res.body);
+
+      for (var item in data["items"]) {
+        videoIds.add(item["contentDetails"]["videoId"]);
+      }
+
+      nextPageToken = data["nextPageToken"];
+    } while (nextPageToken != null);
+
+    return videoIds;
+  }
+
+  Future<List<YouTubeShort>> _getVideoDetails(
+      List<String> videoIds) async {
+    List<YouTubeShort> videos = [];
+
+    for (int i = 0; i < videoIds.length; i += 50) {
+      final chunk =
+      videoIds.sublist(i, i + 50 > videoIds.length ? videoIds.length : i + 50);
+
+      final url =
+          "https://www.googleapis.com/youtube/v3/videos"
+          "?part=snippet,contentDetails,statistics"
+          "&id=${chunk.join(",")}"
+          "&key=$apiKey";
+
+      final res = await http.get(Uri.parse(url));
+      final data = jsonDecode(res.body);
+
+      for (var item in data["items"]) {
+        final duration = _parseDuration(
+            item["contentDetails"]["duration"]);
+
+        final videoId = item["id"];
+
+        videos.add(
+          YouTubeShort(
+            url: "https://www.youtube.com/watch?v=$videoId",
+            title: item["snippet"]["title"],
+            description: item["snippet"]["description"],
+            tags: List<String>.from(
+                item["snippet"]["tags"] ?? []),
+            author: item["snippet"]["channelTitle"],
+            authorId: item["snippet"]["channelId"],
+            views: int.parse(
+                item["statistics"]["viewCount"] ?? "0"),
+            likes: int.parse(
+                item["statistics"]["likeCount"] ?? "0"),
+            duration: duration,
+            width: 0, // Not provided by API
+            height: 0,
+            thumbnailUrl:
+            "https://img.youtube.com/vi/$videoId/hqdefault.jpg",
+            videoId: videoId,
+          ),
+        );
+      }
+    }
+
+    return videos;
+  }
+
+  int _parseDuration(String isoDuration) {
+    final regex = RegExp(r'PT((\d+)M)?((\d+)S)?');
+    final match = regex.firstMatch(isoDuration);
+
+    int minutes = int.tryParse(match?.group(2) ?? "0") ?? 0;
+    int seconds = int.tryParse(match?.group(4) ?? "0") ?? 0;
+
+    return minutes * 60 + seconds;
   }
 }
