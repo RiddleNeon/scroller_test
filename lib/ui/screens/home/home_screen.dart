@@ -160,6 +160,8 @@ class _HomeScreenState extends State<HomeScreen> {
       // Keep UI responsive even if analytics persistence fails.
     }
 
+    if(!mounted) return;
+    
     await openVideoPlayer(
       context: context,
       listedVideos: videos,

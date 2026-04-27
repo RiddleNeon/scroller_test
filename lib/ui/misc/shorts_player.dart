@@ -3,6 +3,10 @@ import 'dart:async';
 import 'package:cached_network_image/cached_network_image.dart';
 import 'package:flutter/material.dart';
 import 'package:pointer_interceptor/pointer_interceptor.dart';
+import 'package:wurp/base_logic.dart';
+import 'package:wurp/logic/feed_recommendation/video_recommender_base.dart';
+import 'package:wurp/logic/local_storage/local_seen_service.dart';
+import 'package:wurp/logic/repositories/video_repository.dart';
 import 'package:wurp/logic/video/video.dart';
 import 'package:wurp/logic/video/video_provider.dart';
 import 'package:wurp/ui/widgets/overlays/overlays.dart';
@@ -134,10 +138,8 @@ class _ShortsFeedState extends State<ShortsFeed> {
                 ),
               );
             } else if(snapshot.error != null) {
-              print("Error loading video at index $index: ${snapshot.error}, stack trace: ${snapshot.stackTrace}");
               return Center(child: Text('Error loading video: ${snapshot.error}'));
             }
-            print("Building ShortVideoPage for index $index with video ID: ${snapshot.data?.metadata.videoId}");
             return ShortVideoPage(controller: _controllers[index]!.controller, video: _controllers[index]!.video, index: index,);
           },
         );
@@ -155,7 +157,6 @@ class _ShortsFeedState extends State<ShortsFeed> {
         throw VideoNotFoundException(index);
       }
       
-      print("Fetched video for index $index: ${video.videoUrl}");
 
       final controller = _createController(YoutubePlayerController.convertUrlToId(video.videoUrl)!);
       _controllers[index] = YoutubeVideoContainer(controller: controller, video: video);
@@ -169,8 +170,9 @@ class ShortVideoPage extends StatefulWidget {
   final String? thumbnailUrl;
   final Video video;
   final int index;
-
-  const ShortVideoPage({super.key, required this.controller, this.thumbnailUrl, required this.video, required this.index});
+  final void Function(bool)? onLikeChanged;
+  
+  const ShortVideoPage({super.key, required this.controller, this.thumbnailUrl, required this.video, required this.index, this.onLikeChanged});
 
   @override
   State<ShortVideoPage> createState() => _ShortVideoPageState();
@@ -187,8 +189,162 @@ class _ShortVideoPageState extends State<ShortVideoPage> with SingleTickerProvid
       if (event.playerState == PlayerState.playing && !_startedPlaying && mounted) {
         setState(() {
           _startedPlaying = true;
+          _wasPlaying = true;
+          _startTracking();
         });
       }
+    });
+  }
+
+  DateTime? _startWatchTime;
+  Timer? _trackingTimer;
+  double _totalWatchTime = 0.0;
+  bool _hasTrackedView = false;
+  bool _isLiked = false;
+  bool _isDisliked = false;
+  bool _hasShared = false;
+  bool _hasCommented = false;
+  bool _hasSaved = false;
+  bool _wasPlaying = false;
+
+  @override
+  void dispose() {
+    _trackingTimer?.cancel();
+    _saveInteraction();
+    super.dispose();
+  }
+
+  void _onControllerUpdate(bool isPlaying) {
+    if(!mounted) return;
+    if (isPlaying && !_wasPlaying) {
+      _wasPlaying = true;
+      _startTracking();
+      setState(() {});
+    } else if (!isPlaying && _wasPlaying) {
+      _wasPlaying = false;
+      _stopTracking();
+      setState(() {});
+    }
+  }
+
+  void _startTracking() {
+    _startWatchTime = DateTime.now();
+
+    // Track view after 3 seconds
+    if (!_hasTrackedView) {
+      Future.delayed(const Duration(milliseconds: 400), () {
+        if (widget.controller.value.playerState == .playing && mounted) {
+          _trackView();
+          _hasTrackedView = true;
+        }
+      });
+    }
+
+    // Update watch time every second
+    _trackingTimer = Timer.periodic(const Duration(seconds: 1), (_) {
+      if (mounted) {
+        _updateWatchTime();
+      }
+    });
+  }
+
+  void _stopTracking() {
+    _trackingTimer?.cancel();
+    _saveInteraction();
+    _startWatchTime = null;
+  }
+
+  void _updateWatchTime() {
+    if (_startWatchTime != null) {
+      final elapsed = DateTime.now().difference(_startWatchTime!).inSeconds.toDouble();
+      _totalWatchTime += elapsed;
+      _startWatchTime = DateTime.now();
+    }
+  }
+
+  /// Track view count on video document only (lightweight)
+  void _trackView() {
+    videoRepo.incrementViewCount(widget.video.id);
+  }
+
+  bool currentlySaving = false;
+
+  /// Save complete interaction when user leaves video
+  /// This creates ONE interaction document with all data
+  void _saveInteraction() async {
+    if (currentlySaving) return;
+    if (_startWatchTime != null) {
+      final elapsed = DateTime.now().difference(_startWatchTime!).inSeconds.toDouble();
+      _totalWatchTime += elapsed;
+    }
+    currentlySaving = true;
+    final videoDuration = widget.video.duration?.inSeconds.toDouble() ?? 0;
+    
+    try {
+      // Use VideoRecommender to track interaction
+      // This handles BOTH recent_interactions AND preference updates
+      await trackInteraction(
+        video: widget.video,
+        watchTime: _totalWatchTime,
+        videoDuration: videoDuration > 0 ? videoDuration : 1.0,
+        liked: _isLiked,
+        disliked: _isDisliked,
+        shared: _hasShared,
+        commented: _hasCommented,
+        saved: _hasSaved,
+        userId: currentAuthUserId(),
+      );
+      
+      // Reset for next viewing session
+      _totalWatchTime = 0.0;
+    } catch (e) {
+      print("Error saving interaction: $e");
+    }
+    currentlySaving = false;
+  }
+
+  /// Update interaction state when user likes/dislikes
+  void onLikeChanged(bool isLiked) {
+    setState(() {
+      _isLiked = isLiked;
+      if (isLiked) _isDisliked = false; // Can't like and dislike
+    });
+    if (isLiked) {
+      localSeenService.saveLike(widget.video.id);
+    } else {
+      localSeenService.removeLike(widget.video.id);
+    }
+    // Interaction will be saved when video stops playing
+    widget.onLikeChanged?.call(isLiked);
+  }
+
+  void onDislikeChanged(bool isDisliked) {
+    setState(() {
+      _isDisliked = isDisliked;
+      if (isDisliked) _isLiked = false; // Can't like and dislike
+    });
+    if (isDisliked) {
+      localSeenService.saveDislike(widget.video.id);
+    } else {
+      localSeenService.removeDislike(widget.video.id);
+    }
+  }
+
+  void onShareChanged(bool hasShared) {
+    setState(() {
+      _hasShared = hasShared;
+    });
+  }
+
+  void onSaveChanged(bool hasSaved) {
+    setState(() {
+      _hasSaved = hasSaved;
+    });
+  }
+
+  void onCommentChanged(bool hasCommented) {
+    setState(() {
+      _hasCommented = hasCommented;
     });
   }
 
@@ -218,13 +374,21 @@ class _ShortVideoPageState extends State<ShortVideoPage> with SingleTickerProvid
                 provider: this,
                 video: widget.video,
                 index: widget.index,
-                initiallyLiked: false,
-                initiallyDisliked: false,
+                initiallyLiked: localSeenService.isLiked(widget.video.id),
+                initiallyDisliked: localSeenService.isLiked(widget.video.id),
+                onLikeChanged: onLikeChanged,
+                onDislikeChanged: onDislikeChanged,
+                onShareChanged: onShareChanged,
+                onSaveChanged: onSaveChanged,
+                onCommentChanged: onCommentChanged,
+                
                 onTogglePause: () {
                   if (widget.controller.value.playerState == PlayerState.playing) {
                     widget.controller.pauseVideo();
+                    _onControllerUpdate(false);
                   } else {
                     widget.controller.playVideo();
+                    _onControllerUpdate(true);
                   }
                 },
                 isPaused: widget.controller.value.playerState != PlayerState.playing,
@@ -234,7 +398,6 @@ class _ShortVideoPageState extends State<ShortVideoPage> with SingleTickerProvid
         ),
       ),
     );
-    print("Built ShortVideoPage for video ID: ${widget.controller.metadata.videoId}, startedPlaying: $_startedPlaying");
     return out;
   }
 }

@@ -59,14 +59,14 @@ class _UserCardState extends State<UserCard> {
         },
         child: Row(
           children: [
-            Avatar(name: user.username, imageUrl: user.profileImageUrl, colorScheme: widget.cs),
+            Avatar(name: user.displayName, imageUrl: user.profileImageUrl, colorScheme: widget.cs),
             const SizedBox(width: 14),
             Expanded(
               child: Column(
                 crossAxisAlignment: CrossAxisAlignment.start,
                 children: [
                   Text(
-                    user.username,
+                    user.displayName,
                     style: TextStyle(color: widget.cs.onSurface, fontSize: 15, fontWeight: FontWeight.w700),
                   ),
                   const SizedBox(height: 2),

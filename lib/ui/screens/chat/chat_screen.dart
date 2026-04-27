@@ -35,7 +35,7 @@ class MessagingScreen extends StatefulWidget {
   final void Function(ChatMessage message) onMessageUpdate;
   final Future<List<ChatMessage>> Function(int limit, DateTime? lastVisibleMessage) loadMoreMessages;
 
-  String? get recipientName => user.username;
+  String? get recipientName => user.displayName;
 
   String get recipientId => user.id;
 

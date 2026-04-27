@@ -38,20 +38,23 @@ class ChatManagingScreenState extends State<ChatManagingScreen> {
   }
 
   bool noMoreChats = false;
-  bool loading = false;
+  bool loading = true;
   bool _handledInitialChat = false;
   String? _lastHandledDeepLinkPartnerId;
 
   void _onScroll() async {
     if (_scrollController.offset >= _scrollController.position.maxScrollExtent - 60 && !loading && !noMoreChats) {
-      _preload();
+      preload();
     }
+  }
+  
+  void preload(){
+    if (loading) return;
+    loading = true;
+    _preload();
   }
 
   void _preload() async {
-    if (loading) return;
-    loading = true;
-
     try {
       final preloadedChatsResult = await widget.preloadMoreChats(currentLastIndex);
       currentLastIndex = preloadedChatsResult.newCurrent;
@@ -92,7 +95,7 @@ class ChatManagingScreenState extends State<ChatManagingScreen> {
         chat = Chat(
           partnerId: partner.id,
           partnerProfileImageUrl: partner.profileImageUrl,
-          partnerName: partner.username,
+          partnerName: partner.displayName,
           lastMessage: '',
           lastMessageAt: null,
           lastMessageByMe: true,

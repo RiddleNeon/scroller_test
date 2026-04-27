@@ -418,7 +418,7 @@ class _DeepLinkProfileScreen extends StatelessWidget {
 
 String _canonicalNavPath(String path) {
   if (path.startsWith('/feed')) return '/feed';
-  if (path.startsWith('/home')) return '/home1';
+  if (path.startsWith('/home')) return '/home';
   if (path.startsWith('/search')) return '/search';
   if (path.startsWith('/chat')) return '/chat';
   if (path.startsWith('/profile')) return '/profile';

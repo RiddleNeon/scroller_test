@@ -159,8 +159,10 @@ Future<void> trackInteraction({
   bool commented = false,
   bool saved = false,
 }) async {
+  print("Releasing play-soon reservation for video ${video.id} before tracking interaction.");
   await releaseVideosWillPlaySoon(userId: userId, videoIds: [video.id]);
 
+  print("Tracking interaction for video ${video.id}: watchTime=$watchTime, liked=$liked, disliked=$disliked, shared=$shared, commented=$commented, saved=$saved");
   await supabaseClient.from('user_interactions').insert({
     'user_id': userId,
     'video_id': video.id,
