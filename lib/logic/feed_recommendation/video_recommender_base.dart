@@ -84,13 +84,15 @@ abstract class VideoRecommenderBase {
     return fetchNewVideos(oldestSeen, limit);
   }
 
-  Future<Set<Video>> fetchTrendingVideos({required int limit, bool onlyUnseen = false}) async {
+  Future<Set<Video>> fetchTrendingVideos({required int limit, bool onlyUnseen = false, bool useYoutubeVids = false}) async {
+    print("using youtube: $useYoutubeVids, onlyUnseen: $onlyUnseen");
     final snapshot = await supabaseClient.rpc('get_trending_candidates', params: {
       'p_user_id': currentUser.id,
       'p_cursor': null,
       'p_limit': limit * 3,
       'p_only_unseen': onlyUnseen,
       'p_days_back': 356,
+      'p_use_youtube': useYoutubeVids,
     }).select(_recommenderVideoSelect);
 
     var videos = snapshot.map<Video>(_mapVideo).toList();

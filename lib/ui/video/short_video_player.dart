@@ -303,11 +303,11 @@ class SingleVideoProvider implements VideoProvider {
   final Video video;
 
   @override
-  Future<Video?> getVideoByIndex(int index) async {
+  Future<Video?> getVideoByIndex(int index, {bool useYoutubeVideos = false}) async {
     if (index != 0) return null;
     return video;
   }
 
   @override
-  Future<void> preloadVideos(int count) async {}
+  Future<void> preloadVideos(int count,{bool useYoutubeVideos = false}) async {}
 }

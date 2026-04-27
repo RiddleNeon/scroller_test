@@ -5,9 +5,9 @@ import '../feed_recommendation/video_recommender_base.dart';
 import '../feed_recommendation/video_recommender.dart';
 
 abstract class VideoProvider {
-  Future<Video?> getVideoByIndex(int index);
+  Future<Video?> getVideoByIndex(int index, {bool useYoutubeVideos = false});
 
-  Future<void> preloadVideos(int count);
+  Future<void> preloadVideos(int count, {bool useYoutubeVideos = false});
 }
 
 class RecommendationVideoProvider implements VideoProvider {
@@ -23,11 +23,11 @@ class RecommendationVideoProvider implements VideoProvider {
   RecommendationVideoProvider() : _recommender = VideoRecommender();
 
   @override
-  Future<Video?> getVideoByIndex(int index, [bool retry = true]) async {
+  Future<Video?> getVideoByIndex(int index, {bool retry = true, bool useYoutubeVideos = false}) async {
     Future? loadingFuture;
     // Preload more videos if we're running low
     if (index >= _videoCache.length - _preloadThreshold) {
-      loadingFuture = preloadVideos(_preloadBatchSize);
+      loadingFuture = preloadVideos(_preloadBatchSize, useYoutubeVideos: useYoutubeVideos);
       if (index >= _videoCache.length) {
         // If requested index is beyond current cache, wait for preload to finish
         await loadingFuture;
@@ -41,7 +41,7 @@ class RecommendationVideoProvider implements VideoProvider {
     } else if (retry) {
       await loadingFuture;
       print("Retrying getVideoByIndex for index $index after preload");
-      return getVideoByIndex(index, false);
+      return getVideoByIndex(index, retry: false, useYoutubeVideos: useYoutubeVideos);
     }
     return null;
   }
@@ -68,14 +68,14 @@ class RecommendationVideoProvider implements VideoProvider {
   Future<void>? _currentPreloadTask;
 
   @override
-  Future<void> preloadVideos(int count) {
-    _currentPreloadTask ??= _preloadMoreVideosInternal(count).then((val) => _currentPreloadTask = null);
+  Future<void> preloadVideos(int count, {bool useYoutubeVideos = false}) {
+    _currentPreloadTask ??= _preloadMoreVideosInternal(count, useYoutubeVideos: useYoutubeVideos).then((val) => _currentPreloadTask = null);
     return _currentPreloadTask!;
   }
 
-  Future<void> _preloadMoreVideosInternal(int count) async {
+  Future<void> _preloadMoreVideosInternal(int count, {bool useYoutubeVideos = false}) async {
     try {
-      final newVideos = await _recommender.getRecommendedVideos(limit: count);
+      final newVideos = await _recommender.getRecommendedVideos(limit: count, useYoutubeVideos: useYoutubeVideos);
 
       _videoCache.addAll(newVideos);
     } catch (e) {

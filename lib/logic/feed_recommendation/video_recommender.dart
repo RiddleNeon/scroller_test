@@ -24,12 +24,12 @@ class VideoRecommender extends VideoRecommenderBase {
   VideoRecommender();
 
   /// Main recommendation function
-  Future<Set<Video>> getRecommendedVideos({int limit = 20}) async {
+  Future<Set<Video>> getRecommendedVideos({int limit = 20, bool useYoutubeVideos = false}) async {
     try {
       // Get user preferences
       //final userPreferences = await getUserPreferences();
       
-      final candidateVideos = await _getCandidateVideos(limit: _candidatePoolSize);
+      final candidateVideos = await _getCandidateVideos(limit: _candidatePoolSize, useYoutubeVids: useYoutubeVideos);
 
       //final scoredVideos = _scoreVideos(candidateVideos, userPreferences);
 
@@ -44,8 +44,8 @@ class VideoRecommender extends VideoRecommenderBase {
   }
 
   /// Get candidate videos with smart filtering based on user preferences
-  Future<Set<Video>> _getCandidateVideos({required int limit}) async {
-    return fetchTrendingVideos(limit: limit, onlyUnseen: true);
+  Future<Set<Video>> _getCandidateVideos({required int limit, bool useYoutubeVids = false}) async {
+    return fetchTrendingVideos(limit: limit, onlyUnseen: true, useYoutubeVids: useYoutubeVids);
 
     /*final Set<Video> candidates = {}; // old code, can be optimized by fetching directly into a set and avoiding duplicates early on
 

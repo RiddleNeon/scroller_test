@@ -107,8 +107,11 @@ class _ShortsFeedState extends State<ShortsFeed> {
                   ),
                 ),
               );
+            } else if(snapshot.error != null) {
+              print("Error loading video at index $index: ${snapshot.error}, stack trace: ${snapshot.stackTrace}");
+              return Center(child: Text('Error loading video: ${snapshot.error}'));
             }
-            print("Building ShortVideoPage for index $index with video ID: ${snapshot.data!.metadata.videoId}");
+            print("Building ShortVideoPage for index $index with video ID: ${snapshot.data?.metadata.videoId}");
             return ShortVideoPage(controller: _controllers[index]!.controller, video: _controllers[index]!.video, index: index,);
           },
         );
@@ -120,13 +123,15 @@ class _ShortsFeedState extends State<ShortsFeed> {
     if (_controllers.containsKey(index)) {
       return _controllers[index]!.controller;
     } else {
-      final video = await widget.videoProvider.getVideoByIndex(index);
+      final video = await widget.videoProvider.getVideoByIndex(index, useYoutubeVideos: true);
 
       if (video == null) {
         throw VideoNotFoundException(index);
       }
+      
+      print("Fetched video for index $index: ${video.videoUrl}");
 
-      final controller = _createController('inMTpnNDUGM');
+      final controller = _createController(YoutubePlayerController.convertUrlToId(video.videoUrl)!);
       _controllers[index] = YoutubeVideoContainer(controller: controller, video: video);
       return controller;
     }

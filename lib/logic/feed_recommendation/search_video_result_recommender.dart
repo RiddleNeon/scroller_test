@@ -7,10 +7,10 @@ class SearchVideoResultRecommender extends VideoProvider {
   SearchVideoResultRecommender({required this.listedVideos});
 
   @override
-  Future<Video?> getVideoByIndex(int index) async => listedVideos.elementAtOrNull(index);
+  Future<Video?> getVideoByIndex(int index, {bool useYoutubeVideos = false}) async => listedVideos.elementAtOrNull(index); //todo
 
   @override
-  Future<void> preloadVideos(int count) async {
+  Future<void> preloadVideos(int count, {bool useYoutubeVideos = false}) async {
     // nothing to preload
   }
 }
