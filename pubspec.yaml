@@ -36,6 +36,7 @@ dependencies:
   custom_youtube_player: ^1.1.0
   webview_flutter: ^4.13.1
   pointer_interceptor: ^0.10.1+2
+  crypto: ^3.0.7
 
 dev_dependencies:
   flutter_test:
@@ -77,6 +78,8 @@ flutter:
   assets:
     - assets/like.json
     - assets/pixabay_videos.json
+    - assets/youtube_videos_single.json
+    - assets/youtube_videos.json
     - assets/quests.json
     - assets/all_cloudinary_image_urls
     - assets/icon.png

@@ -35,7 +35,7 @@ class Video {
   });
 
   factory Video.fromSupabase(Map<String, dynamic> data, String authorName, List<String> tags) {
-    final durationMs = data['duration_ms'] as int?;
+    final durationSec = data['duration_s'] as int?;
     return Video(
       id: data['id'].toString(),
       title: data['title'] ?? '',
@@ -49,7 +49,7 @@ class Video {
       tags: tags,
       commentsCount: data['comment_count'] as int?,
       authorName: authorName,
-      duration: durationMs == null ? null : Duration(milliseconds: durationMs),
+      duration: durationSec == null ? null : Duration(seconds: durationSec),
     );
   }
 

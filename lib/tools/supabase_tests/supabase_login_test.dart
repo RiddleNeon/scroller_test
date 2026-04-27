@@ -13,7 +13,7 @@ void main() async {
 Future<void> onUserLoginSupabaseTest() async {
   await ensureSupabaseInitialized();
   await userRepository.upsertCurrentUserProfile(currentUser);
-  //await publishTest();
+  //await publishTestYoutube();
 }
 
 Future<void> ensureSupabaseInitialized() async {
