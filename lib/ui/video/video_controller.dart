@@ -3,7 +3,6 @@ import 'dart:async';
 import 'package:cached_network_image/cached_network_image.dart';
 import 'package:flutter/material.dart';
 import 'package:video_player/video_player.dart';
-import 'package:wurp/ui/misc/shorts_player.dart';
 import 'package:youtube_player_iframe/youtube_player_iframe.dart';
 
 abstract class VideoController {
@@ -154,18 +153,10 @@ class YoutubeVideoController implements VideoController {
     _subscriptions.clear();
     await controller.close();
   }
-
   
   
-  YoutubeVideoController(this.controller) {
-    bool ready = false;
-/*    controller.listen((event) {
-      if (!ready &&
-          event.playerState != PlayerState.unknown) {
-        ready = true;
-      }
-    });*/
-  }
+  
+  YoutubeVideoController(this.controller);
   
   
   

@@ -3,7 +3,7 @@ import 'package:flutter/material.dart';
 import 'package:pointer_interceptor/pointer_interceptor.dart';
 import 'package:wurp/logic/video/video.dart';
 import 'package:wurp/logic/video/video_provider.dart';
-import 'package:wurp/ui/video/video_container.dart';
+import 'package:wurp/ui/video/video_controller.dart';
 import 'package:wurp/ui/widgets/overlays/overlays.dart';
 import 'package:youtube_player_iframe/youtube_player_iframe.dart';
 
@@ -61,14 +61,6 @@ class _ShortsFeedState extends State<ShortsFeed> {
 
     _currentIndex = index;
   }
-
-  /*  @override
-  void initState() {
-    super.initState();
-
-    // preload first video
-    _controllers[0] = _createController(videos[0].id);
-  }*/
 
   @override
   void dispose() {
@@ -162,8 +154,7 @@ class _ShortVideoPageState extends State<ShortVideoPage> with SingleTickerProvid
     super.initState();
 
     widget.controller.listen((event) {
-      print("Received player state change event: ${event.playerState}, startedPlaying: $_startedPlaying");
-      if (event.playerState == PlayerState.playing && !_startedPlaying) {
+      if (event.playerState == PlayerState.playing && !_startedPlaying && mounted) {
         setState(() {
           _startedPlaying = true;
         });
@@ -188,8 +179,8 @@ class _ShortVideoPageState extends State<ShortVideoPage> with SingleTickerProvid
 
               AnimatedOpacity(
                 duration: const Duration(milliseconds: 150),
-                opacity: _startedPlaying ? 0.01 : 0.01,
-                child: CachedNetworkImage(imageUrl: 'https://img.youtube.com/vi/${widget.controller.metadata.videoId}/hqdefault.jpg', fit: BoxFit.cover),
+                opacity: _startedPlaying ? 0 : 0.99,
+                child: CachedNetworkImage(imageUrl: widget.video.thumbnailUrl ?? 'https://img.youtube.com/vi/${YoutubePlayerController.convertUrlToId(widget.video.videoUrl)}/hqdefault.jpg', fit: BoxFit.cover),
               ),
 
               PointerInterceptor(child: const AspectRatio(aspectRatio: 9 / 16)),
