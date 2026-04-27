@@ -202,7 +202,7 @@ void initRouter() {
           GoRoute(
             path: '/yt-test',
             pageBuilder: (context, state) =>
-                SlideMorphTransitions.page<void>(key: state.pageKey, child: const ShortsFeed(), beginOffset: const Offset(0.03, 0.0), beginScale: 0.993),
+                SlideMorphTransitions.page<void>(key: state.pageKey, child: ShortsFeed(videoProvider: videoProvider,), beginOffset: const Offset(0.03, 0.0), beginScale: 0.993),
           ),
         ],
       ),

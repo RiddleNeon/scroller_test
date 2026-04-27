@@ -32,6 +32,9 @@ class YoutubeFeedViewModel extends FeedViewModel {
 
   @override
   Future<VideoContainer> getVideoContainerAt(int index, Video video) async {
+    if(index != currentIndex) {
+      print("Warning: getVideoContainerAt called for index $index, but currentIndex is $currentIndex. This may lead to unexpected behavior.");
+    }
     print("getting video at index $index");
     _containers[index] ??= VideoContainer(video: video); //fixme
     if (_containers[index]!.controller == null) {

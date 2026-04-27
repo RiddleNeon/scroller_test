@@ -41,6 +41,7 @@ abstract class VideoController {
 
   factory VideoController.fromVideoUrl(String url, {bool looping = true}) {
     String? videoId = YoutubePlayerController.convertUrlToId(url);
+    print("CREATING VIDEO CONTROLLER for URL: $url, extracted video ID: $videoId");
     if (videoId != null) {
       return YoutubeVideoController(
         YoutubePlayerController.fromVideoId(
@@ -149,38 +150,27 @@ class YoutubeVideoController implements VideoController {
     if (_disposed) return;
     _disposed = true;
 
-    if (!_initCompleter.isCompleted) {
-      _initCompleter.completeError(StateError('Disposed before ready'));
-    }
-
     _subscriptions.forEach((listener, subscription) => subscription.cancel());
     _subscriptions.clear();
-    controller.close();
+    await controller.close();
   }
 
   
   
   YoutubeVideoController(this.controller) {
     bool ready = false;
-    controller.listen((event) {
-      print("YouTube player state changed: ${event.playerState}");
+/*    controller.listen((event) {
       if (!ready &&
           event.playerState != PlayerState.unknown) {
         ready = true;
-        if (!_initCompleter.isCompleted) _initCompleter.complete();
       }
-    });
+    });*/
   }
   
   
   
-  final Completer<void> _initCompleter = Completer<void>();
   @override
-  Future<void> init() async {
-    print("starting the vid");
-    await _initCompleter.future;
-    print("ready!");
-  }
+  Future<void> init() async {}
 
   @override
   bool get isInitialized => controller.metadata.videoId.isNotEmpty;
@@ -237,6 +227,8 @@ class YoutubeVideoController implements VideoController {
 
   @override
   Widget buildVideoWidget(BuildContext context, {Key? key, String? thumbnailUrl}) {
-    return ShortVideoPage(controller: controller, thumbnailUrl: thumbnailUrl, key: key);
+    print("Building YouTube video widget with thumbnail: $thumbnailUrl");
+    // return ShortVideoPage(controller: controller, thumbnailUrl: thumbnailUrl, key: key);
+    return const SizedBox();
   }
 }

@@ -15,10 +15,10 @@ class VideoContainer {
     
     print("Loading video controller for video ID: ${video!.id}, URL: ${video!.videoUrl}");
 
-    if((int.tryParse(video!.id) ?? 0) < 4000) {
+    if((int.tryParse(video!.id) ?? 0) < 44000) {
       controller = VideoController.fromVideoUrl(video!.videoUrl);
     } else {
-      controller = VideoController.fromVideoUrl('https://www.youtube.com/shorts/PMHpQB-XM2Q');
+      controller = VideoController.fromVideoUrl('https://www.youtube.com/shorts/dOdxysmZa-E');
     }
     await controller!.init();
     print("Video controller initialized for video ID: ${video!.id}, setting looping... is initialized: ${controller!.isInitialized}");

@@ -1,5 +1,6 @@
 import 'dart:async';
 
+import 'package:cached_network_image/cached_network_image.dart';
 import 'package:flutter/cupertino.dart';
 import 'package:flutter/material.dart';
 import 'package:preload_page_view/preload_page_view.dart';
@@ -23,12 +24,13 @@ Widget feedVideos(
   PreloadPageController? pageController,
   void Function(int)? onPageChanged,
 }) {
+  int currentIndex = initialPage;
   return Stack(
     children: [
       ScrollConfiguration(
-        behavior: ScrollConfiguration.of(context).copyWith(scrollbars: false),
+        behavior: ScrollConfiguration.of(context).copyWith(scrollbars: false, multitouchDragStrategy: .sumAllPointers),
         child: PreloadPageView.builder(
-          controller: pageController ?? PreloadPageController(initialPage: initialPage, viewportFraction: 1),
+          controller: pageController ?? PreloadPageController(initialPage: initialPage),
           itemCount: itemCount,
           preloadPagesCount: 1,
           scrollDirection: Axis.vertical,
@@ -42,7 +44,7 @@ Widget feedVideos(
               future: generalFeedViewModel.getVideoContainerAt(index),
               builder: (context, snapshot) {
                 if (snapshot.connectionState != ConnectionState.done) {
-                  return const Center(
+                  /*                  return const Center(
                     child: ClipRRect(
                       borderRadius: .all(Radius.circular(12)),
                       child: ColoredBox(
@@ -53,8 +55,8 @@ Widget feedVideos(
                         ),
                       ),
                     ),
-                  );
-                  /*return FutureBuilder(
+                  );*/
+                  return FutureBuilder(
                     future: videoProvider.getVideoByIndex(index),
                     builder: (context, snapshot) {
                       if (!snapshot.hasData || snapshot.data?.thumbnailUrl == null) {
@@ -65,7 +67,7 @@ Widget feedVideos(
                         child: CachedNetworkImage(imageUrl: snapshot.data!.thumbnailUrl!),
                       );
                     },
-                  );*/
+                  );
                 }
 
                 if (snapshot.hasError) {
@@ -120,6 +122,21 @@ Widget feedVideos(
 
                 print("Building video widget for index $index, video ID: ${videoData.id}");
 
+                if (index != currentIndex && snapshot.data!.video!.videoUrl.contains("youtube.com")) {
+                  return const Center(
+                    child: ClipRRect(
+                      borderRadius: .all(Radius.circular(12)),
+                      child: ColoredBox(
+                        color: Colors.lightBlue,
+                        child: Padding(
+                          padding: EdgeInsets.all(24.0),
+                          child: Text("Preloading...", style: TextStyle(color: Colors.black)),
+                        ),
+                      ),
+                    ),
+                  );
+                }
+
                 return Stack(
                   fit: StackFit.expand,
                   children: [
@@ -138,6 +155,7 @@ Widget feedVideos(
             );
           },
           onPageChanged: (value) {
+            currentIndex = value;
             generalFeedViewModel.switchToVideoContainerAt(value);
             onPageChanged?.call(value);
           },
@@ -247,7 +265,7 @@ class _VideoFeedState extends State<VideoFeed> with TickerProviderStateMixin {
   void initState() {
     super.initState();
     _feedModel = GeneralFeedViewModel(videoProvider: widget.customVideoProvider ?? videoProvider);
-    _initialPage = widget.initialPage ?? (feedViewModel.currentIndex);
+    _initialPage = widget.initialPage ?? feedViewModel.currentIndex;
     _pageController = PreloadPageController(initialPage: _initialPage, viewportFraction: 1);
     // Ensure initial page starts playing even when opening the feed at index 0.
     WidgetsBinding.instance.addPostFrameCallback((_) {
