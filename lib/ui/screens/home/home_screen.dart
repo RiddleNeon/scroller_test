@@ -4,12 +4,10 @@ import 'package:flutter/material.dart';
 import 'package:flutter/scheduler.dart';
 import 'package:go_router/go_router.dart';
 import 'package:wurp/base_logic.dart';
-import 'package:wurp/logic/feed_recommendation/search_video_result_recommender.dart';
 import 'package:wurp/logic/repositories/video_repository.dart';
 import 'package:wurp/logic/users/user_model.dart';
 import 'package:wurp/logic/video/video.dart';
 import 'package:wurp/ui/misc/avatar.dart';
-import 'package:wurp/ui/video/view_models/general_feed_view_model.dart';
 
 import '../../theme/theme_ui_values.dart';
 import '../search_screen/search_screen.dart';
@@ -574,8 +572,6 @@ class _VerticalVideoCard extends StatefulWidget {
 }
 
 class _VerticalVideoCardState extends State<_VerticalVideoCard> {
-  GeneralFeedViewModel? _feedVM;
-
   @override
   Widget build(BuildContext context) {
     final cs = Theme.of(context).colorScheme;
@@ -587,15 +583,11 @@ class _VerticalVideoCardState extends State<_VerticalVideoCard> {
         clipBehavior: Clip.hardEdge,
         child: InkWell(
           onTap: () async {
-            _feedVM ??= GeneralFeedViewModel();
             await openVideoPlayer(
               context: context,
               listedVideos: widget.videos,
               videoIndex: widget.videos.indexOf(widget.video),
-              feedModel: _feedVM!,
-              tickerProvider: widget.ticker,
             );
-            Future.delayed(const Duration(milliseconds: 800), () => _feedVM!.dispose());
           },
           child: Column(
             crossAxisAlignment: CrossAxisAlignment.start,
@@ -667,8 +659,6 @@ class LargeCarouselVideoCard extends StatelessWidget {
           context: context,
           listedVideos: videos,
           videoIndex: videos.indexOf(video),
-          feedModel: GeneralFeedViewModel(videoProvider: SearchVideoResultRecommender(listedVideos: videos)),
-          tickerProvider: ticker,
         ),
         child: Column(
           crossAxisAlignment: CrossAxisAlignment.start,
@@ -733,8 +723,6 @@ class _FeedListVideoCard extends StatelessWidget {
           context: context,
           listedVideos: videos,
           videoIndex: videos.indexOf(video),
-          feedModel: GeneralFeedViewModel(videoProvider: SearchVideoResultRecommender(listedVideos: videos)),
-          tickerProvider: ticker,
         ),
         child: Row(
           children: [

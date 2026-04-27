@@ -46,11 +46,11 @@ abstract class VideoController {
         YoutubePlayerController.fromVideoId(
           videoId: videoId,
           autoPlay: true,
-          params: const YoutubePlayerParams(
+          params: YoutubePlayerParams(
             showControls: false,
             showFullscreenButton: false,
             mute: false,
-            loop: true,
+            loop: looping,
             playsInline: true,
             pointerEvents: .none,
             enableCaption: false,
@@ -218,8 +218,65 @@ class YoutubeVideoController implements VideoController {
 
   @override
   Widget buildVideoWidget(BuildContext context, {Key? key, String? thumbnailUrl}) {
-    print("Building YouTube video widget with thumbnail: $thumbnailUrl");
-    // return ShortVideoPage(controller: controller, thumbnailUrl: thumbnailUrl, key: key);
-    return const SizedBox();
+    final fallbackThumbnail = thumbnailUrl ?? 'https://img.youtube.com/vi/${controller.metadata.videoId}/hqdefault.jpg';
+    return _YoutubeVideoWidget(
+      key: key,
+      controller: controller,
+      thumbnailUrl: fallbackThumbnail,
+    );
+  }
+}
+
+class _YoutubeVideoWidget extends StatefulWidget {
+  const _YoutubeVideoWidget({super.key, required this.controller, required this.thumbnailUrl});
+
+  final YoutubePlayerController controller;
+  final String thumbnailUrl;
+
+  @override
+  State<_YoutubeVideoWidget> createState() => _YoutubeVideoWidgetState();
+}
+
+class _YoutubeVideoWidgetState extends State<_YoutubeVideoWidget> {
+  bool _startedPlaying = false;
+  StreamSubscription? _subscription;
+
+  @override
+  void initState() {
+    super.initState();
+    _subscription = widget.controller.listen((event) {
+      if (!mounted) return;
+      final shouldShowPlayer = event.playerState == PlayerState.playing;
+      if (shouldShowPlayer != _startedPlaying) {
+        setState(() {
+          _startedPlaying = shouldShowPlayer;
+        });
+      }
+    });
+  }
+
+  @override
+  void dispose() {
+    _subscription?.cancel();
+    super.dispose();
+  }
+
+  @override
+  Widget build(BuildContext context) {
+    return Stack(
+      fit: StackFit.expand,
+      children: [
+        AnimatedOpacity(
+          duration: const Duration(milliseconds: 150),
+          opacity: _startedPlaying ? 1.0 : 0.1,
+          child: YoutubePlayer(controller: widget.controller, aspectRatio: 9 / 16),
+        ),
+        AnimatedOpacity(
+          duration: const Duration(milliseconds: 150),
+          opacity: _startedPlaying ? 0.0 : 0.99,
+          child: CachedNetworkImage(imageUrl: widget.thumbnailUrl, fit: BoxFit.cover),
+        ),
+      ],
+    );
   }
 }

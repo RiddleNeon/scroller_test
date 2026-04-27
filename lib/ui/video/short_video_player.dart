@@ -6,25 +6,53 @@ import 'package:flutter/material.dart';
 import 'package:preload_page_view/preload_page_view.dart';
 import 'package:wurp/logic/video/video.dart';
 import 'package:wurp/logic/video/video_provider.dart';
+import 'package:wurp/ui/misc/shorts_player.dart';
 import 'package:wurp/ui/router/router.dart';
 import 'package:wurp/ui/screens/auth_screen.dart';
 import 'package:wurp/ui/theme/theme_ui_values.dart';
-import 'package:wurp/ui/video/view_models/general_feed_view_model.dart';
+import 'package:wurp/ui/video/video_container.dart';
+import 'package:wurp/ui/video/view_models/video_feed_view_model.dart';
 
 import '../../base_logic.dart';
 import '../widgets/video_widget.dart';
 
+bool _isYoutubeUrl(String url) => url.contains('youtube.com') || url.contains('youtu.be');
+
+Future<VideoContainer?> _loadRegularContainer(
+  int index,
+  VideoProvider videoProvider,
+  VideoFeedViewModel feedModel,
+) async {
+  final video = await videoProvider.getVideoByIndex(index);
+  if (video == null) return null;
+  return feedModel.getVideoContainerAt(index, video);
+}
+
+Future<void> _switchToRegularIndex(
+  int index,
+  VideoProvider videoProvider,
+  VideoFeedViewModel feedModel,
+) async {
+  final currentVideo = await videoProvider.getVideoByIndex(index);
+  if (currentVideo == null) return;
+  final nextVideoFuture = videoProvider.getVideoByIndex(index + 1);
+  final prevVideoFuture = index > 0 ? videoProvider.getVideoByIndex(index - 1) : Future<Video?>.value(null);
+  final nextVideo = await nextVideoFuture;
+  final prevVideo = await prevVideoFuture;
+  await feedModel.switchToVideoContainerAt(index, currentVideo, nextVideo: nextVideo, lastVideo: prevVideo);
+}
+
 Widget feedVideos(
   TickerProvider tickerProvider,
   BuildContext context, {
-  required GeneralFeedViewModel generalFeedViewModel,
+  required VideoProvider videoProvider,
+  required VideoFeedViewModel feedModel,
   int itemCount = 5000,
   int initialPage = 0,
   void Function(bool)? onLikeChanged,
   PreloadPageController? pageController,
   void Function(int)? onPageChanged,
 }) {
-  int currentIndex = initialPage;
   return Stack(
     children: [
       ScrollConfiguration(
@@ -41,30 +69,18 @@ Widget feedVideos(
             }
 
             return FutureBuilder(
-              future: generalFeedViewModel.getVideoContainerAt(index),
+              future: _loadRegularContainer(index, videoProvider, feedModel),
               builder: (context, snapshot) {
                 if (snapshot.connectionState != ConnectionState.done) {
-                  /*                  return const Center(
-                    child: ClipRRect(
-                      borderRadius: .all(Radius.circular(12)),
-                      child: ColoredBox(
-                        color: Colors.lime,
-                        child: Padding(
-                          padding: EdgeInsets.all(24.0),
-                          child: Text("Loading...", style: TextStyle(color: Colors.black)),
-                        ),
-                      ),
-                    ),
-                  );*/
                   return FutureBuilder(
                     future: videoProvider.getVideoByIndex(index),
-                    builder: (context, snapshot) {
-                      if (!snapshot.hasData || snapshot.data?.thumbnailUrl == null) {
+                    builder: (context, videoSnapshot) {
+                      if (!videoSnapshot.hasData || videoSnapshot.data?.thumbnailUrl == null) {
                         return const Center(child: CircularProgressIndicator());
                       }
                       return FittedBox(
                         fit: BoxFit.fitHeight,
-                        child: CachedNetworkImage(imageUrl: snapshot.data!.thumbnailUrl!),
+                        child: CachedNetworkImage(imageUrl: videoSnapshot.data!.thumbnailUrl!),
                       );
                     },
                   );
@@ -95,8 +111,8 @@ Widget feedVideos(
                   );
                 }
 
-                final videoData = snapshot.data!.video;
-                if (videoData == null) {
+                final container = snapshot.data;
+                if (container?.video == null || container?.controller == null) {
                   return Center(
                     child: Padding(
                       padding: const EdgeInsets.symmetric(horizontal: 32.0),
@@ -120,29 +136,15 @@ Widget feedVideos(
                   );
                 }
 
+                final videoData = container!.video!;
                 print("Building video widget for index $index, video ID: ${videoData.id}");
-
-                if (index != currentIndex && snapshot.data!.video!.videoUrl.contains("youtube.com")) {
-                  return const Center(
-                    child: ClipRRect(
-                      borderRadius: .all(Radius.circular(12)),
-                      child: ColoredBox(
-                        color: Colors.lightBlue,
-                        child: Padding(
-                          padding: EdgeInsets.all(24.0),
-                          child: Text("Preloading...", style: TextStyle(color: Colors.black)),
-                        ),
-                      ),
-                    ),
-                  );
-                }
 
                 return Stack(
                   fit: StackFit.expand,
                   children: [
                     VideoItem(
-                      controller: snapshot.data!.controller!,
-                      video: snapshot.data!.video!,
+                      controller: container.controller!,
+                      video: videoData,
                       provider: tickerProvider,
                       videoProvider: videoProvider,
                       userId: currentAuthUserId(),
@@ -155,8 +157,7 @@ Widget feedVideos(
             );
           },
           onPageChanged: (value) {
-            currentIndex = value;
-            generalFeedViewModel.switchToVideoContainerAt(value);
+            unawaited(_switchToRegularIndex(value, videoProvider, feedModel));
             onPageChanged?.call(value);
           },
         ),
@@ -249,8 +250,9 @@ class VideoFeed extends StatefulWidget {
   final int? initialPage;
   final int itemCount;
   final VideoProvider? customVideoProvider;
+  final void Function(bool)? onLikeChanged;
 
-  const VideoFeed({super.key, this.initialPage, this.itemCount = 5000, this.customVideoProvider});
+  const VideoFeed({super.key, this.initialPage, this.itemCount = 5000, this.customVideoProvider, this.onLikeChanged});
 
   @override
   State<VideoFeed> createState() => _VideoFeedState();
@@ -259,17 +261,28 @@ class VideoFeed extends StatefulWidget {
 class _VideoFeedState extends State<VideoFeed> with TickerProviderStateMixin {
   late final PreloadPageController _pageController;
   late final int _initialPage;
-  late final GeneralFeedViewModel _feedModel;
+  late final VideoFeedViewModel _feedModel;
+  late final VideoProvider _videoSource;
+  late final Future<bool> _isYoutubeFeed;
+
+  Future<bool> _detectYoutubeFeed() async {
+    final firstVideo = await _videoSource.getVideoByIndex(_initialPage);
+    if (firstVideo == null) return false;
+    return _isYoutubeUrl(firstVideo.videoUrl);
+  }
 
   @override
   void initState() {
     super.initState();
-    _feedModel = GeneralFeedViewModel(videoProvider: widget.customVideoProvider ?? videoProvider);
-    _initialPage = widget.initialPage ?? feedViewModel.currentIndex;
+    _videoSource = widget.customVideoProvider ?? videoProvider;
+    _feedModel = VideoFeedViewModel();
+    _initialPage = widget.initialPage ?? 0;
     _pageController = PreloadPageController(initialPage: _initialPage, viewportFraction: 1);
-    // Ensure initial page starts playing even when opening the feed at index 0.
-    WidgetsBinding.instance.addPostFrameCallback((_) {
-      unawaited(_feedModel.switchToVideoContainerAt(_initialPage));
+    _isYoutubeFeed = _detectYoutubeFeed();
+    WidgetsBinding.instance.addPostFrameCallback((_) async {
+      final isYoutubeFeed = await _isYoutubeFeed;
+      if (isYoutubeFeed) return;
+      unawaited(_switchToRegularIndex(_initialPage, _videoSource, _feedModel));
     });
   }
 
@@ -284,15 +297,30 @@ class _VideoFeedState extends State<VideoFeed> with TickerProviderStateMixin {
 
   @override
   Widget build(BuildContext context) {
-    return Scaffold(
-      body: feedVideos(
-        this,
-        context,
-        generalFeedViewModel: _feedModel,
-        itemCount: widget.itemCount,
-        initialPage: _initialPage,
-        pageController: _pageController,
-      ),
+    return FutureBuilder<bool>(
+      future: _isYoutubeFeed,
+      builder: (context, snapshot) {
+        if (snapshot.connectionState != ConnectionState.done) {
+          return const Scaffold(body: Center(child: CircularProgressIndicator()));
+        }
+
+        if (snapshot.data == true) {
+          return Scaffold(body: ShortsFeed(videoProvider: _videoSource, initialPage: _initialPage, itemCount: widget.itemCount));
+        }
+
+        return Scaffold(
+          body: feedVideos(
+            this,
+            context,
+            videoProvider: _videoSource,
+            feedModel: _feedModel,
+            itemCount: widget.itemCount,
+            initialPage: _initialPage,
+            onLikeChanged: widget.onLikeChanged,
+            pageController: _pageController,
+          ),
+        );
+      },
     );
   }
 }

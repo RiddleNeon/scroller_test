@@ -15,7 +15,6 @@ import 'package:wurp/ui/animations/slide_morph_transitions.dart';
 import 'package:wurp/ui/misc/avatar.dart';
 import 'package:wurp/ui/screens/search_screen/search_screen.dart';
 import 'package:wurp/ui/theme/theme_ui_values.dart';
-import 'package:wurp/ui/video/view_models/general_feed_view_model.dart';
 
 import '../../../base_logic.dart';
 import '../../../logic/chat/chat_message.dart';
@@ -221,20 +220,11 @@ class MessagingScreenState extends State<MessagingScreen> with TickerProviderSta
 
     if (!mounted) return;
     final index = videos.indexWhere((video) => video.id == routeVideoId);
-    final dialogFeedModel = GeneralFeedViewModel();
-    try {
-      await openVideoPlayer(
-        context: context,
-        listedVideos: videos,
-        videoIndex: index >= 0 ? index : 0,
-        feedModel: dialogFeedModel,
-        tickerProvider: this,
-      );
-    } finally {
-      Future.delayed(const Duration(milliseconds: 350), () {
-        dialogFeedModel.dispose();
-      });
-    }
+    await openVideoPlayer(
+      context: context,
+      listedVideos: videos,
+      videoIndex: index >= 0 ? index : 0,
+    );
   }
 
   bool preloading = false;

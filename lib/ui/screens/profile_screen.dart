@@ -15,7 +15,6 @@ import 'package:wurp/ui/screens/search_screen/search_query.dart';
 import 'package:wurp/ui/screens/search_screen/search_screen.dart';
 import 'package:wurp/ui/screens/search_screen/widgets/search_user_card.dart';
 import 'package:wurp/ui/screens/search_screen/widgets/search_video_card.dart';
-import 'package:wurp/ui/video/view_models/general_feed_view_model.dart';
 import 'package:wurp/ui/widgets/logout_button.dart';
 import 'package:wurp/ui/widgets/overlays/follow_button.dart';
 
@@ -52,7 +51,6 @@ class _ProfileScreenState extends State<ProfileScreen> with TickerProviderStateM
   bool _editingMode = false;
   late final TabController _tabController;
   late UserProfile user = widget.initialProfile;
-  late GeneralFeedViewModel _currentSearchViewModel;
 
   late final SearchQuery<UserProfile> _followingQuery;
   late final SearchQuery<UserProfile> _followersQuery;
@@ -71,7 +69,6 @@ class _ProfileScreenState extends State<ProfileScreen> with TickerProviderStateM
     _tabController.addListener(() {
       if (mounted) setState(() {});
     });
-    _currentSearchViewModel = GeneralFeedViewModel();
 
     _videoQuery = SearchQuery(
       (limit, offset) {
@@ -207,8 +204,6 @@ class _ProfileScreenState extends State<ProfileScreen> with TickerProviderStateM
                             context: context,
                             listedVideos: videos.whereType<Video>().toList(),
                             videoIndex: index,
-                            feedModel: _currentSearchViewModel,
-                            tickerProvider: this,
                           );
                           if (likesChanged != 0) {
                             setState(() {

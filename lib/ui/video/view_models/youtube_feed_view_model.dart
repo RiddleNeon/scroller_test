@@ -14,20 +14,18 @@ class YoutubeFeedViewModel extends FeedViewModel {
   int currentIndex = 0;
 
   @override
-  Future<void> dispose() {
+  Future<void> dispose() async {
     for (final controller in _containers.values) {
-      controller.controller?.dispose();
+      await controller.controller?.dispose();
     }
     _containers.clear();
-    return Future.value();
   }
 
   @override
-  Future<void> ensureCurrentVideoPlays(Video? video) {
+  Future<void> ensureCurrentVideoPlays(Video? video) async {
     if (_containers.containsKey(currentIndex)) {
-      _containers[currentIndex]?.controller?.play();
+      await _containers[currentIndex]?.controller?.play();
     }
-    return Future.value();
   }
 
   @override
@@ -45,23 +43,22 @@ class YoutubeFeedViewModel extends FeedViewModel {
   }
 
   @override
-  Future<void> pauseAll() {
+  Future<void> pauseAll() async {
     for (final container in _containers.values) {
-      container.controller?.pause();
+      await container.controller?.pause();
     }
-    return Future.value();
   }
 
   @override
   Future<void> switchToVideoContainerAt(int index, Video video) async {
     if (index == currentIndex) return;
 
-    _containers[currentIndex]?.controller?.dispose();
+    await _containers[currentIndex]?.controller?.dispose();
     _containers.remove(currentIndex);
 
     _containers[index] ??= VideoContainer(video: video);
     await _containers[index]!.loadController();
-    _containers[index]!.controller?.play();
+    await _containers[index]!.controller?.play();
 
     currentIndex = index;
   }

@@ -1,3 +1,5 @@
+import 'dart:async';
+
 import 'package:cached_network_image/cached_network_image.dart';
 import 'package:flutter/material.dart';
 import 'package:pointer_interceptor/pointer_interceptor.dart';
@@ -15,20 +17,44 @@ class YoutubeVideoContainer {
 }
 
 class ShortsFeed extends StatefulWidget {
-  const ShortsFeed({super.key, required this.videoProvider});
+  const ShortsFeed({super.key, required this.videoProvider, this.initialPage = 0, this.itemCount = 5000});
 
   final VideoProvider videoProvider;
+  final int initialPage;
+  final int itemCount;
 
   @override
   State<ShortsFeed> createState() => _ShortsFeedState();
 }
 
 class _ShortsFeedState extends State<ShortsFeed> {
-  final PageController _pageController = PageController();
+  late final PageController _pageController;
 
   final Map<int, YoutubeVideoContainer> _controllers = {};
 
-  int _currentIndex = 0;
+  late int _currentIndex;
+
+  @override
+  void initState() {
+    super.initState();
+    _currentIndex = widget.initialPage;
+    _pageController = PageController(initialPage: widget.initialPage);
+    WidgetsBinding.instance.addPostFrameCallback((_) {
+      unawaited(_prepareInitialPage());
+    });
+  }
+
+  Future<void> _prepareInitialPage() async {
+    final initial = await getControllerAt(_currentIndex);
+    initial.playVideo();
+    unawaited(_warmNextController());
+  }
+
+  Future<void> _warmNextController() async {
+    try {
+      await getControllerAt(_currentIndex + 1);
+    } catch (_) {}
+  }
 
   YoutubePlayerController _createController(String videoId) {
     print("Creating YoutubePlayerController for video ID: $videoId");
@@ -76,7 +102,7 @@ class _ShortsFeedState extends State<ShortsFeed> {
       scrollDirection: Axis.vertical,
       controller: _pageController,
       onPageChanged: _onPageChanged,
-      itemCount: 5000,
+      itemCount: widget.itemCount,
       physics: const PageScrollPhysics(),
       itemBuilder: (context, index) {
         return FutureBuilder(
