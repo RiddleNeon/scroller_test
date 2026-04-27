@@ -12,7 +12,7 @@ import 'package:wurp/tools/supabase_tests/supabase_login_test.dart';
 void main() async {
   const String key = String.fromEnvironment("YOUTUBE_API_KEY");
   YouTubeShortsFetcher fetcher = YouTubeShortsFetcher(key);
-  final channelId = await getChannelIdFromName(key, "MrWissen2go");
+  final channelId = await getChannelIdFromName(key, "Fireship");
   print(await fetcher.fetchFromChannels([channelId!]));
 }
 
@@ -67,8 +67,24 @@ Future<String?> getChannelIdFromName(String apiKey, String channelName) async {
 ///   the imported metrics match the source data.
 /// - Skips a video if its source URL is already present in the `videos` table
 Future<void> publishTest() async {
-  //todo republish, in case there were issues
+  final file = await rootBundle.loadString("pixabay_videos.json"); //load the file as a string
+  final allLinksFile = await rootBundle.loadString("all_cloudinary_image_urls"); //load the file as a string
+  parseCloudinaryUrls(allLinksFile);
+  final Map<String, dynamic> json = jsonDecode(file);
+  final List<dynamic> items = json['data'] as List<dynamic>;
 
+  print('Found ${items.length} video(s) to import.\n');
+
+  final userRepo = UserRepository();
+  final videoRepo = VideoRepository();
+  final importer = BulkVideoImporter(userRepo: userRepo, videoRepo: videoRepo);
+
+  await importer.importAll(items.take(1000).toList().cast<Map<String, dynamic>>());
+
+  print('\nDone.');
+}
+
+Future<void> publishTestYoutube() async {
   final file = await rootBundle.loadString("pixabay_videos.json"); //load the file as a string
   final allLinksFile = await rootBundle.loadString("all_cloudinary_image_urls"); //load the file as a string
   parseCloudinaryUrls(allLinksFile);
@@ -320,11 +336,11 @@ class YouTubeShortsFetcher {
     for (var channelId in channelIds) {
       final uploadsPlaylistId = await _getUploadsPlaylistId(channelId);
 
-      final videoIds = await _getAllVideoIdsFromPlaylist(uploadsPlaylistId);
+      final videoIds = await _getAllVideoIdsFromPlaylist(uploadsPlaylistId, limit: 180); 
 
       final videos = await _getVideoDetails(videoIds);
 
-      results.addAll(videos.where((v) => v.duration <= 60));
+      results.addAll((videos..sort((a, b) => b.likes.compareTo(a.likes))).where((v) => v.duration < 58 && v.duration > 2 && v.likes > 8000 && v.tags.length > 2).take(70)); // Filter to likely shorts (duration < 60s) and some engagement, and sort by like count descending
     }
 
     return jsonEncode(results.map((e) => e.toJson()).toList());
@@ -340,16 +356,20 @@ class YouTubeShortsFetcher {
     return data["items"][0]["contentDetails"]["relatedPlaylists"]["uploads"];
   }
 
-  Future<List<String>> _getAllVideoIdsFromPlaylist(String playlistId) async {
+  Future<List<String>> _getAllVideoIdsFromPlaylist(String playlistId, {int? limit}) async {
     List<String> videoIds = [];
     String? nextPageToken;
 
+    int fetchedCount = 0;
     do {
+      if(limit != null && fetchedCount >= limit) {
+        break;
+      }
       final url =
           "https://www.googleapis.com/youtube/v3/playlistItems"
           "?part=contentDetails"
           "&playlistId=$playlistId"
-          "&maxResults=50"
+          "&maxResults=${limit != null ? (limit - fetchedCount).clamp(1, 50) : 50}"
           "&pageToken=${nextPageToken ?? ""}"
           "&key=$apiKey";
 
