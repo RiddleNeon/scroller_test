@@ -17,6 +17,8 @@ class UserProfile {
   final bool acceptedDataProcessing;
   final bool onboardingCompleted;
 
+  final bool isBot;
+
   const UserProfile({
     required this.id,
     required this.username,
@@ -31,6 +33,7 @@ class UserProfile {
     this.acceptedEula = false,
     this.acceptedDataProcessing = false,
     this.onboardingCompleted = false,
+    this.isBot = false,
   });
 
   factory UserProfile.fromSupabase(Map<String, dynamic> data) {
@@ -48,6 +51,7 @@ class UserProfile {
       acceptedEula: data['accepted_eula'] ?? data['acceptedEula'] ?? false,
       acceptedDataProcessing: data['accepted_data_processing'] ?? data['acceptedDataProcessing'] ?? false,
       onboardingCompleted: data['onboarding_completed'] ?? data['onboardingCompleted'] ?? false,
+      isBot: data['is_bot'] ?? data['isBot'] ?? false,
     );
   }
 
@@ -66,6 +70,7 @@ class UserProfile {
       acceptedEula: data['acceptedEula'] ?? data['accepted_eula'] ?? false,
       acceptedDataProcessing: data['acceptedDataProcessing'] ?? data['accepted_data_processing'] ?? false,
       onboardingCompleted: data['onboardingCompleted'] ?? data['onboarding_completed'] ?? false,
+      isBot: data['isBot'] ?? data['is_bot'] ?? false,
     );
   }
 
@@ -84,6 +89,7 @@ class UserProfile {
       "acceptedEula": acceptedEula,
       "acceptedDataProcessing": acceptedDataProcessing,
       "onboardingCompleted": onboardingCompleted,
+      "isBot": isBot,
     };
   }
 
@@ -99,6 +105,7 @@ class UserProfile {
     bool? acceptedEula,
     bool? acceptedDataProcessing,
     bool? onboardingCompleted,
+    bool? isBot,
   }) {
     return UserProfile(
       id: id,
@@ -114,6 +121,7 @@ class UserProfile {
       acceptedEula: acceptedEula ?? this.acceptedEula,
       acceptedDataProcessing: acceptedDataProcessing ?? this.acceptedDataProcessing,
       onboardingCompleted: onboardingCompleted ?? this.onboardingCompleted,
+      isBot: isBot ?? this.isBot,
     );
   }
 
@@ -121,7 +129,7 @@ class UserProfile {
 
   @override
   String toString() =>
-      'UserProfile{id: $id, username: $username, displayName: $displayName, profileImageUrl: $profileImageUrl, bio: $bio, createdAt: $createdAt, followersCount: $followersCount}';
+      'UserProfile{id: $id, username: $username, displayName: $displayName, profileImageUrl: $profileImageUrl, bio: $bio, createdAt: $createdAt, followersCount: $followersCount, followingCount: $followingCount, totalVideosCount: $totalVideosCount, totalLikesCount: $totalLikesCount, acceptedEula: $acceptedEula, acceptedDataProcessing: $acceptedDataProcessing, onboardingCompleted: $onboardingCompleted, isBot: $isBot}';
 }
 
 DateTime _parseDateTime(Object? value) {
@@ -149,6 +157,7 @@ class CreatorUserProfile extends UserProfile {
     super.acceptedEula,
     super.acceptedDataProcessing,
     super.onboardingCompleted,
+    super.isBot,
     required this.publishedVideoIds,
   });
 

@@ -264,15 +264,15 @@ class VideoRepository {
   }
 
   /// searches all videos where title, description or tags contain the query (case-insensitive), ordered by relevance desc then creation date and popularity desc. Also contains unprecise full text search, so "funny" will match "funny videos". For more precise tag search, use [searchVideosByTag].
-  Future<({List<Video> videos, int? nextOffset})> searchVideos(String query, {int limit = 20, int offset = 0, bool withAuthor = false}) async {
-    final videos = await searchVideosSupabase(query, limit: limit, offset: offset, withAuthor: withAuthor);
+  Future<({List<Video> videos, int? nextOffset})> searchVideos(String query, {int limit = 20, int offset = 0, bool withAuthor = false, bool showYoutube = false}) async {
+    final videos = await searchVideosSupabase(query, limit: limit, offset: offset, withAuthor: withAuthor, showYoutube: showYoutube);
     return (videos: videos, nextOffset: videos.length < limit ? null : offset + videos.length);
   }
 
-  Future<List<Video>> searchVideosSupabase(String query, {int limit = 20, int offset = 0, bool withAuthor = false}) async {
+  Future<List<Video>> searchVideosSupabase(String query, {int limit = 20, int offset = 0, bool withAuthor = false, bool showYoutube = false}) async {
     final result = await supabaseClient.rpc(
       withAuthor ? 'search_videos_with_author' : 'search_videos',
-      params: {'search_query': query, 'p_limit': limit, 'p_offset': offset},
+      params: {'search_query': query, 'p_limit': limit, 'p_offset': offset, 'p_show_youtube': showYoutube},
     );
 
     return (result as List).map<Video>((e) => _toVideo(e)).toList();

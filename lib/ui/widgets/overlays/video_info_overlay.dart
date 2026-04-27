@@ -1,6 +1,7 @@
 import 'dart:math' as math;
 
 import 'package:flutter/material.dart';
+import 'package:url_launcher/url_launcher.dart';
 import 'package:wurp/logic/users/user_model.dart';
 import 'package:wurp/ui/theme/theme_ui_values.dart';
 
@@ -74,15 +75,37 @@ class _VideoInfoOverlayState extends State<VideoInfoOverlay> {
     );
   }
 
+  bool get _isYoutubeVideo {
+    final url = widget.video.videoUrl.toLowerCase();
+    return url.contains('youtube.com') || url.contains('youtu.be');
+  }
+
+  Future<void> _openOriginalYoutubeUrl() async {
+    final uri = Uri.tryParse(widget.video.videoUrl);
+    if (uri == null) return;
+    final launched = await launchUrl(uri, mode: LaunchMode.externalApplication);
+    if (launched || !mounted) return;
+    ScaffoldMessenger.of(context).showSnackBar(
+      const SnackBar(content: Text('Could not open YouTube link')),
+    );
+  }
+
   @override
   Widget build(BuildContext context) {
     final cs = Theme.of(context).colorScheme;
     final title = widget.video.title.trim();
     final description = widget.video.description.trim();
-    final filteredTags = widget.video.tags.where((tag) => tag.trim().isNotEmpty).map((tag) => tag.trim()).toList();
-    final visibleTags = _showAllTags ? filteredTags : filteredTags.take(3).toList();
+    final filteredTags = widget.video.tags
+        .where((tag) => tag.trim().isNotEmpty)
+        .map((tag) => tag.trim())
+        .toList();
+    final visibleTags = _showAllTags
+        ? filteredTags
+        : filteredTags.take(3).toList();
     final hiddenTagsCount = filteredTags.length - visibleTags.length;
-    final isOwnProfile = userLoggedIn && currentUser.id == widget.video.authorId;
+    final isOwnProfile =
+        userLoggedIn && currentUser.id == widget.video.authorId;
+    final hasDescriptionSection = description.isNotEmpty || _isYoutubeVideo;
 
     return Stack(
       children: [
@@ -94,7 +117,11 @@ class _VideoInfoOverlayState extends State<VideoInfoOverlay> {
                 gradient: LinearGradient(
                   begin: Alignment.bottomCenter,
                   end: Alignment.topCenter,
-                  colors: [cs.scrim.withValues(alpha: 0.74), cs.scrim.withValues(alpha: 0.44), cs.scrim.withValues(alpha: 0)],
+                  colors: [
+                    cs.scrim.withValues(alpha: 0.74),
+                    cs.scrim.withValues(alpha: 0.44),
+                    cs.scrim.withValues(alpha: 0),
+                  ],
                 ),
               ),
             ),
@@ -106,11 +133,20 @@ class _VideoInfoOverlayState extends State<VideoInfoOverlay> {
             alignment: Alignment.bottomLeft,
             child: LayoutBuilder(
               builder: (context, constraints) {
-                final maxCardWidth = math.min(420.0, math.max(260.0, constraints.maxWidth - 22));
+                final maxCardWidth = math.min(
+                  420.0,
+                  math.max(260.0, constraints.maxWidth - 22),
+                );
                 final maxTagWidth = math.max(64.0, (maxCardWidth - 84) / 3);
-                final maxCardHeight = math.max(120.0, constraints.maxHeight - 8);
+                final maxCardHeight = math.max(
+                  120.0,
+                  constraints.maxHeight - 8,
+                );
                 return ConstrainedBox(
-                  constraints: BoxConstraints(maxWidth: maxCardWidth, maxHeight: maxCardHeight),
+                  constraints: BoxConstraints(
+                    maxWidth: maxCardWidth,
+                    maxHeight: maxCardHeight,
+                  ),
                   child: GestureDetector(
                     onTap: _toggleExpanded,
                     child: AnimatedContainer(
@@ -120,7 +156,9 @@ class _VideoInfoOverlayState extends State<VideoInfoOverlay> {
                       decoration: BoxDecoration(
                         color: cs.surfaceContainerLow.withValues(alpha: 0.72),
                         borderRadius: BorderRadius.circular(context.uiRadiusLg),
-                        border: Border.all(color: cs.outlineVariant.withValues(alpha: 0.55)),
+                        border: Border.all(
+                          color: cs.outlineVariant.withValues(alpha: 0.55),
+                        ),
                       ),
                       child: Column(
                         crossAxisAlignment: CrossAxisAlignment.start,
@@ -131,7 +169,9 @@ class _VideoInfoOverlayState extends State<VideoInfoOverlay> {
                             children: [
                               Expanded(
                                 child: Padding(
-                                  padding: const EdgeInsets.symmetric(vertical: 2),
+                                  padding: const EdgeInsets.symmetric(
+                                    vertical: 2,
+                                  ),
                                   child: Row(
                                     children: [
                                       SizedBox(
@@ -141,7 +181,13 @@ class _VideoInfoOverlayState extends State<VideoInfoOverlay> {
                                           fit: BoxFit.cover,
                                           child: Avatar(
                                             imageUrl: _author?.profileImageUrl,
-                                            name: _author?.displayName.isNotEmpty == true ? _author!.displayName : widget.video.authorName,
+                                            name:
+                                                _author
+                                                        ?.displayName
+                                                        .isNotEmpty ==
+                                                    true
+                                                ? _author!.displayName
+                                                : widget.video.authorName,
                                             colorScheme: cs,
                                           ),
                                         ),
@@ -150,10 +196,16 @@ class _VideoInfoOverlayState extends State<VideoInfoOverlay> {
                                       InkWell(
                                         onTap: _openProfile,
                                         child: Text(
-                                          _author?.username.isNotEmpty == true ? _author!.username : widget.video.authorName,
+                                          _author?.username.isNotEmpty == true
+                                              ? _author!.username
+                                              : widget.video.authorName,
                                           maxLines: 1,
                                           overflow: TextOverflow.ellipsis,
-                                          style: TextStyle(color: cs.onSurface, fontWeight: FontWeight.w700, fontSize: 14),
+                                          style: TextStyle(
+                                            color: cs.onSurface,
+                                            fontWeight: FontWeight.w700,
+                                            fontSize: 14,
+                                          ),
                                         ),
                                       ),
                                       const Spacer(),
@@ -166,7 +218,8 @@ class _VideoInfoOverlayState extends State<VideoInfoOverlay> {
                                 FollowButton(
                                   key: ValueKey(widget.video.authorId),
                                   user: _author!,
-                                  initialSubscribed: localSeenService.isFollowing(widget.video.authorId),
+                                  initialSubscribed: localSeenService
+                                      .isFollowing(widget.video.authorId),
                                   design: FollowButtonDesign.compact,
                                 ),
                               ],
@@ -175,7 +228,11 @@ class _VideoInfoOverlayState extends State<VideoInfoOverlay> {
                                 turns: _expanded ? 0.5 : 0,
                                 duration: const Duration(milliseconds: 220),
                                 curve: Curves.easeOutCubic,
-                                child: Icon(Icons.keyboard_arrow_down_rounded, color: cs.onSurfaceVariant, size: 20),
+                                child: Icon(
+                                  Icons.keyboard_arrow_down_rounded,
+                                  color: cs.onSurfaceVariant,
+                                  size: 20,
+                                ),
                               ),
                             ],
                           ),
@@ -185,7 +242,11 @@ class _VideoInfoOverlayState extends State<VideoInfoOverlay> {
                               title,
                               maxLines: _expanded ? 2 : 1,
                               overflow: TextOverflow.ellipsis,
-                              style: TextStyle(color: cs.onSurface, fontWeight: FontWeight.w600, fontSize: 14),
+                              style: TextStyle(
+                                color: cs.onSurface,
+                                fontWeight: FontWeight.w600,
+                                fontSize: 14,
+                              ),
                             ),
                           ],
                           Flexible(
@@ -200,24 +261,79 @@ class _VideoInfoOverlayState extends State<VideoInfoOverlay> {
                                   transitionBuilder: (child, animation) {
                                     return FadeTransition(
                                       opacity: animation,
-                                      child: SizeTransition(sizeFactor: animation, axisAlignment: -1, child: child),
+                                      child: SizeTransition(
+                                        sizeFactor: animation,
+                                        axisAlignment: -1,
+                                        child: child,
+                                      ),
                                     );
                                   },
                                   child: _expanded
                                       ? Padding(
-                                          key: ValueKey('expanded_details_$_showAllTags'),
-                                          padding: const EdgeInsets.only(top: 8),
+                                          key: ValueKey(
+                                            'expanded_details_$_showAllTags',
+                                          ),
+                                          padding: const EdgeInsets.only(
+                                            top: 8,
+                                          ),
                                           child: SingleChildScrollView(
                                             child: Column(
-                                              crossAxisAlignment: CrossAxisAlignment.start,
+                                              crossAxisAlignment:
+                                                  CrossAxisAlignment.start,
                                               mainAxisSize: MainAxisSize.min,
                                               children: [
                                                 if (description.isNotEmpty)
                                                   Text(
                                                     description,
-                                                    style: TextStyle(color: cs.onSurfaceVariant, fontSize: 13, fontWeight: FontWeight.w500),
+                                                    style: TextStyle(
+                                                      color:
+                                                          cs.onSurfaceVariant,
+                                                      fontSize: 13,
+                                                      fontWeight:
+                                                          FontWeight.w500,
+                                                    ),
                                                   ),
-                                                if (description.isNotEmpty && visibleTags.isNotEmpty) const SizedBox(height: 8),
+                                                if (_isYoutubeVideo)
+                                                  Padding(
+                                                    padding: EdgeInsets.only(
+                                                      top:
+                                                          description.isNotEmpty
+                                                          ? 4
+                                                          : 0,
+                                                    ),
+                                                    child: InkWell(
+                                                      onTap:
+                                                          _openOriginalYoutubeUrl,
+                                                      borderRadius:
+                                                          BorderRadius.circular(
+                                                            6,
+                                                          ),
+                                                      child: Padding(
+                                                        padding:
+                                                            const EdgeInsets.symmetric(
+                                                              vertical: 1,
+                                                            ),
+                                                        child: Text(
+                                                          'source: YouTube',
+                                                          style: TextStyle(
+                                                            color: cs
+                                                                .onSurfaceVariant,
+                                                            fontSize: 12,
+                                                            fontWeight:
+                                                                FontWeight.w600,
+                                                            decoration:
+                                                                TextDecoration
+                                                                    .underline,
+                                                            decorationColor: cs
+                                                                .onSurfaceVariant,
+                                                          ),
+                                                        ),
+                                                      ),
+                                                    ),
+                                                  ),
+                                                if (hasDescriptionSection &&
+                                                    visibleTags.isNotEmpty)
+                                                  const SizedBox(height: 8),
                                                 if (visibleTags.isNotEmpty)
                                                   ClipRect(
                                                     child: Wrap(
@@ -225,28 +341,43 @@ class _VideoInfoOverlayState extends State<VideoInfoOverlay> {
                                                       runSpacing: 6,
                                                       children: [
                                                         ...visibleTags.map(
-                                                          (tag) => _TagChip(text: '#$tag', maxWidth: maxTagWidth, isInteractive: false, onTap: () {
-                                                          }),
+                                                          (tag) => _TagChip(
+                                                            text: '#$tag',
+                                                            maxWidth:
+                                                                maxTagWidth,
+                                                            isInteractive:
+                                                                false,
+                                                            onTap: () {},
+                                                          ),
                                                         ),
                                                         if (hiddenTagsCount > 0)
                                                           _TagChip(
-                                                            text: '+$hiddenTagsCount',
+                                                            text:
+                                                                '+$hiddenTagsCount',
                                                             isInteractive: true,
-                                                            maxWidth: maxTagWidth,
+                                                            maxWidth:
+                                                                maxTagWidth,
                                                             onTap: () {
                                                               setState(() {
-                                                                _showAllTags = true;
+                                                                _showAllTags =
+                                                                    true;
                                                               });
                                                             },
                                                           ),
-                                                        if (_showAllTags && filteredTags.length > 3)
+                                                        if (_showAllTags &&
+                                                            filteredTags
+                                                                    .length >
+                                                                3)
                                                           _TagChip(
                                                             isInteractive: true,
                                                             text: 'Show less',
-                                                            maxWidth: maxTagWidth + 24,
+                                                            maxWidth:
+                                                                maxTagWidth +
+                                                                24,
                                                             onTap: () {
                                                               setState(() {
-                                                                _showAllTags = false;
+                                                                _showAllTags =
+                                                                    false;
                                                               });
                                                             },
                                                           ),
@@ -257,7 +388,9 @@ class _VideoInfoOverlayState extends State<VideoInfoOverlay> {
                                             ),
                                           ),
                                         )
-                                      : const SizedBox(key: ValueKey('collapsed_details')),
+                                      : const SizedBox(
+                                          key: ValueKey('collapsed_details'),
+                                        ),
                                 ),
                               ),
                             ),
@@ -282,7 +415,12 @@ class _TagChip extends StatelessWidget {
   final VoidCallback? onTap;
   final bool isInteractive;
 
-  const _TagChip({required this.text, required this.maxWidth, this.onTap, required this.isInteractive});
+  const _TagChip({
+    required this.text,
+    required this.maxWidth,
+    this.onTap,
+    required this.isInteractive,
+  });
 
   @override
   Widget build(BuildContext context) {
@@ -297,15 +435,25 @@ class _TagChip extends StatelessWidget {
           child: Ink(
             padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 3),
             decoration: BoxDecoration(
-              color: isInteractive ? cs.tertiary.withValues(alpha: 0.72) : cs.primaryContainer.withValues(alpha: 0.72),
+              color: isInteractive
+                  ? cs.tertiary.withValues(alpha: 0.72)
+                  : cs.primaryContainer.withValues(alpha: 0.72),
               borderRadius: BorderRadius.circular(context.uiRadiusLg),
-              border: Border.all(color: isInteractive ? cs.tertiaryFixedDim : cs.primaryContainer.withValues(alpha: 0.32)),
+              border: Border.all(
+                color: isInteractive
+                    ? cs.tertiaryFixedDim
+                    : cs.primaryContainer.withValues(alpha: 0.32),
+              ),
             ),
             child: Text(
               text,
               maxLines: 1,
               overflow: TextOverflow.ellipsis,
-              style: TextStyle(color: cs.onSecondaryContainer, fontWeight: FontWeight.w600, fontSize: 12),
+              style: TextStyle(
+                color: cs.onSecondaryContainer,
+                fontWeight: FontWeight.w600,
+                fontSize: 12,
+              ),
             ),
           ),
         ),

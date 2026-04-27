@@ -111,7 +111,7 @@ void initRouter() {
               final mode = _searchModeFromQuery(state.uri.queryParameters['mode']);
               return SlideMorphTransitions.page<void>(
                 key: state.pageKey,
-                child: SearchScreen(initialQuery: state.uri.queryParameters['q'], initialScope: scope, initialMode: mode),
+                child: SearchScreen(initialQuery: state.uri.queryParameters['q'], initialScope: scope, initialMode: mode, showYoutube: useYoutubeVideosOnlyNotifier.value,),
                 beginOffset: const Offset(0.03, 0.0),
                 beginScale: 0.993,
               );

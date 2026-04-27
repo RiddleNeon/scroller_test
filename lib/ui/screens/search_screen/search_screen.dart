@@ -21,11 +21,12 @@ enum SearchScope { videos, profiles, all }
 enum SearchMode { text, tags }
 
 class SearchScreen extends StatefulWidget {
-  const SearchScreen({super.key, this.initialQuery, this.initialScope = SearchScope.all, this.initialMode = SearchMode.text});
+  const SearchScreen({super.key, this.initialQuery, this.initialScope = SearchScope.all, this.initialMode = SearchMode.text, required this.showYoutube});
 
   final String? initialQuery;
   final SearchScope initialScope;
   final SearchMode initialMode;
+  final bool showYoutube;
 
   @override
   State<SearchScreen> createState() => _SearchScreenState();
@@ -131,7 +132,7 @@ class _SearchScreenState extends State<SearchScreen> with TickerProviderStateMix
       nextVideoQuery = SearchQuery<Video>((limit, offset) async {
         final videos = widget.initialMode == SearchMode.tags
             ? await videoRepo.searchVideosByTagSupabase(trimmedQuery, limit: limit, offset: offset)
-            : (await videoRepo.searchVideos(trimmedQuery, limit: limit, offset: offset, withAuthor: true)).videos;
+            : (await videoRepo.searchVideos(trimmedQuery, limit: limit, offset: offset, withAuthor: true, showYoutube: widget.showYoutube)).videos;
         return videos;
       }, () => videoRepo.countSearchVideos(trimmedQuery));
     }

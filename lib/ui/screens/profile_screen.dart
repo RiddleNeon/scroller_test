@@ -47,7 +47,8 @@ class ProfileScreen extends StatefulWidget {
   State<ProfileScreen> createState() => _ProfileScreenState();
 }
 
-class _ProfileScreenState extends State<ProfileScreen> with TickerProviderStateMixin {
+class _ProfileScreenState extends State<ProfileScreen>
+    with TickerProviderStateMixin {
   bool _editingMode = false;
   late final TabController _tabController;
   late UserProfile user = widget.initialProfile;
@@ -56,9 +57,12 @@ class _ProfileScreenState extends State<ProfileScreen> with TickerProviderStateM
   late final SearchQuery<UserProfile> _followersQuery;
   late final SearchQuery<Video> _videoQuery;
 
-  final GlobalKey<AnimatedPreloadingListState<UserProfile>> _followingListKey = GlobalKey<AnimatedPreloadingListState<UserProfile>>();
-  final GlobalKey<AnimatedPreloadingListState<UserProfile>> _followersListKey = GlobalKey<AnimatedPreloadingListState<UserProfile>>();
-  final GlobalKey<AnimatedPreloadingListState<UserProfile>> _videoListKey = GlobalKey<AnimatedPreloadingListState<UserProfile>>();
+  final GlobalKey<AnimatedPreloadingListState<UserProfile>> _followingListKey =
+      GlobalKey<AnimatedPreloadingListState<UserProfile>>();
+  final GlobalKey<AnimatedPreloadingListState<UserProfile>> _followersListKey =
+      GlobalKey<AnimatedPreloadingListState<UserProfile>>();
+  final GlobalKey<AnimatedPreloadingListState<UserProfile>> _videoListKey =
+      GlobalKey<AnimatedPreloadingListState<UserProfile>>();
   StreamSubscription<user_repo.FollowChangeEvent>? _followChangesSub;
 
   @override
@@ -72,7 +76,11 @@ class _ProfileScreenState extends State<ProfileScreen> with TickerProviderStateM
 
     _videoQuery = SearchQuery(
       (limit, offset) {
-        return userRepository.getPublishedVideos(user.id, limit: limit, offset: offset);
+        return userRepository.getPublishedVideos(
+          user.id,
+          limit: limit,
+          offset: offset,
+        );
       },
       () {
         return userRepository.getPublishedVideosCount(user.id);
@@ -80,7 +88,11 @@ class _ProfileScreenState extends State<ProfileScreen> with TickerProviderStateM
     );
     _followingQuery = SearchQuery(
       (limit, offset) {
-        return userRepository.getFollowing(user.id, limit: limit, offset: offset);
+        return userRepository.getFollowing(
+          user.id,
+          limit: limit,
+          offset: offset,
+        );
       },
       () {
         return userRepository.getFollowingCount(user.id);
@@ -88,7 +100,11 @@ class _ProfileScreenState extends State<ProfileScreen> with TickerProviderStateM
     );
     _followersQuery = SearchQuery(
       (limit, offset) {
-        return userRepository.getFollowers(user.id, limit: limit, offset: offset);
+        return userRepository.getFollowers(
+          user.id,
+          limit: limit,
+          offset: offset,
+        );
       },
       () {
         return userRepository.getFollowersCount(user.id);
@@ -98,7 +114,9 @@ class _ProfileScreenState extends State<ProfileScreen> with TickerProviderStateM
     _followersQuery.preloadMore(limit: 8);
 
     if (widget.ownProfile) {
-      _followChangesSub = userRepository.followChanges.listen(_onOwnFollowChanged);
+      _followChangesSub = userRepository.followChanges.listen(
+        _onOwnFollowChanged,
+      );
     }
   }
 
@@ -120,11 +138,14 @@ class _ProfileScreenState extends State<ProfileScreen> with TickerProviderStateM
     if (!mounted || event.followerId != user.id) return;
 
     final listState = _followingListKey.currentState;
-    final containsInList = listState?.items.any((u) => u.id == event.targetUserId) ?? false;
+    final containsInList =
+        listState?.items.any((u) => u.id == event.targetUserId) ?? false;
 
     if (event.followed) {
       UserProfile? followedUser = event.targetUser;
-      followedUser ??= _followingQuery.results.where((u) => u.id == event.targetUserId).firstOrNull;
+      followedUser ??= _followingQuery.results
+          .where((u) => u.id == event.targetUserId)
+          .firstOrNull;
       followedUser ??= localSeenService.getAuthorFromCache(event.targetUserId);
       followedUser ??= await userRepository.getUserSupabase(event.targetUserId);
       if (!mounted || followedUser == null) {
@@ -143,11 +164,16 @@ class _ProfileScreenState extends State<ProfileScreen> with TickerProviderStateM
     } else {
       _followingQuery.results.removeWhere((u) => u.id == event.targetUserId);
       if (listState != null) {
-        final currentIndex = listState.items.indexWhere((u) => u.id == event.targetUserId);
+        final currentIndex = listState.items.indexWhere(
+          (u) => u.id == event.targetUserId,
+        );
         if (currentIndex != -1) {
           final removedUser = listState.items[currentIndex];
           final cs = Theme.of(context).colorScheme;
-          listState.removeItem(currentIndex, (context, anim) => _buildSqueezeItem(removedUser, anim, cs));
+          listState.removeItem(
+            currentIndex,
+            (context, anim) => _buildSqueezeItem(removedUser, anim, cs),
+          );
         }
       }
     }
@@ -158,7 +184,9 @@ class _ProfileScreenState extends State<ProfileScreen> with TickerProviderStateM
   void _syncOwnFollowingCount() {
     if (!mounted) return;
     setState(() {
-      user = user.copyWith(followingCount: currentUser.followingCount ?? user.followingCount);
+      user = user.copyWith(
+        followingCount: currentUser.followingCount ?? user.followingCount,
+      );
     });
   }
 
@@ -180,8 +208,14 @@ class _ProfileScreenState extends State<ProfileScreen> with TickerProviderStateM
               elevation: 0,
               titleSpacing: 0,
               title: _buildCollapsedTitle(cs),
-              flexibleSpace: FlexibleSpaceBar(collapseMode: CollapseMode.pin, background: _buildProfileHeader(cs)),
-              bottom: PreferredSize(preferredSize: const Size.fromHeight(60), child: _buildTabBar(cs)),
+              flexibleSpace: FlexibleSpaceBar(
+                collapseMode: CollapseMode.pin,
+                background: _buildProfileHeader(cs),
+              ),
+              bottom: PreferredSize(
+                preferredSize: const Size.fromHeight(60),
+                child: _buildTabBar(cs),
+              ),
             ),
           ],
           body: TabBarView(
@@ -190,10 +224,17 @@ class _ProfileScreenState extends State<ProfileScreen> with TickerProviderStateM
               AnimatedPreloadingList<Video>(
                 key: _videoListKey,
                 query: _videoQuery,
-                notFoundWidget: _buildTab(cs, Icons.grid_on_rounded, 'No published videos'),
+                notFoundWidget: _buildTab(
+                  cs,
+                  Icons.grid_on_rounded,
+                  'No published videos',
+                ),
                 itemBuilder: (context, video, animation, index, videos) {
                   return SizeTransition(
-                    sizeFactor: CurvedAnimation(parent: animation, curve: Curves.easeOutQuart),
+                    sizeFactor: CurvedAnimation(
+                      parent: animation,
+                      curve: Curves.easeOutQuart,
+                    ),
                     axisAlignment: -1.0,
                     child: SlideMorphTransitions.build(
                       animation,
@@ -207,7 +248,12 @@ class _ProfileScreenState extends State<ProfileScreen> with TickerProviderStateM
                           );
                           if (likesChanged != 0) {
                             setState(() {
-                              user = user.copyWith(totalLikesCount: max((user.totalLikesCount ?? 0) + likesChanged, 0));
+                              user = user.copyWith(
+                                totalLikesCount: max(
+                                  (user.totalLikesCount ?? 0) + likesChanged,
+                                  0,
+                                ),
+                              );
                             });
                           }
                         },
@@ -222,10 +268,17 @@ class _ProfileScreenState extends State<ProfileScreen> with TickerProviderStateM
               AnimatedPreloadingList<UserProfile>(
                 key: _followersListKey,
                 query: _followersQuery,
-                notFoundWidget: _buildTab(cs, FontAwesomeIcons.users, 'No followers'),
+                notFoundWidget: _buildTab(
+                  cs,
+                  FontAwesomeIcons.users,
+                  'No followers',
+                ),
                 itemBuilder: (context, itemUser, animation, index, users) {
                   return SizeTransition(
-                    sizeFactor: CurvedAnimation(parent: animation, curve: Curves.easeOutQuart),
+                    sizeFactor: CurvedAnimation(
+                      parent: animation,
+                      curve: Curves.easeOutQuart,
+                    ),
                     axisAlignment: -1.0,
                     child: SlideMorphTransitions.build(
                       animation,
@@ -237,17 +290,36 @@ class _ProfileScreenState extends State<ProfileScreen> with TickerProviderStateM
                           if (user.id != currentUser.id) return;
                           setState(() {
                             if (followed) {
-                              user = user.copyWith(followingCount: (user.followingCount ?? 0) + 1);
+                              user = user.copyWith(
+                                followingCount: (user.followingCount ?? 0) + 1,
+                              );
                               _followingListKey.currentState?.addItem(itemUser);
                             } else {
-                              user = user.copyWith(followingCount: max((user.followingCount ?? 0) - 1, 0));
-                              final currentIndex = _followingListKey.currentState?.items.indexOf(itemUser) ?? -1;
+                              user = user.copyWith(
+                                followingCount: max(
+                                  (user.followingCount ?? 0) - 1,
+                                  0,
+                                ),
+                              );
+                              final currentIndex =
+                                  _followingListKey.currentState?.items.indexOf(
+                                    itemUser,
+                                  ) ??
+                                  -1;
                               if (currentIndex != -1) {
-                                _followingListKey.currentState?.removeItem(currentIndex, (context, anim) => _buildSqueezeItem(itemUser, anim, cs));
+                                _followingListKey.currentState?.removeItem(
+                                  currentIndex,
+                                  (context, anim) =>
+                                      _buildSqueezeItem(itemUser, anim, cs),
+                                );
                                 //_followingListKey.currentState?.preloadMore(limit: 1); //fixme
-                                print('Removed user ${itemUser.username} from following list');
+                                print(
+                                  'Removed user ${itemUser.username} from following list',
+                                );
                               } else {
-                                print('Tried to remove user ${itemUser.username} from following list, but they were not found in the list');
+                                print(
+                                  'Tried to remove user ${itemUser.username} from following list, but they were not found in the list',
+                                );
                               }
                             }
                           });
@@ -262,10 +334,17 @@ class _ProfileScreenState extends State<ProfileScreen> with TickerProviderStateM
               AnimatedPreloadingList<UserProfile>(
                 key: _followingListKey,
                 query: _followingQuery,
-                notFoundWidget: _buildTab(cs, Icons.person_add_alt_1, 'Not following anyone yet'),
+                notFoundWidget: _buildTab(
+                  cs,
+                  Icons.person_add_alt_1,
+                  'Not following anyone yet',
+                ),
                 itemBuilder: (context, itemUser, animation, index, users) {
                   return SizeTransition(
-                    sizeFactor: CurvedAnimation(parent: animation, curve: Curves.easeOutQuart),
+                    sizeFactor: CurvedAnimation(
+                      parent: animation,
+                      curve: Curves.easeOutQuart,
+                    ),
                     axisAlignment: -1.0,
                     child: SlideMorphTransitions.build(
                       animation,
@@ -275,17 +354,32 @@ class _ProfileScreenState extends State<ProfileScreen> with TickerProviderStateM
                         key: ValueKey(itemUser.id),
                         onFollowChange: (followed) {
                           if (!followed) {
-                            final currentIndex = _followingListKey.currentState?.items.indexOf(itemUser) ?? -1;
+                            final currentIndex =
+                                _followingListKey.currentState?.items.indexOf(
+                                  itemUser,
+                                ) ??
+                                -1;
                             if (currentIndex != -1) {
-                              _followingListKey.currentState?.removeItem(currentIndex, (context, anim) => _buildSqueezeItem(itemUser, anim, cs));
+                              _followingListKey.currentState?.removeItem(
+                                currentIndex,
+                                (context, anim) =>
+                                    _buildSqueezeItem(itemUser, anim, cs),
+                              );
                               //_followingListKey.currentState?.preloadMore(limit: 1); //fixme
                             }
                           }
                           setState(() {
                             if (followed) {
-                              user = user.copyWith(followingCount: (user.followingCount ?? 0) + 1);
+                              user = user.copyWith(
+                                followingCount: (user.followingCount ?? 0) + 1,
+                              );
                             } else {
-                              user = user.copyWith(followingCount: max((user.followingCount ?? 0) - 1, 0));
+                              user = user.copyWith(
+                                followingCount: max(
+                                  (user.followingCount ?? 0) - 1,
+                                  0,
+                                ),
+                              );
                             }
                           });
                         },
@@ -303,12 +397,22 @@ class _ProfileScreenState extends State<ProfileScreen> with TickerProviderStateM
     );
   }
 
-  Widget _buildSqueezeItem(UserProfile user, Animation<double> animation, ColorScheme cs) {
+  Widget _buildSqueezeItem(
+    UserProfile user,
+    Animation<double> animation,
+    ColorScheme cs,
+  ) {
     return SizeTransition(
-      sizeFactor: CurvedAnimation(parent: animation, curve: Curves.easeInOutQuart),
+      sizeFactor: CurvedAnimation(
+        parent: animation,
+        curve: Curves.easeInOutQuart,
+      ),
       axisAlignment: -1.0,
       child: SizeTransition(
-        sizeFactor: CurvedAnimation(parent: animation, curve: Curves.easeInOutQuart),
+        sizeFactor: CurvedAnimation(
+          parent: animation,
+          curve: Curves.easeInOutQuart,
+        ),
         axis: Axis.horizontal,
         child: SlideMorphTransitions.build(
           animation,
@@ -324,7 +428,10 @@ class _ProfileScreenState extends State<ProfileScreen> with TickerProviderStateM
     return Container(
       decoration: BoxDecoration(
         color: cs.surfaceContainer.withValues(alpha: 0.95),
-        borderRadius: BorderRadius.only(bottomLeft: Radius.circular(context.uiRadiusMd), bottomRight: Radius.circular(context.uiRadiusMd)),
+        borderRadius: BorderRadius.only(
+          bottomLeft: Radius.circular(context.uiRadiusMd),
+          bottomRight: Radius.circular(context.uiRadiusMd),
+        ),
       ),
       height: kToolbarHeight,
       padding: const EdgeInsets.symmetric(horizontal: 4),
@@ -332,12 +439,31 @@ class _ProfileScreenState extends State<ProfileScreen> with TickerProviderStateM
         mainAxisSize: MainAxisSize.max,
         mainAxisAlignment: MainAxisAlignment.spaceEvenly,
         children: [
-          if (widget.ownProfile) ...[const SizedBox(width: 16), const LogoutButton()] else const SizedBox(width: 48),
+          if (widget.ownProfile) ...[
+            const SizedBox(width: 16),
+            const LogoutButton(),
+          ] else
+            const SizedBox(width: 48),
           Expanded(
-            child: Text(
-              user.username,
-              style: TextStyle(color: cs.onSurface, fontSize: 15, fontWeight: FontWeight.w700, letterSpacing: 0.2),
-              textAlign: TextAlign.center,
+            child: Row(
+              mainAxisAlignment: MainAxisAlignment.center,
+              mainAxisSize: MainAxisSize.min,
+              children: [
+                Flexible(
+                  child: Text(
+                    user.username,
+                    style: TextStyle(
+                      color: cs.onSurface,
+                      fontSize: 15,
+                      fontWeight: FontWeight.w700,
+                      letterSpacing: 0.2,
+                    ),
+                    textAlign: TextAlign.center,
+                    maxLines: 1,
+                    overflow: TextOverflow.ellipsis,
+                  ),
+                ),
+              ],
             ),
           ),
           if (widget.ownProfile) ...[
@@ -352,7 +478,7 @@ class _ProfileScreenState extends State<ProfileScreen> with TickerProviderStateM
             ),
             const SizedBox(width: 16),
           ] else
-            const SizedBox(width: 48),
+            const SizedBox(width: 96),
         ],
       ),
     );
@@ -367,9 +493,21 @@ class _ProfileScreenState extends State<ProfileScreen> with TickerProviderStateM
           const SizedBox(height: 16),
           _buildAvatar(cs),
           const SizedBox(height: 16),
-          Text(
-            '@${user.username}',
-            style: TextStyle(color: cs.onSurface, fontSize: 16, fontWeight: FontWeight.w800, letterSpacing: 0.3),
+          Row(
+            mainAxisAlignment: MainAxisAlignment.center,
+            mainAxisSize: MainAxisSize.min,
+            children: [
+              Text(
+                '@${user.username}',
+                style: TextStyle(
+                  color: cs.onSurface,
+                  fontSize: 16,
+                  fontWeight: FontWeight.w800,
+                  letterSpacing: 0.3,
+                ),
+              ),
+              if (user.isBot) ...[const SizedBox(width: 8), _buildBotBadge(cs)],
+            ],
           ),
           const SizedBox(height: 16),
           _buildStatsRow(cs),
@@ -385,7 +523,11 @@ class _ProfileScreenState extends State<ProfileScreen> with TickerProviderStateM
     final avatar = SizedBox(
       width: 100,
       height: 100,
-      child: Avatar(name: user.username, colorScheme: cs, imageUrl: user.profileImageUrl),
+      child: Avatar(
+        name: user.username,
+        colorScheme: cs,
+        imageUrl: user.profileImageUrl,
+      ),
     );
 
     if (widget.ownProfile && _editingMode) {
@@ -436,12 +578,21 @@ class _ProfileScreenState extends State<ProfileScreen> with TickerProviderStateM
         children: [
           RollingDigitCounter(
             value: value,
-            style: TextStyle(color: cs.onSurface, fontSize: 20, fontWeight: FontWeight.w800, letterSpacing: -0.5),
+            style: TextStyle(
+              color: cs.onSurface,
+              fontSize: 20,
+              fontWeight: FontWeight.w800,
+              letterSpacing: -0.5,
+            ),
           ),
           const SizedBox(height: 3),
           Text(
             label,
-            style: TextStyle(color: cs.onSurfaceVariant, fontSize: 12, fontWeight: FontWeight.w500),
+            style: TextStyle(
+              color: cs.onSurfaceVariant,
+              fontSize: 12,
+              fontWeight: FontWeight.w500,
+            ),
           ),
         ],
       ),
@@ -450,6 +601,28 @@ class _ProfileScreenState extends State<ProfileScreen> with TickerProviderStateM
 
   Widget _buildStatDivider(ColorScheme cs) {
     return Container(width: 1, height: 22, color: cs.outlineVariant);
+  }
+
+  Widget _buildBotBadge(ColorScheme cs, {bool compact = false}) {
+    return Container(
+      padding: EdgeInsets.symmetric(
+        horizontal: compact ? 6 : 8,
+        vertical: compact ? 2 : 3,
+      ),
+      decoration: BoxDecoration(
+        color: cs.tertiaryContainer.withValues(alpha: 0.92),
+        borderRadius: BorderRadius.circular(999),
+        border: Border.all(color: cs.tertiary.withValues(alpha: 0.65)),
+      ),
+      child: Text(
+        'bot',
+        style: TextStyle(
+          color: cs.onTertiaryContainer,
+          fontSize: compact ? 10 : 11,
+          fontWeight: FontWeight.w700,
+        ),
+      ),
+    );
   }
 
   Widget _buildActionRow(ColorScheme cs) {
@@ -465,11 +638,13 @@ class _ProfileScreenState extends State<ProfileScreen> with TickerProviderStateM
             onTap: () => setState(() {
               _editingMode = !_editingMode;
               if (!_editingMode && newPPUrl != null) {
-                userRepository.updateProfileImageUrl(currentUser, newPPUrl).then((value) {
-                  currentUser = value;
-                  user = value;
-                  if (mounted) setState(() {});
-                });
+                userRepository
+                    .updateProfileImageUrl(currentUser, newPPUrl)
+                    .then((value) {
+                      currentUser = value;
+                      user = value;
+                      if (mounted) setState(() {});
+                    });
                 newPPUrl = null;
               }
             }),
@@ -483,7 +658,9 @@ class _ProfileScreenState extends State<ProfileScreen> with TickerProviderStateM
               WidgetsBinding.instance.addPostFrameCallback((timeStamp) {
                 if (mounted) {
                   setState(() {
-                    user = user.copyWith(followersCount: user.followersCount + (followed ? 1 : -1));
+                    user = user.copyWith(
+                      followersCount: user.followersCount + (followed ? 1 : -1),
+                    );
 
                     if (followed) {
                       if (_followersListKey.currentState == null) {
@@ -493,15 +670,27 @@ class _ProfileScreenState extends State<ProfileScreen> with TickerProviderStateM
                       }
                     } else {
                       if (_followersListKey.currentState == null) {
-                        _followersQuery.results.removeWhere((element) => element.id == currentUser.id);
+                        _followersQuery.results.removeWhere(
+                          (element) => element.id == currentUser.id,
+                        );
                       } else {
                         final currentIndex =
                             _followersListKey.currentState?.items.indexOf(
-                              _followersListKey.currentState?.items.where((element) => element.id == currentUser.id).singleOrNull ?? currentUser,
+                              _followersListKey.currentState?.items
+                                      .where(
+                                        (element) =>
+                                            element.id == currentUser.id,
+                                      )
+                                      .singleOrNull ??
+                                  currentUser,
                             ) ??
                             -1;
                         if (currentIndex != -1) {
-                          _followersListKey.currentState?.removeItem(currentIndex, (context, anim) => _buildSqueezeItem(currentUser, anim, cs));
+                          _followersListKey.currentState?.removeItem(
+                            currentIndex,
+                            (context, anim) =>
+                                _buildSqueezeItem(currentUser, anim, cs),
+                          );
                         }
                       }
                     }
@@ -525,7 +714,11 @@ class _ProfileScreenState extends State<ProfileScreen> with TickerProviderStateM
                   border: Border.all(color: cs.outlineVariant),
                   borderRadius: BorderRadius.circular(context.uiRadiusSm),
                 ),
-                child: Icon(Icons.flag_rounded, size: 20, color: cs.onSurfaceVariant),
+                child: Icon(
+                  Icons.flag_rounded,
+                  size: 20,
+                  color: cs.onSurfaceVariant,
+                ),
               ),
             ),
           ),
@@ -595,17 +788,30 @@ class _ProfileScreenState extends State<ProfileScreen> with TickerProviderStateM
     );
   }
 
-  Widget _buildTab(ColorScheme cs, IconData icon, String label, [List<Widget>? items]) {
+  Widget _buildTab(
+    ColorScheme cs,
+    IconData icon,
+    String label, [
+    List<Widget>? items,
+  ]) {
     if (items == null || items.isEmpty) {
       return Center(
         child: Column(
           mainAxisSize: MainAxisSize.min,
           children: [
-            Icon(icon, size: 48, color: cs.onSurfaceVariant.withValues(alpha: 0.35)),
+            Icon(
+              icon,
+              size: 48,
+              color: cs.onSurfaceVariant.withValues(alpha: 0.35),
+            ),
             const SizedBox(height: 12),
             Text(
               label,
-              style: TextStyle(color: cs.onSurfaceVariant, fontSize: 14, fontWeight: FontWeight.w500),
+              style: TextStyle(
+                color: cs.onSurfaceVariant,
+                fontSize: 14,
+                fontWeight: FontWeight.w500,
+              ),
             ),
           ],
         ),
@@ -623,7 +829,10 @@ class _ProfileScreenState extends State<ProfileScreen> with TickerProviderStateM
     List<UserProfile> currentList,
     ColorScheme cs,
   ) {
-    final curvedAnimation = CurvedAnimation(parent: animation, curve: Curves.easeInOutQuart);
+    final curvedAnimation = CurvedAnimation(
+      parent: animation,
+      curve: Curves.easeInOutQuart,
+    );
 
     return SizeTransition(
       sizeFactor: curvedAnimation,
@@ -652,21 +861,35 @@ class _ProfileScreenState extends State<ProfileScreen> with TickerProviderStateM
     );
   }
 
-  void _removeItemWithAnimation(int index, GlobalKey<AnimatedListState> listKey, List<UserProfile> currentList, ColorScheme cs) {
+  void _removeItemWithAnimation(
+    int index,
+    GlobalKey<AnimatedListState> listKey,
+    List<UserProfile> currentList,
+    ColorScheme cs,
+  ) {
     if (index < 0 || index >= currentList.length) return;
 
     final removedItem = currentList[index];
 
     listKey.currentState?.removeItem(
       index,
-      (context, animation) => _buildAnimatedUserCard(removedItem, animation, index, listKey, currentList, cs),
+      (context, animation) => _buildAnimatedUserCard(
+        removedItem,
+        animation,
+        index,
+        listKey,
+        currentList,
+        cs,
+      ),
       duration: const Duration(milliseconds: 450),
     );
 
     currentList.removeAt(index);
 
     setState(() {
-      user = user.copyWith(followingCount: max((user.followingCount ?? 0) - 1, 0));
+      user = user.copyWith(
+        followingCount: max((user.followingCount ?? 0) - 1, 0),
+      );
     });
   }
 
@@ -681,7 +904,13 @@ class _ProfileScreenState extends State<ProfileScreen> with TickerProviderStateM
 }
 
 class _ActionButton extends StatelessWidget {
-  const _ActionButton({required this.label, required this.width, required this.filled, required this.cs, required this.onTap});
+  const _ActionButton({
+    required this.label,
+    required this.width,
+    required this.filled,
+    required this.cs,
+    required this.onTap,
+  });
 
   final String label;
   final double width;
@@ -699,13 +928,21 @@ class _ActionButton extends StatelessWidget {
         height: 38,
         decoration: BoxDecoration(
           color: filled ? cs.primary : cs.surfaceContainerLowest,
-          border: Border.all(color: filled ? cs.primary : cs.outlineVariant, width: 1.5),
+          border: Border.all(
+            color: filled ? cs.primary : cs.outlineVariant,
+            width: 1.5,
+          ),
           borderRadius: BorderRadius.circular(context.uiRadiusSm),
         ),
         child: Center(
           child: Text(
             label,
-            style: TextStyle(color: filled ? cs.onPrimary : cs.onSurface, fontSize: 14, fontWeight: FontWeight.w700, letterSpacing: 0.2),
+            style: TextStyle(
+              color: filled ? cs.onPrimary : cs.onSurface,
+              fontSize: 14,
+              fontWeight: FontWeight.w700,
+              letterSpacing: 0.2,
+            ),
           ),
         ),
       ),
@@ -714,7 +951,12 @@ class _ActionButton extends StatelessWidget {
 }
 
 class _ProfileSegmentButton extends StatelessWidget {
-  const _ProfileSegmentButton({required this.icon, required this.selected, required this.tooltip, required this.onTap});
+  const _ProfileSegmentButton({
+    required this.icon,
+    required this.selected,
+    required this.tooltip,
+    required this.onTap,
+  });
 
   final IconData icon;
   final bool selected;
@@ -735,9 +977,13 @@ class _ProfileSegmentButton extends StatelessWidget {
           duration: const Duration(milliseconds: 220),
           curve: Curves.easeOutCubic,
           decoration: BoxDecoration(
-            color: selected ? cs.secondaryContainer.withValues(alpha: 0.75) : Colors.transparent,
+            color: selected
+                ? cs.secondaryContainer.withValues(alpha: 0.75)
+                : Colors.transparent,
             borderRadius: BorderRadius.circular(context.uiRadiusMd),
-            border: selected ? Border.all(color: cs.outlineVariant.withValues(alpha: 0.65)) : null,
+            border: selected
+                ? Border.all(color: cs.outlineVariant.withValues(alpha: 0.65))
+                : null,
           ),
           child: Center(
             child: AnimatedScale(
