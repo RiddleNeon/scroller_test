@@ -395,6 +395,67 @@ class VideoRepository {
     }
     return parsedVideoId;
   }
+
+  Future<({Video? continueVideo, int dailyStartedCount})> getHomeLearningSnapshot({
+    required String userId,
+    DateTime? now,
+  }) async {
+    final continueVideoFuture = getContinueLearningVideo(userId: userId);
+    final dailyCountFuture = getDailyStartedCount(userId: userId, day: now);
+    final continueVideo = await continueVideoFuture;
+    final dailyCount = await dailyCountFuture;
+    return (continueVideo: continueVideo, dailyStartedCount: dailyCount);
+  }
+
+  Future<Video?> getContinueLearningVideo({required String userId}) async {
+    final row = await supabaseClient
+        .from('user_interactions')
+        .select('''
+          video_id,
+          videos (
+            $_videoSelectInner
+          )
+        ''')
+        .eq('user_id', userId)
+        .eq('interaction_type', 'view')
+        .order('created_at', ascending: false)
+        .limit(1)
+        .maybeSingle();
+
+    if (row == null) return null;
+    final rawVideo = row['videos'];
+    if (rawVideo is! Map<String, dynamic>) return null;
+    return _toVideo(rawVideo);
+  }
+
+  Future<int> getDailyStartedCount({required String userId, DateTime? day}) async {
+    final local = (day ?? DateTime.now()).toLocal();
+    final start = DateTime(local.year, local.month, local.day);
+    final end = start.add(const Duration(days: 1));
+
+    final rows = await supabaseClient
+        .from('user_interactions')
+        .select('video_id')
+        .eq('user_id', userId)
+        .eq('interaction_type', 'view')
+        .gte('created_at', start.toUtc().toIso8601String())
+        .lt('created_at', end.toUtc().toIso8601String());
+
+    return rows.length;
+  }
+
+  Future<void> recordLearningStart(String videoId, {required String userId}) async {
+    final parsedVideoId = _parseVideoId(videoId);
+    await supabaseClient.from('user_interactions').insert({
+      'user_id': userId,
+      'video_id': parsedVideoId,
+      'interaction_type': 'view',
+      'created_at': DateTime.now().toUtc().toIso8601String(),
+      'liked': false,
+      'watch_time': 0,
+      'additional_data': {'source': 'home'},
+    });
+  }
 }
 
 const String _videoSelectInner = '''

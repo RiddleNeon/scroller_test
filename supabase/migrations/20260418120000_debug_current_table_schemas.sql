@@ -1,6 +1,3 @@
--- WARNING: This schema is for context only and is not meant to be run.
--- Table order and constraints may not be valid for execution.
-
 CREATE TABLE public.applied_themes (
                                        user_id uuid NOT NULL DEFAULT auth.uid(),
                                        theme_id uuid NOT NULL DEFAULT gen_random_uuid(),

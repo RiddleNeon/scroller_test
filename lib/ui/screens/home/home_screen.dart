@@ -33,6 +33,10 @@ class _HomeScreenState extends State<HomeScreen> {
   bool _loading = true;
   late String _welcomeMessage;
   final TextEditingController _searchController = TextEditingController();
+  static const int _dailyGoalTarget = 60;
+  int _dailyVideosStarted = 0;
+  DateTime _dailyGoalDate = DateTime.now();
+  Video? _continueLearningVideo;
 
   final List<String> _rawWelcomeMessages = [
     "Ready to dive into something new today?",
@@ -72,9 +76,14 @@ class _HomeScreenState extends State<HomeScreen> {
 
       _followedCreators = await userRepository.getFollowing(currentUser.id, limit: 5);
 
+      final learningSnapshot = await videoRepo.getHomeLearningSnapshot(userId: currentUser.id);
+
       if (mounted) {
         setState(() {
           _discoverVideos = discover;
+          _continueLearningVideo = learningSnapshot.continueVideo;
+          _dailyGoalDate = DateTime.now();
+          _dailyVideosStarted = learningSnapshot.dailyStartedCount;
           _loading = false;
         });
 
@@ -86,6 +95,7 @@ class _HomeScreenState extends State<HomeScreen> {
       if (mounted) {
         setState(() {
           _discoverVideos = [];
+          _continueLearningVideo = null;
           _loading = false;
         });
       }
@@ -117,6 +127,107 @@ class _HomeScreenState extends State<HomeScreen> {
     if (query.trim().isEmpty) return;
     final uri = Uri(path: '/search', queryParameters: {'q': query.trim()});
     GoRouter.of(context).push(uri.toString());
+  }
+
+  DateTime _todayOnly(DateTime dt) => DateTime(dt.year, dt.month, dt.day);
+
+  void _resetDailyGoalIfNeeded() {
+    final today = _todayOnly(DateTime.now());
+    if (_todayOnly(_dailyGoalDate) != today) {
+      _dailyGoalDate = today;
+      _dailyVideosStarted = 0;
+    }
+  }
+
+  Future<void> _openVideoList(List<Video> videos, {int videoIndex = 0}) async {
+    if (videos.isEmpty) {
+      GoRouter.of(context).go('/feed');
+      return;
+    }
+
+    final safeIndex = videoIndex.clamp(0, videos.length - 1);
+    final selectedVideo = videos[safeIndex];
+
+    _resetDailyGoalIfNeeded();
+    setState(() {
+      _dailyVideosStarted += 1;
+      _continueLearningVideo = selectedVideo;
+    });
+
+    try {
+      await videoRepo.recordLearningStart(selectedVideo.id, userId: currentUser.id);
+    } catch (_) {
+      // Keep UI responsive even if analytics persistence fails.
+    }
+
+    await openVideoPlayer(
+      context: context,
+      listedVideos: videos,
+      videoIndex: safeIndex,
+    );
+  }
+
+  Future<void> _openContinueLearning() async {
+    if (_continueLearningVideo != null) {
+      final continueVideo = _continueLearningVideo!;
+      final discover = _discoverVideos ?? const <Video>[];
+      final idxInDiscover = discover.indexWhere((v) => v.id == continueVideo.id);
+      if (idxInDiscover != -1) {
+        await _openVideoList(discover, videoIndex: idxInDiscover);
+        return;
+      }
+
+      await _openVideoList([continueVideo], videoIndex: 0);
+      return;
+    }
+
+    if (_followedCreators.isNotEmpty) {
+      final creatorId = _followedCreators[_currentCreatorIndex].id;
+      await _loadVideosForCreator(creatorId);
+      final creatorVideos = _creatorVideos[creatorId] ?? const <Video>[];
+      if (creatorVideos.isNotEmpty) {
+        await _openVideoList(creatorVideos, videoIndex: 0);
+        return;
+      }
+    }
+
+    final discover = _discoverVideos ?? const <Video>[];
+    if (discover.isNotEmpty) {
+      await _openVideoList(discover, videoIndex: 0);
+      return;
+    }
+
+    if (mounted) {
+      GoRouter.of(context).go('/feed');
+    }
+  }
+
+  String _continueLearningSubtitle() {
+    if (_continueLearningVideo != null) {
+      return 'Pick up with "${_continueLearningVideo!.title}"';
+    }
+
+    if (_followedCreators.isNotEmpty) {
+      final creator = _followedCreators[_currentCreatorIndex];
+      return 'Latest from ${creator.displayName}';
+    }
+    final discover = _discoverVideos;
+    if (discover != null && discover.isNotEmpty) {
+      return 'Pick up with "${discover.first.title}"';
+    }
+    return 'Find your next lesson';
+  }
+
+  double _continueLearningProgress() {
+    if (_continueLearningVideo != null) {
+      return 0.8;
+    }
+
+    if (_followedCreators.isNotEmpty) {
+      return (_currentCreatorIndex + 1) / _followedCreators.length;
+    }
+    final discoverCount = _discoverVideos?.length ?? 0;
+    return discoverCount == 0 ? 0.0 : 0.35;
   }
 
   @override
@@ -407,7 +518,7 @@ class _HomeScreenState extends State<HomeScreen> {
             .map(
               (v) => Padding(
                 padding: const EdgeInsets.only(bottom: 10.0),
-                child: _FeedListVideoCard(video: v, videos: videos),
+                child: _FeedListVideoCard(video: v, videos: videos, onPlayVideo: _openVideoList),
               ),
             ),
         profileButton,
@@ -447,6 +558,9 @@ class _HomeScreenState extends State<HomeScreen> {
   }
 
   Widget _buildHorizontalQuestsList(ColorScheme cs) {
+    _resetDailyGoalIfNeeded();
+    final dailyGoalProgress = (_dailyVideosStarted / _dailyGoalTarget).clamp(0.0, 1.0);
+
     return SizedBox(
       height: 140,
       child: ListView(
@@ -457,23 +571,25 @@ class _HomeScreenState extends State<HomeScreen> {
           _buildQuestCard(
             cs: cs,
             title: 'Continue learning',
-            subtitle: 'PLACEHOLDER',
-            progress: 0.65,
+            subtitle: _continueLearningSubtitle(),
+            progress: _continueLearningProgress(),
             icon: Icons.play_arrow_rounded,
             color: cs.primaryContainer,
             onColor: cs.onPrimaryContainer,
             width: MediaQuery.of(context).size.width * 0.75,
+            onTap: _openContinueLearning,
           ),
           SizedBox(width: context.uiSpace(12)),
           _buildQuestCard(
             cs: cs,
             title: 'Daily Goal',
-            subtitle: 'Watch 3 videos',
-            progress: 0.33,
+            subtitle: 'Watch $_dailyGoalTarget videos ($_dailyVideosStarted/$_dailyGoalTarget)',
+            progress: dailyGoalProgress,
             icon: Icons.local_fire_department_rounded,
             color: cs.tertiaryContainer,
             onColor: cs.onTertiaryContainer,
             width: MediaQuery.of(context).size.width * 0.75,
+            onTap: () async => GoRouter.of(context).go('/feed'),
           ),
         ],
       ),
@@ -489,6 +605,7 @@ class _HomeScreenState extends State<HomeScreen> {
     required Color color,
     required Color onColor,
     required double width,
+    required Future<void> Function() onTap,
   }) {
     return Container(
       width: width,
@@ -497,7 +614,7 @@ class _HomeScreenState extends State<HomeScreen> {
       child: Material(
         color: Colors.transparent,
         child: InkWell(
-          onTap: () => GoRouter.of(context).go('/quests'),
+          onTap: onTap,
           child: Padding(
             padding: EdgeInsets.all(context.uiSpace(16)),
             child: Column(
@@ -558,11 +675,11 @@ class _HomeScreenState extends State<HomeScreen> {
       height: 800,
       child: Column(
         children: [
-          _AutoScrollRow(videos: itemsRow1, speed: 15),
+          _AutoScrollRow(videos: itemsRow1, speed: 15, onPlayVideo: _openVideoList),
           const SizedBox(height: 16),
-          _AutoScrollRow(videos: itemsRow2, speed: 45),
+          _AutoScrollRow(videos: itemsRow2, speed: 45, onPlayVideo: _openVideoList),
           const SizedBox(height: 16),
-          _AutoScrollRow(videos: itemsRow3, speed: 25),
+          _AutoScrollRow(videos: itemsRow3, speed: 25, onPlayVideo: _openVideoList),
         ],
       ),
     );
@@ -572,8 +689,9 @@ class _HomeScreenState extends State<HomeScreen> {
 class _AutoScrollRow extends StatefulWidget {
   final List<Video> videos;
   final double speed;
+  final Future<void> Function(List<Video> videos, {int videoIndex}) onPlayVideo;
 
-  const _AutoScrollRow({required this.videos, required this.speed});
+  const _AutoScrollRow({required this.videos, required this.speed, required this.onPlayVideo});
 
   @override
   State<_AutoScrollRow> createState() => _AutoScrollRowState();
@@ -645,6 +763,7 @@ class _AutoScrollRowState extends State<_AutoScrollRow>
                   video: video,
                   videos: widget.videos,
                   ticker: this,
+                  onPlayVideo: widget.onPlayVideo,
                 ),
               ),
             );
@@ -659,8 +778,15 @@ class _VerticalVideoCard extends StatefulWidget {
   final Video video;
   final List<Video> videos;
   final TickerProvider ticker;
+  final Future<void> Function(List<Video> videos, {int videoIndex}) onPlayVideo;
 
-  const _VerticalVideoCard({super.key, required this.video, required this.videos, required this.ticker});
+  const _VerticalVideoCard({
+    super.key,
+    required this.video,
+    required this.videos,
+    required this.ticker,
+    required this.onPlayVideo,
+  });
 
   @override
   State<_VerticalVideoCard> createState() => _VerticalVideoCardState();
@@ -677,13 +803,7 @@ class _VerticalVideoCardState extends State<_VerticalVideoCard> {
         decoration: BoxDecoration(color: cs.surfaceContainerHigh, borderRadius: BorderRadius.circular(context.uiRadiusLg)),
         clipBehavior: Clip.hardEdge,
         child: InkWell(
-          onTap: () async {
-            await openVideoPlayer(
-              context: context,
-              listedVideos: widget.videos,
-              videoIndex: widget.videos.indexOf(widget.video),
-            );
-          },
+          onTap: () async => widget.onPlayVideo(widget.videos, videoIndex: widget.videos.indexOf(widget.video)),
           child: Column(
             crossAxisAlignment: CrossAxisAlignment.start,
             children: [
@@ -798,8 +918,9 @@ class LargeCarouselVideoCard extends StatelessWidget {
 class _FeedListVideoCard extends StatelessWidget {
   final Video video;
   final List<Video> videos;
+  final Future<void> Function(List<Video> videos, {int videoIndex}) onPlayVideo;
 
-  const _FeedListVideoCard({required this.video, required this.videos});
+  const _FeedListVideoCard({required this.video, required this.videos, required this.onPlayVideo});
 
   @override
   Widget build(BuildContext context) {
@@ -813,11 +934,7 @@ class _FeedListVideoCard extends StatelessWidget {
       ),
       clipBehavior: Clip.hardEdge,
       child: InkWell(
-        onTap: () async => await openVideoPlayer(
-          context: context,
-          listedVideos: videos,
-          videoIndex: videos.indexOf(video),
-        ),
+        onTap: () async => onPlayVideo(videos, videoIndex: videos.indexOf(video)),
         child: Row(
           children: [
             AspectRatio(
