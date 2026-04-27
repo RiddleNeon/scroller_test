@@ -2,12 +2,10 @@ import 'dart:async';
 
 import 'package:flutter/cupertino.dart';
 import 'package:flutter/material.dart';
-import 'package:font_awesome_flutter/font_awesome_flutter.dart';
 import 'package:go_router/go_router.dart';
 import 'package:wurp/main.dart';
 import 'package:wurp/transcription/uploading/video_upload_screen.dart';
 import 'package:wurp/ui/animations/slide_morph_transitions.dart';
-import 'package:wurp/ui/misc/shorts_player.dart';
 import 'package:wurp/ui/screens/auth_screen.dart';
 import 'package:wurp/ui/screens/chat/chat_managing_screen.dart';
 import 'package:wurp/ui/screens/home/home_screen.dart';
