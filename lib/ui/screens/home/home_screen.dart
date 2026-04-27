@@ -4,6 +4,7 @@ import 'package:flutter/material.dart';
 import 'package:flutter/scheduler.dart';
 import 'package:go_router/go_router.dart';
 import 'package:wurp/base_logic.dart';
+import 'package:wurp/ui/router/deep_link_builder.dart';
 import 'package:wurp/logic/repositories/video_repository.dart';
 import 'package:wurp/logic/users/user_model.dart';
 import 'package:wurp/logic/video/video.dart';
@@ -20,7 +21,7 @@ class HomeScreen extends StatefulWidget {
   State<HomeScreen> createState() => _HomeScreenState();
 }
 
-class _HomeScreenState extends State<HomeScreen> with TickerProviderStateMixin {
+class _HomeScreenState extends State<HomeScreen> {
   List<Video>? _discoverVideos;
 
   List<UserProfile> _followedCreators = [];
@@ -297,6 +298,59 @@ class _HomeScreenState extends State<HomeScreen> with TickerProviderStateMixin {
     );
   }
 
+  Widget _buildProfileButton(ColorScheme cs, dynamic creator, {required bool hasVideos}) {
+    return Padding(
+      padding: EdgeInsets.only(top: context.uiSpace(8)),
+      child: Material(
+        color: cs.primaryContainer,
+        borderRadius: BorderRadius.circular(context.uiRadiusMd),
+        child: InkWell(
+          borderRadius: BorderRadius.circular(context.uiRadiusMd),
+          onTap: () => GoRouter.of(context).push(DeepLinkBuilder.profile(creator.id)),
+          child: Padding(
+            padding: EdgeInsets.symmetric(
+              horizontal: context.uiSpace(14),
+              vertical: context.uiSpace(12),
+            ),
+            child: Row(
+              mainAxisAlignment: MainAxisAlignment.center,
+              children: [
+                Icon(
+                  Icons.person_rounded,
+                  color: cs.onPrimaryContainer,
+                  size: 18,
+                ),
+                SizedBox(width: context.uiSpace(8)),
+
+                Flexible(
+                  child: Text(
+                    hasVideos
+                        ? 'View profile'
+                        : 'Check out ${creator.displayName}',
+                    maxLines: 1,
+                    overflow: TextOverflow.ellipsis,
+                    style: TextStyle(
+                      color: cs.onPrimaryContainer,
+                      fontWeight: FontWeight.w700,
+                      fontSize: 14,
+                    ),
+                  ),
+                ),
+
+                SizedBox(width: context.uiSpace(6)),
+                Icon(
+                  Icons.arrow_forward_ios_rounded,
+                  size: 14,
+                  color: cs.onPrimaryContainer.withValues(alpha: 0.8),
+                ),
+              ],
+            ),
+          ),
+        ),
+      ),
+    );
+  }
+
   Widget _buildCreatorColumn(ColorScheme cs, dynamic creator, List<Video>? videos) {
     if (videos == null) {
       return Container(
@@ -305,25 +359,59 @@ class _HomeScreenState extends State<HomeScreen> with TickerProviderStateMixin {
       );
     }
 
+    final profileButton = _buildProfileButton(cs, creator, hasVideos: videos.isNotEmpty);
+
     if (videos.isEmpty) {
-      return Container(
-        decoration: BoxDecoration(color: cs.surfaceContainerLow, borderRadius: BorderRadius.circular(context.uiRadiusLg)),
-        child: Center(
-          child: Text('No videos yet', style: TextStyle(color: cs.onSurfaceVariant)),
-        ),
+      return Column(
+        mainAxisAlignment: MainAxisAlignment.center,
+        children: [
+          Container(
+            decoration: BoxDecoration(
+              color: cs.surfaceContainerLow,
+              borderRadius: BorderRadius.circular(context.uiRadiusLg),
+            ),
+            padding: EdgeInsets.symmetric(
+              horizontal: context.uiSpace(16),
+              vertical: context.uiSpace(18),
+            ),
+            child: Column(
+              children: [
+                Icon(Icons.video_library_outlined, color: cs.onSurfaceVariant),
+                SizedBox(height: context.uiSpace(8)),
+                Text(
+                  '${creator.displayName} hasn’t posted yet',
+                  style: TextStyle(
+                    color: cs.onSurface,
+                    fontWeight: FontWeight.w600,
+                  ),
+                  textAlign: TextAlign.center,
+                ),
+                SizedBox(height: context.uiSpace(4)),
+                Text(
+                  'Check their profile for updates',
+                  style: TextStyle(color: cs.onSurfaceVariant, fontSize: 13),
+                ),
+              ],
+            ),
+          ),
+          profileButton,
+        ],
       );
     }
 
+    final previewVideos = videos.take(2).toList();
+
     return Column(
-      children: videos
-          .take(3)
-          .map(
-            (v) => Padding(
-              padding: const EdgeInsets.only(bottom: 12.0),
-              child: _FeedListVideoCard(video: v, videos: videos, ticker: this),
+      children: [
+        ...previewVideos
+            .map(
+              (v) => Padding(
+                padding: const EdgeInsets.only(bottom: 10.0),
+                child: _FeedListVideoCard(video: v, videos: videos),
+              ),
             ),
-          )
-          .toList(),
+        profileButton,
+      ],
     );
   }
 
@@ -470,11 +558,11 @@ class _HomeScreenState extends State<HomeScreen> with TickerProviderStateMixin {
       height: 800,
       child: Column(
         children: [
-          _AutoScrollRow(videos: itemsRow1, speed: 15, ticker: this),
+          _AutoScrollRow(videos: itemsRow1, speed: 15),
           const SizedBox(height: 16),
-          _AutoScrollRow(videos: itemsRow2, speed: 45, ticker: this),
+          _AutoScrollRow(videos: itemsRow2, speed: 45),
           const SizedBox(height: 16),
-          _AutoScrollRow(videos: itemsRow3, speed: 25, ticker: this),
+          _AutoScrollRow(videos: itemsRow3, speed: 25),
         ],
       ),
     );
@@ -484,15 +572,15 @@ class _HomeScreenState extends State<HomeScreen> with TickerProviderStateMixin {
 class _AutoScrollRow extends StatefulWidget {
   final List<Video> videos;
   final double speed;
-  final TickerProvider ticker;
 
-  const _AutoScrollRow({required this.videos, required this.speed, required this.ticker});
+  const _AutoScrollRow({required this.videos, required this.speed});
 
   @override
   State<_AutoScrollRow> createState() => _AutoScrollRowState();
 }
 
-class _AutoScrollRowState extends State<_AutoScrollRow> {
+class _AutoScrollRowState extends State<_AutoScrollRow>
+    with TickerProviderStateMixin {
   late final ScrollController _controller;
   late final Ticker _ticker;
 
@@ -505,11 +593,11 @@ class _AutoScrollRowState extends State<_AutoScrollRow> {
 
     _controller = ScrollController();
 
-    _hoverController = AnimationController(vsync: widget.ticker, duration: const Duration(milliseconds: 1800));
+    _hoverController = AnimationController(vsync: this, duration: const Duration(milliseconds: 1800));
 
     _speedFactor = Tween<double>(begin: 1.0, end: 0).animate(CurvedAnimation(parent: _hoverController, curve: Curves.easeOut));
 
-    _ticker = widget.ticker.createTicker((elapsed) {
+    _ticker = createTicker((elapsed) {
       if (!_controller.hasClients) return;
 
       final effectiveSpeed = widget.speed * _speedFactor.value;
@@ -529,6 +617,7 @@ class _AutoScrollRowState extends State<_AutoScrollRow> {
   void dispose() {
     _ticker.dispose();
     _controller.dispose();
+    _hoverController.dispose();
     super.dispose();
   }
 
@@ -547,10 +636,16 @@ class _AutoScrollRowState extends State<_AutoScrollRow> {
             final video = widget.videos[index % widget.videos.length];
 
             return Padding(
+              key: ValueKey('${video.id}-$index'),
               padding: const EdgeInsets.symmetric(horizontal: 8),
               child: SizedBox(
                 width: 140,
-                child: _VerticalVideoCard(video: video, videos: widget.videos, ticker: widget.ticker),
+                child: _VerticalVideoCard(
+                  key: ValueKey('video-${video.id}-$index'),
+                  video: video,
+                  videos: widget.videos,
+                  ticker: this,
+                ),
               ),
             );
           },
@@ -565,7 +660,7 @@ class _VerticalVideoCard extends StatefulWidget {
   final List<Video> videos;
   final TickerProvider ticker;
 
-  const _VerticalVideoCard({required this.video, required this.videos, required this.ticker});
+  const _VerticalVideoCard({super.key, required this.video, required this.videos, required this.ticker});
 
   @override
   State<_VerticalVideoCard> createState() => _VerticalVideoCardState();
@@ -703,9 +798,8 @@ class LargeCarouselVideoCard extends StatelessWidget {
 class _FeedListVideoCard extends StatelessWidget {
   final Video video;
   final List<Video> videos;
-  final TickerProvider ticker;
 
-  const _FeedListVideoCard({required this.video, required this.videos, required this.ticker});
+  const _FeedListVideoCard({required this.video, required this.videos});
 
   @override
   Widget build(BuildContext context) {

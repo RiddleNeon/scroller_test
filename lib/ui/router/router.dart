@@ -13,6 +13,7 @@ import 'package:wurp/ui/screens/chat/chat_managing_screen.dart';
 import 'package:wurp/ui/screens/home/home_screen.dart';
 import 'package:wurp/ui/screens/profile_screen.dart';
 import 'package:wurp/ui/screens/quests/quest_screen.dart';
+import 'package:wurp/ui/screens/settings/settings_screen.dart';
 import 'package:wurp/ui/screens/search_screen/search_screen.dart';
 import 'package:wurp/ui/theme/theme_creation_screen.dart';
 import 'package:wurp/ui/video/short_video_player.dart';
@@ -146,6 +147,11 @@ void initRouter() {
             ),
           ),
           GoRoute(
+            path: '/settings',
+            pageBuilder: (context, state) =>
+                SlideMorphTransitions.page<void>(key: state.pageKey, child: const GeneralSettingsScreen(), beginOffset: const Offset(0.03, 0.0), beginScale: 0.993),
+          ),
+          GoRoute(
             path: '/chat',
             pageBuilder: (context, state) => SlideMorphTransitions.page<void>(
               key: state.pageKey,
@@ -198,12 +204,7 @@ void initRouter() {
                 beginScale: 0.993,
               );
             },
-          ),
-          GoRoute(
-            path: '/yt-test',
-            pageBuilder: (context, state) =>
-                SlideMorphTransitions.page<void>(key: state.pageKey, child: ShortsFeed(videoProvider: videoProvider,), beginOffset: const Offset(0.03, 0.0), beginScale: 0.993),
-          ),
+          )
         ],
       ),
       GoRoute(
@@ -271,7 +272,6 @@ List<({IconData icon, String label, String id})> _navigationBarItems = [
   (icon: Icons.person_outline, label: 'Profile', id: '/profile'),
   (icon: Icons.chat, label: 'Chat', id: '/chat'),
   (icon: CupertinoIcons.map, label: 'Quests', id: '/quests'),
-  (icon: FontAwesomeIcons.youtube, label: 'Youtube test', id: '/yt-test'),
 ];
 
 class RouteObserver extends NavigatorObserver {
@@ -295,7 +295,9 @@ class RouteObserver extends NavigatorObserver {
           if (!routerConfig.routeInformationProvider.value.uri.path.startsWith('/feed')) return;
           unawaited(
             Future.microtask(() async {
-              feedViewModel.ensureCurrentVideoPlays((await videoProvider.getVideoByIndex(feedViewModel.currentIndex))!);
+              feedViewModel.ensureCurrentVideoPlays(
+                (await videoProvider.getVideoByIndex(feedViewModel.currentIndex, useYoutubeVideos: useYoutubeVideosOnlyNotifier.value))!,
+              );
             }),
           );
         });

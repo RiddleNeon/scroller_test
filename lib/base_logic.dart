@@ -128,3 +128,7 @@ Future<void> onUserLogout() async {
 }
 
 bool runningOnMobile = defaultTargetPlatform == TargetPlatform.iOS || defaultTargetPlatform == TargetPlatform.android;
+
+/// When true, recommendation queries should only fetch YouTube-backed videos.
+final ValueNotifier<bool> useYoutubeVideosOnlyNotifier = ValueNotifier(false);
+

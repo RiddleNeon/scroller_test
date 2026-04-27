@@ -23,7 +23,7 @@ Future<VideoContainer?> _loadRegularContainer(
   VideoProvider videoProvider,
   VideoFeedViewModel feedModel,
 ) async {
-  final video = await videoProvider.getVideoByIndex(index);
+  final video = await videoProvider.getVideoByIndex(index, useYoutubeVideos: useYoutubeVideosOnlyNotifier.value);
   if (video == null) return null;
   return feedModel.getVideoContainerAt(index, video);
 }
@@ -33,10 +33,11 @@ Future<void> _switchToRegularIndex(
   VideoProvider videoProvider,
   VideoFeedViewModel feedModel,
 ) async {
-  final currentVideo = await videoProvider.getVideoByIndex(index);
+  final currentVideo = await videoProvider.getVideoByIndex(index, useYoutubeVideos: useYoutubeVideosOnlyNotifier.value);
   if (currentVideo == null) return;
-  final nextVideoFuture = videoProvider.getVideoByIndex(index + 1);
-  final prevVideoFuture = index > 0 ? videoProvider.getVideoByIndex(index - 1) : Future<Video?>.value(null);
+  final nextVideoFuture = videoProvider.getVideoByIndex(index + 1, useYoutubeVideos: useYoutubeVideosOnlyNotifier.value);
+  final prevVideoFuture =
+      index > 0 ? videoProvider.getVideoByIndex(index - 1, useYoutubeVideos: useYoutubeVideosOnlyNotifier.value) : Future<Video?>.value(null);
   final nextVideo = await nextVideoFuture;
   final prevVideo = await prevVideoFuture;
   await feedModel.switchToVideoContainerAt(index, currentVideo, nextVideo: nextVideo, lastVideo: prevVideo);
@@ -73,7 +74,7 @@ Widget feedVideos(
               builder: (context, snapshot) {
                 if (snapshot.connectionState != ConnectionState.done) {
                   return FutureBuilder(
-                    future: videoProvider.getVideoByIndex(index),
+                    future: videoProvider.getVideoByIndex(index, useYoutubeVideos: useYoutubeVideosOnlyNotifier.value),
                     builder: (context, videoSnapshot) {
                       if (!videoSnapshot.hasData || videoSnapshot.data?.thumbnailUrl == null) {
                         return const Center(child: CircularProgressIndicator());
@@ -266,7 +267,7 @@ class _VideoFeedState extends State<VideoFeed> with TickerProviderStateMixin {
   late final Future<bool> _isYoutubeFeed;
 
   Future<bool> _detectYoutubeFeed() async {
-    final firstVideo = await _videoSource.getVideoByIndex(_initialPage);
+    final firstVideo = await _videoSource.getVideoByIndex(_initialPage, useYoutubeVideos: useYoutubeVideosOnlyNotifier.value);
     if (firstVideo == null) return false;
     return _isYoutubeUrl(firstVideo.videoUrl);
   }

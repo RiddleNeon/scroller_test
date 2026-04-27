@@ -19,7 +19,7 @@ class GeneralFeedViewModel {
     final usedVideoProvider = videoProvider ?? customVideoProvider;
     assert(usedVideoProvider != null, "VideoProvider must be provided to get a video container at index $index.");
     
-    final video = await usedVideoProvider!.getVideoByIndex(index);
+    final video = await usedVideoProvider!.getVideoByIndex(index, useYoutubeVideos: base_logic.useYoutubeVideosOnlyNotifier.value);
     if(video == null) {
       throw Exception("No video found at index $index");
     }
@@ -36,7 +36,7 @@ class GeneralFeedViewModel {
     final VideoProvider? usedVideoProvider = videoProvider ?? customVideoProvider;
     assert(usedVideoProvider != null, "VideoProvider must be provided to switch to a video container at index $index.");
     
-    final video = await usedVideoProvider!.getVideoByIndex(index);
+    final video = await usedVideoProvider!.getVideoByIndex(index, useYoutubeVideos: base_logic.useYoutubeVideosOnlyNotifier.value);
     if(video == null) {
       throw Exception("No video found at index $index");
     }

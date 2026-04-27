@@ -224,6 +224,14 @@ class LocalSeenService {
     return _blacklistedTags.keys.toList();
   }
 
+  Future<void> removeBlacklistedTag(String tag) async {
+    _blacklistedTags.remove(tag);
+  }
+
+  Future<void> clearBlacklistedTags() async {
+    _blacklistedTags.clear();
+  }
+
   // ---------------------------------------------------------------------------
   // Like / dislike helpers
   // ---------------------------------------------------------------------------

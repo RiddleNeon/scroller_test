@@ -13,9 +13,10 @@ import 'package:wurp/ui/theme/theme_ui_values.dart';
 import 'app_theme.dart';
 
 class ThemeManagerScreen extends StatefulWidget {
-  const ThemeManagerScreen({super.key, this.initialTabIndex = 0});
+  const ThemeManagerScreen({super.key, this.initialTabIndex = 0, this.embedded = false});
 
   final int initialTabIndex;
+  final bool embedded;
 
   @override
   State<ThemeManagerScreen> createState() => _ThemeManagerScreenState();
@@ -363,33 +364,65 @@ class _ThemeManagerScreenState extends State<ThemeManagerScreen> with TickerProv
 
   @override
   Widget build(BuildContext context) {
-    return DefaultTabController(
+    final content = DefaultTabController(
       key: ValueKey(widget.initialTabIndex.clamp(0, 1)),
       initialIndex: widget.initialTabIndex.clamp(0, 1),
       length: 2,
-      child: Scaffold(
-        appBar: AppBar(
-          backgroundColor: Theme.of(context).appBarTheme.backgroundColor,
-          title: const Text('Theme Manager'),
-          actions: [
-            IconButton(icon: const Icon(Icons.file_download_outlined), onPressed: _importTheme, tooltip: 'import theme from file'),
-            IconButton(icon: const Icon(Icons.file_upload_outlined), onPressed: _exportTheme, tooltip: 'export selected theme to file'),
-          ],
-          bottom: const TabBar(
-            tabs: [
-              Tab(icon: Icon(Icons.palette_outlined), text: 'My Themes'),
-              Tab(icon: Icon(Icons.public), text: 'Community'),
-            ],
-          ),
-        ),
-        body: TabBarView(children: [_buildMyThemesTab(), _buildCommunityTab()]),
-        floatingActionButton: FloatingActionButton.extended(
-          onPressed: () => _openEditor(),
-          icon: const Icon(Icons.color_lens_outlined),
-          label: const Text('create new'),
-        ),
-      ),
+      child: widget.embedded
+          ? Column(
+              children: [
+                Padding(
+                  padding: const EdgeInsets.fromLTRB(16, 12, 16, 8),
+                  child: Row(
+                    children: [
+                      Expanded(
+                        child: Text('Theme Manager', style: Theme.of(context).textTheme.titleLarge),
+                      ),
+                      IconButton(icon: const Icon(Icons.file_download_outlined), onPressed: _importTheme, tooltip: 'import theme from file'),
+                      IconButton(icon: const Icon(Icons.file_upload_outlined), onPressed: _exportTheme, tooltip: 'export selected theme to file'),
+                      const SizedBox(width: 8),
+                      FilledButton.icon(
+                        onPressed: () => _openEditor(),
+                        icon: const Icon(Icons.color_lens_outlined),
+                        label: const Text('create new'),
+                      ),
+                    ],
+                  ),
+                ),
+                const TabBar(
+                  tabs: [
+                    Tab(icon: Icon(Icons.palette_outlined), text: 'My Themes'),
+                    Tab(icon: Icon(Icons.public), text: 'Community'),
+                  ],
+                ),
+                Expanded(child: TabBarView(children: [_buildMyThemesTab(), _buildCommunityTab()])),
+              ],
+            )
+          : Scaffold(
+              appBar: AppBar(
+                backgroundColor: Theme.of(context).appBarTheme.backgroundColor,
+                title: const Text('Theme Manager'),
+                actions: [
+                  IconButton(icon: const Icon(Icons.file_download_outlined), onPressed: _importTheme, tooltip: 'import theme from file'),
+                  IconButton(icon: const Icon(Icons.file_upload_outlined), onPressed: _exportTheme, tooltip: 'export selected theme to file'),
+                ],
+                bottom: const TabBar(
+                  tabs: [
+                    Tab(icon: Icon(Icons.palette_outlined), text: 'My Themes'),
+                    Tab(icon: Icon(Icons.public), text: 'Community'),
+                  ],
+                ),
+              ),
+              body: TabBarView(children: [_buildMyThemesTab(), _buildCommunityTab()]),
+              floatingActionButton: FloatingActionButton.extended(
+                onPressed: () => _openEditor(),
+                icon: const Icon(Icons.color_lens_outlined),
+                label: const Text('create new'),
+              ),
+            ),
     );
+
+    return content;
   }
 
   Widget _buildMyThemesTab() {
