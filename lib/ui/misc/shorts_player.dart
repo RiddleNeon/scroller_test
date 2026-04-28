@@ -194,6 +194,17 @@ class _ShortVideoPageState extends State<ShortVideoPage> with SingleTickerProvid
         });
       }
     });
+    
+    Future.delayed(const Duration(milliseconds: 1500), () {
+      if (mounted && widget.controller.value.playerState == PlayerState.buffering) {
+        setState(() {
+          widget.controller.playVideo();
+          _startedPlaying = true;
+          _wasPlaying = true;
+          _startTracking();
+        });
+      }
+    });
   }
 
   DateTime? _startWatchTime;
