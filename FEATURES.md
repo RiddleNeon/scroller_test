@@ -211,10 +211,7 @@ Users can report other users if they find them inappropriate.
 If a user receives too many reports:
 - The user is banned
 
-The banned user can:
-- Appeal the ban
-
-Moderators then review the case and decide whether to lift the ban.
+The banned user can Appeal the ban and moderators then review the case and decide whether to lift the ban.
 
 ---
 

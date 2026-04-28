@@ -644,7 +644,7 @@ class _HomeScreenState extends State<HomeScreen> {
                       title,
                       style: TextStyle(color: onColor, fontWeight: FontWeight.w800, fontSize: 16),
                     ),
-                    Text(subtitle, style: TextStyle(color: onColor.withValues(alpha: 0.8), fontSize: 13)),
+                    Text(subtitle, style: TextStyle(color: onColor.withValues(alpha: 0.8), fontSize: 13), overflow: .ellipsis ,maxLines: 1,),
                     const SizedBox(height: 12),
                     ClipRRect(
                       borderRadius: BorderRadius.circular(context.uiRadiusSm),
