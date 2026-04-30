@@ -1,6 +1,6 @@
 import 'dart:ui';
 
-import 'package:wurp/logic/quests/quest_system.dart';
+import 'package:lumox/logic/quests/quest_system.dart';
 
 Offset bezierPoint(Offset p0, Offset p1, Offset p2, Offset p3, double t) {
   final mt = 1.0 - t;

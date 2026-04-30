@@ -1,4 +1,4 @@
-import 'package:wurp/logic/video/video.dart';
+import 'package:lumox/logic/video/video.dart';
 
 import '../../base_logic.dart';
 import '../feed_recommendation/video_recommender_base.dart';

@@ -1,6 +1,6 @@
 <manifest xmlns:android="http://schemas.android.com/apk/res/android">
     <application
-        android:label="wurp"
+        android:label="lumox"
         android:name="${applicationName}"
         android:icon="@mipmap/launcher_icon">
         <activity
@@ -28,7 +28,7 @@
                 <action android:name="android.intent.action.VIEW" />
                 <category android:name="android.intent.category.DEFAULT" />
                 <category android:name="android.intent.category.BROWSABLE" />
-                <data android:scheme="de.riddleneon.wurp" android:host="reset-callback" />
+                <data android:scheme="de.riddleneon.lumox" android:host="reset-callback" />
             </intent-filter>
         </activity>
         <!-- Don't delete the meta-data below.

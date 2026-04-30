@@ -1,14 +1,14 @@
 import 'package:flutter/cupertino.dart';
-import 'package:wurp/logic/chat/chat.dart';
-import 'package:wurp/logic/chat/chat_message.dart';
-import 'package:wurp/logic/local_storage/local_seen_service.dart';
-import 'package:wurp/logic/repositories/video_repository.dart';
-import 'package:wurp/logic/video/video.dart';
-import 'package:wurp/ui/router/deep_link_builder.dart';
-import 'package:wurp/ui/screens/comment_overlay.dart';
-import 'package:wurp/ui/widgets/overlays/pause_indicator.dart';
-import 'package:wurp/ui/widgets/overlays/share_button.dart';
-import 'package:wurp/ui/widgets/overlays/video_info_overlay.dart';
+import 'package:lumox/logic/chat/chat.dart';
+import 'package:lumox/logic/chat/chat_message.dart';
+import 'package:lumox/logic/local_storage/local_seen_service.dart';
+import 'package:lumox/logic/repositories/video_repository.dart';
+import 'package:lumox/logic/video/video.dart';
+import 'package:lumox/ui/router/deep_link_builder.dart';
+import 'package:lumox/ui/screens/comment_overlay.dart';
+import 'package:lumox/ui/widgets/overlays/pause_indicator.dart';
+import 'package:lumox/ui/widgets/overlays/share_button.dart';
+import 'package:lumox/ui/widgets/overlays/video_info_overlay.dart';
 
 import '../../../base_logic.dart';
 import 'comment_button.dart';

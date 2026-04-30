@@ -4,9 +4,9 @@ import 'dart:convert';
 import 'package:crypto/crypto.dart';
 import 'package:flutter/services.dart';
 import 'package:http/http.dart' as http;
-import 'package:wurp/logic/repositories/user_repository.dart';
-import 'package:wurp/logic/repositories/video_repository.dart';
-import 'package:wurp/tools/supabase_tests/supabase_login_test.dart';
+import 'package:lumox/logic/repositories/user_repository.dart';
+import 'package:lumox/logic/repositories/video_repository.dart';
+import 'package:lumox/tools/supabase_tests/supabase_login_test.dart';
 
 ///   to make the import idempotent.
 

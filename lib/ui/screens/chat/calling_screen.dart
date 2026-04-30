@@ -1,11 +1,11 @@
 import 'dart:async';
 
 import 'package:flutter/material.dart';
-import 'package:wurp/ui/misc/avatar.dart';
-import 'package:wurp/ui/misc/basic_player.dart';
-import 'package:wurp/ui/router/router.dart';
-import 'package:wurp/ui/theme/theme_ui_values.dart';
-import 'package:wurp/ui/widgets/camera/web_camera.dart';
+import 'package:lumox/ui/misc/avatar.dart';
+import 'package:lumox/ui/misc/basic_player.dart';
+import 'package:lumox/ui/router/router.dart';
+import 'package:lumox/ui/theme/theme_ui_values.dart';
+import 'package:lumox/ui/widgets/camera/web_camera.dart';
 
 class CallingApp extends StatelessWidget {
   final String name;

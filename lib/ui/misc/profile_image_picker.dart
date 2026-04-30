@@ -6,7 +6,7 @@ import 'package:file_picker/file_picker.dart';
 import 'package:flutter/foundation.dart';
 import 'package:flutter/material.dart';
 import 'package:http/http.dart' as http;
-import 'package:wurp/logic/repositories/user_repository.dart';
+import 'package:lumox/logic/repositories/user_repository.dart';
 
 import '../../base_logic.dart';
 import '../theme/theme_ui_values.dart';

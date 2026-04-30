@@ -1,8 +1,8 @@
 import 'dart:math';
 
-import 'package:wurp/logic/feed_recommendation/user_preferences.dart';
-import 'package:wurp/logic/feed_recommendation/video_recommender_base.dart';
-import 'package:wurp/logic/video/video.dart';
+import 'package:lumox/logic/feed_recommendation/user_preferences.dart';
+import 'package:lumox/logic/feed_recommendation/video_recommender_base.dart';
+import 'package:lumox/logic/video/video.dart';
 
 import '../local_storage/local_seen_service.dart';
 

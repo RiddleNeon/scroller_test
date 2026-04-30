@@ -2,7 +2,7 @@ import 'dart:convert';
 import 'dart:math' as math;
 
 import 'package:flutter/material.dart';
-import 'package:wurp/base_logic.dart';
+import 'package:lumox/base_logic.dart';
 
 const defaultLightThemeId = '0f5309f7-0a82-4842-ae06-79a7251afa6f';
 const defaultDarkThemeId = '3c5ec440-64fd-46ad-ac2c-2ea06821a32f';

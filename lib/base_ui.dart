@@ -1,7 +1,7 @@
 import 'package:flutter/material.dart';
 import 'package:supabase_flutter/supabase_flutter.dart';
-import 'package:wurp/ui/router/router.dart';
-import 'package:wurp/ui/theme/app_theme.dart';
+import 'package:lumox/ui/router/router.dart';
+import 'package:lumox/ui/theme/app_theme.dart';
 
 import 'base_logic.dart';
 import 'logic/repositories/user_repository.dart';

@@ -1,9 +1,9 @@
 // ignore_for_file: curly_braces_in_flow_control_structures
 
 import 'package:flutter/material.dart';
-import 'package:wurp/logic/chat/chat_message.dart';
-import 'package:wurp/ui/misc/avatar.dart';
-import 'package:wurp/ui/screens/chat/chat_screen.dart';
+import 'package:lumox/logic/chat/chat_message.dart';
+import 'package:lumox/ui/misc/avatar.dart';
+import 'package:lumox/ui/screens/chat/chat_screen.dart';
 
 import '../../../base_logic.dart';
 import '../../../logic/chat/chat.dart';

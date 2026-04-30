@@ -1,6 +1,6 @@
 import 'package:flutter/cupertino.dart';
 import 'package:flutter/material.dart';
-import 'package:wurp/ui/theme/theme_ui_values.dart';
+import 'package:lumox/ui/theme/theme_ui_values.dart';
 
 class CommentButton extends StatefulWidget {
   final void Function()? onComment;

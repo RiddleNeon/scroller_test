@@ -1,10 +1,10 @@
 //test app for the quest screen
 
 import 'package:flutter/material.dart';
-import 'package:wurp/logic/quests/quest.dart';
-import 'package:wurp/logic/quests/quest_system.dart';
-import 'package:wurp/ui/screens/quests/core/pan.dart';
-import 'package:wurp/ui/screens/quests/version_management/change_screen.dart';
+import 'package:lumox/logic/quests/quest.dart';
+import 'package:lumox/logic/quests/quest_system.dart';
+import 'package:lumox/ui/screens/quests/core/pan.dart';
+import 'package:lumox/ui/screens/quests/version_management/change_screen.dart';
 
 class TestQuestScreen extends StatefulWidget {
   final String subject;

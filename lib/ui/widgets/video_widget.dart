@@ -1,9 +1,9 @@
 import 'dart:async';
 
 import 'package:flutter/material.dart';
-import 'package:wurp/logic/feed_recommendation/video_recommender_base.dart';
-import 'package:wurp/logic/video/video_provider.dart';
-import 'package:wurp/ui/video/video_controller.dart';
+import 'package:lumox/logic/feed_recommendation/video_recommender_base.dart';
+import 'package:lumox/logic/video/video_provider.dart';
+import 'package:lumox/ui/video/video_controller.dart';
 
 import '../../base_logic.dart';
 import '../../logic/local_storage/local_seen_service.dart';

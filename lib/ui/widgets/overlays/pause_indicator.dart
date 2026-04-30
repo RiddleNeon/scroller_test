@@ -2,7 +2,7 @@ import 'dart:async';
 
 import 'package:flutter/cupertino.dart';
 import 'package:flutter/material.dart';
-import 'package:wurp/ui/theme/theme_ui_values.dart';
+import 'package:lumox/ui/theme/theme_ui_values.dart';
 
 /// A simple overlay that briefly appears when playback enters paused state.
 class PauseIndicator extends StatefulWidget {

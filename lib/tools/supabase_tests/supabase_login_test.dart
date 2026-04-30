@@ -1,6 +1,6 @@
 import 'package:supabase_flutter/supabase_flutter.dart' hide User;
-import 'package:wurp/base_logic.dart';
-import 'package:wurp/base_ui.dart';
+import 'package:lumox/base_logic.dart';
+import 'package:lumox/base_ui.dart';
 
 void main() async {
   print("running main");

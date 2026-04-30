@@ -1,8 +1,8 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_colorpicker/flutter_colorpicker.dart';
 import 'package:uuid/uuid.dart';
-import 'package:wurp/logic/themes/theme_model.dart';
-import 'package:wurp/ui/theme/theme_ui_values.dart';
+import 'package:lumox/logic/themes/theme_model.dart';
+import 'package:lumox/ui/theme/theme_ui_values.dart';
 
 class ThemeEditorScreen extends StatefulWidget {
   final CustomThemeModel? existingTheme;

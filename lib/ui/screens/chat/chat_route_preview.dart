@@ -1,10 +1,10 @@
 import 'package:flutter/material.dart';
-import 'package:wurp/base_logic.dart';
-import 'package:wurp/logic/repositories/video_repository.dart';
-import 'package:wurp/logic/themes/theme_model.dart';
-import 'package:wurp/logic/users/user_model.dart';
-import 'package:wurp/logic/video/video.dart';
-import 'package:wurp/tools/supabase_tests/supabase_login_test.dart';
+import 'package:lumox/base_logic.dart';
+import 'package:lumox/logic/repositories/video_repository.dart';
+import 'package:lumox/logic/themes/theme_model.dart';
+import 'package:lumox/logic/users/user_model.dart';
+import 'package:lumox/logic/video/video.dart';
+import 'package:lumox/tools/supabase_tests/supabase_login_test.dart';
 
 class ChatRouteReference {
   final String raw;

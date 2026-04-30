@@ -1,5 +1,5 @@
-// android/app/src/main/kotlin/com/example/wurp/MainActivity.kt
-package com.example.wurp
+// android/app/src/main/kotlin/com/example/lumox/MainActivity.kt
+package com.example.lumox
 
 import android.app.ActivityManager
 import android.content.Context

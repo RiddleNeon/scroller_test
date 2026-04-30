@@ -1,6 +1,6 @@
 
-import 'package:wurp/base_logic.dart';
-import 'package:wurp/tools/supabase_tests/supabase_login_test.dart';
+import 'package:lumox/base_logic.dart';
+import 'package:lumox/tools/supabase_tests/supabase_login_test.dart';
 
 class LevelingRepository {
   

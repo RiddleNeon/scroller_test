@@ -1,4 +1,4 @@
-import 'package:wurp/util/extensions/num_distance.dart';
+import 'package:lumox/util/extensions/num_distance.dart';
 
 import '../video/video.dart';
 

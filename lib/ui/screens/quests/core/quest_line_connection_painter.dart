@@ -2,8 +2,8 @@ import 'dart:math';
 import 'dart:ui' as ui;
 
 import 'package:flutter/material.dart';
-import 'package:wurp/logic/quests/quest_system.dart';
-import 'package:wurp/ui/screens/quests/core/quest_bubbles_overlay.dart';
+import 'package:lumox/logic/quests/quest_system.dart';
+import 'package:lumox/ui/screens/quests/core/quest_bubbles_overlay.dart';
 
 import 'bezier_helper.dart';
 

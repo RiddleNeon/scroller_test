@@ -3,12 +3,12 @@ import 'dart:math';
 import 'package:flutter/material.dart';
 import 'package:flutter/scheduler.dart';
 import 'package:go_router/go_router.dart';
-import 'package:wurp/base_logic.dart';
-import 'package:wurp/ui/router/deep_link_builder.dart';
-import 'package:wurp/logic/repositories/video_repository.dart';
-import 'package:wurp/logic/users/user_model.dart';
-import 'package:wurp/logic/video/video.dart';
-import 'package:wurp/ui/misc/avatar.dart';
+import 'package:lumox/base_logic.dart';
+import 'package:lumox/ui/router/deep_link_builder.dart';
+import 'package:lumox/logic/repositories/video_repository.dart';
+import 'package:lumox/logic/users/user_model.dart';
+import 'package:lumox/logic/video/video.dart';
+import 'package:lumox/ui/misc/avatar.dart';
 
 import '../../theme/theme_ui_values.dart';
 import '../search_screen/search_screen.dart';

@@ -1,9 +1,9 @@
-import 'package:wurp/logic/video/video.dart';
-import 'package:wurp/logic/video/video_provider.dart';
-import 'package:wurp/ui/video/video_container.dart';
-import 'package:wurp/ui/video/view_models/video_feed_view_model.dart';
-import 'package:wurp/ui/video/view_models/youtube_feed_view_model.dart';
-import 'package:wurp/base_logic.dart' as base_logic;
+import 'package:lumox/logic/video/video.dart';
+import 'package:lumox/logic/video/video_provider.dart';
+import 'package:lumox/ui/video/video_container.dart';
+import 'package:lumox/ui/video/view_models/video_feed_view_model.dart';
+import 'package:lumox/ui/video/view_models/youtube_feed_view_model.dart';
+import 'package:lumox/base_logic.dart' as base_logic;
 
 class GeneralFeedViewModel {
   VideoProvider? videoProvider;

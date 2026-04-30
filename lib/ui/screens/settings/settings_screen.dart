@@ -1,7 +1,7 @@
 import 'package:flutter/material.dart';
-import 'package:wurp/base_logic.dart';
-import 'package:wurp/logic/feed_recommendation/user_preference_manager.dart';
-import 'package:wurp/ui/theme/theme_creation_screen.dart';
+import 'package:lumox/base_logic.dart';
+import 'package:lumox/logic/feed_recommendation/user_preference_manager.dart';
+import 'package:lumox/ui/theme/theme_creation_screen.dart';
 
 import '../../../logic/local_storage/local_seen_service.dart';
 

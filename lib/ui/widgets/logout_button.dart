@@ -1,5 +1,5 @@
 import 'package:flutter/material.dart';
-import 'package:wurp/ui/router/router.dart';
+import 'package:lumox/ui/router/router.dart';
 
 import '../../base_logic.dart';
 

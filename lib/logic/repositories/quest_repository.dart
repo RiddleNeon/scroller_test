@@ -1,9 +1,9 @@
 import 'dart:ui';
 
-import 'package:wurp/logic/quests/quest.dart';
-import 'package:wurp/logic/quests/quest_change_manager.dart';
-import 'package:wurp/logic/quests/quest_connection.dart';
-import 'package:wurp/tools/supabase_tests/supabase_login_test.dart';
+import 'package:lumox/logic/quests/quest.dart';
+import 'package:lumox/logic/quests/quest_change_manager.dart';
+import 'package:lumox/logic/quests/quest_connection.dart';
+import 'package:lumox/tools/supabase_tests/supabase_login_test.dart';
 
 import '../../base_logic.dart';
 

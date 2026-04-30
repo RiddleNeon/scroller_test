@@ -1,8 +1,8 @@
 import 'dart:async';
 
 import 'package:flutter/material.dart';
-import 'package:wurp/logic/local_storage/local_seen_service.dart';
-import 'package:wurp/logic/users/user_model.dart';
+import 'package:lumox/logic/local_storage/local_seen_service.dart';
+import 'package:lumox/logic/users/user_model.dart';
 
 import '../../../base_logic.dart';
 import '../../theme/theme_ui_values.dart';

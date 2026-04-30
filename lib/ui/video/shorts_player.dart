@@ -3,13 +3,13 @@ import 'dart:async';
 import 'package:cached_network_image/cached_network_image.dart';
 import 'package:flutter/material.dart';
 import 'package:pointer_interceptor/pointer_interceptor.dart';
-import 'package:wurp/base_logic.dart';
-import 'package:wurp/logic/feed_recommendation/video_recommender_base.dart';
-import 'package:wurp/logic/local_storage/local_seen_service.dart';
-import 'package:wurp/logic/repositories/video_repository.dart';
-import 'package:wurp/logic/video/video.dart';
-import 'package:wurp/logic/video/video_provider.dart';
-import 'package:wurp/ui/widgets/overlays/overlays.dart';
+import 'package:lumox/base_logic.dart';
+import 'package:lumox/logic/feed_recommendation/video_recommender_base.dart';
+import 'package:lumox/logic/local_storage/local_seen_service.dart';
+import 'package:lumox/logic/repositories/video_repository.dart';
+import 'package:lumox/logic/video/video.dart';
+import 'package:lumox/logic/video/video_provider.dart';
+import 'package:lumox/ui/widgets/overlays/overlays.dart';
 import 'package:youtube_player_iframe/youtube_player_iframe.dart';
 
 import '../router/router.dart';
@@ -194,7 +194,7 @@ class _ShortVideoPageState extends State<ShortVideoPage> with SingleTickerProvid
     });
 
     Future.doWhile(() {
-      return Future.delayed(const Duration(milliseconds: 1200), () {
+      return Future.delayed(const Duration(milliseconds: 500), () {
         if (mounted && widget.controller.value.playerState != PlayerState.playing) {
           widget.controller.playVideo();
           return true;

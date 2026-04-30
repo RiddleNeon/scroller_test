@@ -2,7 +2,7 @@ import 'dart:async';
 
 import 'package:file_picker/file_picker.dart';
 import 'package:flutter/material.dart';
-import 'package:wurp/transcription/generation_service/transcription_service.dart';
+import 'package:lumox/transcription/generation_service/transcription_service.dart';
 
 import '../../ui/theme/theme_ui_values.dart';
 

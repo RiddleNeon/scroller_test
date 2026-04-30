@@ -1,7 +1,7 @@
 import 'dart:async';
 
 import 'package:supabase_flutter/supabase_flutter.dart';
-import 'package:wurp/tools/supabase_tests/supabase_login_test.dart';
+import 'package:lumox/tools/supabase_tests/supabase_login_test.dart';
 
 import '../../base_logic.dart';
 import '../local_storage/local_seen_service.dart';

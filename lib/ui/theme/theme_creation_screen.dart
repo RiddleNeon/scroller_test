@@ -5,17 +5,17 @@ import 'package:flutter/material.dart';
 import 'package:flutter_web_file_saver/flutter_web_file_saver.dart';
 import 'package:supabase_flutter/supabase_flutter.dart';
 import 'package:uuid/uuid.dart';
-import 'package:wurp/base_ui.dart';
-import 'package:wurp/logic/themes/theme_model.dart';
-import 'package:wurp/ui/router/deep_link_builder.dart';
-import 'package:wurp/ui/theme/theme_editor_screen.dart';
-import 'package:wurp/ui/widgets/overlays/share_button.dart';
+import 'package:lumox/base_ui.dart';
+import 'package:lumox/logic/themes/theme_model.dart';
+import 'package:lumox/ui/router/deep_link_builder.dart';
+import 'package:lumox/ui/theme/theme_editor_screen.dart';
+import 'package:lumox/ui/widgets/overlays/share_button.dart';
 import 'package:flutter/services.dart';
-import 'package:wurp/logic/chat/chat.dart';
-import 'package:wurp/logic/chat/chat_message.dart';
-import 'package:wurp/base_logic.dart';
-import 'package:wurp/logic/local_storage/local_seen_service.dart';
-import 'package:wurp/ui/theme/theme_ui_values.dart';
+import 'package:lumox/logic/chat/chat.dart';
+import 'package:lumox/logic/chat/chat_message.dart';
+import 'package:lumox/base_logic.dart';
+import 'package:lumox/logic/local_storage/local_seen_service.dart';
+import 'package:lumox/ui/theme/theme_ui_values.dart';
 
 import 'app_theme.dart';
 

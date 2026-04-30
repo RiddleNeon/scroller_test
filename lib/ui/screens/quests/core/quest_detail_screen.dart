@@ -1,9 +1,9 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_colorpicker/flutter_colorpicker.dart';
-import 'package:wurp/logic/quests/quest.dart';
-import 'package:wurp/logic/quests/quest_change_manager.dart';
-import 'package:wurp/logic/quests/quest_system.dart';
-import 'package:wurp/util/extensions/num_distance.dart';
+import 'package:lumox/logic/quests/quest.dart';
+import 'package:lumox/logic/quests/quest_change_manager.dart';
+import 'package:lumox/logic/quests/quest_system.dart';
+import 'package:lumox/util/extensions/num_distance.dart';
 
 import '../../../theme/theme_ui_values.dart';
 

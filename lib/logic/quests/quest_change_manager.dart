@@ -1,10 +1,10 @@
 import 'dart:ui';
 
 import 'package:flutter/foundation.dart';
-import 'package:wurp/logic/quests/quest.dart';
-import 'package:wurp/logic/quests/quest_connection.dart';
-import 'package:wurp/logic/quests/quest_system.dart';
-import 'package:wurp/logic/repositories/quest_repository.dart';
+import 'package:lumox/logic/quests/quest.dart';
+import 'package:lumox/logic/quests/quest_connection.dart';
+import 'package:lumox/logic/quests/quest_system.dart';
+import 'package:lumox/logic/repositories/quest_repository.dart';
 
 /// Tracks quest changes locally with full undo/redo support.
 /// Changes are applied to [QuestSystem] immediately when recorded.

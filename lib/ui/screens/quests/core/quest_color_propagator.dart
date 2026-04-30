@@ -1,7 +1,7 @@
 import 'dart:math';
 
 import 'package:flutter/material.dart';
-import 'package:wurp/logic/quests/quest.dart';
+import 'package:lumox/logic/quests/quest.dart';
 
 const int kNoColorValue = 0xFFFFFFFF;
 

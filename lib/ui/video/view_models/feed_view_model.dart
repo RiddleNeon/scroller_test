@@ -1,5 +1,5 @@
-import 'package:wurp/logic/video/video.dart';
-import 'package:wurp/ui/video/video_container.dart';
+import 'package:lumox/logic/video/video.dart';
+import 'package:lumox/ui/video/video_container.dart';
 
 
 abstract class FeedViewModel {

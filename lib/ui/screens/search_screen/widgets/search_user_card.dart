@@ -1,8 +1,8 @@
 import 'package:flutter/material.dart';
-import 'package:wurp/logic/users/user_model.dart';
-import 'package:wurp/ui/misc/avatar.dart';
-import 'package:wurp/ui/screens/profile_screen.dart';
-import 'package:wurp/ui/widgets/overlays/follow_button.dart';
+import 'package:lumox/logic/users/user_model.dart';
+import 'package:lumox/ui/misc/avatar.dart';
+import 'package:lumox/ui/screens/profile_screen.dart';
+import 'package:lumox/ui/widgets/overlays/follow_button.dart';
 
 import '../../../../base_logic.dart';
 import '../../../../logic/local_storage/local_seen_service.dart';

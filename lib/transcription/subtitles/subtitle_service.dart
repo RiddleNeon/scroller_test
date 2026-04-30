@@ -1,4 +1,4 @@
-import 'package:wurp/transcription/generation_service/transcription_service.dart';
+import 'package:lumox/transcription/generation_service/transcription_service.dart';
 
 class SubtitleService {
   static String chunksToSrt(List<TranscriptChunk> chunks) {

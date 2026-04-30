@@ -1,6 +1,6 @@
 import 'dart:convert';
 
-import 'package:wurp/ui/screens/chat/chat_managing_screen.dart';
+import 'package:lumox/ui/screens/chat/chat_managing_screen.dart';
 
 Future<void> setupMessaging() async {}
 

@@ -1,6 +1,6 @@
 import 'package:flutter/material.dart';
 import 'package:vector_math/vector_math_64.dart' hide Colors;
-import 'package:wurp/base_logic.dart';
+import 'package:lumox/base_logic.dart';
 
 import '../theme/theme_ui_values.dart';
 

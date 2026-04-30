@@ -1,7 +1,7 @@
-import 'package:wurp/base_logic.dart';
-import 'package:wurp/logic/feed_recommendation/user_interaction.dart';
-import 'package:wurp/logic/feed_recommendation/user_preference_manager.dart';
-import 'package:wurp/logic/feed_recommendation/user_preferences.dart';
+import 'package:lumox/base_logic.dart';
+import 'package:lumox/logic/feed_recommendation/user_interaction.dart';
+import 'package:lumox/logic/feed_recommendation/user_preference_manager.dart';
+import 'package:lumox/logic/feed_recommendation/user_preferences.dart';
 
 import '../../tools/supabase_tests/supabase_login_test.dart';
 import '../local_storage/local_seen_service.dart';

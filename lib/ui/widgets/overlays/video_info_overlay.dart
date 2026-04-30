@@ -2,10 +2,10 @@ import 'dart:math' as math;
 
 import 'package:flutter/material.dart';
 import 'package:url_launcher/url_launcher.dart';
-import 'package:wurp/logic/users/user_model.dart';
-import 'package:wurp/ui/router/deep_link_builder.dart';
-import 'package:wurp/ui/router/router.dart';
-import 'package:wurp/ui/theme/theme_ui_values.dart';
+import 'package:lumox/logic/users/user_model.dart';
+import 'package:lumox/ui/router/deep_link_builder.dart';
+import 'package:lumox/ui/router/router.dart';
+import 'package:lumox/ui/theme/theme_ui_values.dart';
 
 import '../../../base_logic.dart';
 import '../../../logic/local_storage/local_seen_service.dart';

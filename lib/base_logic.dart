@@ -2,12 +2,12 @@ import 'package:flutter/foundation.dart';
 import 'package:flutter/material.dart';
 import 'package:fvp/fvp.dart' as fvp;
 import 'package:supabase_flutter/supabase_flutter.dart';
-import 'package:wurp/base_ui.dart';
-import 'package:wurp/logic/themes/theme_model.dart';
-import 'package:wurp/tools/supabase_tests/supabase_login_test.dart';
-import 'package:wurp/ui/theme/app_theme.dart';
-import 'package:wurp/ui/video/view_models/video_feed_view_model.dart';
-import 'package:wurp/ui/video/view_models/youtube_feed_view_model.dart';
+import 'package:lumox/base_ui.dart';
+import 'package:lumox/logic/themes/theme_model.dart';
+import 'package:lumox/tools/supabase_tests/supabase_login_test.dart';
+import 'package:lumox/ui/theme/app_theme.dart';
+import 'package:lumox/ui/video/view_models/video_feed_view_model.dart';
+import 'package:lumox/ui/video/view_models/youtube_feed_view_model.dart';
 
 import 'logic/feed_recommendation/user_preference_manager.dart';
 import 'logic/feed_recommendation/video_recommender_base.dart';

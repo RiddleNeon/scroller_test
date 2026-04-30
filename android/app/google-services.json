@@ -1,15 +1,15 @@
 {
   "project_info": {
     "project_number": "418845388234",
-    "project_id": "scroller-wurp",
-    "storage_bucket": "scroller-wurp.firebasestorage.app"
+    "project_id": "scroller-lumox",
+    "storage_bucket": "scroller-lumox.firebasestorage.app"
   },
   "client": [
     {
       "client_info": {
         "mobilesdk_app_id": "1:418845388234:android:7596e04b7e5a068760b333",
         "android_client_info": {
-          "package_name": "de.riddleNeon.wurp"
+          "package_name": "de.riddleNeon.lumox"
         }
       },
       "oauth_client": [
@@ -34,7 +34,7 @@
               "client_id": "418845388234-akc2e36is9iaktrbjgfpa9ne7pbv2e27.apps.googleusercontent.com",
               "client_type": 2,
               "ios_info": {
-                "bundle_id": "de.riddleNeon.wurp"
+                "bundle_id": "de.riddleNeon.lumox"
               }
             }
           ]

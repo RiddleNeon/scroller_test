@@ -1,5 +1,5 @@
 import 'package:flutter/material.dart';
-import 'package:wurp/base_logic.dart';
+import 'package:lumox/base_logic.dart';
 
 import 'base_ui.dart';
 import 'messaging_base.dart';

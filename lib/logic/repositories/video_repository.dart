@@ -1,8 +1,8 @@
 import 'dart:convert';
 
-import 'package:wurp/logic/comments/comment.dart';
-import 'package:wurp/logic/video/video.dart';
-import 'package:wurp/tools/supabase_tests/supabase_login_test.dart';
+import 'package:lumox/logic/comments/comment.dart';
+import 'package:lumox/logic/video/video.dart';
+import 'package:lumox/tools/supabase_tests/supabase_login_test.dart';
 
 import '../../base_logic.dart';
 

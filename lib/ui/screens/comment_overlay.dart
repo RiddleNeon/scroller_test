@@ -2,9 +2,9 @@
 
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
-import 'package:wurp/ui/misc/avatar.dart';
-import 'package:wurp/ui/animations/slide_morph_transitions.dart';
-import 'package:wurp/ui/theme/theme_ui_values.dart';
+import 'package:lumox/ui/misc/avatar.dart';
+import 'package:lumox/ui/animations/slide_morph_transitions.dart';
+import 'package:lumox/ui/theme/theme_ui_values.dart';
 
 import '../../base_logic.dart';
 import '../../logic/comments/comment.dart';

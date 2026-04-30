@@ -2,10 +2,10 @@ import 'dart:convert';
 
 import 'package:flutter/cupertino.dart';
 import 'package:flutter/services.dart';
-import 'package:wurp/logic/quests/quest.dart';
-import 'package:wurp/logic/quests/quest_change_manager.dart';
-import 'package:wurp/logic/quests/quest_connection.dart';
-import 'package:wurp/logic/repositories/quest_repository.dart';
+import 'package:lumox/logic/quests/quest.dart';
+import 'package:lumox/logic/quests/quest_change_manager.dart';
+import 'package:lumox/logic/quests/quest_connection.dart';
+import 'package:lumox/logic/repositories/quest_repository.dart';
 
 class QuestSystem with ChangeNotifier {
   late QuestChangeManager changeManager;

@@ -6,11 +6,11 @@ import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
 import 'package:go_router/go_router.dart';
 import 'package:supabase_flutter/supabase_flutter.dart';
-import 'package:wurp/logic/repositories/user_repository.dart';
-import 'package:wurp/ui/animations/slide_morph_transitions.dart';
-import 'package:wurp/ui/misc/ban_appeal_screen.dart';
-import 'package:wurp/ui/misc/profile_image_picker.dart';
-import 'package:wurp/ui/router/router.dart';
+import 'package:lumox/logic/repositories/user_repository.dart';
+import 'package:lumox/ui/animations/slide_morph_transitions.dart';
+import 'package:lumox/ui/misc/ban_appeal_screen.dart';
+import 'package:lumox/ui/misc/profile_image_picker.dart';
+import 'package:lumox/ui/router/router.dart';
 
 import '../../base_logic.dart';
 import '../../logic/users/user_model.dart';

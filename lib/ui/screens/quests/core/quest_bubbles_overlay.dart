@@ -1,7 +1,7 @@
 import 'package:flutter/material.dart';
-import 'package:wurp/logic/quests/quest.dart';
-import 'package:wurp/logic/quests/quest_system.dart';
-import 'package:wurp/ui/screens/quests/core/quest_line_connection_painter.dart';
+import 'package:lumox/logic/quests/quest.dart';
+import 'package:lumox/logic/quests/quest_system.dart';
+import 'package:lumox/ui/screens/quests/core/quest_line_connection_painter.dart';
 
 import 'quest_bubble.dart';
 import 'quest_color_propagator.dart';

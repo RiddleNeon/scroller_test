@@ -4,8 +4,8 @@ import 'package:flutter/foundation.dart';
 import 'package:flutter/material.dart';
 import 'package:http/http.dart' as http;
 import 'package:shimmer_animation/shimmer_animation.dart';
-import 'package:wurp/logic/video/video.dart';
-import 'package:wurp/ui/theme/theme_ui_values.dart';
+import 'package:lumox/logic/video/video.dart';
+import 'package:lumox/ui/theme/theme_ui_values.dart';
 
 class VideoCard extends StatefulWidget {
   const VideoCard({super.key, this.thumbnail, required this.video, required this.onTap, required this.cs});

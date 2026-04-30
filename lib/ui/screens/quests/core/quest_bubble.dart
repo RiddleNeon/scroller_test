@@ -1,5 +1,5 @@
 import 'package:flutter/material.dart';
-import 'package:wurp/logic/quests/quest.dart';
+import 'package:lumox/logic/quests/quest.dart';
 
 const double kConnectionHandleRadius = 12.0;
 

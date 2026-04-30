@@ -1,5 +1,5 @@
 import 'package:flutter/material.dart';
-import 'package:wurp/logic/quests/quest_change_manager.dart';
+import 'package:lumox/logic/quests/quest_change_manager.dart';
 
 import '../../../theme/theme_ui_values.dart';
 

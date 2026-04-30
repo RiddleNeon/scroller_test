@@ -1,7 +1,7 @@
 import 'package:camera/camera.dart';
 import 'package:flutter/material.dart';
-import 'package:wurp/ui/theme/theme_ui_values.dart';
-import 'package:wurp/ui/widgets/camera/web_camera.dart';
+import 'package:lumox/ui/theme/theme_ui_values.dart';
+import 'package:lumox/ui/widgets/camera/web_camera.dart';
 
 class WebCameraDialog extends StatefulWidget {
   final bool preferFrontCamera;

@@ -1,6 +1,6 @@
 
-import 'package:wurp/logic/video/video.dart';
-import 'package:wurp/ui/video/video_controller.dart';
+import 'package:lumox/logic/video/video.dart';
+import 'package:lumox/ui/video/video_controller.dart';
 
 import '../video_container.dart';
 import 'feed_view_model.dart';

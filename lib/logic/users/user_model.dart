@@ -1,6 +1,6 @@
-import 'package:wurp/logic/repositories/user_repository.dart';
-import 'package:wurp/logic/repositories/video_repository.dart';
-import 'package:wurp/logic/video/video.dart';
+import 'package:lumox/logic/repositories/user_repository.dart';
+import 'package:lumox/logic/repositories/video_repository.dart';
+import 'package:lumox/logic/video/video.dart';
 
 class UserProfile {
   final String id;

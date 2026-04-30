@@ -1,6 +1,6 @@
-import 'package:wurp/logic/chat/chat.dart';
-import 'package:wurp/logic/chat/chat_message.dart';
-import 'package:wurp/logic/users/user_model.dart';
+import 'package:lumox/logic/chat/chat.dart';
+import 'package:lumox/logic/chat/chat_message.dart';
+import 'package:lumox/logic/users/user_model.dart';
 
 import '../../base_logic.dart';
 import '../../tools/supabase_tests/supabase_login_test.dart';
