@@ -202,6 +202,18 @@ void initRouter() {
                 beginScale: 0.993,
               );
             },
+          ),
+          GoRoute(
+            path: '/themes/:themeId',
+            pageBuilder: (context, state) {
+              final themeId = state.pathParameters['themeId'] ?? '';
+              return SlideMorphTransitions.page<void>(
+                key: state.pageKey,
+                child: _DeepLinkThemeScreen(themeId: themeId),
+                beginOffset: const Offset(0.03, 0.0),
+                beginScale: 0.993,
+              );
+            },
           )
         ],
       ),
@@ -473,15 +485,34 @@ bool _parseZoomOut(String? value) {
 }
 
 List<String> _parseVideoIds(String? raw) {
-  if (raw == null || raw.trim().isEmpty) return const [];
-  final seen = <String>{};
-  final ids = <String>[];
-  for (final part in raw.split(',')) {
-    final id = part.trim();
-    if (id.isEmpty) continue;
-    if (seen.add(id)) {
-      ids.add(id);
+   if (raw == null || raw.trim().isEmpty) return const [];
+   final seen = <String>{};
+   final ids = <String>[];
+   for (final part in raw.split(',')) {
+     final id = part.trim();
+     if (id.isEmpty) continue;
+     if (seen.add(id)) {
+       ids.add(id);
+     }
+   }
+   return ids;
+ }
+
+class _DeepLinkThemeScreen extends StatelessWidget {
+  const _DeepLinkThemeScreen({required this.themeId});
+
+  final String themeId;
+
+  @override
+  Widget build(BuildContext context) {
+    if (themeId.isEmpty) {
+      return const ThemeManagerScreen(initialTabIndex: 1); // 1 = Community tab
     }
+
+    return ThemeManagerScreen(
+      initialTabIndex: 1, // Start on community tab to look for the theme
+      initialThemeId: themeId,
+    );
   }
-  return ids;
 }
+

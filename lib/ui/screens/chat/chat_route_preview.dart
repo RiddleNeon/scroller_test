@@ -1,5 +1,7 @@
+import 'package:flutter/material.dart';
 import 'package:wurp/base_logic.dart';
 import 'package:wurp/logic/repositories/video_repository.dart';
+import 'package:wurp/logic/themes/theme_model.dart';
 import 'package:wurp/logic/users/user_model.dart';
 import 'package:wurp/logic/video/video.dart';
 import 'package:wurp/tools/supabase_tests/supabase_login_test.dart';
@@ -22,6 +24,9 @@ class ChatRoutePreview {
   final String route;
   final String? thumbnailUrl;
   final String? avatarUrl;
+  final Color? themeColor; // Primary color for theme previews
+  final Color? themeBackground; // Background color for theme previews
+  final CustomThemeModel? themeModel; // Full theme model for detailed preview
 
   const ChatRoutePreview({
     required this.type,
@@ -30,6 +35,9 @@ class ChatRoutePreview {
     required this.route,
     this.thumbnailUrl,
     this.avatarUrl,
+    this.themeColor,
+    this.themeBackground,
+    this.themeModel,
   });
 }
 
@@ -79,29 +87,29 @@ class ChatRoutePreviewResolver {
     return stripped.trim().isNotEmpty;
   }
 
-  static Future<ChatRoutePreview?> resolve(ChatRouteReference routeRef) async {
-    final path = routeRef.uri.path;
-    if (path.startsWith('/feed/')) {
-      return _resolveVideo(routeRef);
-    }
-    if (path == '/quests') {
-      return _resolveQuests(routeRef);
-    }
-    if (path.startsWith('/chat')) {
-      return _resolveChat(routeRef);
-    }
-    if (path == '/search') {
-      return _resolveSearch(routeRef);
-    }
-    if (path == '/themes') {
-      return _resolveThemes(routeRef);
-    }
-    return null;
-  }
+   static Future<ChatRoutePreview?> resolve(ChatRouteReference routeRef) async {
+     final path = routeRef.uri.path;
+     if (path.startsWith('/feed/')) {
+       return _resolveVideo(routeRef);
+     }
+     if (path == '/quests') {
+       return _resolveQuests(routeRef);
+     }
+     if (path.startsWith('/chat')) {
+       return _resolveChat(routeRef);
+     }
+     if (path == '/search') {
+       return _resolveSearch(routeRef);
+     }
+     if (path.startsWith('/themes')) {
+       return _resolveThemes(routeRef);
+     }
+     return null;
+   }
 
-  static bool _isSupportedPath(String path) {
-    return path.startsWith('/feed/') || path == '/quests' || path.startsWith('/chat') || path == '/search' || path == '/themes';
-  }
+   static bool _isSupportedPath(String path) {
+     return path.startsWith('/feed/') || path == '/quests' || path.startsWith('/chat') || path == '/search' || path.startsWith('/themes');
+   }
 
   static Future<ChatRoutePreview?> _resolveVideo(ChatRouteReference routeRef) async {
     final videoId = routeRef.uri.pathSegments.length >= 2 ? routeRef.uri.pathSegments[1] : '';
@@ -227,15 +235,59 @@ class ChatRoutePreviewResolver {
     );
   }
 
-  static Future<ChatRoutePreview?> _resolveThemes(ChatRouteReference routeRef) async {
-    final tab = routeRef.uri.queryParameters['tab'];
-    final tabLabel = tab == 'community' ? 'Community themes' : 'My themes';
-    return ChatRoutePreview(
-      type: ChatRoutePreviewType.themes,
-      title: 'Themes',
-      subtitle: tabLabel,
-      route: routeRef.route,
-    );
-  }
+    static Future<ChatRoutePreview?> _resolveThemes(ChatRouteReference routeRef) async {
+      final pathSegments = routeRef.uri.pathSegments;
+      if (pathSegments.length >= 2 && pathSegments[0] == 'themes' && pathSegments[1].isNotEmpty) {
+        final themeId = pathSegments[1];
+        try {
+          final row = await supabaseClient.from('themes').select().eq('id', themeId).maybeSingle();
+          if (row != null) {
+            final themeName = (row['name'] as String?)?.trim() ?? 'Untitled Theme';
+            final createdBy = row['created_by'] as String?;
+            String creatorLabel = 'by Unknown';
+            
+            if (createdBy != null && createdBy.isNotEmpty) {
+              try {
+                final creatorRow = await supabaseClient.from('profiles').select('display_name, username').eq('id', createdBy).maybeSingle();
+                if (creatorRow != null) {
+                  final displayName = (creatorRow['display_name'] as String?)?.trim();
+                  final username = (creatorRow['username'] as String?)?.trim();
+                  creatorLabel = (displayName != null && displayName.isNotEmpty) 
+                      ? 'by $displayName'
+                      : (username != null && username.isNotEmpty)
+                          ? 'by @$username'
+                          : 'by ${createdBy.substring(0, 6)}...';
+                }
+              } catch (_) {
+                creatorLabel = 'by ${createdBy.substring(0, 6)}...';
+              }
+            }
+            
+            // Create the full theme model for preview
+            final themeModel = CustomThemeModel.fromJson(row);
+            
+            return ChatRoutePreview(
+              type: ChatRoutePreviewType.themes,
+              title: themeName,
+              subtitle: creatorLabel,
+              route: routeRef.route,
+              themeModel: themeModel,
+            );
+          }
+        } catch (_) {
+          // If fetch fails, fall through to default
+        }
+      }
+      
+      // Default theme preview when no specific theme ID or fetch failed
+      final tab = routeRef.uri.queryParameters['tab'];
+      final tabLabel = tab == 'own' ? 'My themes' : 'Community themes';
+      return ChatRoutePreview(
+        type: ChatRoutePreviewType.themes,
+        title: 'Themes',
+        subtitle: tabLabel,
+        route: routeRef.route,
+      );
+    }
 }
 

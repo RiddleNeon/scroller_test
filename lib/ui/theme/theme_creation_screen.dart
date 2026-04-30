@@ -7,16 +7,24 @@ import 'package:supabase_flutter/supabase_flutter.dart';
 import 'package:uuid/uuid.dart';
 import 'package:wurp/base_ui.dart';
 import 'package:wurp/logic/themes/theme_model.dart';
+import 'package:wurp/ui/router/deep_link_builder.dart';
 import 'package:wurp/ui/theme/theme_editor_screen.dart';
+import 'package:wurp/ui/widgets/overlays/share_button.dart';
+import 'package:flutter/services.dart';
+import 'package:wurp/logic/chat/chat.dart';
+import 'package:wurp/logic/chat/chat_message.dart';
+import 'package:wurp/base_logic.dart';
+import 'package:wurp/logic/local_storage/local_seen_service.dart';
 import 'package:wurp/ui/theme/theme_ui_values.dart';
 
 import 'app_theme.dart';
 
 class ThemeManagerScreen extends StatefulWidget {
-  const ThemeManagerScreen({super.key, this.initialTabIndex = 0, this.embedded = false});
+  const ThemeManagerScreen({super.key, this.initialTabIndex = 0, this.embedded = false, this.initialThemeId});
 
   final int initialTabIndex;
   final bool embedded;
+  final String? initialThemeId;
 
   @override
   State<ThemeManagerScreen> createState() => _ThemeManagerScreenState();
@@ -27,6 +35,8 @@ class _ThemeManagerScreenState extends State<ThemeManagerScreen> with TickerProv
 
   List<CustomThemeModel> _myThemes = [];
   List<CustomThemeModel> _communityThemes = [];
+  List<ShareContact> _shareContacts = const [];
+  final Map<String, Chat> _chatByPartnerId = {};
   final Set<String> _savedThemeIds = {};
   final Set<String> _ownedThemeIds = {};
   final Map<String, String> _creatorNamesById = {};
@@ -58,8 +68,18 @@ class _ThemeManagerScreenState extends State<ThemeManagerScreen> with TickerProv
   void initState() {
     super.initState();
     _selectedThemeId = _normalizeThemeId(appThemeNotifier.value.$2);
+    // If an initial theme ID is provided via deep link, set it to be selected
+    final shouldAutoApplyTheme = widget.initialThemeId != null && widget.initialThemeId!.isNotEmpty;
+    if (shouldAutoApplyTheme) {
+      _selectedThemeId = widget.initialThemeId;
+    }
     _loadMyThemes();
-    _loadCommunityThemes();
+    _loadCommunityThemes().then((_) {
+      // After loading community themes, if this was a deep link, apply the theme
+      if (shouldAutoApplyTheme && mounted) {
+        applyTheme(widget.initialThemeId!, pushToServer: true);
+      }
+    });
     _loadLikedIds();
   }
 
@@ -324,6 +344,109 @@ class _ThemeManagerScreenState extends State<ThemeManagerScreen> with TickerProv
     if (result != null) await _saveTheme(result);
   }
 
+  Future<void> _prepareShareContactsForTheme(CustomThemeModel theme) async {
+    final now = DateTime.now();
+    final thirtyDaysAgo = now.subtract(const Duration(days: 30));
+    final currentThemeLink = '${Uri.base.origin}/themes/${theme.id}';
+    final chats = localSeenService.getChats();
+    final contacts = <ShareContact>[];
+    final chatMap = <String, Chat>{};
+
+    for (final chat in chats) {
+      final messages = await localSeenService.getMessagesWithLocal(
+        chat.partnerId,
+        limit: 180,
+        startOffset: now.add(const Duration(seconds: 1)),
+      );
+      final myRecentMessages = messages.where((message) => message.isMe && message.timestamp.isAfter(thirtyDaysAgo)).toList();
+      final mySharesOfCurrentTheme = messages.where((message) => message.isMe && message.text.trim() == currentThemeLink).toList();
+      final lastSharedAt = myRecentMessages.isEmpty ? chat.lastMessageAt : myRecentMessages.last.timestamp;
+      final lastSharedThisThemeAt = mySharesOfCurrentTheme.isEmpty ? null : mySharesOfCurrentTheme.last.timestamp;
+
+      contacts.add(
+        ShareContact(
+          id: chat.partnerId,
+          name: chat.partnerName,
+          avatarUrl: chat.partnerProfileImageUrl,
+          recentShareCount: myRecentMessages.length,
+          lastSharedAt: lastSharedAt,
+          alreadySharedWithThisVideo: mySharesOfCurrentTheme.isNotEmpty,
+          lastSharedThisVideoAt: lastSharedThisThemeAt,
+        ),
+      );
+      chatMap[chat.partnerId] = chat;
+    }
+
+    if (!mounted) return;
+    setState(() {
+      _shareContacts = contacts;
+      _chatByPartnerId
+        ..clear()
+        ..addAll(chatMap);
+    });
+  }
+
+  Future<void> _shareToContact(ShareContact contact, String link) async {
+    final chat = _chatByPartnerId[contact.id];
+    if (chat == null) return;
+
+    final message = ChatMessage(
+      id: '${contact.id}-${DateTime.now().microsecondsSinceEpoch}',
+      text: link,
+      isMe: true,
+      timestamp: DateTime.now(),
+    );
+
+    await chatRepository.sendNotification(chat: chat, message: message);
+    if (!mounted) return;
+    // We don't eagerly refresh the contacts here; overlays usually refresh after sending.
+  }
+
+  Future<void> _openShareForTheme(CustomThemeModel theme) async {
+    await _prepareShareContactsForTheme(theme);
+    if (!mounted) return;
+    showModalBottomSheet(
+      context: context,
+      isScrollControlled: true,
+      backgroundColor: Theme.of(context).colorScheme.surface,
+      shape: RoundedRectangleBorder(borderRadius: BorderRadius.vertical(top: Radius.circular(theme.colors.style.radiusXl))),
+      builder: (ctx) {
+        return Padding(
+          padding: EdgeInsets.fromLTRB(16, 16, 16, MediaQuery.of(ctx).viewInsets.bottom + 16),
+          child: Column(
+            mainAxisSize: MainAxisSize.min,
+            crossAxisAlignment: CrossAxisAlignment.stretch,
+            children: [
+              Text('Share "${theme.name}"', style: Theme.of(ctx).textTheme.titleLarge),
+              const SizedBox(height: 8),
+              Text(
+                'Send to a contact to message them this theme, or copy the link to share anywhere.',
+                style: Theme.of(ctx).textTheme.bodySmall?.copyWith(color: Theme.of(ctx).colorScheme.onSurfaceVariant),
+              ),
+               const SizedBox(height: 8),
+               ShareButton(
+                 shareUrl: DeepLinkBuilder.themes(themeId: theme.id),
+                 contacts: _shareContacts,
+                 onCopyLink: (l) async {
+                  await Clipboard.setData(ClipboardData(text: l));
+                  if (!ctx.mounted) return;
+                  showSnackBar(ctx, 'Link copied to clipboard');
+                },
+                onShareToContact: (c, l) async {
+                  await _shareToContact(c, l);
+                  if (!ctx.mounted) return;
+                  showSnackBar(ctx, 'Sent');
+                },
+                onShared: () {},
+                emptyStateLabel: 'No recent chats',
+              ),
+            ],
+          ),
+        );
+      },
+    );
+  }
+
   Future<void> _exportTheme() async {
     if (_selectedThemeId == null) {
       showSnackBar(context, 'Choose a theme first.');
@@ -485,6 +608,7 @@ class _ThemeManagerScreenState extends State<ThemeManagerScreen> with TickerProv
               saveTheme: isOwned ? _saveTheme : null,
               deleteTheme: isDefault ? null : _deleteTheme,
               isSelected: isSelected,
+              onShare: _openShareForTheme,
               creatorName: isOwned ? 'you' : isDefault ? 'default' : creatorName,
               showCreatorInline: true,
               isPublic: !isDefault && theme.isPublic,
@@ -551,6 +675,7 @@ class _ThemeManagerScreenState extends State<ThemeManagerScreen> with TickerProv
               saveTheme: null,
               deleteTheme: null,
               isSelected: isSelected,
+              onShare: _openShareForTheme,
               onLikeToggle: _toggleLike,
               likesCount: theme.likesCount,
               initiallyLiked: isLiked,
@@ -573,6 +698,7 @@ class ThemePreview extends StatefulWidget {
   final Future<void> Function({required CustomThemeModel existing})? openEditor;
   final Future<void> Function(CustomThemeModel)? saveTheme;
   final Future<void> Function(CustomThemeModel)? deleteTheme;
+  final Future<void> Function(CustomThemeModel)? onShare;
   final bool isSelected;
 
   final String? creatorName;
@@ -592,6 +718,7 @@ class ThemePreview extends StatefulWidget {
     required this.saveTheme,
     required this.deleteTheme,
     required this.isSelected,
+    this.onShare,
     this.creatorName,
     this.showCreatorInline = false,
     this.isPublic = false,
@@ -783,6 +910,16 @@ class _ThemePreviewState extends State<ThemePreview> {
                       }
                       return;
                     }
+                    if (val == 'copy_link') {
+                      final link = '${Uri.base.origin}/themes/${widget.theme.id}';
+                      await Clipboard.setData(ClipboardData(text: link));
+                      if (context.mounted) showSnackBar(context, 'Link copied to clipboard');
+                      return;
+                    }
+                    if (val == 'share_link' && widget.onShare != null) {
+                      await widget.onShare!(widget.theme);
+                      return;
+                    }
                     if (val == 'details') {
                       _showThemeDetails(context, widget.theme, creatorName: widget.creatorName);
                       return;
@@ -802,6 +939,14 @@ class _ThemePreviewState extends State<ThemePreview> {
                         value: 'share',
                         child: ListTile(leading: Icon(Icons.public), title: Text('share with Community'), dense: true),
                       ),
+                    const PopupMenuItem(
+                      value: 'copy_link',
+                      child: ListTile(leading: Icon(Icons.copy_outlined), title: Text('Copy link'), dense: true),
+                    ),
+                    const PopupMenuItem(
+                      value: 'share_link',
+                      child: ListTile(leading: Icon(Icons.share_outlined), title: Text('Share'), dense: true),
+                    ),
                     const PopupMenuItem(
                       value: 'details',
                       child: ListTile(leading: Icon(Icons.info_outline), title: Text('Details'), dense: true),

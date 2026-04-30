@@ -22,6 +22,7 @@ import '../../../logic/local_storage/local_seen_service.dart';
 import '../profile_screen.dart';
 import 'calling_screen.dart';
 import 'chat_route_preview.dart';
+import '../../theme/theme_creation_screen.dart';
 
 double _chatBubbleRadius(BuildContext context) => context.uiRadiusLg;
 double _chatBubbleTightRadius(BuildContext context) => context.uiRadiusSm * 0.66;
@@ -1282,6 +1283,33 @@ class _RoutePreviewCard extends StatelessWidget {
       ChatRoutePreviewType.themes => Icons.palette_outlined,
     };
 
+    // Special preview for themes with full theme preview widget
+    if (preview.type == ChatRoutePreviewType.themes && preview.themeModel != null) {
+      final theme = preview.themeModel!;
+      return InkWell(
+        onTap: onTap,
+        borderRadius: BorderRadius.circular(context.uiRadiusMd),
+        child: SizedBox(
+          width: double.infinity,
+          height: 190,
+          child: ThemePreview(
+            c: theme.colors,
+            theme: theme,
+            isDefault: false,
+            openEditor: null,
+            saveTheme: null,
+            deleteTheme: null,
+            isSelected: false,
+            onShare: null,
+            creatorName: preview.subtitle.replaceFirst('by ', ''),
+            showCreatorInline: true,
+            isPublic: theme.isPublic,
+            showVisibilityBadge: false,
+          ),
+        ),
+      );
+    }
+
     if (preview.type == ChatRoutePreviewType.feed && preview.thumbnailUrl != null) {
       return InkWell(
         onTap: onTap,
@@ -1487,7 +1515,10 @@ class _AvatarWidget extends StatelessWidget {
     final cs = colorScheme;
     return Stack(
       children: [
-        Avatar(imageUrl: imageUrl, name: name, colorScheme: colorScheme),
+        SizedBox(
+            width: radius * 2,
+            height: radius * 2,
+            child: Avatar(imageUrl: imageUrl, name: name, colorScheme: colorScheme)),
         if (isOnline)
           Positioned(
             right: 0,

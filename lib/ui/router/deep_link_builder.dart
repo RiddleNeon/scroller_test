@@ -44,8 +44,11 @@ class DeepLinkBuilder {
     return Uri(path: '/profile', queryParameters: params.isEmpty ? null : params).toString();
   }
 
-  static String themes({DeepLinkThemeTab tab = DeepLinkThemeTab.own}) {
-    final params = <String, String>{if (tab != DeepLinkThemeTab.own) 'tab': tab.value};
+  static String themes({String? themeId, DeepLinkThemeTab tab = DeepLinkThemeTab.community}) {
+    if (themeId != null && themeId.trim().isNotEmpty) {
+      return '/themes/${themeId.trim()}';
+    }
+    final params = <String, String>{if (tab != DeepLinkThemeTab.community) 'tab': tab.value};
     return Uri(path: '/themes', queryParameters: params.isEmpty ? null : params).toString();
   }
 

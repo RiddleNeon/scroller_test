@@ -17,6 +17,7 @@ import '../router/router.dart';
 class YoutubeVideoContainer {
   final YoutubePlayerController controller;
   final Video video;
+
   YoutubeVideoContainer({required this.controller, required this.video});
 }
 
@@ -61,20 +62,18 @@ class _ShortsFeedState extends State<ShortsFeed> {
   }
 
   YoutubePlayerController _createController(String videoId) {
-    print("Creating YoutubePlayerController for video ID: $videoId");
     return YoutubePlayerController.fromVideoId(
       videoId: videoId,
-      autoPlay: true,
+      autoPlay: false,
       params: const YoutubePlayerParams(
         showControls: false,
         showFullscreenButton: false,
-        mute: false,
         loop: true,
-        playsInline: true,
         pointerEvents: .none,
         enableCaption: false,
         enableKeyboard: false,
         strictRelatedVideos: true,
+        showVideoAnnotations: false,
       ),
     )..loadVideoById(videoId: videoId);
   }
@@ -137,10 +136,10 @@ class _ShortsFeedState extends State<ShortsFeed> {
                   ),
                 ),
               );
-            } else if(snapshot.error != null) {
+            } else if (snapshot.error != null) {
               return Center(child: Text('Error loading video: ${snapshot.error}'));
             }
-            return ShortVideoPage(controller: _controllers[index]!.controller, video: _controllers[index]!.video, index: index,);
+            return ShortVideoPage(controller: _controllers[index]!.controller, video: _controllers[index]!.video, index: index);
           },
         );
       },
@@ -156,7 +155,6 @@ class _ShortsFeedState extends State<ShortsFeed> {
       if (video == null) {
         throw VideoNotFoundException(index);
       }
-      
 
       final controller = _createController(YoutubePlayerController.convertUrlToId(video.videoUrl)!);
       _controllers[index] = YoutubeVideoContainer(controller: controller, video: video);
@@ -171,7 +169,7 @@ class ShortVideoPage extends StatefulWidget {
   final Video video;
   final int index;
   final void Function(bool)? onLikeChanged;
-  
+
   const ShortVideoPage({super.key, required this.controller, this.thumbnailUrl, required this.video, required this.index, this.onLikeChanged});
 
   @override
@@ -194,17 +192,27 @@ class _ShortVideoPageState extends State<ShortVideoPage> with SingleTickerProvid
         });
       }
     });
-    
-    Future.delayed(const Duration(milliseconds: 1500), () {
-      if (mounted && widget.controller.value.playerState == PlayerState.buffering) {
-        setState(() {
+
+    Future.doWhile(() {
+      return Future.delayed(const Duration(milliseconds: 1200), () {
+        if (mounted && widget.controller.value.playerState != PlayerState.playing) {
           widget.controller.playVideo();
-          _startedPlaying = true;
-          _wasPlaying = true;
-          _startTracking();
-        });
-      }
+          return true;
+        }
+        return !mounted;
+      });
     });
+
+    // Future.delayed(const Duration(milliseconds: 1500), () {
+    //   if (mounted && widget.controller.value.playerState == PlayerState.buffering) {
+    //     setState(() {
+    //       widget.controller.playVideo();
+    //       _startedPlaying = true;
+    //       _wasPlaying = true;
+    //       _startTracking();
+    //     });
+    //   }
+    // });
   }
 
   DateTime? _startWatchTime;
@@ -226,7 +234,7 @@ class _ShortVideoPageState extends State<ShortVideoPage> with SingleTickerProvid
   }
 
   void _onControllerUpdate(bool isPlaying) {
-    if(!mounted) return;
+    if (!mounted) return;
     if (isPlaying && !_wasPlaying) {
       _wasPlaying = true;
       _startTracking();
@@ -290,7 +298,7 @@ class _ShortVideoPageState extends State<ShortVideoPage> with SingleTickerProvid
     }
     currentlySaving = true;
     final videoDuration = widget.video.duration?.inSeconds.toDouble() ?? 0;
-    
+
     try {
       // Use VideoRecommender to track interaction
       // This handles BOTH recent_interactions AND preference updates
@@ -305,7 +313,7 @@ class _ShortVideoPageState extends State<ShortVideoPage> with SingleTickerProvid
         saved: _hasSaved,
         userId: currentAuthUserId(),
       );
-      
+
       // Reset for next viewing session
       _totalWatchTime = 0.0;
     } catch (e) {
@@ -376,8 +384,12 @@ class _ShortVideoPageState extends State<ShortVideoPage> with SingleTickerProvid
 
               AnimatedOpacity(
                 duration: const Duration(milliseconds: 150),
-                opacity: _startedPlaying ? 0 : 0.99,
-                child: CachedNetworkImage(imageUrl: widget.video.thumbnailUrl ?? 'https://img.youtube.com/vi/${YoutubePlayerController.convertUrlToId(widget.video.videoUrl)}/hqdefault.jpg', fit: BoxFit.cover),
+                opacity: _startedPlaying ? 0 : 0.95,
+                child: CachedNetworkImage(
+                  imageUrl:
+                      widget.video.thumbnailUrl ?? 'https://img.youtube.com/vi/${YoutubePlayerController.convertUrlToId(widget.video.videoUrl)}/hqdefault.jpg',
+                  fit: BoxFit.cover,
+                ),
               ),
 
               PointerInterceptor(child: const AspectRatio(aspectRatio: 9 / 16)),
@@ -392,7 +404,7 @@ class _ShortVideoPageState extends State<ShortVideoPage> with SingleTickerProvid
                 onShareChanged: onShareChanged,
                 onSaveChanged: onSaveChanged,
                 onCommentChanged: onCommentChanged,
-                
+
                 onTogglePause: () {
                   if (widget.controller.value.playerState == PlayerState.playing) {
                     widget.controller.pauseVideo();
