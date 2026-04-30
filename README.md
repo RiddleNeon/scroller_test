@@ -1,6 +1,6 @@
 # lumox
 > [!IMPORTANT]
-> this is a flutter app für a scool project. it is not meant to be used for any real-live uses, but all the used backend providers and storage providers are the best ones for this usecase and the code is built to be scalable. 
+> this is a flutter app for a scool project. it is not meant to be used for any real-live uses, but all the used backend providers and storage providers are the best ones for this usecase and the code is built to be scalable. 
 
 ## backend
 as for the database, auth and analytics provider, ive descided to use **supabase**. supabase is a backend provider containing its own services like auth and third party connections.<br>
