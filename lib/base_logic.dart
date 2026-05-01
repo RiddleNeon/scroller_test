@@ -58,6 +58,7 @@ Future<void> onUserLogin(UserProfile user, bool firstTime) async {
   print("User logged in: ${user.id}");
   _currentUser = user;
   await onUserLoginSupabaseTest();
+  useYoutubeVideosOnlyNotifier.value = bool.tryParse(await userRepository.getSetting(user.id, 'show_youtube')) ?? true;
   await clearAllWillPlaySoonReservations(userId: user.id);
   await initLocalSeenService();
   await applyThemeFromServer();
@@ -130,5 +131,4 @@ Future<void> onUserLogout() async {
 bool runningOnMobile = defaultTargetPlatform == TargetPlatform.iOS || defaultTargetPlatform == TargetPlatform.android;
 
 /// When true, recommendation queries should only fetch YouTube-backed videos.
-final ValueNotifier<bool> useYoutubeVideosOnlyNotifier = ValueNotifier(true);
-
+final ValueNotifier<bool> useYoutubeVideosOnlyNotifier = ValueNotifier(false);

@@ -1,6 +1,7 @@
 import 'package:flutter/material.dart';
 import 'package:lumox/base_logic.dart';
 import 'package:lumox/logic/feed_recommendation/user_preference_manager.dart';
+import 'package:lumox/ui/misc/dynamic_item_list.dart';
 import 'package:lumox/ui/theme/theme_creation_screen.dart';
 
 import '../../../logic/local_storage/local_seen_service.dart';
@@ -27,11 +28,17 @@ class _GeneralSettingsScreenState extends State<GeneralSettingsScreen> {
   late bool _useYoutubeOnly;
   late List<String> _blockedTags;
 
+  bool isProUser = false;
+
   @override
   void initState() {
     super.initState();
     _useYoutubeOnly = useYoutubeVideosOnlyNotifier.value;
     _blockedTags = localSeenService.getBlacklistedTags()..sort();
+
+    userRepository.isProUser(currentUser.id).then((isPro) {
+      if (mounted) setState(() => isProUser = isPro);
+    });
   }
 
   @override
@@ -108,11 +115,97 @@ class _GeneralSettingsScreenState extends State<GeneralSettingsScreen> {
     }
   }
 
-  void _toggleYoutubeOnly(bool value) {
+  void _toggleYoutubeOnly(bool value) async {
+    final isPro = await userRepository.isProUser(currentUser.id);
+    if (value && !isPro) {
+      _snack('This feature is available for Pro users only.');
+      return;
+    }
+
+    await userRepository.setSetting(currentUser.id, 'show_youtube', value ? 'true' : 'false');
     setState(() => _useYoutubeOnly = value);
     useYoutubeVideosOnlyNotifier.value = value;
     videoProvider.clearCache();
     _snack(value ? 'Feed switched to YouTube videos only.' : 'Feed switched to normal videos.');
+  }
+
+  Widget _buildRequestProWidget(BuildContext context) {
+    return Card(
+      color: Theme.of(context).colorScheme.primaryContainer,
+      child: Padding(
+        padding: const EdgeInsets.all(16),
+        child: Column(
+          mainAxisSize: MainAxisSize.min,
+          children: [
+            Text('Pro feature', style: Theme.of(context).textTheme.titleMedium?.copyWith(color: Theme.of(context).colorScheme.onPrimaryContainer)),
+            const SizedBox(height: 8),
+            Text(
+              'Showing only YouTube videos in the feed is a Pro feature. Please verify yourself to gain access to this and other Pro features.',
+              style: Theme.of(context).textTheme.bodyMedium?.copyWith(color: Theme.of(context).colorScheme.onPrimaryContainer),
+            ),
+            const SizedBox(height: 12),
+            ElevatedButton(
+              onPressed: () {
+                showDialog(
+                  context: context,
+                  builder: (context) => AlertDialog(
+                    content: SingleChildScrollView(
+                      child: _buildProVerificationWidget(context),
+                    ),
+                  ),
+                );
+              },
+              child: const Text('Upgrade to Pro'),
+            ),
+          ],
+        ),
+      ),
+    );
+  }
+
+  /// a screen that asks the user what the names of the group members are (as a safety question) to verify they know the owner. there is an input field list where they can put any amount of names, and if all of them are correct, they get access to the feature. if any of them are wrong, they get a message saying "verification failed, please try again" and the input fields are cleared.
+  Widget _buildProVerificationWidget(BuildContext context) {
+    return Card(
+      color: Theme.of(context).colorScheme.primaryContainer,
+      child: Padding(
+        padding: const EdgeInsets.all(16),
+        child: Column(
+          mainAxisSize: MainAxisSize.min,
+          children: [
+            Text('Pro verification', style: Theme.of(context).textTheme.titleMedium?.copyWith(color: Theme.of(context).colorScheme.onPrimaryContainer)),
+            const SizedBox(height: 8),
+            Text(
+              'To access this feature, please verify your Pro status by answering the following question:',
+              style: Theme.of(context).textTheme.bodyMedium?.copyWith(color: Theme.of(context).colorScheme.onPrimaryContainer),
+            ),
+            const SizedBox(height: 12),
+            Text(
+              'What are the group members of this project?',
+              style: Theme.of(context).textTheme.bodyMedium?.copyWith(color: Theme.of(context).colorScheme.onPrimaryContainer),
+            ),
+            const SizedBox(height: 12),
+            DynamicItemList(
+              itemBuilder: (index, enteredName, [removeItem]) => Text(enteredName),
+              onSubmitted: (answers) async {
+                final returnValue = await userRepository.requestProPrivileges((answers..sort()).map((e) => e.toLowerCase()).join('-'));
+                if (returnValue == true) {
+                  _snack('Verification successful! You can now watch youtube videos.');
+                  if(mounted){
+                    setState(() {
+                      isProUser = true;
+                    });
+                  }
+                  if(context.mounted) Navigator.of(context).pop();
+                } else {
+                  _snack('Verification failed, please try again.');
+                  if(context.mounted) Navigator.of(context).pop();
+                }
+              },
+            ),
+          ],
+        ),
+      ),
+    );
   }
 
   Future<void> _addBlockedTag() async {
@@ -187,10 +280,7 @@ class _GeneralSettingsScreenState extends State<GeneralSettingsScreen> {
       padding: const EdgeInsets.all(16),
       child: Align(
         alignment: Alignment.topCenter,
-        child: ConstrainedBox(
-          constraints: const BoxConstraints(maxWidth: 920),
-          child: child,
-        ),
+        child: ConstrainedBox(constraints: const BoxConstraints(maxWidth: 920), child: child),
       ),
     );
   }
@@ -266,11 +356,7 @@ class _GeneralSettingsScreenState extends State<GeneralSettingsScreen> {
                 Expanded(
                   child: TextField(
                     controller: _tagController,
-                    decoration: const InputDecoration(
-                      labelText: 'Blocked tag',
-                      hintText: 'example: spoilers',
-                      border: OutlineInputBorder(),
-                    ),
+                    decoration: const InputDecoration(labelText: 'Blocked tag', hintText: 'example: spoilers', border: OutlineInputBorder()),
                     onSubmitted: (_) => _addBlockedTag(),
                   ),
                 ),
@@ -285,14 +371,7 @@ class _GeneralSettingsScreenState extends State<GeneralSettingsScreen> {
               Wrap(
                 spacing: 8,
                 runSpacing: 8,
-                children: _blockedTags
-                    .map(
-                      (tag) => InputChip(
-                        label: Text('#$tag'),
-                        onDeleted: () => _removeBlockedTag(tag),
-                      ),
-                    )
-                    .toList(),
+                children: _blockedTags.map((tag) => InputChip(label: Text('#$tag'), onDeleted: () => _removeBlockedTag(tag))).toList(),
               ),
             const SizedBox(height: 12),
             OutlinedButton.icon(
@@ -317,13 +396,15 @@ class _GeneralSettingsScreenState extends State<GeneralSettingsScreen> {
             const SizedBox(height: 8),
             Text('Feed source and maintenance actions.', style: Theme.of(context).textTheme.bodyMedium),
             const SizedBox(height: 16),
-            SwitchListTile.adaptive(
-              value: _useYoutubeOnly,
-              contentPadding: EdgeInsets.zero,
-              title: const Text('Show YouTube videos only'),
-              subtitle: const Text('When off, the feed uses the normal video source.'),
-              onChanged: _toggleYoutubeOnly,
-            ),
+            if (isProUser)
+              SwitchListTile.adaptive(
+                value: _useYoutubeOnly,
+                contentPadding: EdgeInsets.zero,
+                title: const Text('Show YouTube videos only'),
+                subtitle: const Text('When off, the feed uses the normal video source.'),
+                onChanged: _toggleYoutubeOnly,
+              ),
+            if (!isProUser) _buildRequestProWidget(context),
             const Divider(height: 24),
             ListTile(
               contentPadding: EdgeInsets.zero,
@@ -401,22 +482,13 @@ enum SettingsCategory {
 }
 
 class _SettingsSidebar extends StatelessWidget {
-  const _SettingsSidebar({
-    required this.isWide,
-    required this.selectedCategory,
-    required this.onCategorySelected,
-  });
+  const _SettingsSidebar({required this.isWide, required this.selectedCategory, required this.onCategorySelected});
 
   final bool isWide;
   final SettingsCategory selectedCategory;
   final ValueChanged<SettingsCategory> onCategorySelected;
 
-  static const List<SettingsCategory> _mainCategories = [
-    SettingsCategory.account,
-    SettingsCategory.content,
-    SettingsCategory.themes,
-    SettingsCategory.about,
-  ];
+  static const List<SettingsCategory> _mainCategories = [SettingsCategory.account, SettingsCategory.content, SettingsCategory.themes, SettingsCategory.about];
 
   @override
   Widget build(BuildContext context) {
@@ -429,12 +501,7 @@ class _SettingsSidebar extends StatelessWidget {
         children: [
           const SizedBox(height: 8),
           for (final category in _mainCategories)
-            _SidebarItem(
-              isWide: isWide,
-              category: category,
-              selected: selectedCategory == category,
-              onTap: () => onCategorySelected(category),
-            ),
+            _SidebarItem(isWide: isWide, category: category, selected: selectedCategory == category, onTap: () => onCategorySelected(category)),
           const Spacer(),
           Divider(height: 1, color: cs.outlineVariant.withValues(alpha: 0.6)),
           _SidebarItem(
@@ -451,12 +518,7 @@ class _SettingsSidebar extends StatelessWidget {
 }
 
 class _SidebarItem extends StatelessWidget {
-  const _SidebarItem({
-    required this.isWide,
-    required this.category,
-    required this.selected,
-    required this.onTap,
-  });
+  const _SidebarItem({required this.isWide, required this.category, required this.selected, required this.onTap});
 
   final bool isWide;
   final SettingsCategory category;
@@ -488,10 +550,7 @@ class _SidebarItem extends StatelessWidget {
               if (isWide) ...[
                 const SizedBox(width: 12),
                 Expanded(
-                  child: Text(
-                    category.label,
-                    style: textStyle?.copyWith(color: selected ? cs.onSecondaryContainer : cs.onSurfaceVariant),
-                  ),
+                  child: Text(category.label, style: textStyle?.copyWith(color: selected ? cs.onSecondaryContainer : cs.onSurfaceVariant)),
                 ),
               ],
             ],
@@ -501,4 +560,3 @@ class _SidebarItem extends StatelessWidget {
     );
   }
 }
-

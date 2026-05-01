@@ -793,6 +793,44 @@ class UserRepository {
       print("Simulating ban appeal review for user $id. In a real app, this would be handled by admins. Unbanning user.");
     });
   }
+  
+  Future<bool> isProUser(String userId) async {
+    try {
+      final result = await supabaseClient.from('pro_users').select('user_id').eq('user_id', userId).maybeSingle();
+      return result != null;
+    } catch (e) {
+      print('Error checking pro status: $e');
+      return false;
+    }
+  }
+  
+  Future<bool> requestProPrivileges(String key) async {
+    try {
+      final response = await supabaseClient.rpc('request_pro_tier', params: {'key': key});
+      return response == true;
+    } catch (e) {
+      print('Error requesting pro privileges: $e');
+      return false;
+    }
+  }
+  
+  Future<void> setSetting(String userId, String key, String value) async {
+    try {
+      await supabaseClient.from('profile_settings').upsert({'user_id': userId, 'setting_key': key, 'setting_value': value});
+    } catch (e) {
+      print('Error setting user setting: $e');
+    }
+  }
+  
+  Future<String> getSetting(String userId, String key) async {
+    try {
+      final result = await supabaseClient.from('profile_settings').select('setting_value').eq('user_id', userId).eq('setting_key', key).maybeSingle();
+      return result != null ? result['setting_value'] as String : '';
+    } catch (e) {
+      print('Error getting user setting: $e');
+      return '';
+    }
+  }
 }
 
 String createUserProfileImageUrl(String? seed) => "https://api.dicebear.com/7.x/miniavs/png?seed=${seed ?? "_"}";
