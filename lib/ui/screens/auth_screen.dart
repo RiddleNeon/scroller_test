@@ -1490,8 +1490,10 @@ class _SignupOnboardingScreenState extends State<SignupOnboardingScreen> with Ti
             child: Text(
               "This app is currently in a prototype stage, so you may encounter bugs or missing features.\n\n"
               "If something doesn’t work as expected, I’d really appreciate your feedback to help me improve this app.\n\n"
-              "Since this is only a prototype the videos used in this app are currently sourced from Pixabay. "
-              "All credit goes to their respective creators.\n\n"
+              "Ive currently implemented 2 different kinds of video players, the youtube one being the default. It uses youtube videos to fill in some content. \n It uses the youtube IFrame API, because otherwise it would violate youtubes TOS. However that provides some limitations, so its a bit unstable. "
+              "some videos might not play, there might be some latency and i also cant really do anything about the ads and play overlays. \n"
+              "The main video player (which can be activated in the advanced settings) uses direct video urls and a custom-built video player. \n It is more stable and has more features, but is limited to pixabay videos for now, since i dont have any licenses to use other video sources. \n\n"
+              "All credit goes to their respective creators! Their name is the same on youtube / pixabay, so go check out their channels if you like their content! \n\n"
               "Thanks for your understanding – and enjoy using Lumox!",
               style: theme.textTheme.bodyMedium?.copyWith(color: cs.onSurfaceVariant, height: 1.4),
             ),
