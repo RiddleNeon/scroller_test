@@ -1,4 +1,3 @@
-import 'package:cached_network_image/cached_network_image.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter_colorpicker/flutter_colorpicker.dart';
 import 'package:flutter_markdown_plus/flutter_markdown_plus.dart';
@@ -957,73 +956,6 @@ class _NumericField extends StatelessWidget {
       decoration: _editInputDecoration(context, colorScheme).copyWith(
         prefixText: '$prefixLabel  ',
         prefixStyle: TextStyle(color: colorScheme.onSurfaceVariant, fontSize: 12, fontWeight: FontWeight.w600),
-      ),
-    );
-  }
-}
-
-class _MetaGrid extends StatelessWidget {
-  final List<_MetaItem> items;
-  final ColorScheme colorScheme;
-
-  const _MetaGrid({required this.items, required this.colorScheme});
-
-  @override
-  Widget build(BuildContext context) {
-    return GridView.count(
-      crossAxisCount: 2,
-      shrinkWrap: true,
-      physics: const NeverScrollableScrollPhysics(),
-      mainAxisSpacing: 10,
-      crossAxisSpacing: 10,
-      childAspectRatio: 2.6,
-      children: items.map((item) => _MetaCell(item: item, colorScheme: colorScheme)).toList(),
-    );
-  }
-}
-
-class _MetaItem {
-  final IconData icon;
-  final String label;
-  final String value;
-
-  const _MetaItem({required this.icon, required this.label, required this.value});
-}
-
-class _MetaCell extends StatelessWidget {
-  final _MetaItem item;
-  final ColorScheme colorScheme;
-
-  const _MetaCell({required this.item, required this.colorScheme});
-
-  @override
-  Widget build(BuildContext context) {
-    return Container(
-      padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 10),
-      decoration: BoxDecoration(color: colorScheme.surfaceContainerHighest, borderRadius: BorderRadius.circular(context.uiRadiusSm)),
-      child: Row(
-        children: [
-          Icon(item.icon, size: 18, color: colorScheme.primary),
-          const SizedBox(width: 8),
-          Expanded(
-            child: Column(
-              crossAxisAlignment: CrossAxisAlignment.start,
-              mainAxisAlignment: MainAxisAlignment.center,
-              children: [
-                Text(
-                  item.label,
-                  style: TextStyle(color: colorScheme.onSurfaceVariant, fontSize: 10, fontWeight: FontWeight.w500, letterSpacing: 0.5),
-                  overflow: TextOverflow.ellipsis,
-                ),
-                Text(
-                  item.value,
-                  style: TextStyle(color: colorScheme.onSurface, fontSize: 13, fontWeight: FontWeight.w700),
-                  overflow: TextOverflow.ellipsis,
-                ),
-              ],
-            ),
-          ),
-        ],
       ),
     );
   }
