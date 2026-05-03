@@ -4,6 +4,7 @@ import 'package:flutter/material.dart';
 import 'package:flutter/scheduler.dart';
 import 'package:go_router/go_router.dart';
 import 'package:lumox/base_logic.dart';
+import 'package:lumox/logic/feed_recommendation/video_recommender.dart';
 import 'package:lumox/ui/router/deep_link_builder.dart';
 import 'package:lumox/logic/repositories/video_repository.dart';
 import 'package:lumox/logic/users/user_model.dart';
@@ -37,6 +38,8 @@ class _HomeScreenState extends State<HomeScreen> {
   int _dailyVideosStarted = 0;
   DateTime _dailyGoalDate = DateTime.now();
   Video? _continueLearningVideo;
+  
+  late VideoRecommender _videoRecommender;
 
   final List<String> _rawWelcomeMessages = [
     "Ready to dive into something new today?",
@@ -54,6 +57,7 @@ class _HomeScreenState extends State<HomeScreen> {
     super.initState();
     _followingPageController = PageController(viewportFraction: 0.92);
     _setupWelcomeMessage();
+    _videoRecommender = VideoRecommender();
     _loadContent();
   }
 
@@ -72,7 +76,11 @@ class _HomeScreenState extends State<HomeScreen> {
   Future<void> _loadContent() async {
     setState(() => _loading = true);
     try {
-      final discover = await videoRepo.getTrendingVideos(limit: 28);
+      final discover = await _videoRecommender.fetchTrendingVideos(limit: 28);
+      
+      if(discover.isEmpty) {
+        throw Exception("No videos found");
+      }
 
       _followedCreators = await userRepository.getFollowing(currentUser.id, limit: 5);
 
@@ -80,7 +88,7 @@ class _HomeScreenState extends State<HomeScreen> {
 
       if (mounted) {
         setState(() {
-          _discoverVideos = discover;
+          _discoverVideos = discover.toList();
           _continueLearningVideo = learningSnapshot.continueVideo;
           _dailyGoalDate = DateTime.now();
           _dailyVideosStarted = learningSnapshot.dailyStartedCount;
