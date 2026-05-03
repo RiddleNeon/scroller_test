@@ -139,7 +139,7 @@ class QuestColorPropagator {
       final blend = wSum > 0 ? 1.0 - (wMax / wSum) : 0.0;
 
 
-      final maxHueShift = 45.0 * (blend * 2.0) * (blend * 2.0);
+      final maxHueShift = 6.0 * (blend * 2.0) * (blend * 2.0);
 
       if (maxHueShift > 0.3) {
         color = _applyHueVariation(color, maxHueShift, q.id);

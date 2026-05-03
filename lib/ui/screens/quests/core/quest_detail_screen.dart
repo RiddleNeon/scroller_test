@@ -1,5 +1,7 @@
+import 'package:cached_network_image/cached_network_image.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter_colorpicker/flutter_colorpicker.dart';
+import 'package:flutter_markdown_plus/flutter_markdown_plus.dart';
 import 'package:lumox/logic/quests/quest.dart';
 import 'package:lumox/logic/quests/quest_change_manager.dart';
 import 'package:lumox/logic/quests/quest_system.dart';
@@ -235,14 +237,13 @@ class _QuestDetailScreenState extends State<QuestDetailScreen> {
                     ),
                   ),
                 ],
-                if (widget.debugMode) ...[
+                if (widget.debugMode && _editMode) ...[
                   const SizedBox(height: 16),
                   _SectionCard(
                     colorScheme: colorScheme,
                     child: _MetaSection(
                       quest: _editedQuest,
                       colorScheme: colorScheme,
-                      editMode: _editMode,
                       posXCtrl: _posXCtrl,
                       posYCtrl: _posYCtrl,
                       sizeXCtrl: _sizeXCtrl,
@@ -583,7 +584,11 @@ class _DescriptionSection extends StatelessWidget {
               decoration: _editInputDecoration(context, colorScheme, hint: 'Quest description…'),
             )
           else
-            Text(description, style: TextStyle(color: colorScheme.onSurface, fontSize: 15, height: 1.6)),
+            MarkdownBody(
+              data: description,
+              styleSheet: MarkdownStyleSheet.fromTheme(Theme.of(context)).copyWith(code: const TextStyle(fontSize: 16, fontWeight: FontWeight.w500)),
+            ),
+          //Text(description, style: TextStyle(color: colorScheme.onSurface, fontSize: 15, height: 1.6)),
         ],
       ),
     );
@@ -693,7 +698,10 @@ class _DifficultySectionState extends State<_DifficultySection> {
                   child: Container(
                     height: 8,
                     margin: EdgeInsets.only(right: i < segments - 1 ? 4 : 0),
-                    decoration: BoxDecoration(color: filled ? color : widget.colorScheme.surfaceContainerHighest, borderRadius: BorderRadius.circular(context.uiRadiusSm)),
+                    decoration: BoxDecoration(
+                      color: filled ? color : widget.colorScheme.surfaceContainerHighest,
+                      borderRadius: BorderRadius.circular(context.uiRadiusSm),
+                    ),
                   ),
                 );
               }),
@@ -783,7 +791,6 @@ class _PrerequisitesSection extends StatelessWidget {
 class _MetaSection extends StatelessWidget {
   final Quest quest;
   final ColorScheme colorScheme;
-  final bool editMode;
   final TextEditingController posXCtrl;
   final TextEditingController posYCtrl;
   final TextEditingController sizeXCtrl;
@@ -792,7 +799,6 @@ class _MetaSection extends StatelessWidget {
   const _MetaSection({
     required this.quest,
     required this.colorScheme,
-    required this.editMode,
     required this.posXCtrl,
     required this.posYCtrl,
     required this.sizeXCtrl,
@@ -801,29 +807,7 @@ class _MetaSection extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    return Padding(
-      padding: const EdgeInsets.all(20),
-      child: Column(
-        crossAxisAlignment: CrossAxisAlignment.start,
-        children: [
-          _SectionLabel(label: 'Details', colorScheme: colorScheme),
-          const SizedBox(height: 14),
-          if (editMode) _buildEditLayout() else _buildViewLayout(),
-        ],
-      ),
-    );
-  }
-
-  Widget _buildViewLayout() {
-    return _MetaGrid(
-      colorScheme: colorScheme,
-      items: [
-        _MetaItem(icon: Icons.tag_rounded, label: 'Quest ID', value: '#${quest.id}'),
-        _MetaItem(icon: Icons.subject_rounded, label: 'Subject', value: quest.subject),
-        _MetaItem(icon: Icons.place_outlined, label: 'Position', value: '(${quest.posX.toStringAsFixed(0)}, ${quest.posY.toStringAsFixed(0)})'),
-        _MetaItem(icon: Icons.aspect_ratio_rounded, label: 'Size', value: '${quest.sizeX.toStringAsFixed(0)} × ${quest.sizeY.toStringAsFixed(0)}'),
-      ],
-    );
+    return Padding(padding: const EdgeInsets.all(20), child: _buildEditLayout());
   }
 
   Widget _buildEditLayout() {
