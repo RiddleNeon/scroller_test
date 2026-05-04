@@ -365,7 +365,7 @@ class _QuestSliverAppBar extends StatelessWidget {
             Positioned(
               top: 60,
               right: 16,
-              child: _SubjectBadge(subject: quest.subject, colorScheme: colorScheme, initialColor: quest.color, onColorChanged: onColorChanged),
+              child: _SubjectBadge(subject: quest.subject, colorScheme: colorScheme),
             ),
             if (debugMode)
               Positioned(
@@ -375,6 +375,36 @@ class _QuestSliverAppBar extends StatelessWidget {
                   '#${quest.id}',
                   style: TextStyle(color: colorScheme.onPrimaryContainer.withValues(alpha: 0.5), fontSize: 12, fontWeight: FontWeight.w600, letterSpacing: 1.5),
                 ),
+              ),
+            if(editMode)
+              IconButton(
+                hoverColor: Colors.transparent,
+                onPressed: () async {
+                  Color? temp;
+                  await showDialog<void>(
+                    context: context,
+                    builder: (c2) => AlertDialog(
+                      title: const Text('Primary Seed'),
+                      content: SizedBox(
+                        width: 300,
+                        child: SingleChildScrollView(
+                          child: ColorPicker(
+                            pickerColor: quest.color,
+                            onColorChanged: (c) => temp = c,
+                            enableAlpha: false,
+                            portraitOnly: true,
+                            labelTypes: const [ColorLabelType.hex],
+                          ),
+                        ),
+                      ),
+                      actions: [FilledButton(onPressed: () => Navigator.pop(c2), child: const Text('OK'))],
+                    ),
+                  );
+                  if (temp != null) {
+                    onColorChanged?.call(temp!);
+                  }
+                },
+                icon: const Icon(Icons.colorize_rounded),
               ),
           ],
         ),
@@ -408,11 +438,9 @@ class _GridPatternPainter extends CustomPainter {
 
 class _SubjectBadge extends StatelessWidget {
   final String subject;
-  final Color initialColor;
-  final void Function(Color newColor)? onColorChanged;
   final ColorScheme colorScheme;
 
-  const _SubjectBadge({required this.subject, required this.colorScheme, required this.initialColor, this.onColorChanged});
+  const _SubjectBadge({required this.subject, required this.colorScheme});
 
   @override
   Widget build(BuildContext context) {
@@ -428,34 +456,6 @@ class _SubjectBadge extends StatelessWidget {
           Text(
             subject.toUpperCase(),
             style: TextStyle(color: colorScheme.onPrimary, fontSize: 11, fontWeight: FontWeight.w700, letterSpacing: 1.2),
-          ),
-          IconButton(
-            onPressed: () async {
-              Color? temp;
-              await showDialog<void>(
-                context: context,
-                builder: (c2) => AlertDialog(
-                  title: const Text('Primary Seed'),
-                  content: SizedBox(
-                    width: 300,
-                    child: SingleChildScrollView(
-                      child: ColorPicker(
-                        pickerColor: initialColor,
-                        onColorChanged: (c) => temp = c,
-                        enableAlpha: false,
-                        portraitOnly: true,
-                        labelTypes: const [ColorLabelType.hex],
-                      ),
-                    ),
-                  ),
-                  actions: [FilledButton(onPressed: () => Navigator.pop(c2), child: const Text('OK'))],
-                ),
-              );
-              if (temp != null) {
-                onColorChanged?.call(temp!);
-              }
-            },
-            icon: const Icon(Icons.colorize_rounded),
           ),
         ],
       ),
