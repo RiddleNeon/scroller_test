@@ -491,7 +491,7 @@ class PanWidgetState extends State<PanWidget> {
 
     final screenPos = MatrixUtils.transformPoint(_controller.value, _hoveredConnection!.midpoint);
 
-    const radius = 20.0;
+    const radius = 10.0;
 
     return (_lastPointerLocalPos - screenPos).distance <= radius;
   }

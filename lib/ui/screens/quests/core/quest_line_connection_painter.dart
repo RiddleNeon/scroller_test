@@ -211,7 +211,7 @@ class QuestLineConnectionPainter extends CustomPainter {
     if (lengthSquared == 0) return (point - a).distance;
 
     final t = (((point.dx - a.dx) * ab.dx) + ((point.dy - a.dy) * ab.dy)) / lengthSquared;
-    final clampedT = t.clamp(0.0, 1.0) as double;
+    final clampedT = t.clamp(0.0, 1.0);
     final projected = a + ab * clampedT;
     return (point - projected).distance;
   }
@@ -374,7 +374,7 @@ class QuestLineConnectionPainter extends CustomPainter {
 
     final bodyRRect = RRect.fromRectAndRadius(
       bodyRect,
-      const Radius.circular(20),
+      const Radius.circular(10),
     );
 
     canvas.drawRRect(bodyRRect, bodyPaint);
