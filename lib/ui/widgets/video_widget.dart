@@ -212,7 +212,6 @@ class _VideoItemState extends State<VideoItem> {
 
   @override
   Widget build(BuildContext context) {
-    print("Building VideoItem for video ID: ${widget.video.id}, isPlaying: ${widget.controller.isPlaying}, isInitialized: ${widget.controller.isInitialized}");    
     return RepaintBoundary(
       child: Stack(
         fit: StackFit.expand,

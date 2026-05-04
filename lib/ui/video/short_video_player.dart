@@ -3,41 +3,34 @@ import 'dart:async';
 import 'package:cached_network_image/cached_network_image.dart';
 import 'package:flutter/cupertino.dart';
 import 'package:flutter/material.dart';
-import 'package:preload_page_view/preload_page_view.dart';
 import 'package:lumox/logic/video/video.dart';
 import 'package:lumox/logic/video/video_provider.dart';
-import 'package:lumox/ui/video/shorts_player.dart';
 import 'package:lumox/ui/router/router.dart';
 import 'package:lumox/ui/screens/auth_screen.dart';
 import 'package:lumox/ui/theme/theme_ui_values.dart';
+import 'package:lumox/ui/video/shorts_player.dart';
 import 'package:lumox/ui/video/video_container.dart';
 import 'package:lumox/ui/video/view_models/video_feed_view_model.dart';
+import 'package:preload_page_view/preload_page_view.dart';
 
 import '../../base_logic.dart';
 import '../widgets/video_widget.dart';
 
 bool _isYoutubeUrl(String url) => url.contains('youtube.com') || url.contains('youtu.be');
 
-Future<VideoContainer?> _loadRegularContainer(
-  int index,
-  VideoProvider videoProvider,
-  VideoFeedViewModel feedModel,
-) async {
+Future<VideoContainer?> _loadRegularContainer(int index, VideoProvider videoProvider, VideoFeedViewModel feedModel) async {
   final video = await videoProvider.getVideoByIndex(index, useYoutubeVideos: useYoutubeVideosOnlyNotifier.value);
   if (video == null) return null;
   return feedModel.getVideoContainerAt(index, video);
 }
 
-Future<void> _switchToRegularIndex(
-  int index,
-  VideoProvider videoProvider,
-  VideoFeedViewModel feedModel,
-) async {
+Future<void> _switchToRegularIndex(int index, VideoProvider videoProvider, VideoFeedViewModel feedModel) async {
   final currentVideo = await videoProvider.getVideoByIndex(index, useYoutubeVideos: useYoutubeVideosOnlyNotifier.value);
   if (currentVideo == null) return;
   final nextVideoFuture = videoProvider.getVideoByIndex(index + 1, useYoutubeVideos: useYoutubeVideosOnlyNotifier.value);
-  final prevVideoFuture =
-      index > 0 ? videoProvider.getVideoByIndex(index - 1, useYoutubeVideos: useYoutubeVideosOnlyNotifier.value) : Future<Video?>.value(null);
+  final prevVideoFuture = index > 0
+      ? videoProvider.getVideoByIndex(index - 1, useYoutubeVideos: useYoutubeVideosOnlyNotifier.value)
+      : Future<Video?>.value(null);
   final nextVideo = await nextVideoFuture;
   final prevVideo = await prevVideoFuture;
   await feedModel.switchToVideoContainerAt(index, currentVideo, nextVideo: nextVideo, lastVideo: prevVideo);
@@ -136,10 +129,8 @@ Widget feedVideos(
                     ),
                   );
                 }
-
+                
                 final videoData = container!.video!;
-                print("Building video widget for index $index, video ID: ${videoData.id}");
-
                 return Stack(
                   fit: StackFit.expand,
                   children: [
@@ -306,7 +297,9 @@ class _VideoFeedState extends State<VideoFeed> with TickerProviderStateMixin {
         }
 
         if (snapshot.data == true) {
-          return Scaffold(body: ShortsFeed(videoProvider: _videoSource, initialPage: _initialPage, itemCount: widget.itemCount));
+          return Scaffold(
+            body: ShortsFeed(videoProvider: _videoSource, initialPage: _initialPage, itemCount: widget.itemCount),
+          );
         }
 
         return Scaffold(
@@ -338,5 +331,5 @@ class SingleVideoProvider implements VideoProvider {
   }
 
   @override
-  Future<void> preloadVideos(int count,{bool useYoutubeVideos = false}) async {}
+  Future<void> preloadVideos(int count, {bool useYoutubeVideos = false}) async {}
 }

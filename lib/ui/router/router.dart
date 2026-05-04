@@ -25,11 +25,17 @@ import '../../logic/video/video.dart';
 late final GoRouter routerConfig;
 
 void initRouter() {
+  bool firstRoute = true;
   routerConfig = GoRouter(
     navigatorKey: appNavigatorKey,
     observers: [RouteObserver()],
     redirect: (context, state) async {
-      print("navigating to ${state.uri.path}");
+      
+      if(firstRoute && state.uri.path == '/feed'){
+        firstRoute = false;
+        return '/home';
+      }
+      firstRoute = false;
 
       final canonicalNavPath = _canonicalNavPath(state.uri.path);
       final navBarItem = _navigationBarItems.where((element) => element.id == canonicalNavPath).firstOrNull;
@@ -80,7 +86,7 @@ void initRouter() {
         if (requested != null && requested.startsWith('/')) {
           return requested;
         }
-        return '/profile';
+        return '/home';
       }
       return null;
     },
@@ -248,7 +254,6 @@ void initRouter() {
       GoRoute(
         path: '/reset-password',
         pageBuilder: (context, state) {
-          print("navigating to reset password screen");
           return SlideMorphTransitions.page<void>(
             key: state.pageKey,
             child: const ResetPasswordScreen(),

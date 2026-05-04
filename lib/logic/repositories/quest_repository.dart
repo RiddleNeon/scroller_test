@@ -68,7 +68,6 @@ class QuestRepository {
       if (latest == null || latest['is_deleted'] == true) continue;
 
       connectionList.add(QuestConnection(fromQuestId: row['from_id'] as int, toQuestId: row['to_id'] as int, type: row['quest_connections_latest']['type'] as String, xpRequirement: (row['quest_connections_latest']['xp_requirement'] as num?)?.toDouble() ?? 0));
-      print("got connection from ${questMap[row['from_id']]?.name} to ${questMap[row['to_id']]?.name} with type ${row['quest_connections_latest']['type']} and xp requirement ${row['quest_connections_latest']['xp_requirement']}");
     }
 
 

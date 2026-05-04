@@ -13,14 +13,20 @@ class VideoContainer {
   Future<void> loadController() async {
     if (video == null || controller != null) return;
     
-    print("Loading video controller for video ID: ${video!.id}, URL: ${video!.videoUrl}");
-
     controller = VideoController.fromVideoUrl(video!.videoUrl);
-    await controller!.init();
-    print("Video controller initialized for video ID: ${video!.id}, setting looping... is initialized: ${controller!.isInitialized}");
-    loadedAt = DateTime.now();
-    await controller!.setLooping(true);
+    controller?.addListener(_onLoadListener);
     
-    print("Video controller loaded for video ID: ${video!.id}");
+    await controller!.init();
+    loadedAt = DateTime.now();
+    
+    await controller!.setLooping(true);
+  }
+  
+  void _onLoadListener(bool playing) {
+    bool readyToPlay = controller?.isInitialized == true && video != null && video!.videoUrl.isNotEmpty && (controller?.isLooping ?? false);
+    if (readyToPlay) {
+      if(!(controller?.isPlaying ?? true)) controller?.play();
+      controller?.removeListener(_onLoadListener);
+    }
   }
 }

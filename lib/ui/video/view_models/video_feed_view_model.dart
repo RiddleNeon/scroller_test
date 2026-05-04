@@ -25,7 +25,6 @@ class VideoFeedViewModel extends FeedViewModel {
     }
 
     final container = await _loadContainer(index, video);
-    print("Container loaded for index $index");
     return container;
   }
 
@@ -64,13 +63,13 @@ class VideoFeedViewModel extends FeedViewModel {
         return;
       }
     }
-
-    Future.delayed(const Duration(milliseconds: 100), () => current.controller!.play());
     
     if (requestId != _switchRequestId) {
       await current.controller!.pause();
       print("Switch request ID mismatch after play, expected $requestId but got $_switchRequestId. Pausing video at index $index.");
       return;
+    } else {
+      Future.delayed(const Duration(milliseconds: 150), () => current.controller!.play());
     }
 
     if(current.controller is! YoutubeVideoController) {

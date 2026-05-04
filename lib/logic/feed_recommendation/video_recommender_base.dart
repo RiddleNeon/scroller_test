@@ -85,7 +85,6 @@ abstract class VideoRecommenderBase {
   }
 
   Future<Set<Video>> fetchTrendingVideos({required int limit, bool onlyUnseen = false, bool useYoutubeVids = false}) async {
-    print("using youtube: $useYoutubeVids, onlyUnseen: $onlyUnseen");
     final snapshot = await supabaseClient.rpc('get_trending_candidates', params: {
       'p_user_id': currentUser.id,
       'p_cursor': null,

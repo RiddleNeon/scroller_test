@@ -20,7 +20,7 @@ abstract class VideoController {
 
   bool get isInitialized;
 
-  FutureOr<bool> get isLooping;
+  bool get isLooping;
 
   Future<void> seekTo(Duration position);
 
@@ -40,7 +40,6 @@ abstract class VideoController {
 
   factory VideoController.fromVideoUrl(String url, {bool looping = true}) {
     String? videoId = YoutubePlayerController.convertUrlToId(url);
-    print("CREATING VIDEO CONTROLLER for URL: $url, extracted video ID: $videoId");
     if (videoId != null) {
       return YoutubeVideoController(
         YoutubePlayerController.fromVideoId(
@@ -72,15 +71,15 @@ class MemoryVideoController implements VideoController {
   }
 
   @override
-  Future<void> init() {
-    return controller.initialize();
+  Future<void> init() async {
+    await controller.initialize();
   }
 
   @override
   bool get isInitialized => controller.value.isInitialized;
 
   @override
-  FutureOr<bool> get isLooping => controller.value.isLooping;
+  bool get isLooping => controller.value.isLooping;
 
   @override
   bool get isPlaying => controller.value.isPlaying;
@@ -167,7 +166,7 @@ class YoutubeVideoController implements VideoController {
   bool get isInitialized => controller.metadata.videoId.isNotEmpty;
 
   @override
-  FutureOr<bool> get isLooping => controller.params.loop;
+  bool get isLooping => controller.params.loop;
 
   @override
   bool get isPlaying => controller.value.playerState == PlayerState.playing;
