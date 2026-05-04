@@ -65,7 +65,8 @@ class VideoFeedViewModel extends FeedViewModel {
       }
     }
 
-    await current.controller!.play();
+    Future.delayed(const Duration(milliseconds: 100), () => current.controller!.play());
+    
     if (requestId != _switchRequestId) {
       await current.controller!.pause();
       print("Switch request ID mismatch after play, expected $requestId but got $_switchRequestId. Pausing video at index $index.");

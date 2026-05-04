@@ -39,7 +39,7 @@ class VideoRecommender extends VideoRecommenderBase {
     } catch (e) {
       print('Error getting recommendations: $e. stacktrace: ${StackTrace.current}');
       // Fallback to trending videos
-      return fetchTrendingVideos(limit: limit);
+      return fetchTrendingVideos(limit: limit, useYoutubeVids: useYoutubeVideos);
     }
   }
 

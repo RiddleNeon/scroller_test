@@ -76,7 +76,7 @@ class _HomeScreenState extends State<HomeScreen> {
   Future<void> _loadContent() async {
     setState(() => _loading = true);
     try {
-      final discover = await _videoRecommender.fetchTrendingVideos(limit: 28);
+      final discover = await _videoRecommender.fetchTrendingVideos(limit: 28, useYoutubeVids: useYoutubeVideosOnlyNotifier.value);
       
       if(discover.isEmpty) {
         throw Exception("No videos found");
