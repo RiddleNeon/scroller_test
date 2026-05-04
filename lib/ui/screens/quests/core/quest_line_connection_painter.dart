@@ -17,6 +17,7 @@ class _ConnectionGeometry {
     required this.startColor,
     required this.endColor,
     required this.midPoint,
+    required this.bounds,
   });
 
   final Offset p0, cp1, cp2, p3;
@@ -24,6 +25,23 @@ class _ConnectionGeometry {
   final Color startColor, endColor;
 
   final Offset midPoint;
+  final Rect bounds;
+}
+
+class _CubicSplit {
+  const _CubicSplit({
+    required this.leftP0,
+    required this.leftP1,
+    required this.leftP2,
+    required this.leftP3,
+    required this.rightP0,
+    required this.rightP1,
+    required this.rightP2,
+    required this.rightP3,
+  });
+
+  final Offset leftP0, leftP1, leftP2, leftP3;
+  final Offset rightP0, rightP1, rightP2, rightP3;
 }
 
 class QuestLineConnectionPainter extends CustomPainter {
@@ -60,9 +78,13 @@ class QuestLineConnectionPainter extends CustomPainter {
   final double arrowSize;
 
   final Map<(int, int), _ConnectionGeometry> _cache = {};
+  final Map<String, Set<(int, int)>> _spatialIndex = {};
+
+  static const double _spatialIndexCellSize = 180.0;
 
   void rebuildCache() {
     _cache.clear();
+    _spatialIndex.clear();
     for (final quest in questSystem.quests) {
       for (final prereq in questSystem.prerequisitesOf(quest.id)) {
         _buildAndStoreEntry(prereq.id, quest.id);
@@ -71,21 +93,155 @@ class QuestLineConnectionPainter extends CustomPainter {
   }
 
   void rebuildCacheForQuest(int questId) {
-    _cache.removeWhere((key, _) => key.$1 == questId || key.$2 == questId);
+    rebuildCache();
+  }
 
-    for (final quest in questSystem.quests) {
-      for (final prereq in questSystem.prerequisitesOf(quest.id)) {
-        if (prereq.id == questId || quest.id == questId) {
-          _buildAndStoreEntry(prereq.id, quest.id);
+  _ConnectionGeometry? _buildAndStoreEntry(int fromId, int toId) {
+    final geom = _computeGeometry(fromId, toId, null, null);
+    if (geom != null) {
+      final key = (fromId, toId);
+      _cache[key] = geom;
+      _indexGeometry(key, geom.bounds);
+    }
+    return geom;
+  }
+
+  void _indexGeometry((int, int) key, Rect bounds) {
+    final minCellX = (bounds.left / _spatialIndexCellSize).floor();
+    final maxCellX = (bounds.right / _spatialIndexCellSize).floor();
+    final minCellY = (bounds.top / _spatialIndexCellSize).floor();
+    final maxCellY = (bounds.bottom / _spatialIndexCellSize).floor();
+
+    for (int x = minCellX; x <= maxCellX; x++) {
+      for (int y = minCellY; y <= maxCellY; y++) {
+        final cellKey = _cellKey(x, y);
+        _spatialIndex.putIfAbsent(cellKey, () => <(int, int)>{}).add(key);
+      }
+    }
+  }
+
+  String _cellKey(int x, int y) => '$x:$y';
+
+  Iterable<(int, int)> _candidateConnections(Rect queryRect) sync* {
+    if (_spatialIndex.isEmpty) return;
+
+    final seen = <(int, int)>{};
+    final minCellX = (queryRect.left / _spatialIndexCellSize).floor();
+    final maxCellX = (queryRect.right / _spatialIndexCellSize).floor();
+    final minCellY = (queryRect.top / _spatialIndexCellSize).floor();
+    final maxCellY = (queryRect.bottom / _spatialIndexCellSize).floor();
+
+    for (int x = minCellX; x <= maxCellX; x++) {
+      for (int y = minCellY; y <= maxCellY; y++) {
+        final candidates = _spatialIndex[_cellKey(x, y)];
+        if (candidates == null) continue;
+        for (final key in candidates) {
+          if (seen.add(key)) {
+            yield key;
+          }
         }
       }
     }
   }
 
-  _ConnectionGeometry? _buildAndStoreEntry(int fromId, int toId) {
-    final geom = _computeGeometry(fromId, toId, null, null);
-    if (geom != null) _cache[(fromId, toId)] = geom;
-    return geom;
+  ({int fromId, int toId, Offset midpoint})? hitTestConnection(
+    Offset scenePos, {
+    required double scale,
+  }) {
+    if (_cache.isEmpty) return null;
+
+    final safeScale = scale <= 0 ? 1.0 : scale;
+    final sceneHitRadius = max(18.0 / safeScale, (lineWidth + borderWidth) * 0.5 + 4.0 / safeScale);
+    final queryRect = Rect.fromCircle(center: scenePos, radius: sceneHitRadius).inflate(4.0 / safeScale);
+
+    ({int fromId, int toId, Offset midpoint})? best;
+    double bestDistance = double.infinity;
+
+    for (final key in _candidateConnections(queryRect)) {
+      final geom = _cache[key];
+      if (geom == null) continue;
+
+      if (!geom.bounds.inflate(sceneHitRadius).overlaps(queryRect)) continue;
+
+      final tolerance = max(0.2, sceneHitRadius / 8.0);
+      final dist = _distanceToCubicBezier(scenePos, geom.p0, geom.cp1, geom.cp2, geom.p3, tolerance: tolerance);
+      if (dist <= sceneHitRadius && dist < bestDistance) {
+        bestDistance = dist;
+        best = (fromId: key.$1, toId: key.$2, midpoint: geom.midPoint);
+      }
+    }
+
+    return best;
+  }
+
+  double _distanceToCubicBezier(
+    Offset point,
+    Offset p0,
+    Offset p1,
+    Offset p2,
+    Offset p3, {
+    required double tolerance,
+    int depth = 0,
+  }) {
+    final flatness = max(_distanceToLine(p1, p0, p3), _distanceToLine(p2, p0, p3));
+    if (flatness <= tolerance || depth >= 12) {
+      return _distanceToSegment(point, p0, p3);
+    }
+
+    final split = _splitCubic(p0, p1, p2, p3);
+    return min(
+      _distanceToCubicBezier(point, split.leftP0, split.leftP1, split.leftP2, split.leftP3, tolerance: tolerance, depth: depth + 1),
+      _distanceToCubicBezier(point, split.rightP0, split.rightP1, split.rightP2, split.rightP3, tolerance: tolerance, depth: depth + 1),
+    );
+  }
+
+  double _distanceToLine(Offset point, Offset lineStart, Offset lineEnd) {
+    final segment = lineEnd - lineStart;
+    final lengthSquared = segment.dx * segment.dx + segment.dy * segment.dy;
+    if (lengthSquared == 0) return (point - lineStart).distance;
+
+    final t = (((point.dx - lineStart.dx) * segment.dx) + ((point.dy - lineStart.dy) * segment.dy)) / lengthSquared;
+    final projected = lineStart + segment * t;
+    return (point - projected).distance;
+  }
+
+  double _distanceToSegment(Offset point, Offset a, Offset b) {
+    final ab = b - a;
+    final lengthSquared = ab.dx * ab.dx + ab.dy * ab.dy;
+    if (lengthSquared == 0) return (point - a).distance;
+
+    final t = (((point.dx - a.dx) * ab.dx) + ((point.dy - a.dy) * ab.dy)) / lengthSquared;
+    final clampedT = t.clamp(0.0, 1.0) as double;
+    final projected = a + ab * clampedT;
+    return (point - projected).distance;
+  }
+
+  _CubicSplit _splitCubic(Offset p0, Offset p1, Offset p2, Offset p3) {
+    final p01 = (p0 + p1) * 0.5;
+    final p12 = (p1 + p2) * 0.5;
+    final p23 = (p2 + p3) * 0.5;
+    final p012 = (p01 + p12) * 0.5;
+    final p123 = (p12 + p23) * 0.5;
+    final p0123 = (p012 + p123) * 0.5;
+
+    return _CubicSplit(
+      leftP0: p0,
+      leftP1: p01,
+      leftP2: p012,
+      leftP3: p0123,
+      rightP0: p0123,
+      rightP1: p123,
+      rightP2: p23,
+      rightP3: p3,
+    );
+  }
+
+  Rect _geometryBounds(Offset p0, Offset p1, Offset p2, Offset p3) {
+    final left = min(min(p0.dx, p1.dx), min(p2.dx, p3.dx));
+    final top = min(min(p0.dy, p1.dy), min(p2.dy, p3.dy));
+    final right = max(max(p0.dx, p1.dx), max(p2.dx, p3.dx));
+    final bottom = max(max(p0.dy, p1.dy), max(p2.dy, p3.dy));
+    return Rect.fromLTRB(left, top, right, bottom);
   }
 
   _ConnectionGeometry? _computeGeometry(int fromId, int toId, int? draggedId, Offset? draggedPos) {
@@ -125,6 +281,7 @@ class QuestLineConnectionPainter extends CustomPainter {
       startColor: glowColorOfQuest(fromId, questSystem),
       endColor: glowColorOfQuest(toId, questSystem),
       midPoint: midPoint,
+      bounds: _geometryBounds(p0, cp1, cp2, p3),
     );
   }
 

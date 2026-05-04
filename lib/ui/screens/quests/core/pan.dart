@@ -1,5 +1,6 @@
 // ignore_for_file: deprecated_member_use
 
+import 'dart:async';
 import 'dart:math' show max, min;
 
 import 'package:flutter/gestures.dart';
@@ -14,10 +15,8 @@ import 'package:lumox/ui/screens/quests/core/quest_bubbles_overlay.dart';
 import 'package:lumox/ui/screens/quests/core/quest_connection_edit_screen.dart';
 import 'package:lumox/ui/screens/quests/core/quest_detail_screen.dart';
 import 'package:lumox/ui/theme/theme_ui_values.dart';
-import 'package:lumox/util/extensions/offset_distance.dart';
 
 import '../../../../logic/quests/quest.dart';
-import 'bezier_helper.dart';
 import 'pan_background.dart';
 import 'quest_bubble.dart';
 
@@ -53,6 +52,9 @@ class PanWidgetState extends State<PanWidget> {
 
   Offset _lastPointerScenePos = Offset.zero;
   Offset _lastPointerLocalPos = Offset.zero;
+  bool _hasLatestPointerScenePos = false;
+
+  Timer? _hoverConnectionTimer;
 
   double get _currentScale => _controller.value.getMaxScaleOnAxis();
 
@@ -63,6 +65,36 @@ class PanWidgetState extends State<PanWidget> {
   bool get _isMobile {
     final platform = Theme.of(context).platform;
     return platform == TargetPlatform.iOS || platform == TargetPlatform.android;
+  }
+
+  void _updatePointerScenePosition(Offset localPos) {
+    _lastPointerLocalPos = localPos;
+    _lastPointerScenePos = _controller.toScene(localPos);
+    _hasLatestPointerScenePos = true;
+  }
+
+  ({int fromId, int toId, Offset midpoint})? _hitTestConnectionAtScenePos(Offset scenePos) {
+    if (!debugMode) return null;
+    return _questBubbleOverlayKey.currentState?.hitTestConnection(scenePos, _currentScale);
+  }
+
+  void _refreshHoveredConnection() {
+    if (!mounted) return;
+
+    if (!debugMode || !_hasLatestPointerScenePos || _isConnecting || _draggingQuest != null) {
+      if (_hoveredConnection != null) {
+        setState(() => _hoveredConnection = null);
+      }
+      return;
+    }
+
+    final scenePos = _controller.toScene(_lastPointerLocalPos);
+    _lastPointerScenePos = scenePos;
+
+    final hovered = _hitTestConnectionAtScenePos(scenePos);
+    if (hovered != _hoveredConnection) {
+      setState(() => _hoveredConnection = hovered);
+    }
   }
 
   Quest? _findQuestAt(Offset scenePos) {
@@ -88,67 +120,20 @@ class PanWidgetState extends State<PanWidget> {
     return null;
   }
 
-  ({int fromId, int toId, Offset midpoint})? _findConnectionNearScenePos(Offset scenePos) {
-    final threshold = (_isMobile ? 30.0 : 15.0) / _currentScale;
-
-    final int? currentDraggedQuestId = _draggingQuest?.id;
-    final Offset? currentDraggedQuestPos = _draggingQuest != null ? snap(_dragStartQuestPos) : null;
-
-    ({int fromId, int toId, Offset midpoint})? closest;
-    double minDistance = double.infinity;
-
-    for (final quest in questSystem.quests) {
-      for (final prereq in questSystem.prerequisitesOf(quest.id)) {
-        final middlePos = Offset((quest.posX + prereq.posX) / 2, (quest.posY + prereq.posY) / 2);
-        if ((scenePos - middlePos).distance > 400.0 / _currentScale) continue;
-
-        final startCenter = getQuestCenter(prereq.id, questSystem, currentDraggedQuestId, currentDraggedQuestPos);
-        final endCenter = getQuestCenter(quest.id, questSystem, currentDraggedQuestId, currentDraggedQuestPos);
-        if (startCenter == null || endCenter == null) continue;
-
-        final anchorStart = getBestAnchor(prereq.id, endCenter, questSystem, currentDraggedQuestId, currentDraggedQuestPos);
-        final anchorEnd = getBestAnchor(quest.id, startCenter, questSystem, currentDraggedQuestId, currentDraggedQuestPos);
-
-        final cps = calculateCubicControlPointsOffsetting(
-          anchorStart.pos,
-          anchorStart.sideDir,
-          anchorEnd.pos,
-          anchorEnd.sideDir,
-          prereq.id,
-          quest.id,
-          questSystem,
-          null,
-          null,
-        );
-
-        final lut = getLut(anchorStart.pos, cps[0], cps[1], anchorEnd.pos);
-        final midT = lut.tForArcLen(lut.totalLength / 2.0);
-        final midPoint = bezierPoint(anchorStart.pos, cps[0], cps[1], anchorEnd.pos, midT);
-
-        for (double t = 0.0; t <= 1.0; t += 0.025) {
-          final pointOnCurve = bezierPoint(anchorStart.pos, cps[0], cps[1], anchorEnd.pos, t);
-          final dist = (scenePos - pointOnCurve).distance;
-
-          if (dist < threshold && dist < minDistance) {
-            minDistance = dist;
-            closest = (fromId: prereq.id, toId: quest.id, midpoint: midPoint);
-          }
-        }
-      }
-    }
-
-    return closest;
-  }
-
   @override
   void initState() {
+    super.initState();
     questSystem.addListener(revalidateBoundaries);
     revalidateBoundaries();
-    super.initState();
+
+    _hoverConnectionTimer = Timer.periodic(const Duration(milliseconds: 200), (_) {
+      _refreshHoveredConnection();
+    });
   }
 
   @override
   void dispose() {
+    _hoverConnectionTimer?.cancel();
     questSystem.removeListener(revalidateBoundaries);
     super.dispose();
   }
@@ -196,6 +181,8 @@ class PanWidgetState extends State<PanWidget> {
 
     final scenePos = _controller.toScene(details.localFocalPoint);
     _lastPointerScenePos = scenePos;
+    _lastPointerLocalPos = details.localFocalPoint;
+    _hasLatestPointerScenePos = true;
 
     if (debugMode && details.pointerCount == 1) {
       if (_isTapOnConnectionHandle()) {
@@ -223,6 +210,7 @@ class PanWidgetState extends State<PanWidget> {
 
   void _onScaleUpdate(ScaleUpdateDetails details) {
     _focalDelta += details.focalPointDelta;
+    _updatePointerScenePosition(details.localFocalPoint);
 
     if (_isConnecting && _connectingFromQuest != null) {
       final scenePos = _controller.toScene(details.localFocalPoint);
@@ -290,6 +278,7 @@ class PanWidgetState extends State<PanWidget> {
 
     _lastPointerLocalPos = localPos;
     _lastPointerScenePos = scenePos;
+    _hasLatestPointerScenePos = true;
 
     _draggingQuest = null;
     _questBubbleOverlayKey.currentState?.setDragState(questId: null, position: null);
@@ -311,6 +300,8 @@ class PanWidgetState extends State<PanWidget> {
     final scenePos = _controller.toScene(details.localPosition);
     _lastConnectionScene = scenePos;
     _lastPointerScenePos = scenePos;
+    _lastPointerLocalPos = details.localPosition;
+    _hasLatestPointerScenePos = true;
 
     final hoveredQuest = _findQuestAt(scenePos);
     final targetId = (hoveredQuest != null && hoveredQuest.id != _connectingFromQuest!.id) ? hoveredQuest.id : null;
@@ -362,6 +353,8 @@ class PanWidgetState extends State<PanWidget> {
 
     const zoomSensitivity = 0.0010;
 
+    _updatePointerScenePosition(event.localPosition);
+
     final currentScale = _currentScale;
     final newScale = (currentScale * (1.0 - event.scrollDelta.dy * zoomSensitivity)).clamp(minScale, maxScale);
 
@@ -382,71 +375,19 @@ class PanWidgetState extends State<PanWidget> {
 
   ({int fromId, int toId, Offset midpoint})? _hoveredConnection;
 
-  Offset lastHoverPositionCheckPos = Offset.zero;
-
   void _onPointerHover(PointerHoverEvent event) {
-    if (!debugMode || _isConnecting || _draggingQuest != null || event.down) return;
+    if (event.down) return;
 
-    final scenePos = _controller.toScene(event.localPosition);
-    final threshold = 15.0 / _currentScale;
-
-    if (scenePos.distanceTo(lastHoverPositionCheckPos) < 32.0 / _currentScale) {
-      return;
-    } else {
-      lastHoverPositionCheckPos = scenePos;
+    _updatePointerScenePosition(event.localPosition);
+    if (debugMode) {
+      _refreshHoveredConnection();
     }
+  }
 
-    int? currentDraggedQuestId = _draggingQuest?.id;
-    Offset? currentDraggedQuestPos = _draggingQuest != null ? snap(_dragStartQuestPos) : null;
-
-    ({int fromId, int toId, Offset midpoint})? closest;
-    double minDistance = double.infinity;
-
-    for (final quest in questSystem.quests) {
-      for (final prereq in questSystem.prerequisitesOf(quest.id)) {
-        final middlePos = Offset((quest.posX + prereq.posX) / 2, (quest.posY + prereq.posY) / 2);
-        if ((scenePos - middlePos).distance > 300.0 / _currentScale) {
-          continue;
-        }
-
-        final startCenter = getQuestCenter(prereq.id, questSystem, currentDraggedQuestId, currentDraggedQuestPos);
-        final endCenter = getQuestCenter(quest.id, questSystem, currentDraggedQuestId, currentDraggedQuestPos);
-
-        if (startCenter == null || endCenter == null) continue;
-
-        final anchorStart = getBestAnchor(prereq.id, endCenter, questSystem, currentDraggedQuestId, currentDraggedQuestPos);
-        final anchorEnd = getBestAnchor(quest.id, startCenter, questSystem, currentDraggedQuestId, currentDraggedQuestPos);
-
-        final cps = calculateCubicControlPointsOffsetting(
-          anchorStart.pos,
-          anchorStart.sideDir,
-          anchorEnd.pos,
-          anchorEnd.sideDir,
-          prereq.id,
-          quest.id,
-          questSystem,
-          null,
-          null,
-        );
-
-        for (double t = 0.0; t <= 1.0; t += 0.02) {
-          final pointOnCurve = bezierPoint(anchorStart.pos, cps[0], cps[1], anchorEnd.pos, t);
-          final dist = (scenePos - pointOnCurve).distance;
-
-          final lut = getLut(anchorStart.pos, cps[0], cps[1], anchorEnd.pos);
-          final midT = lut.tForArcLen(lut.totalLength / 2.0);
-          final midPoint = bezierPoint(anchorStart.pos, cps[0], cps[1], anchorEnd.pos, midT);
-
-          if (dist < threshold && dist < minDistance) {
-            minDistance = dist;
-            closest = (fromId: prereq.id, toId: quest.id, midpoint: midPoint);
-          }
-        }
-      }
-    }
-
-    if (closest != _hoveredConnection) {
-      setState(() => _hoveredConnection = closest);
+  void _onPointerExit(PointerExitEvent event) {
+    _hasLatestPointerScenePos = false;
+    if (_hoveredConnection != null) {
+      setState(() => _hoveredConnection = null);
     }
   }
 
@@ -476,8 +417,7 @@ class PanWidgetState extends State<PanWidget> {
   }
 
   void _onDoubleTapDown(TapDownDetails details) {
-    _lastPointerLocalPos = details.localPosition;
-    _lastPointerScenePos = _controller.toScene(details.localPosition);
+    _updatePointerScenePosition(details.localPosition);
   }
 
   void _onDoubleTap() {
@@ -493,9 +433,10 @@ class PanWidgetState extends State<PanWidget> {
   }
 
   void _onTap() {
-    final connection = _hoveredConnection ?? (debugMode ? _findConnectionNearScenePos(_lastPointerScenePos) : null);
+    final quest = _findQuestAt(_lastPointerScenePos);
+    final connection = _hitTestConnectionAtScenePos(_lastPointerScenePos) ?? _hoveredConnection;
 
-    if (connection != null && debugMode) {
+    if (quest == null && connection != null && debugMode) {
       if (_isMobile) {
         _showConnectionOptionsSheet(connection.fromId, connection.toId);
       } else {
@@ -508,7 +449,7 @@ class PanWidgetState extends State<PanWidget> {
       return;
     }
 
-    final quest = _findQuestAt(_lastPointerScenePos);
+    
     if (quest == null) return;
     showDialog(
       context: context,
@@ -784,71 +725,74 @@ class PanWidgetState extends State<PanWidget> {
         },
         canRequestFocus: true,
       )..requestFocus(),
-      child: Listener(
-        onPointerHover: _onPointerHover,
-        onPointerSignal: (e) {
-          if (e is PointerScrollEvent) {
-            _onPointerScroll(e);
-          }
-        },
-        child: ClipRRect(
-          borderRadius: BorderRadius.circular(context.uiRadiusLg),
-          child: DecoratedBox(
-            decoration: const BoxDecoration(color: Color(0xFF0A1218)),
-            child: Stack(
-              children: [
-                Positioned.fill(child: InfiniteDotsBackground(controller: _controller)),
-                Positioned.fill(
-                  child: AnimatedBuilder(
-                    animation: _controller,
-                    builder: (context, child) => Transform(transform: _controller.value, alignment: Alignment.topLeft, child: child),
-                    child: QuestBubblesOverlay(key: _questBubbleOverlayKey, debugMode: debugMode, questSystem: questSystem),
+      child: MouseRegion(
+        onExit: _onPointerExit,
+        child: Listener(
+          onPointerHover: _onPointerHover,
+          onPointerSignal: (e) {
+            if (e is PointerScrollEvent) {
+              _onPointerScroll(e);
+            }
+          },
+          child: ClipRRect(
+            borderRadius: BorderRadius.circular(context.uiRadiusLg),
+            child: DecoratedBox(
+              decoration: const BoxDecoration(color: Color(0xFF0A1218)),
+              child: Stack(
+                children: [
+                  Positioned.fill(child: InfiniteDotsBackground(controller: _controller)),
+                  Positioned.fill(
+                    child: AnimatedBuilder(
+                      animation: _controller,
+                      builder: (context, child) => Transform(transform: _controller.value, alignment: Alignment.topLeft, child: child),
+                      child: QuestBubblesOverlay(key: _questBubbleOverlayKey, debugMode: debugMode, questSystem: questSystem),
+                    ),
                   ),
-                ),
-                
-                if (_hoveredConnection != null && debugMode && !_isMobile)
-                  AnimatedBuilder(
-                    animation: _controller,
-                    builder: (context, child) {
-                      final screenPos = MatrixUtils.transformPoint(_controller.value, _hoveredConnection!.midpoint);
 
-                      return Positioned(
-                        left: screenPos.dx - 15,
-                        top: screenPos.dy - 15,
-                        child: MouseRegion(
-                          cursor: SystemMouseCursors.click,
-                          child: InkWell(
-                            onTap: () => _removeConnection(_hoveredConnection!.fromId, _hoveredConnection!.toId),
-                            child: Container(
-                              decoration: const BoxDecoration(color: Colors.redAccent, shape: BoxShape.circle),
-                              padding: const EdgeInsets.all(4),
-                              child: const Icon(Icons.close, size: 18, color: Colors.white),
+                  if (_hoveredConnection != null && debugMode && !_isMobile)
+                    AnimatedBuilder(
+                      animation: _controller,
+                      builder: (context, child) {
+                        final screenPos = MatrixUtils.transformPoint(_controller.value, _hoveredConnection!.midpoint);
+
+                        return Positioned(
+                          left: screenPos.dx - 15,
+                          top: screenPos.dy - 15,
+                          child: MouseRegion(
+                            cursor: SystemMouseCursors.click,
+                            child: InkWell(
+                              onTap: () => _removeConnection(_hoveredConnection!.fromId, _hoveredConnection!.toId),
+                              child: Container(
+                                decoration: const BoxDecoration(color: Colors.redAccent, shape: BoxShape.circle),
+                                padding: const EdgeInsets.all(4),
+                                child: const Icon(Icons.close, size: 18, color: Colors.white),
+                              ),
                             ),
                           ),
-                        ),
-                      );
-                    },
-                  ),
+                        );
+                      },
+                    ),
 
-                Positioned.fill(
-                  child: GestureDetector(
-                    behavior: HitTestBehavior.translucent,
-                    onScaleStart: _onScaleStart,
-                    onScaleUpdate: _onScaleUpdate,
-                    onScaleEnd: _onScaleEnd,
-                    onDoubleTapDown: _onDoubleTapDown,
-                    onDoubleTap: _onDoubleTap,
-                    onTap: _onTap,
-                    onTapDown: _onDoubleTapDown,
-                    onLongPressStart: _onLongPressStart,
-                    onLongPressMoveUpdate: _onLongPressMoveUpdate,
-                    onLongPressEnd: _onLongPressEnd,
-                    onLongPressCancel: _onLongPressCancel,
+                  Positioned.fill(
+                    child: GestureDetector(
+                      behavior: HitTestBehavior.translucent,
+                      onScaleStart: _onScaleStart,
+                      onScaleUpdate: _onScaleUpdate,
+                      onScaleEnd: _onScaleEnd,
+                      onDoubleTapDown: _onDoubleTapDown,
+                      onDoubleTap: _onDoubleTap,
+                      onTap: _onTap,
+                      onTapDown: _onDoubleTapDown,
+                      onLongPressStart: _onLongPressStart,
+                      onLongPressMoveUpdate: _onLongPressMoveUpdate,
+                      onLongPressEnd: _onLongPressEnd,
+                      onLongPressCancel: _onLongPressCancel,
+                    ),
                   ),
-                ),
-                /*if (debugMode)
-                  QuestDebugPanel(key: _debugPanelKey, onChanged: () => _questBubbleOverlayKey.currentState?.refresh(), onFocusQuest: _focusOnQuest),*/
-              ],
+                  /*if (debugMode)
+                    QuestDebugPanel(key: _debugPanelKey, onChanged: () => _questBubbleOverlayKey.currentState?.refresh(), onFocusQuest: _focusOnQuest),*/
+                ],
+              ),
             ),
           ),
         ),

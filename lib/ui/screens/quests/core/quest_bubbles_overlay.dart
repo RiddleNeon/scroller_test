@@ -116,6 +116,10 @@ class QuestBubblesOverlayState extends State<QuestBubblesOverlay>
     });
   }
 
+  ({int fromId, int toId, Offset midpoint})? hitTestConnection(Offset scenePos, double scale) {
+    return _connectionPainter.hitTestConnection(scenePos, scale: scale);
+  }
+
   @override
   Widget build(BuildContext context) {
     const padding = 500.0;
