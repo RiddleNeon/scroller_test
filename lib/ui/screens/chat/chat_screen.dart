@@ -1719,7 +1719,7 @@ class _DictionaryPickerSheetState extends State<_DictionaryPickerSheet> {
                       }
 
                       return DropdownButtonFormField<String?>(
-                        value: _selectedSubject,
+                        initialValue: _selectedSubject,
                         decoration: InputDecoration(
                           labelText: 'Subject',
                           filled: true,
@@ -1766,7 +1766,7 @@ class _DictionaryPickerSheetState extends State<_DictionaryPickerSheet> {
                   return ListView.separated(
                     padding: const EdgeInsets.fromLTRB(16, 8, 16, 20),
                     itemCount: filtered.length,
-                    separatorBuilder: (_, __) => const SizedBox(height: 6),
+                    separatorBuilder: (_, _) => const SizedBox(height: 6),
                     itemBuilder: (context, index) {
                       final entry = filtered[index];
                       return ListTile(

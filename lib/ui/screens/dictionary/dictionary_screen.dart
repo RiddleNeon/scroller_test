@@ -32,6 +32,7 @@ class _DictionaryScreenState extends State<DictionaryScreen> {
 
   List<ShareContact> _shareContacts = const [];
   final Map<String, Chat> _chatByPartnerId = {};
+  final Map<String, Map<String, DateTime>> _lastSharedLinkByPartnerId = {};
 
   @override
   void initState() {
@@ -39,7 +40,10 @@ class _DictionaryScreenState extends State<DictionaryScreen> {
 	_entriesFuture = dictionaryRepository.fetchEntries();
 	_selectedSubject = widget.initialSubject;
 	_searchController.addListener(() => setState(() => _searchQuery = _searchController.text.trim()));
-	_prepareShareContacts();
+	WidgetsBinding.instance.addPostFrameCallback((_) {
+	  if (!mounted) return;
+	  _prepareShareContacts();
+	});
   }
 
   @override
@@ -55,6 +59,7 @@ class _DictionaryScreenState extends State<DictionaryScreen> {
     final chats = localSeenService.getChats();
     final contacts = <ShareContact>[];
     final chatMap = <String, Chat>{};
+    final lastSharedLinkByPartnerId = <String, Map<String, DateTime>>{};
 
     for (final chat in chats) {
       final messages = await localSeenService.getMessagesWithLocal(
@@ -65,6 +70,18 @@ class _DictionaryScreenState extends State<DictionaryScreen> {
       final myRecentMessages = messages.where((message) => message.isMe && message.timestamp.isAfter(thirtyDaysAgo)).toList();
       final lastSharedAt = myRecentMessages.isEmpty ? chat.lastMessageAt : myRecentMessages.last.timestamp;
 
+      final sharedLinks = <String, DateTime>{};
+      for (final message in messages) {
+        if (!message.isMe) continue;
+        final link = message.text.trim();
+        if (link.isEmpty) continue;
+        final existing = sharedLinks[link];
+        if (existing == null || message.timestamp.isAfter(existing)) {
+          sharedLinks[link] = message.timestamp;
+        }
+      }
+      lastSharedLinkByPartnerId[chat.partnerId] = sharedLinks;
+
       contacts.add(
         ShareContact(
           id: chat.partnerId,
@@ -74,17 +91,35 @@ class _DictionaryScreenState extends State<DictionaryScreen> {
           lastSharedAt: lastSharedAt,
         ),
       );
-      print("Chat with ${chat.partnerName}: ${myRecentMessages.length} messages in the last 30 days, last shared at $lastSharedAt");
       chatMap[chat.partnerId] = chat;
     }
 
     if (!mounted) return;
     setState(() {
       _shareContacts = contacts;
+      _lastSharedLinkByPartnerId
+        ..clear()
+        ..addAll(lastSharedLinkByPartnerId);
       _chatByPartnerId
         ..clear()
         ..addAll(chatMap);
     });
+  }
+
+  List<ShareContact> _contactsForEntry(DictionaryEntry entry) {
+    final link = entry.route;
+    return _shareContacts.map((contact) {
+      final lastSharedAt = _lastSharedLinkByPartnerId[contact.id]?[link];
+      return ShareContact(
+        id: contact.id,
+        name: contact.name,
+        avatarUrl: contact.avatarUrl,
+        recentShareCount: contact.recentShareCount,
+        lastSharedAt: contact.lastSharedAt,
+        alreadySharedWithThisVideo: lastSharedAt != null,
+        lastSharedThisVideoAt: lastSharedAt,
+      );
+    }).toList();
   }
 
   Future<void> _shareToContact(ShareContact contact, DictionaryEntry entry) async {
@@ -99,6 +134,7 @@ class _DictionaryScreenState extends State<DictionaryScreen> {
     );
 
     await chatRepository.sendNotification(chat: chat, message: message);
+    await localSeenService.sendMessageLocal(chat, message);
     if (!mounted) return;
     await _prepareShareContacts();
   }
@@ -112,7 +148,7 @@ class _DictionaryScreenState extends State<DictionaryScreen> {
         return _DictionaryEntryDetailsSheet(
           entry: entry,
           entries: entries,
-          shareContacts: _shareContacts,
+          shareContacts: _contactsForEntry(entry),
           onOpenQuest: () {
             Navigator.of(ctx).pop();
             context.go(entry.questRoute);
@@ -215,7 +251,7 @@ class _DictionaryScreenState extends State<DictionaryScreen> {
 					  children: [
 						Expanded(
 						  child: DropdownButtonFormField<String?>(
-							value: _selectedSubject,
+							initialValue: _selectedSubject,
 							decoration: InputDecoration(
 							  labelText: 'Subject',
 							  filled: true,
@@ -250,7 +286,7 @@ class _DictionaryScreenState extends State<DictionaryScreen> {
 						controller: _scrollController,
 						padding: const EdgeInsets.fromLTRB(16, 8, 16, 20),
 						itemCount: filtered.length,
-						separatorBuilder: (_, __) => const SizedBox(height: 10),
+						separatorBuilder: (_, _) => const SizedBox(height: 10),
 						itemBuilder: (context, index) {
 						  final entry = filtered[index];
 						  final difficultyColor = _difficultyColor(entry.difficulty, cs);
@@ -278,7 +314,7 @@ class _DictionaryScreenState extends State<DictionaryScreen> {
 										),
 										ShareButton(
 										  shareUrl: entry.route,
-										  contacts: _shareContacts,
+										  contacts: _contactsForEntry(entry),
 										  emptyStateLabel: 'No chats yet',
 										  onShareToContact: (contact, _) => _shareToContact(contact, entry),
 										),
@@ -463,4 +499,3 @@ class _DictionaryEntryDetailsSheet extends StatelessWidget {
     );
   }
 }
-

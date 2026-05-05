@@ -2,7 +2,7 @@ import 'package:flutter/gestures.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
 import 'package:flutter_markdown_plus/flutter_markdown_plus.dart';
-import 'package:markdown/markdown.dart' as md;
+import 'package:url_launcher/url_launcher_string.dart';
 import 'package:lumox/logic/dictionary/dictionary_entry.dart';
 
 class DictionaryLinkifiedSelectableText extends StatefulWidget {
@@ -136,20 +136,142 @@ class DictionaryMarkdownBody extends StatelessWidget {
       return MarkdownBody(data: data, styleSheet: styleSheet);
     }
 
+    final entriesByRoute = <String, DictionaryEntry>{
+      for (final entry in entries) entry.route: entry,
+    };
+
+    final linkifiedData = _linkifyDictionaryEntries(data, entriesByTitle);
+    final effectiveStyleSheet = _applyLinkStyle(styleSheet, linkColor, context);
+
     return MarkdownBody(
-      data: data,
-      styleSheet: styleSheet,
-      inlineSyntaxes: <md.InlineSyntax>[
-        _DictionaryInlineSyntax(entriesByTitle: entriesByTitle),
-      ],
-      builders: <String, MarkdownElementBuilder>{
-        'dictionary-entry': _DictionaryEntryBuilder(
-          entriesByTitle: entriesByTitle,
-          onTapEntry: onTapEntry,
-          linkColor: linkColor,
-        ),
+      data: linkifiedData,
+      styleSheet: effectiveStyleSheet,
+      onTapLink: (text, href, title) {
+        if (href == null || href.trim().isEmpty) return;
+        final entry = _entryForHref(href, entriesByRoute);
+        if (entry != null) {
+          onTapEntry(entry);
+          return;
+        }
+        final resolved = href.startsWith('/') ? Uri.base.resolve(href).toString() : href;
+        launchUrlString(resolved);
       },
     );
+  }
+}
+
+MarkdownStyleSheet? _applyLinkStyle(MarkdownStyleSheet? styleSheet, Color? linkColor, BuildContext context) {
+  if (linkColor == null) return styleSheet;
+  final base = styleSheet ?? MarkdownStyleSheet.fromTheme(Theme.of(context));
+  return base.copyWith(
+    a: TextStyle(color: linkColor, decoration: TextDecoration.underline, decorationColor: linkColor),
+  );
+}
+
+DictionaryEntry? _entryForHref(String href, Map<String, DictionaryEntry> entriesByRoute) {
+  final direct = entriesByRoute[href];
+  if (direct != null) return direct;
+  final uri = Uri.tryParse(href);
+  if (uri == null || uri.path != '/dictionary') return null;
+  final questId = int.tryParse(uri.queryParameters['id'] ?? '');
+  if (questId == null) return null;
+  final subject = uri.queryParameters['subject']?.trim().toLowerCase();
+  for (final entry in entriesByRoute.values) {
+    if (entry.questId != questId) continue;
+    if (subject == null || entry.subject.toLowerCase() == subject) {
+      return entry;
+    }
+  }
+  return null;
+}
+
+String _linkifyDictionaryEntries(String data, Map<String, DictionaryEntry> entriesByTitle) {
+  if (data.trim().isEmpty) return data;
+  final pattern = RegExp(
+    _buildDictionaryPattern(entriesByTitle.keys.toList()),
+    multiLine: true,
+    caseSensitive: false,
+  );
+  final skipRanges = _collectMarkdownSkipRanges(data);
+  if (skipRanges.isEmpty) return _replaceMatches(data, pattern, entriesByTitle, skipRanges);
+  return _replaceMatches(data, pattern, entriesByTitle, skipRanges);
+}
+
+String _replaceMatches(
+  String data,
+  RegExp pattern,
+  Map<String, DictionaryEntry> entriesByTitle,
+  List<TextRange> skipRanges,
+) {
+  final buffer = StringBuffer();
+  var cursor = 0;
+
+  for (final match in pattern.allMatches(data)) {
+    final start = match.start;
+    final end = match.end;
+    if (_isInSkipRange(start, end, skipRanges)) {
+      continue;
+    }
+    if (start < cursor) continue;
+
+    final matched = match.group(0) ?? '';
+    final entry = entriesByTitle[matched.trim().toLowerCase()];
+    if (entry == null) continue;
+
+    buffer.write(data.substring(cursor, start));
+    buffer.write('[${matched}](${entry.route})');
+    cursor = end;
+  }
+
+  if (cursor < data.length) {
+    buffer.write(data.substring(cursor));
+  }
+
+  return buffer.toString();
+}
+
+bool _isInSkipRange(int start, int end, List<TextRange> ranges) {
+  for (final range in ranges) {
+    if (range.overlaps(start, end)) return true;
+  }
+  return false;
+}
+
+List<TextRange> _collectMarkdownSkipRanges(String data) {
+  final ranges = <TextRange>[];
+  final patterns = <RegExp>[
+    RegExp(r'```[\s\S]*?```', multiLine: true),
+    RegExp(r'`[^`\n]+`'),
+    RegExp(r'!\[[\s\S]*?\]\([\s\S]*?\)'),
+    RegExp(r'\[[\s\S]*?\]\([\s\S]*?\)'),
+  ];
+
+  for (final pattern in patterns) {
+    for (final match in pattern.allMatches(data)) {
+      ranges.add(TextRange(start: match.start, end: match.end));
+    }
+  }
+
+  if (ranges.isEmpty) return ranges;
+  ranges.sort((a, b) => a.start.compareTo(b.start));
+
+  final merged = <TextRange>[];
+  var current = ranges.first;
+  for (final range in ranges.skip(1)) {
+    if (range.start <= current.end) {
+      current = TextRange(start: current.start, end: range.end > current.end ? range.end : current.end);
+    } else {
+      merged.add(current);
+      current = range;
+    }
+  }
+  merged.add(current);
+  return merged;
+}
+
+extension on TextRange {
+  bool overlaps(int start, int end) {
+    return this.start < end && start < this.end;
   }
 }
 
@@ -184,24 +306,12 @@ class DictionaryEntryPreviewSheet extends StatelessWidget {
           mainAxisSize: MainAxisSize.min,
           crossAxisAlignment: CrossAxisAlignment.start,
           children: [
-            Row(
+            Column(
               crossAxisAlignment: CrossAxisAlignment.start,
               children: [
-                Expanded(
-                  child: Column(
-                    crossAxisAlignment: CrossAxisAlignment.start,
-                    children: [
-                      Text(entry.title, style: TextStyle(color: cs.onSurface, fontSize: 20, fontWeight: FontWeight.w800)),
-                      const SizedBox(height: 4),
-                      Text(entry.subject, style: TextStyle(color: cs.onSurfaceVariant, fontSize: 12, fontWeight: FontWeight.w600)),
-                    ],
-                  ),
-                ),
-                IconButton(
-                  tooltip: 'Copy dictionary link',
-                  onPressed: onCopyRoute,
-                  icon: const Icon(Icons.copy_rounded),
-                ),
+                Text(entry.title, style: TextStyle(color: cs.onSurface, fontSize: 20, fontWeight: FontWeight.w800)),
+                const SizedBox(height: 4),
+                Text(entry.subject, style: TextStyle(color: cs.onSurfaceVariant, fontSize: 12, fontWeight: FontWeight.w600)),
               ],
             ),
             const SizedBox(height: 12),
@@ -225,14 +335,6 @@ class DictionaryEntryPreviewSheet extends StatelessWidget {
                     label: const Text('Send in chat'),
                   ),
                 if (onSendToChat != null) const SizedBox(height: 10),
-                if (onOpenQuest != null) ...[
-                  FilledButton.icon(
-                    onPressed: onOpenQuest,
-                    icon: const Icon(Icons.center_focus_strong_rounded),
-                    label: const Text('Open quest'),
-                  ),
-                  const SizedBox(height: 10),
-                ],
                 OutlinedButton.icon(
                   onPressed: onOpenDictionary,
                   icon: const Icon(Icons.menu_book_outlined),
@@ -281,81 +383,6 @@ Future<void> showDictionaryEntryPreviewSheet(
   );
 }
 
-class _DictionaryInlineSyntax extends md.InlineSyntax {
-  final Map<String, DictionaryEntry> entriesByTitle;
-
-  _DictionaryInlineSyntax({required this.entriesByTitle}) : super(_buildPattern(entriesByTitle.keys.toList()), caseSensitive: false);
-
-  static String _buildPattern(List<String> titles) {
-    final terms = titles.where((t) => t.trim().isNotEmpty).map(RegExp.escape).toList()
-      ..sort((a, b) => b.length.compareTo(a.length));
-    if (terms.isEmpty) return r'(?!x)x';
-    return r'(?<!\w)(' + terms.join('|') + r')(?!\w)';
-  }
-
-  @override
-  bool onMatch(md.InlineParser parser, Match match) {
-    final matched = match.group(0) ?? '';
-    final entry = entriesByTitle[matched.trim().toLowerCase()];
-    if (entry == null) {
-      return false;
-    }
-
-    parser.addNode(
-      md.Element('dictionary-entry', <md.Node>[md.Element.text('span', matched)])
-        ..attributes['href'] = entry.route,
-    );
-    return true;
-  }
-}
-
-class _DictionaryEntryBuilder extends MarkdownElementBuilder {
-  final Map<String, DictionaryEntry> entriesByTitle;
-  final void Function(DictionaryEntry entry) onTapEntry;
-  final Color? linkColor;
-
-  _DictionaryEntryBuilder({required this.entriesByTitle, required this.onTapEntry, this.linkColor});
-
-  @override
-  Widget visitElementAfter(md.Element element, TextStyle? preferredStyle) {
-    final href = element.attributes['href'];
-    if (href == null) {
-      return Text(element.textContent, style: preferredStyle);
-    }
-
-    final uri = Uri.tryParse(href);
-    if (uri == null) {
-      return Text(element.textContent, style: preferredStyle);
-    }
-
-    final questId = int.tryParse(uri.queryParameters['id'] ?? '');
-    final subject = uri.queryParameters['subject']?.trim().toLowerCase();
-    DictionaryEntry? entry;
-    if (questId != null) {
-      for (final candidate in entriesByTitle.values) {
-        if (candidate.questId == questId && (subject == null || candidate.subject.toLowerCase() == subject)) {
-          entry = candidate;
-          break;
-        }
-      }
-    }
-    entry ??= entriesByTitle[element.textContent.trim().toLowerCase()];
-    if (entry == null) {
-      return Text(element.textContent, style: preferredStyle);
-    }
-
-    final style = (preferredStyle ?? const TextStyle()).copyWith(
-      color: linkColor ?? preferredStyle?.color,
-      decoration: TextDecoration.underline,
-      decorationColor: linkColor ?? preferredStyle?.color,
-    );
-
-    return GestureDetector(
-      onTap: () => onTapEntry(entry!),
-      child: Text(element.textContent, style: style),
-    );
-  }
-}
 
 class _TextMatch {
   final int start;
