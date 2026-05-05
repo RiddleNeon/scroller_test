@@ -228,7 +228,8 @@ class _QuestScreenState extends State<QuestScreen> {
                           decoration: const InputDecoration(hintText: "Enter file path"),
                           onSubmitted: (value) async {
                             Navigator.of(context).pop();
-                            await importQuestsFromJson(value);
+                            if(!mounted || questSystem == null) return;
+                            await importWithChangeManager(path: value, system: questSystem);
                           },
                         ),
                       ),
@@ -236,6 +237,7 @@ class _QuestScreenState extends State<QuestScreen> {
                   },
                 ),
               ),
+              const SizedBox(width: 16),
               AnimatedSlide(
                 offset: debugMode && loaded ? Offset.zero : const Offset(0, 2),
                 duration: const Duration(milliseconds: 350),
@@ -273,7 +275,7 @@ class _QuestScreenState extends State<QuestScreen> {
                   },
                 ),
               ),
-              const SizedBox(width: 16), //space between buttons
+              const SizedBox(width: 16), 
               FloatingActionButton(
                 heroTag: null,
                 child: const Icon(Icons.filter_center_focus),
@@ -372,7 +374,7 @@ class _SubjectMenu extends StatelessWidget {
                     child: FutureBuilder<List<String>>(
                       future: subjectFuture,
                       builder: (context, snapshot) {
-                        final subjects = <String>{...createdSubjects, ...?(snapshot.data ?? [])};
+                        final subjects = <String>{...createdSubjects, ...(snapshot.data ?? [])};
                         if (currentSubject.trim().isNotEmpty) subjects.add(currentSubject.trim());
                         final list = subjects.toList()..sort((a, b) => a.toLowerCase().compareTo(b.toLowerCase()));
                         final root = _buildSubjectTree(list);

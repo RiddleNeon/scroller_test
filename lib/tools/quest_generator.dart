@@ -6,14 +6,20 @@ import 'package:lumox/tools/supabase_tests/supabase_login_test.dart';
 
 import '../logic/quests/quest_change_manager.dart';
 import '../logic/quests/quest_connection.dart';
-import '../logic/repositories/quest_repository.dart';
 
-Future<void> importQuestsFromJson(String path) async {
+import 'package:lumox/logic/quests/quest_system.dart';
+
+Future<void> importWithChangeManager({
+  required QuestSystem system,
+  required String path,
+}) async {
   final file = await rootBundle.loadString(path);
   final jsonData = jsonDecode(file);
 
   final List quests = jsonData['quests'] ?? [];
   final List connections = jsonData['connections'] ?? [];
+
+  final cm = system.changeManager;
 
   final Map<int, List<Map<String, dynamic>>> grouped = {};
 
@@ -26,51 +32,69 @@ Future<void> importQuestsFromJson(String path) async {
     final int questId = entry.key;
     final versions = entry.value;
 
-    print("Processing quest $questId with ${versions.length} versions");
+    print("Processing quest $questId");
 
-    final exists = await questExists(questId);
-
-    Quest? current;
+    Quest? current = system.maybeGetQuestById(questId);
 
     for (int i = 0; i < versions.length; i++) {
       final json = versions[i];
 
-      if (i == 0 && !exists) {
+      if (current == null && i == 0) {
         final quest = Quest.fromJson(json);
 
-        await questRepo.addQuest(quest, "imported initial version");
+        cm.record(AddQuestChange(
+          quest: quest,
+          updateMessage: "imported quest",
+        ));
+
         current = quest;
       } else {
         final patch = _patchFromJson(json);
-
         if (patch.isEmpty) continue;
 
-        await questRepo.patchQuest(
-          questId,
-          patch,
-          patch.generateChangeMessage(),
-        );
+        final before = current!;
+        final after = patch.applyTo(before);
 
-        current = current != null
-            ? patch.applyTo(current)
-            : null;
+        cm.record(UpdateQuestChange.fromDiff(
+          before: before,
+          after: after,
+          updateMessage: patch.generateChangeMessage(),
+        ));
+
+        current = after;
       }
     }
   }
-
+  
   for (final c in connections) {
     final conn = QuestConnection.fromJson(c);
 
-    await questRepo.updateConnection(
-      conn.fromQuestId,
-      conn.toQuestId,
-      newType: conn.type,
-      newXpRequirement: conn.xpRequirement,
-      updateMessage: "imported connection",
-    );
+    final exists = system.isConnected(conn.fromQuestId, conn.toQuestId);
+
+    if (!exists) {
+      cm.record(AddConnectionChange(
+        fromId: conn.fromQuestId,
+        toId: conn.toQuestId,
+      ));
+    } else {
+      final current = system.getConnection(conn.fromQuestId, conn.toQuestId);
+      if (current == null) continue;
+
+      final patch = QuestConnectionPatch.diff(current, conn);
+      if (patch.isEmpty) continue;
+
+      cm.record(UpdateConnectionChange(
+        fromId: conn.fromQuestId,
+        toId: conn.toQuestId,
+        patch: patch,
+        reversePatch: patch.reverse(current),
+        updateMessage: "imported connection update",
+      ));
+    }
   }
 
-  print("Import finished.");
+  print("Import recorded. Pending changes: ${cm.pendingCount}");
+  print("Call changeManager.push() to upload.");
 }
 
 Future<bool> questExists(int questId) async {
