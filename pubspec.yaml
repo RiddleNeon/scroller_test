@@ -82,7 +82,7 @@ flutter:
     - assets/pixabay_videos.json
     - assets/youtube_videos_single.json
     - assets/youtube_videos.json
-    - assets/quests.json
+    - assets/quest_data.json
     - assets/all_cloudinary_image_urls
     - assets/icon.png
     - assets/

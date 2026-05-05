@@ -1,0 +1,153 @@
+{
+  "quests": [
+    {
+      "id": 1,
+      "name": "Addition Basics",
+      "description": "Learn addition",
+      "subject": "math",
+      "difficulty": 0.2,
+      "posX": 100,
+      "posY": 200,
+      "sizeX": 200,
+      "sizeY": 100
+    },
+    {
+      "id": 2,
+      "name": "Subtraction Basics",
+      "description": "Learn subtraction",
+      "subject": "math",
+      "difficulty": 0.3,
+      "posX": 400,
+      "posY": 200,
+      "sizeX": 200,
+      "sizeY": 100
+    },
+    {
+      "id": 3,
+      "name": "Multiplication Basics",
+      "description": "Learn multiplication",
+      "subject": "math",
+      "difficulty": 0.4,
+      "posX": 700,
+      "posY": 200,
+      "sizeX": 200,
+      "sizeY": 100
+    },
+    {
+      "id": 4,
+      "name": "Division Basics",
+      "description": "Learn division",
+      "subject": "math",
+      "difficulty": 0.5,
+      "posX": 1000,
+      "posY": 200,
+      "sizeX": 200,
+      "sizeY": 100
+    },
+    {
+      "id": 5,
+      "name": "Algebra Basics",
+      "description": "Learn algebra",
+      "subject": "math",
+      "difficulty": 0.6,
+      "posX": 1300,
+      "posY": 200,
+      "sizeX": 200,
+      "sizeY": 100
+    },
+    {
+      "id": 6,
+      "name": "Geometry Basics",
+      "description": "Learn geometry",
+      "subject": "math",
+      "difficulty": 0.7,
+      "posX": 1600,
+      "posY": 200,
+      "sizeX": 200,
+      "sizeY": 100
+    },
+    {
+      "id": 7,
+      "name": "Trigonometry Basics",
+      "description": "Learn trigonometry",
+      "subject": "math",
+      "difficulty": 0.8,
+      "posX": 1900,
+      "posY": 200,
+      "sizeX": 200,
+      "sizeY": 100
+    },
+    {
+      "id": 8,
+      "name": "Calculus Basics",
+      "description": "Learn calculus",
+      "subject": "math",
+      "difficulty": 0.9,
+      "posX": 2200,
+      "posY": 200,
+      "sizeX": 200,
+      "sizeY": 100
+    },
+    {
+      "id": 9,
+      "name": "Statistics Basics",
+      "description": "Learn statistics",
+      "subject": "math",
+      "difficulty": 1.0,
+      "posX": 2500,
+      "posY": 200,
+      "sizeX": 200,
+      "sizeY": 100
+    }
+  ],
+  "connections": [
+    {
+      "fromQuestId": 2,
+      "toQuestId": 1,
+      "type": "prerequisite",
+      "xpRequirement": 50
+    },
+    {
+      "fromQuestId": 3,
+      "toQuestId": 2,
+      "type": "prerequisite",
+      "xpRequirement": 100
+    },
+    {
+      "fromQuestId": 4,
+      "toQuestId": 3,
+      "type": "prerequisite",
+      "xpRequirement": 150
+    },
+    {
+      "fromQuestId": 5,
+      "toQuestId": 4,
+      "type": "prerequisite",
+      "xpRequirement": 200
+    },
+    {
+      "fromQuestId": 6,
+      "toQuestId": 5,
+      "type": "prerequisite",
+      "xpRequirement": 250
+    },
+    {
+      "fromQuestId": 7,
+      "toQuestId": 6,
+      "type": "prerequisite",
+      "xpRequirement": 300
+    },
+    {
+      "fromQuestId": 8,
+      "toQuestId": 7,
+      "type": "prerequisite",
+      "xpRequirement": 350
+    },
+    {
+      "fromQuestId": 9,
+      "toQuestId": 8,
+      "type": "prerequisite",
+      "xpRequirement": 400
+    }
+  ]
+}

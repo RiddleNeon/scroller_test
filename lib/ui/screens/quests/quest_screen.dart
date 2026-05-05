@@ -3,6 +3,7 @@
 import 'package:flutter/material.dart';
 import 'package:lumox/logic/quests/quest.dart';
 import 'package:lumox/logic/quests/quest_system.dart';
+import 'package:lumox/tools/quest_generator.dart';
 import 'package:lumox/ui/screens/quests/core/pan.dart';
 import 'package:lumox/ui/screens/quests/version_management/change_screen.dart';
 
@@ -104,6 +105,36 @@ class _TestQuestScreenState extends State<TestQuestScreen> {
           floatingActionButton: Row(
             mainAxisAlignment: MainAxisAlignment.end,
             children: [
+              AnimatedSlide(
+                offset: debugMode && loaded ? Offset.zero : const Offset(0, 2),
+                duration: const Duration(milliseconds: 350),
+                curve: Curves.easeInOutCirc,
+                child: FloatingActionButton(
+                  heroTag: null,
+                  clipBehavior: Clip.none,
+                  child: const Stack(
+                    clipBehavior: Clip.none,
+                    children: [
+                      Icon(Icons.upload_file),
+                    ],
+                  ),
+                  onPressed: () {
+                    showDialog(
+                      context: context, // shows a small screen for you to type in a path of a json file to import quests from, then calls the import function from quest_generator.dart with that path
+                      builder: (context) => AlertDialog(
+                        title: const Text("Import Quests from JSON"),
+                        content: TextField(
+                          decoration: const InputDecoration(hintText: "Enter file path"),
+                          onSubmitted: (value) async {
+                            Navigator.of(context).pop();
+                            await importQuestsFromJson(value);
+                          },
+                        ),
+                      ),
+                    ); //show change screen
+                  },
+                ),
+              ),
               AnimatedSlide(
                 offset: debugMode && loaded ? Offset.zero : const Offset(0, 2),
                 duration: const Duration(milliseconds: 350),
