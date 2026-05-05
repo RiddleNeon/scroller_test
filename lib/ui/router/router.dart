@@ -402,42 +402,6 @@ class _DeepLinkVideoScreen extends StatelessWidget {
   }
 }
 
-class _DeepLinkProfileScreen extends StatelessWidget {
-  const _DeepLinkProfileScreen({required this.userId, required this.initialTabIndex});
-
-  final String userId;
-  final int initialTabIndex;
-
-  @override
-  Widget build(BuildContext context) {
-    if (userId.isEmpty) {
-      return const SizedBox.shrink();
-    }
-
-    return FutureBuilder(
-      future: userRepository.getUser(userId),
-      builder: (context, snapshot) {
-        if (snapshot.connectionState != ConnectionState.done) {
-          return const Center(child: CircularProgressIndicator());
-        }
-        if (!snapshot.hasData) {
-          return const SizedBox.shrink();
-        }
-
-        final profile = snapshot.data!;
-        final ownProfile = profile.id == currentUser.id;
-        return ProfileScreen(
-          initialProfile: profile,
-          ownProfile: ownProfile,
-          hasBackButton: true,
-          initialTabIndex: initialTabIndex,
-          onFollowChange: (followed) {},
-        );
-      },
-    );
-  }
-}
-
 String _canonicalNavPath(String path) {
   if (path.startsWith('/feed')) return '/feed';
   if (path.startsWith('/home')) return '/home';

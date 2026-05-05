@@ -8,7 +8,6 @@ class DictionaryRepository {
 
   Future<List<DictionaryEntry>>? _allEntriesTask;
   final Map<String, Future<List<DictionaryEntry>>> _subjectTasks = {};
-  List<DictionaryEntry>? _allEntriesCache;
   final Map<String, List<DictionaryEntry>> _subjectCache = {};
 
   Future<List<DictionaryEntry>> fetchEntries({String? subject}) {
@@ -110,10 +109,6 @@ class DictionaryRepository {
         if (subjectCompare != 0) return subjectCompare;
         return a.title.toLowerCase().compareTo(b.title.toLowerCase());
       });
-
-    if (subject == null || subject.isEmpty) {
-      _allEntriesCache = entries;
-    }
     return entries;
   }
 }

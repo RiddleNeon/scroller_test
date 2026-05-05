@@ -219,7 +219,7 @@ String _replaceMatches(
     if (entry == null) continue;
 
     buffer.write(data.substring(cursor, start));
-    buffer.write('[${matched}](${entry.route})');
+    buffer.write('[$matched](${entry.route})');
     cursor = end;
   }
 

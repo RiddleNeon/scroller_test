@@ -172,16 +172,7 @@ class _DictionaryScreenState extends State<DictionaryScreen> {
     if (d < 0.7) return cs.primary;
     return cs.error;
   }
-
-  String _formatPrerequisites(DictionaryEntry entry) {
-    if (entry.prerequisites.isEmpty) return '';
-    final names = entry.prerequisites.map((p) => p.title).toList();
-    final visible = names.take(3).toList();
-    final extra = names.length - visible.length;
-    final base = visible.join(', ');
-    return extra > 0 ? '$base +$extra' : base;
-  }
-
+  
   @override
   Widget build(BuildContext context) {
 	final cs = Theme.of(context).colorScheme;
@@ -290,7 +281,6 @@ class _DictionaryScreenState extends State<DictionaryScreen> {
 						itemBuilder: (context, index) {
 						  final entry = filtered[index];
 						  final difficultyColor = _difficultyColor(entry.difficulty, cs);
-						  final prereqText = _formatPrerequisites(entry);
 						  return Card(
 							elevation: 0,
 							color: cs.surfaceContainerLow,
