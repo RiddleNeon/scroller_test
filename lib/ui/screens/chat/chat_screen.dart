@@ -1,11 +1,12 @@
 import 'dart:math';
 
 import 'package:cached_network_image/cached_network_image.dart';
-import 'package:flutter/gestures.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter/rendering.dart';
 import 'package:flutter/services.dart';
 import 'package:go_router/go_router.dart';
+import 'package:lumox/logic/dictionary/dictionary_entry.dart';
+import 'package:lumox/logic/repositories/dictionary_repository.dart';
 import 'package:lumox/logic/repositories/user_repository.dart';
 import 'package:lumox/logic/users/user_model.dart';
 import 'package:lumox/logic/repositories/chat_repository.dart';
@@ -14,6 +15,7 @@ import 'package:lumox/logic/video/video.dart';
 import 'package:lumox/ui/animations/slide_morph_transitions.dart';
 import 'package:lumox/ui/misc/avatar.dart';
 import 'package:lumox/ui/screens/search_screen/search_screen.dart';
+import 'package:lumox/ui/widgets/dictionary/dictionary_linkifier.dart';
 import 'package:lumox/ui/theme/theme_ui_values.dart';
 
 import '../../../base_logic.dart';
@@ -89,6 +91,7 @@ class MessagingScreenState extends State<MessagingScreen> with TickerProviderSta
   final Map<String, Future<ChatRoutePreview?>> _previewFutureCache = {};
   List<String>? _sharedFeedVideoIds;
   Future<List<String>>? _sharedFeedVideoIdsTask;
+  Map<String, DictionaryEntry> _dictionaryEntriesByTitle = {};
 
   late AnimationController _typingDotController;
 
@@ -100,6 +103,7 @@ class MessagingScreenState extends State<MessagingScreen> with TickerProviderSta
 
     _typingDotController = AnimationController(vsync: this, duration: const Duration(milliseconds: 1200))..repeat();
     _loadHistoryPermission();
+    _loadDictionaryEntries();
 
     for (var _ in _messages) {
       _createBubbleController(animate: true);
@@ -109,6 +113,52 @@ class MessagingScreenState extends State<MessagingScreen> with TickerProviderSta
 
   Future<ChatRoutePreview?> _previewFutureFor(ChatRouteReference ref) {
     return _previewFutureCache.putIfAbsent(ref.route, () => ChatRoutePreviewResolver.resolve(ref));
+  }
+
+  Future<void> _loadDictionaryEntries() async {
+    try {
+      final entries = await dictionaryRepository.fetchEntries();
+      if (!mounted) return;
+      setState(() {
+        _dictionaryEntriesByTitle = {
+          for (final entry in entries)
+            if (entry.normalizedTitle.isNotEmpty) entry.normalizedTitle: entry,
+        };
+      });
+    } catch (e) {
+      debugPrint('load dictionary entries failed: $e');
+    }
+  }
+
+  Future<void> _showDictionaryPreview(DictionaryEntry entry) async {
+    if (!mounted) return;
+    await showDictionaryEntryPreviewSheet(
+      context,
+      entry: entry,
+      onSendToChat: () => _sendDictionaryEntry(entry),
+      onOpenQuest: () => context.go(entry.questRoute),
+      onOpenDictionary: () => context.go(entry.route),
+    );
+  }
+
+  Future<void> _sendDictionaryEntry(DictionaryEntry entry) async {
+    await _sendMessageText(entry.route);
+  }
+
+  Future<void> _openDictionaryPicker() async {
+    if (!mounted) return;
+    final selected = await showModalBottomSheet<DictionaryEntry>(
+      context: context,
+      isScrollControlled: true,
+      useSafeArea: true,
+      builder: (ctx) => _DictionaryPickerSheet(
+        entriesFuture: dictionaryRepository.fetchEntries(),
+        onSelect: (entry) => Navigator.of(ctx).pop(entry),
+      ),
+    );
+    if (selected != null) {
+      await _sendDictionaryEntry(selected);
+    }
   }
 
   List<String> _collectSharedFeedVideoIds() {
@@ -474,9 +524,13 @@ class MessagingScreenState extends State<MessagingScreen> with TickerProviderSta
       return;
     }
 
-    HapticFeedback.lightImpact();
     _textController.clear();
-    
+    await _sendMessageText(text);
+  }
+
+  Future<void> _sendMessageText(String text) async {
+    HapticFeedback.lightImpact();
+
     final tempId = DateTime.now().millisecondsSinceEpoch.toString();
     _addMessage(text: text, isMe: true, isNewMessage: true, id: tempId);
     
@@ -800,7 +854,9 @@ class MessagingScreenState extends State<MessagingScreen> with TickerProviderSta
               recipientAvatarUrl: widget.recipientAvatarUrl,
               onLongPress: () => _showMessageActions(msg),
               onRouteTap: _openRouteFromMessage,
+              onDictionaryTap: _showDictionaryPreview,
               previewFutureFor: _previewFutureFor,
+              dictionaryEntriesByTitle: _dictionaryEntriesByTitle,
             );
           },
         ),
@@ -867,6 +923,8 @@ class MessagingScreenState extends State<MessagingScreen> with TickerProviderSta
             crossAxisAlignment: CrossAxisAlignment.end,
             children: [
               _InputIconButton(icon: Icons.add_circle_outline_rounded, color: cs.onSurfaceVariant, onTap: () {}),
+              const SizedBox(width: 6),
+              _InputIconButton(icon: Icons.menu_book_outlined, color: cs.onSurfaceVariant, onTap: _openDictionaryPicker),
               const SizedBox(width: 6),
               Expanded(
                 child: AnimatedContainer(
@@ -944,7 +1002,9 @@ class _MessageBubble extends StatelessWidget {
   final String? recipientAvatarUrl;
   final VoidCallback? onLongPress;
   final void Function(String route) onRouteTap;
+  final void Function(DictionaryEntry entry) onDictionaryTap;
   final Future<ChatRoutePreview?> Function(ChatRouteReference ref) previewFutureFor;
+  final Map<String, DictionaryEntry> dictionaryEntriesByTitle;
 
   const _MessageBubble({
     super.key,
@@ -960,7 +1020,9 @@ class _MessageBubble extends StatelessWidget {
     this.recipientAvatarUrl,
     this.onLongPress,
     required this.onRouteTap,
+    required this.onDictionaryTap,
     required this.previewFutureFor,
+    required this.dictionaryEntriesByTitle,
   });
 
   @override
@@ -1004,7 +1066,9 @@ class _MessageBubble extends StatelessWidget {
                       colorScheme: cs,
                       onLongPress: onLongPress,
                       onRouteTap: onRouteTap,
+                      onDictionaryTap: onDictionaryTap,
                       previewFutureFor: previewFutureFor,
+                      dictionaryEntriesByTitle: dictionaryEntriesByTitle,
                     ),
                     if (showTimestamp || (isMe && isLast))
                       Padding(
@@ -1046,7 +1110,9 @@ class _BubbleBody extends StatelessWidget {
   final ColorScheme colorScheme;
   final VoidCallback? onLongPress;
   final void Function(String route) onRouteTap;
+  final void Function(DictionaryEntry entry) onDictionaryTap;
   final Future<ChatRoutePreview?> Function(ChatRouteReference ref) previewFutureFor;
+  final Map<String, DictionaryEntry> dictionaryEntriesByTitle;
 
   const _BubbleBody({
     required this.message,
@@ -1056,7 +1122,9 @@ class _BubbleBody extends StatelessWidget {
     required this.colorScheme,
     this.onLongPress,
     required this.onRouteTap,
+    required this.onDictionaryTap,
     required this.previewFutureFor,
+    required this.dictionaryEntriesByTitle,
   });
 
   @override
@@ -1099,6 +1167,8 @@ class _BubbleBody extends StatelessWidget {
                     text: message.text,
                     textColor: isMe ? cs.onPrimary : cs.onSecondary,
                     linkColor: isMe ? cs.onPrimary.withValues(alpha: 0.9) : cs.primary,
+                    entriesByTitle: dictionaryEntriesByTitle,
+                    onDictionaryTap: onDictionaryTap,
                     onRouteTap: onRouteTap,
                   ),
                   if (message.isEdited)
@@ -1135,88 +1205,33 @@ class _BubbleBody extends StatelessWidget {
   }
 }
 
-class _LinkedSelectableText extends StatefulWidget {
+class _LinkedSelectableText extends StatelessWidget {
   final String text;
   final Color textColor;
   final Color linkColor;
+  final Map<String, DictionaryEntry> entriesByTitle;
+  final void Function(DictionaryEntry entry) onDictionaryTap;
   final void Function(String route) onRouteTap;
 
   const _LinkedSelectableText({
     required this.text,
     required this.textColor,
     required this.linkColor,
+    required this.entriesByTitle,
+    required this.onDictionaryTap,
     required this.onRouteTap,
   });
 
   @override
-  State<_LinkedSelectableText> createState() => _LinkedSelectableTextState();
-}
-
-class _LinkedSelectableTextState extends State<_LinkedSelectableText> {
-  final List<TapGestureRecognizer> _recognizers = [];
-  List<InlineSpan> _spans = const [];
-  static final RegExp _routeRegex = RegExp(r'(?<!\S)(\/[^\s]+)');
-
-  @override
-  void initState() {
-    super.initState();
-    _rebuildSpans();
-  }
-
-  @override
-  void didUpdateWidget(covariant _LinkedSelectableText oldWidget) {
-    super.didUpdateWidget(oldWidget);
-    if (oldWidget.text != widget.text || oldWidget.textColor != widget.textColor || oldWidget.linkColor != widget.linkColor) {
-      _rebuildSpans();
-    }
-  }
-
-  @override
-  void dispose() {
-    for (final recognizer in _recognizers) {
-      recognizer.dispose();
-    }
-    super.dispose();
-  }
-
-  void _rebuildSpans() {
-    for (final recognizer in _recognizers) {
-      recognizer.dispose();
-    }
-    _recognizers.clear();
-
-    final spans = <InlineSpan>[];
-    final text = widget.text;
-    int cursor = 0;
-    for (final match in _routeRegex.allMatches(text)) {
-      final start = match.start;
-      final end = match.end;
-      final route = match.group(1) ?? '';
-      if (cursor < start) {
-        spans.add(TextSpan(text: text.substring(cursor, start), style: TextStyle(color: widget.textColor, fontSize: 15, height: 1.4)));
-      }
-      if (ChatRoutePreviewResolver.isRoutableToken(route)) {
-        // Skip it. We don't render routable tokens as text anymore.
-      } else {
-        spans.add(TextSpan(text: route, style: TextStyle(color: widget.textColor, fontSize: 15, height: 1.4)));
-      }
-      cursor = end;
-    }
-    if (cursor < text.length) {
-      spans.add(TextSpan(text: text.substring(cursor), style: TextStyle(color: widget.textColor, fontSize: 15, height: 1.4)));
-    }
-    if (spans.isEmpty) {
-      spans.add(TextSpan(text: '', style: TextStyle(color: widget.textColor, fontSize: 15, height: 1.4)));
-    }
-
-    setState(() {
-      _spans = spans;
-    });
-  }
-
-  @override
   Widget build(BuildContext context) {
-    return SelectableText.rich(TextSpan(children: _spans), selectionColor: Theme.of(context).colorScheme.tertiary);
+    return DictionaryLinkifiedSelectableText(
+      text: text,
+      baseStyle: TextStyle(color: textColor, fontSize: 15, height: 1.4),
+      linkColor: linkColor,
+      entriesByTitle: entriesByTitle,
+      onDictionaryTap: onDictionaryTap,
+      onRouteTap: onRouteTap,
+    );
   }
 }
 
@@ -1280,6 +1295,7 @@ class _RoutePreviewCard extends StatelessWidget {
       ChatRoutePreviewType.quests => Icons.map_outlined,
       ChatRoutePreviewType.chat => Icons.chat_bubble_outline_rounded,
       ChatRoutePreviewType.search => Icons.search_rounded,
+      ChatRoutePreviewType.dictionary => Icons.menu_book_outlined,
       ChatRoutePreviewType.themes => Icons.palette_outlined,
     };
 
@@ -1632,6 +1648,143 @@ class _InputIconButton extends StatelessWidget {
     return GestureDetector(
       onTap: onTap,
       child: SizedBox(width: size, height: size, child: Icon(icon, color: color, size: context.uiSpace(24))),
+    );
+  }
+}
+
+class _DictionaryPickerSheet extends StatefulWidget {
+  final Future<List<DictionaryEntry>> entriesFuture;
+  final void Function(DictionaryEntry entry) onSelect;
+
+  const _DictionaryPickerSheet({required this.entriesFuture, required this.onSelect});
+
+  @override
+  State<_DictionaryPickerSheet> createState() => _DictionaryPickerSheetState();
+}
+
+class _DictionaryPickerSheetState extends State<_DictionaryPickerSheet> {
+  final TextEditingController _searchController = TextEditingController();
+  String _searchQuery = '';
+  String? _selectedSubject;
+
+  @override
+  void initState() {
+    super.initState();
+    _searchController.addListener(() => setState(() => _searchQuery = _searchController.text.trim()));
+  }
+
+  @override
+  void dispose() {
+    _searchController.dispose();
+    super.dispose();
+  }
+
+  @override
+  Widget build(BuildContext context) {
+    final cs = Theme.of(context).colorScheme;
+
+    return Padding(
+      padding: EdgeInsets.only(bottom: MediaQuery.of(context).viewInsets.bottom),
+      child: SafeArea(
+        child: Column(
+          mainAxisSize: MainAxisSize.min,
+          children: [
+            Padding(
+              padding: const EdgeInsets.fromLTRB(16, 16, 16, 8),
+              child: Column(
+                children: [
+                  TextField(
+                    controller: _searchController,
+                    decoration: InputDecoration(
+                      hintText: 'Search dictionary…',
+                      prefixIcon: const Icon(Icons.search_rounded),
+                      filled: true,
+                      fillColor: cs.surfaceContainerHighest.withValues(alpha: 0.55),
+                      border: OutlineInputBorder(borderRadius: BorderRadius.circular(16), borderSide: BorderSide(color: cs.outlineVariant)),
+                      enabledBorder: OutlineInputBorder(borderRadius: BorderRadius.circular(16), borderSide: BorderSide(color: cs.outlineVariant.withValues(alpha: 0.5))),
+                      focusedBorder: OutlineInputBorder(borderRadius: BorderRadius.circular(16), borderSide: BorderSide(color: cs.primary, width: 1.4)),
+                      isDense: true,
+                    ),
+                  ),
+                  const SizedBox(height: 10),
+                  FutureBuilder<List<DictionaryEntry>>(
+                    future: widget.entriesFuture,
+                    builder: (context, snapshot) {
+                      final entries = snapshot.data ?? const <DictionaryEntry>[];
+                      final subjects = <String>{for (final entry in entries) if (entry.subject.trim().isNotEmpty) entry.subject}.toList()
+                        ..sort((a, b) => a.toLowerCase().compareTo(b.toLowerCase()));
+
+                      if (_selectedSubject != null && !subjects.contains(_selectedSubject)) {
+                        _selectedSubject = null;
+                      }
+
+                      return DropdownButtonFormField<String?>(
+                        value: _selectedSubject,
+                        decoration: InputDecoration(
+                          labelText: 'Subject',
+                          filled: true,
+                          fillColor: cs.surfaceContainerHighest.withValues(alpha: 0.45),
+                          border: OutlineInputBorder(borderRadius: BorderRadius.circular(16), borderSide: BorderSide(color: cs.outlineVariant)),
+                          enabledBorder: OutlineInputBorder(borderRadius: BorderRadius.circular(16), borderSide: BorderSide(color: cs.outlineVariant.withValues(alpha: 0.5))),
+                          isDense: true,
+                        ),
+                        items: [
+                          const DropdownMenuItem<String?>(value: null, child: Text('All subjects')),
+                          ...subjects.map((subject) => DropdownMenuItem<String?>(value: subject, child: Text(subject))),
+                        ],
+                        onChanged: (value) => setState(() => _selectedSubject = value),
+                      );
+                    },
+                  ),
+                ],
+              ),
+            ),
+            Flexible(
+              child: FutureBuilder<List<DictionaryEntry>>(
+                future: widget.entriesFuture,
+                builder: (context, snapshot) {
+                  if (snapshot.connectionState != ConnectionState.done) {
+                    return const Center(child: CircularProgressIndicator());
+                  }
+                  final entries = snapshot.data ?? const <DictionaryEntry>[];
+                  final filtered = entries.where((entry) {
+                    if (_selectedSubject != null && entry.subject != _selectedSubject) return false;
+                    if (_searchQuery.isEmpty) return true;
+                    final haystack = '${entry.title}\n${entry.subject}\n${entry.description}'.toLowerCase();
+                    return haystack.contains(_searchQuery.toLowerCase());
+                  }).toList();
+
+                  if (filtered.isEmpty) {
+                    return Center(
+                      child: Text(
+                        entries.isEmpty ? 'No dictionary entries found' : 'No entries match your filter',
+                        style: TextStyle(color: cs.onSurfaceVariant),
+                      ),
+                    );
+                  }
+
+                  return ListView.separated(
+                    padding: const EdgeInsets.fromLTRB(16, 8, 16, 20),
+                    itemCount: filtered.length,
+                    separatorBuilder: (_, __) => const SizedBox(height: 6),
+                    itemBuilder: (context, index) {
+                      final entry = filtered[index];
+                      return ListTile(
+                        onTap: () => widget.onSelect(entry),
+                        shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(16)),
+                        tileColor: cs.surfaceContainerLow,
+                        title: Text(entry.title, style: const TextStyle(fontWeight: FontWeight.w700)),
+                        subtitle: Text(entry.previewSummary, maxLines: 2, overflow: TextOverflow.ellipsis),
+                        trailing: const Icon(Icons.send_rounded),
+                      );
+                    },
+                  );
+                },
+              ),
+            ),
+          ],
+        ),
+      ),
     );
   }
 }

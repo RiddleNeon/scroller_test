@@ -1,10 +1,14 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_colorpicker/flutter_colorpicker.dart';
 import 'package:flutter_markdown_plus/flutter_markdown_plus.dart';
+import 'package:go_router/go_router.dart';
+import 'package:lumox/logic/dictionary/dictionary_entry.dart';
 import 'package:lumox/logic/quests/quest.dart';
 import 'package:lumox/logic/quests/quest_change_manager.dart';
 import 'package:lumox/logic/quests/quest_system.dart';
+import 'package:lumox/logic/repositories/dictionary_repository.dart';
 import 'package:lumox/util/extensions/num_distance.dart';
+import 'package:lumox/ui/widgets/dictionary/dictionary_linkifier.dart';
 
 import '../../../theme/theme_ui_values.dart';
 
@@ -583,9 +587,30 @@ class _DescriptionSection extends StatelessWidget {
               decoration: _editInputDecoration(context, colorScheme, hint: 'Quest description…'),
             )
           else
-            MarkdownBody(
-              data: description,
-              styleSheet: MarkdownStyleSheet.fromTheme(Theme.of(context)).copyWith(code: const TextStyle(fontSize: 16, fontWeight: FontWeight.w500)),
+            FutureBuilder<List<DictionaryEntry>>(
+              future: dictionaryRepository.fetchEntries(),
+              builder: (context, snapshot) {
+                final entries = snapshot.data ?? const <DictionaryEntry>[];
+                if (entries.isEmpty) {
+                  return MarkdownBody(
+                    data: description,
+                    styleSheet: MarkdownStyleSheet.fromTheme(Theme.of(context)).copyWith(code: const TextStyle(fontSize: 16, fontWeight: FontWeight.w500)),
+                  );
+                }
+
+                return DictionaryMarkdownBody(
+                  data: description,
+                  entries: entries,
+                  linkColor: colorScheme.primary,
+                  onTapEntry: (entry) => showDictionaryEntryPreviewSheet(
+                    context,
+                    entry: entry,
+                    onOpenQuest: () => context.go(entry.questRoute),
+                    onOpenDictionary: () => context.go(entry.route),
+                  ),
+                  styleSheet: MarkdownStyleSheet.fromTheme(Theme.of(context)).copyWith(code: const TextStyle(fontSize: 16, fontWeight: FontWeight.w500)),
+                );
+              },
             ),
           //Text(description, style: TextStyle(color: colorScheme.onSurface, fontSize: 15, height: 1.6)),
         ],

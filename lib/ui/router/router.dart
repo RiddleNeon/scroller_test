@@ -9,6 +9,7 @@ import 'package:lumox/ui/animations/slide_morph_transitions.dart';
 import 'package:lumox/ui/screens/auth_screen.dart';
 import 'package:lumox/ui/screens/chat/chat_managing_screen.dart';
 import 'package:lumox/ui/screens/home/home_screen.dart';
+import 'package:lumox/ui/screens/dictionary/dictionary_screen.dart';
 import 'package:lumox/ui/screens/profile_screen.dart';
 import 'package:lumox/ui/screens/quests/quest_screen.dart';
 import 'package:lumox/ui/screens/settings/settings_screen.dart';
@@ -189,9 +190,24 @@ void initRouter() {
             pageBuilder: (context, state) {
               final focusIds = _parseQuestIds(state.uri.queryParameters['focus']);
               final zoomOutIfNeeded = _parseZoomOut(state.uri.queryParameters['zoom']);
+              final subjectParam = state.uri.queryParameters['subject']?.trim();
+              final subject = subjectParam == null || subjectParam.isEmpty ? 'General' : subjectParam;
               return SlideMorphTransitions.page<void>(
                 key: state.pageKey,
-                child: TestQuestScreen(subject: 'General', focusQuestIds: focusIds, zoomOutIfNeeded: zoomOutIfNeeded),
+                child: TestQuestScreen(subject: subject, focusQuestIds: focusIds, zoomOutIfNeeded: zoomOutIfNeeded),
+                beginOffset: const Offset(0.03, 0.0),
+                beginScale: 0.993,
+              );
+            },
+          ),
+          GoRoute(
+            path: '/dictionary',
+            pageBuilder: (context, state) {
+              final subject = state.uri.queryParameters['subject']?.trim();
+              final entryId = int.tryParse(state.uri.queryParameters['id'] ?? '');
+              return SlideMorphTransitions.page<void>(
+                key: state.pageKey,
+                child: DictionaryScreen(initialSubject: subject == null || subject.isEmpty ? null : subject, initialEntryId: entryId),
                 beginOffset: const Offset(0.03, 0.0),
                 beginScale: 0.993,
               );
@@ -222,18 +238,6 @@ void initRouter() {
             },
           )
         ],
-      ),
-      GoRoute(
-        path: '/u/:userId',
-        pageBuilder: (context, state) => SlideMorphTransitions.page<void>(
-          key: state.pageKey,
-          child: _DeepLinkProfileScreen(
-            userId: state.pathParameters['userId'] ?? '',
-            initialTabIndex: _profileTabIndexFromQuery(state.uri.queryParameters['tab']),
-          ),
-          beginOffset: const Offset(0.03, 0.0),
-          beginScale: 0.993,
-        ),
       ),
       GoRoute(
         path: '/login',
@@ -287,6 +291,7 @@ List<({IconData icon, String label, String id})> _navigationBarItems = [
   (icon: Icons.person_outline, label: 'Profile', id: '/profile'),
   (icon: Icons.chat, label: 'Chat', id: '/chat'),
   (icon: CupertinoIcons.map, label: 'Quests', id: '/quests'),
+  (icon: Icons.menu_book_outlined, label: 'Dictionary', id: '/dictionary'),
 ];
 
 class RouteObserver extends NavigatorObserver {
@@ -440,6 +445,7 @@ String _canonicalNavPath(String path) {
   if (path.startsWith('/chat')) return '/chat';
   if (path.startsWith('/profile')) return '/profile';
   if (path.startsWith('/quests')) return '/quests';
+  if (path.startsWith('/dictionary')) return '/dictionary';
   return path;
 }
 
@@ -520,4 +526,8 @@ class _DeepLinkThemeScreen extends StatelessWidget {
     );
   }
 }
+
+
+
+
 

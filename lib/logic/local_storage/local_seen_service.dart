@@ -382,6 +382,8 @@ class LocalSeenService {
 
     final latestConversation = DateTime.parse(conversations.first['updated_at'] as String).toLocal();
     _settings[_lastSyncConversationKey] = latestConversation;
+    
+    print('Synced conversations, updated local cache with ${toWrite.length} conversations. Latest conversation update at $latestConversation');
   }
 
   // ---------------------------------------------------------------------------

@@ -1,5 +1,6 @@
 import 'package:flutter/material.dart';
 import 'package:lumox/base_logic.dart';
+import 'package:lumox/logic/repositories/dictionary_repository.dart';
 import 'package:lumox/logic/repositories/video_repository.dart';
 import 'package:lumox/logic/themes/theme_model.dart';
 import 'package:lumox/logic/users/user_model.dart';
@@ -15,7 +16,7 @@ class ChatRouteReference {
   String get route => uri.toString();
 }
 
-enum ChatRoutePreviewType { feed, quests, chat, search, themes }
+enum ChatRoutePreviewType { feed, quests, chat, search, themes, dictionary }
 
 class ChatRoutePreview {
   final ChatRoutePreviewType type;
@@ -101,6 +102,9 @@ class ChatRoutePreviewResolver {
      if (path == '/search') {
        return _resolveSearch(routeRef);
      }
+      if (path == '/dictionary') {
+        return _resolveDictionary(routeRef);
+      }
      if (path.startsWith('/themes')) {
        return _resolveThemes(routeRef);
      }
@@ -108,7 +112,7 @@ class ChatRoutePreviewResolver {
    }
 
    static bool _isSupportedPath(String path) {
-     return path.startsWith('/feed/') || path == '/quests' || path.startsWith('/chat') || path == '/search' || path.startsWith('/themes');
+      return path.startsWith('/feed/') || path == '/quests' || path.startsWith('/chat') || path == '/search' || path == '/dictionary' || path.startsWith('/themes');
    }
 
   static Future<ChatRoutePreview?> _resolveVideo(ChatRouteReference routeRef) async {
@@ -231,6 +235,47 @@ class ChatRoutePreviewResolver {
       type: ChatRoutePreviewType.search,
       title: 'Search "$query"',
       subtitle: subtitle,
+      route: routeRef.route,
+    );
+  }
+
+  static Future<ChatRoutePreview?> _resolveDictionary(ChatRouteReference routeRef) async {
+    final subject = routeRef.uri.queryParameters['subject']?.trim();
+    final id = int.tryParse(routeRef.uri.queryParameters['id'] ?? '');
+
+    if (id == null) {
+      final entries = await dictionaryRepository.fetchEntries(subject: subject);
+      if (entries.isEmpty) {
+        return ChatRoutePreview(
+          type: ChatRoutePreviewType.dictionary,
+          title: 'Dictionary',
+          subtitle: subject == null || subject.isEmpty ? 'Open the dictionary' : 'Open $subject dictionary',
+          route: routeRef.route,
+        );
+      }
+
+      return ChatRoutePreview(
+        type: ChatRoutePreviewType.dictionary,
+        title: subject == null || subject.isEmpty ? 'Dictionary' : '$subject dictionary',
+        subtitle: '${entries.length} entries available',
+        route: routeRef.route,
+      );
+    }
+
+    final entry = await dictionaryRepository.fetchEntryById(questId: id, subject: subject);
+    if (entry == null) {
+      return ChatRoutePreview(
+        type: ChatRoutePreviewType.dictionary,
+        title: 'Dictionary entry',
+        subtitle: 'Open dictionary',
+        route: routeRef.route,
+      );
+    }
+
+    return ChatRoutePreview(
+      type: ChatRoutePreviewType.dictionary,
+      title: entry.title.isEmpty ? 'Untitled entry' : entry.title,
+      subtitle: '${entry.subject} • ${entry.previewSummary}',
       route: routeRef.route,
     );
   }
