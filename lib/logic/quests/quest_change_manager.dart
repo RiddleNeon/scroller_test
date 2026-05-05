@@ -14,6 +14,7 @@ import 'package:lumox/logic/repositories/quest_repository.dart';
 class QuestChangeManager with ChangeNotifier {
   final QuestSystem questSystem;
   final QuestRepository repo;
+  final String subject;
 
   /// Changes that have been applied locally and will be pushed to the server.
   final List<QuestChange> _pendingChanges = [];
@@ -40,7 +41,7 @@ class QuestChangeManager with ChangeNotifier {
   /// Using an Expando avoids touching the QuestChange class hierarchy.
   final Expando<DateTime> _recordedAt = Expando();
 
-  QuestChangeManager({required this.questSystem, required this.repo});
+  QuestChangeManager({required this.questSystem, required this.repo, required this.subject});
 
   /// Returns the timestamp at which [change] was originally recorded,
   /// or `null` for changes created before timestamp tracking was added.

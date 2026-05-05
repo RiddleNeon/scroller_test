@@ -557,7 +557,7 @@ class PanWidgetState extends State<PanWidget> {
       id: DateTime.now().millisecondsSinceEpoch,
       name: 'No name provided',
       description: 'No description provided',
-      subject: 'General',
+      subject: questSystem.subject,
       posX: snappedPos.dx,
       posY: snappedPos.dy,
     );

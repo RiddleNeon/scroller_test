@@ -74,33 +74,7 @@ class QuestSystem with ChangeNotifier {
     notifyListeners();
   }
 
-  // ── Loading ────────────────────────────────────────────────────────────────
-
-  /// Loads quests from the bundled [assets/quests.json] file (offline / dev).
-  Future<void> loadFromAssets() async {
-    final rawJson = jsonDecode(await rootBundle.loadString('assets/quests.json')) as List;
-    final json = rawJson.cast<Map<String, dynamic>>();
-
-    for (final data in json) {
-      _quests[data['id'] as int] = Quest.fromJson(data);
-    }
-
-    // Wire up prerequisites in a second pass so all quests are already in the
-    // map when we start resolving IDs.
-    for (final data in json) {
-      final prereqIds = (data['prerequisites'] as List?)?.cast<int>();
-      if (prereqIds == null || prereqIds.isEmpty) continue;
-
-      assert(prereqIds.every(_quests.containsKey), 'All prerequisite IDs must reference existing quests.');
-
-      for (final prereqId in prereqIds) {
-        final toId = data['id'] as int;
-        _prerequisites[_key(prereqId, toId)] = QuestConnection(fromQuestId: prereqId, toQuestId: toId);
-      }
-    }
-
-    notifyListeners();
-  }
+  String get subject => changeManager.subject;
 
   /// Fetches quests for [subject] from the server and merges them into the
   /// local map. Existing quests with the same ID are replaced.
@@ -119,7 +93,7 @@ class QuestSystem with ChangeNotifier {
     for (final conn in fetchedConnections) {
       _prerequisites[_key(conn.fromQuestId, conn.toQuestId)] = conn;
     }
-    changeManager = QuestChangeManager(questSystem: this, repo: questRepo);
+    changeManager = QuestChangeManager(questSystem: this, repo: questRepo, subject: subject);
 
     notifyListeners();
   }

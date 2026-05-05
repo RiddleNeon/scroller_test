@@ -74,6 +74,22 @@ class QuestRepository {
     return (questMap.values.toList(), connectionList);
   }
 
+  Future<List<String>> fetchQuestSubjects() async {
+    final rows = await supabaseClient.from('quests_latest').select('subject').eq('is_deleted', false);
+    final subjects = <String>{};
+
+    for (final row in rows as List<dynamic>) {
+      final subject = (row as Map<String, dynamic>)['subject'] as String?;
+      if (subject == null) continue;
+      final trimmed = subject.trim();
+      if (trimmed.isNotEmpty) subjects.add(trimmed);
+    }
+
+    final list = subjects.toList();
+    list.sort((a, b) => a.toLowerCase().compareTo(b.toLowerCase()));
+    return list;
+  }
+
   // ── Write ──────────────────────────────────────────────────────────────────
 
   /// Inserts a new quest row and its first version (full snapshot).

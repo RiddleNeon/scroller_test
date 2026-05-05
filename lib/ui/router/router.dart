@@ -193,8 +193,8 @@ void initRouter() {
               final subjectParam = state.uri.queryParameters['subject']?.trim();
               final subject = subjectParam == null || subjectParam.isEmpty ? 'General' : subjectParam;
               return SlideMorphTransitions.page<void>(
-                key: state.pageKey,
-                child: TestQuestScreen(subject: subject, focusQuestIds: focusIds, zoomOutIfNeeded: zoomOutIfNeeded),
+                key: ValueKey('quests:$subject'),
+                child: QuestScreen(subject: subject, focusQuestIds: focusIds, zoomOutIfNeeded: zoomOutIfNeeded),
                 beginOffset: const Offset(0.03, 0.0),
                 beginScale: 0.993,
               );
@@ -490,6 +490,8 @@ class _DeepLinkThemeScreen extends StatelessWidget {
     );
   }
 }
+
+
 
 
 
