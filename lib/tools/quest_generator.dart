@@ -13,6 +13,7 @@ Future<void> importWithChangeManager({
   required QuestSystem system,
   required String path,
 }) async {
+  final importId = (DateTime.now().millisecondsSinceEpoch % 1e10);
   final file = await rootBundle.loadString(path);
   final jsonData = jsonDecode(file);
 
@@ -38,6 +39,8 @@ Future<void> importWithChangeManager({
 
     for (int i = 0; i < versions.length; i++) {
       final json = versions[i];
+      
+      json['id'] = questId + importId; // Offset ID to avoid conflicts
 
       if (current == null && i == 0) {
         final quest = Quest.fromJson(json);
@@ -67,6 +70,9 @@ Future<void> importWithChangeManager({
   }
   
   for (final c in connections) {
+    c['fromQuestId'] = c['fromQuestId'] + importId;
+    c['toQuestId'] = c['toQuestId'] + importId;
+    
     final conn = QuestConnection.fromJson(c);
 
     final exists = system.isConnected(conn.fromQuestId, conn.toQuestId);
@@ -75,6 +81,19 @@ Future<void> importWithChangeManager({
       cm.record(AddConnectionChange(
         fromId: conn.fromQuestId,
         toId: conn.toQuestId,
+      ));
+      cm.record(UpdateConnectionChange(
+        fromId: conn.fromQuestId,
+        toId: conn.toQuestId,
+        patch: QuestConnectionPatch(
+          type: conn.type,
+          xpRequirement: conn.xpRequirement,
+        ),
+        reversePatch: const QuestConnectionPatch(
+          type: null,
+          xpRequirement: null,
+        ),
+        updateMessage: "imported connection",
       ));
     } else {
       final current = system.getConnection(conn.fromQuestId, conn.toQuestId);
