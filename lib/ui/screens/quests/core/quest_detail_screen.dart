@@ -691,9 +691,9 @@ class _AliasesSectionState extends State<_AliasesSection> {
       _aliasController.clear();
       await _loadAliases();
     } finally {
-      if (!mounted) return;
-      setState(() => _saving = false);
+      if (mounted) setState(() => _saving = false);
     }
+    
   }
 
   Future<void> _removeAlias(String alias) async {
@@ -702,8 +702,7 @@ class _AliasesSectionState extends State<_AliasesSection> {
       await questTitleAliasRepository.removeAlias(questId: widget.questId, alias: alias);
       await _loadAliases();
     } finally {
-      if (!mounted) return;
-      setState(() => _saving = false);
+      if (mounted) setState(() => _saving = false);
     }
   }
 

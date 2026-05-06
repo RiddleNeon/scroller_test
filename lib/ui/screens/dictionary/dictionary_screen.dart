@@ -24,7 +24,6 @@ class DictionaryScreen extends StatefulWidget {
 }
 
 class _DictionaryScreenState extends State<DictionaryScreen> {
-  late Future<List<DictionaryEntry>> _entriesFuture;
   final TextEditingController _searchController = TextEditingController();
   final ScrollController _scrollController = ScrollController();
 
@@ -91,8 +90,7 @@ class _DictionaryScreenState extends State<DictionaryScreen> {
       if (!mounted || requestId != _searchRequestId) return;
       setState(() => _entries = entries);
     } finally {
-      if (!mounted || requestId != _searchRequestId) return;
-      setState(() => _isLoading = false);
+      if (mounted && requestId == _searchRequestId) setState(() => _isLoading = false);
     }
   }
 

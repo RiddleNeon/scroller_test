@@ -287,8 +287,7 @@ class _SearchScreenState extends State<SearchScreen> with TickerProviderStateMix
       });
       _maybeAutoOpenDictionaryPreview(entries);
     } finally {
-      if (!mounted || requestId != _dictionaryRequestId) return;
-      setState(() => _dictionaryLoading = false);
+      if (mounted && requestId == _dictionaryRequestId) setState(() => _dictionaryLoading = false);
     }
   }
 

@@ -216,6 +216,7 @@ class _HomeScreenState extends State<HomeScreen> {
     if (_continueLearningVideo != null) {
       return 'Pick up with "${_continueLearningVideo!.title}"';
     }
+    print("_followedCreators: ${_followedCreators.length}, _currentCreatorIndex: $_currentCreatorIndex");
 
     if (_followedCreators.isNotEmpty) {
       final creator = _followedCreators[_currentCreatorIndex];
@@ -230,7 +231,7 @@ class _HomeScreenState extends State<HomeScreen> {
 
   double _continueLearningProgress() {
     if (_continueLearningVideo != null) {
-      return 0.8;
+      return -1.0;
     }
 
     if (_followedCreators.isNotEmpty) {
@@ -639,7 +640,7 @@ class _HomeScreenState extends State<HomeScreen> {
                       decoration: BoxDecoration(color: onColor.withValues(alpha: 0.1), shape: BoxShape.circle),
                       child: Icon(icon, color: onColor),
                     ),
-                    Text(
+                    if(progress >= 0) Text(
                       '${(progress * 100).toInt()}%',
                       style: TextStyle(color: onColor, fontWeight: FontWeight.bold),
                     ),
@@ -656,7 +657,7 @@ class _HomeScreenState extends State<HomeScreen> {
                     const SizedBox(height: 12),
                     ClipRRect(
                       borderRadius: BorderRadius.circular(context.uiRadiusSm),
-                      child: LinearProgressIndicator(value: progress, minHeight: 6, color: onColor, backgroundColor: onColor.withValues(alpha: 0.2)),
+                      child: progress >= 0 ? LinearProgressIndicator(value: progress, minHeight: 6, color: onColor, backgroundColor: onColor.withValues(alpha: 0.2)) : const SizedBox(height: 6)
                     ),
                   ],
                 ),
@@ -667,6 +668,23 @@ class _HomeScreenState extends State<HomeScreen> {
       ),
     );
   }
+  
+  // a streak card that displays your current learning streak and encourages you to keep it going. It should show the number of consecutive days you've watched videos. it shows these days as flames on pedestals, with the ones you have completed lit up and the current day flashing if you haven't completed it yet. tapping the card takes you to your learning path to continue your streak.
+  Widget _buildStreakCard(ColorScheme cs) {
+    // This is a placeholder for the streak card. The actual implementation would depend on how you track and store the user's learning streak.
+    return Container(
+      width: MediaQuery.of(context).size.width * 0.75,
+      decoration: BoxDecoration(color: cs.secondaryContainer, borderRadius: BorderRadius.circular(context.uiRadiusLg)),
+      child: Center(
+        child: Text(
+          '🔥 Your current learning streak is 5 days! Keep it going! 🔥',
+          style: TextStyle(color: cs.onSecondaryContainer, fontWeight: FontWeight.w800, fontSize: 16),
+          textAlign: TextAlign.center,
+        ),
+      ),
+    );
+  }
+  
 
   Widget _buildDiscoverCarouselGrid(ColorScheme cs) {
     if (_loading) {

@@ -13,7 +13,6 @@ import 'package:lumox/ui/screens/profile_screen.dart';
 import 'package:lumox/ui/screens/quests/quest_screen.dart';
 import 'package:lumox/ui/screens/settings/settings_screen.dart';
 import 'package:lumox/ui/screens/search_screen/search_screen.dart';
-import 'package:lumox/ui/theme/theme_creation_screen.dart';
 import 'package:lumox/ui/video/short_video_player.dart';
 import 'package:lumox/ui/widgets/bottom_navigation_bar.dart';
 
