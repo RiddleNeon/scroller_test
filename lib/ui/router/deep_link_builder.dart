@@ -58,6 +58,7 @@ class DeepLinkBuilder {
 enum DeepLinkSearchScope {
   videos('videos'),
   profiles('profiles'),
+  dictionary('dictionary'),
   all('all');
 
   const DeepLinkSearchScope(this.value);
@@ -88,4 +89,3 @@ enum DeepLinkThemeTab {
   const DeepLinkThemeTab(this.value);
   final String value;
 }
-

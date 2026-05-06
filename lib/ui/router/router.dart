@@ -9,7 +9,6 @@ import 'package:lumox/ui/animations/slide_morph_transitions.dart';
 import 'package:lumox/ui/screens/auth_screen.dart';
 import 'package:lumox/ui/screens/chat/chat_managing_screen.dart';
 import 'package:lumox/ui/screens/home/home_screen.dart';
-import 'package:lumox/ui/screens/dictionary/dictionary_screen.dart';
 import 'package:lumox/ui/screens/profile_screen.dart';
 import 'package:lumox/ui/screens/quests/quest_screen.dart';
 import 'package:lumox/ui/screens/settings/settings_screen.dart';
@@ -116,9 +115,18 @@ void initRouter() {
             pageBuilder: (context, state) {
               final scope = _searchScopeFromQuery(state.uri.queryParameters['scope']);
               final mode = _searchModeFromQuery(state.uri.queryParameters['mode']);
+              final subject = state.uri.queryParameters['subject']?.trim();
+              final entryId = int.tryParse(state.uri.queryParameters['id'] ?? '');
               return SlideMorphTransitions.page<void>(
                 key: state.pageKey,
-                child: SearchScreen(initialQuery: state.uri.queryParameters['q'], initialScope: scope, initialMode: mode, showYoutube: useYoutubeVideosOnlyNotifier.value,),
+                child: SearchScreen(
+                  initialQuery: state.uri.queryParameters['q'],
+                  initialScope: scope,
+                  initialMode: mode,
+                  showYoutube: useYoutubeVideosOnlyNotifier.value,
+                  initialDictionarySubject: subject == null || subject.isEmpty ? null : subject,
+                  initialDictionaryEntryId: entryId,
+                ),
                 beginOffset: const Offset(0.03, 0.0),
                 beginScale: 0.993,
               );
@@ -207,31 +215,13 @@ void initRouter() {
               final entryId = int.tryParse(state.uri.queryParameters['id'] ?? '');
               return SlideMorphTransitions.page<void>(
                 key: state.pageKey,
-                child: DictionaryScreen(initialSubject: subject == null || subject.isEmpty ? null : subject, initialEntryId: entryId),
-                beginOffset: const Offset(0.03, 0.0),
-                beginScale: 0.993,
-              );
-            },
-          ),
-          GoRoute(
-            path: '/themes',
-            pageBuilder: (context, state) {
-              final tabIndex = _themeTabIndexFromQuery(state.uri.queryParameters['tab']);
-              return SlideMorphTransitions.page<void>(
-                key: state.pageKey,
-                child: ThemeManagerScreen(initialTabIndex: tabIndex),
-                beginOffset: const Offset(0.03, 0.0),
-                beginScale: 0.993,
-              );
-            },
-          ),
-          GoRoute(
-            path: '/themes/:themeId',
-            pageBuilder: (context, state) {
-              final themeId = state.pathParameters['themeId'] ?? '';
-              return SlideMorphTransitions.page<void>(
-                key: state.pageKey,
-                child: _DeepLinkThemeScreen(themeId: themeId),
+                child: SearchScreen(
+                  initialScope: SearchScope.dictionary,
+                  initialMode: SearchMode.text,
+                  initialDictionarySubject: subject == null || subject.isEmpty ? null : subject,
+                  initialDictionaryEntryId: entryId,
+                  showYoutube: useYoutubeVideosOnlyNotifier.value,
+                ),
                 beginOffset: const Offset(0.03, 0.0),
                 beginScale: 0.993,
               );
@@ -291,7 +281,6 @@ List<({IconData icon, String label, String id})> _navigationBarItems = [
   (icon: Icons.person_outline, label: 'Profile', id: '/profile'),
   (icon: Icons.chat, label: 'Chat', id: '/chat'),
   (icon: CupertinoIcons.map, label: 'Quests', id: '/quests'),
-  (icon: Icons.menu_book_outlined, label: 'Dictionary', id: '/dictionary'),
 ];
 
 class RouteObserver extends NavigatorObserver {
@@ -409,7 +398,7 @@ String _canonicalNavPath(String path) {
   if (path.startsWith('/chat')) return '/chat';
   if (path.startsWith('/profile')) return '/profile';
   if (path.startsWith('/quests')) return '/quests';
-  if (path.startsWith('/dictionary')) return '/dictionary';
+  if (path.startsWith('/dictionary')) return '/search';
   return path;
 }
 
@@ -419,6 +408,8 @@ SearchScope _searchScopeFromQuery(String? value) {
       return SearchScope.videos;
     case 'profiles':
       return SearchScope.profiles;
+    case 'dictionary':
+      return SearchScope.dictionary;
     default:
       return SearchScope.all;
   }
@@ -444,11 +435,6 @@ int _profileTabIndexFromQuery(String? value) {
   }
 }
 
-int _themeTabIndexFromQuery(String? value) {
-  if (value == 'community') return 1;
-  return 0;
-}
-
 List<int> _parseQuestIds(String? raw) {
   if (raw == null || raw.trim().isEmpty) return const [];
   return raw.split(',').map((id) => int.tryParse(id.trim())).whereType<int>().toList();
@@ -472,28 +458,3 @@ List<String> _parseVideoIds(String? raw) {
    }
    return ids;
  }
-
-class _DeepLinkThemeScreen extends StatelessWidget {
-  const _DeepLinkThemeScreen({required this.themeId});
-
-  final String themeId;
-
-  @override
-  Widget build(BuildContext context) {
-    if (themeId.isEmpty) {
-      return const ThemeManagerScreen(initialTabIndex: 1); // 1 = Community tab
-    }
-
-    return ThemeManagerScreen(
-      initialTabIndex: 1, // Start on community tab to look for the theme
-      initialThemeId: themeId,
-    );
-  }
-}
-
-
-
-
-
-
-
