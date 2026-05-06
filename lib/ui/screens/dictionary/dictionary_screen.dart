@@ -1,3 +1,5 @@
+import 'dart:async';
+
 import 'package:flutter/material.dart';
 import 'package:go_router/go_router.dart';
 import 'package:flutter_markdown_plus/flutter_markdown_plus.dart';
@@ -22,13 +24,20 @@ class DictionaryScreen extends StatefulWidget {
 }
 
 class _DictionaryScreenState extends State<DictionaryScreen> {
-  late final Future<List<DictionaryEntry>> _entriesFuture;
+  late Future<List<DictionaryEntry>> _entriesFuture;
   final TextEditingController _searchController = TextEditingController();
   final ScrollController _scrollController = ScrollController();
+
+  Timer? _searchDebounce;
+  List<String> _subjects = const [];
 
   String? _selectedSubject;
   String _searchQuery = '';
   bool _autoOpenedPreview = false;
+
+  List<DictionaryEntry> _entries = const [];
+  bool _isLoading = false;
+  int _searchRequestId = 0;
 
   List<ShareContact> _shareContacts = const [];
   final Map<String, Chat> _chatByPartnerId = {};
@@ -37,9 +46,10 @@ class _DictionaryScreenState extends State<DictionaryScreen> {
   @override
   void initState() {
 	super.initState();
-	_entriesFuture = dictionaryRepository.fetchEntries();
 	_selectedSubject = widget.initialSubject;
-	_searchController.addListener(() => setState(() => _searchQuery = _searchController.text.trim()));
+	_searchController.addListener(_onSearchChanged);
+	_loadSubjects();
+	_loadEntries();
 	WidgetsBinding.instance.addPostFrameCallback((_) {
 	  if (!mounted) return;
 	  _prepareShareContacts();
@@ -48,9 +58,55 @@ class _DictionaryScreenState extends State<DictionaryScreen> {
 
   @override
   void dispose() {
+	_searchDebounce?.cancel();
 	_searchController.dispose();
 	_scrollController.dispose();
 	super.dispose();
+  }
+
+  Future<void> _loadSubjects() async {
+    final subjects = await dictionaryRepository.fetchSubjects();
+    if (!mounted) return;
+    setState(() {
+      _subjects = subjects;
+      if (_selectedSubject != null && !_subjects.contains(_selectedSubject)) {
+        _selectedSubject = null;
+        _loadEntries();
+      }
+    });
+  }
+
+  Future<List<DictionaryEntry>> _fetchEntriesForState() {
+    if (_searchQuery.isEmpty) {
+      return dictionaryRepository.fetchEntries(subject: _selectedSubject);
+    }
+    return dictionaryRepository.searchEntries(subject: _selectedSubject, query: _searchQuery);
+  }
+
+  Future<void> _loadEntries() async {
+    final requestId = ++_searchRequestId;
+    setState(() => _isLoading = true);
+    try {
+      final entries = await _fetchEntriesForState();
+      if (!mounted || requestId != _searchRequestId) return;
+      setState(() => _entries = entries);
+    } finally {
+      if (!mounted || requestId != _searchRequestId) return;
+      setState(() => _isLoading = false);
+    }
+  }
+
+  void _refreshEntries() => _loadEntries();
+
+  void _onSearchChanged() {
+    _searchDebounce?.cancel();
+    _searchDebounce = Timer(const Duration(milliseconds: 250), () {
+      if (!mounted) return;
+      final query = _searchController.text.trim();
+      if (query == _searchQuery) return;
+      setState(() => _searchQuery = query);
+      _loadEntries();
+    });
   }
 
   Future<void> _prepareShareContacts() async {
@@ -176,176 +232,169 @@ class _DictionaryScreenState extends State<DictionaryScreen> {
   @override
   Widget build(BuildContext context) {
 	final cs = Theme.of(context).colorScheme;
+	final entries = _entries;
+	final subjects = _subjects;
+	final filtered = entries;
+
+	if (!_autoOpenedPreview && widget.initialEntryId != null && entries.isNotEmpty) {
+	  DictionaryEntry? target;
+	  for (final entry in filtered) {
+		if (entry.questId == widget.initialEntryId) {
+		  target = entry;
+		  break;
+		}
+	  }
+	  if (target != null) {
+		_autoOpenedPreview = true;
+		WidgetsBinding.instance.addPostFrameCallback((_) {
+		  if (!mounted) return;
+		  _openEntryDetails(context, target!, entries);
+		});
+	  }
+	}
 
 	return Scaffold(
 	  appBar: AppBar(title: const Text('Dictionary'), centerTitle: true),
-	  body: FutureBuilder<List<DictionaryEntry>>(
-		future: _entriesFuture,
-		builder: (context, snapshot) {
-		  if (snapshot.connectionState != ConnectionState.done) {
-			return const Center(child: CircularProgressIndicator());
-		  }
-
-		  final entries = snapshot.data ?? const <DictionaryEntry>[];
-		  final subjects = <String>{for (final entry in entries) if (entry.subject.trim().isNotEmpty) entry.subject}.toList()
-			..sort((a, b) => a.toLowerCase().compareTo(b.toLowerCase()));
-
-		  if (_selectedSubject != null && !subjects.contains(_selectedSubject)) {
-			_selectedSubject = null;
-		  }
-
-		  final filtered = entries.where((entry) {
-			if (_selectedSubject != null && entry.subject != _selectedSubject) return false;
-			if (_searchQuery.isEmpty) return true;
-			final haystack = '${entry.title}\n${entry.subject}\n${entry.description}'.toLowerCase();
-			return haystack.contains(_searchQuery.toLowerCase());
-		  }).toList();
-
-		  if (!_autoOpenedPreview && widget.initialEntryId != null) {
-			DictionaryEntry? target;
-			for (final entry in filtered) {
-			  if (entry.questId == widget.initialEntryId) {
-				target = entry;
-				break;
-			  }
-			}
-			if (target != null) {
-			  _autoOpenedPreview = true;
-			  WidgetsBinding.instance.addPostFrameCallback((_) {
-				if (!mounted) return;
-				_openEntryDetails(context, target!, entries);
-			  });
-			}
-		  }
-
-		  return Column(
-			children: [
-			  Padding(
-				padding: const EdgeInsets.fromLTRB(16, 16, 16, 8),
-				child: Column(
+	  body: Column(
+		children: [
+		  Padding(
+			padding: const EdgeInsets.fromLTRB(16, 16, 16, 8),
+			child: Column(
+			  children: [
+				TextField(
+				  controller: _searchController,
+				  decoration: InputDecoration(
+					hintText: 'Search dictionary…',
+					prefixIcon: const Icon(Icons.search_rounded),
+					filled: true,
+					fillColor: cs.surfaceContainerHighest.withValues(alpha: 0.55),
+					border: OutlineInputBorder(borderRadius: BorderRadius.circular(16), borderSide: BorderSide(color: cs.outlineVariant)),
+					enabledBorder: OutlineInputBorder(borderRadius: BorderRadius.circular(16), borderSide: BorderSide(color: cs.outlineVariant.withValues(alpha: 0.5))),
+					focusedBorder: OutlineInputBorder(borderRadius: BorderRadius.circular(16), borderSide: BorderSide(color: cs.primary, width: 1.4)),
+					isDense: true,
+				  ),
+				),
+				if (_isLoading) ...[
+				  const SizedBox(height: 8),
+				  LinearProgressIndicator(color: cs.primary, minHeight: 2),
+				],
+				const SizedBox(height: 10),
+				Row(
 				  children: [
-					TextField(
-					  controller: _searchController,
-					  decoration: InputDecoration(
-						hintText: 'Search dictionary…',
-						prefixIcon: const Icon(Icons.search_rounded),
-						filled: true,
-						fillColor: cs.surfaceContainerHighest.withValues(alpha: 0.55),
-						border: OutlineInputBorder(borderRadius: BorderRadius.circular(16), borderSide: BorderSide(color: cs.outlineVariant)),
-						enabledBorder: OutlineInputBorder(borderRadius: BorderRadius.circular(16), borderSide: BorderSide(color: cs.outlineVariant.withValues(alpha: 0.5))),
-						focusedBorder: OutlineInputBorder(borderRadius: BorderRadius.circular(16), borderSide: BorderSide(color: cs.primary, width: 1.4)),
-						isDense: true,
+					Expanded(
+					  child: DropdownButtonFormField<String?>(
+						initialValue: _selectedSubject,
+						decoration: InputDecoration(
+						  labelText: 'Subject',
+						  filled: true,
+						  fillColor: cs.surfaceContainerHighest.withValues(alpha: 0.45),
+						  border: OutlineInputBorder(borderRadius: BorderRadius.circular(16), borderSide: BorderSide(color: cs.outlineVariant)),
+						  enabledBorder: OutlineInputBorder(borderRadius: BorderRadius.circular(16), borderSide: BorderSide(color: cs.outlineVariant.withValues(alpha: 0.5))),
+						  isDense: true,
+						),
+						items: [
+						  const DropdownMenuItem<String?>(value: null, child: Text('All subjects')),
+						  ...subjects.map((subject) => DropdownMenuItem<String?>(value: subject, child: Text(subject))),
+						],
+						onChanged: (value) {
+						  setState(() => _selectedSubject = value);
+						  _refreshEntries();
+						},
 					  ),
 					),
-					const SizedBox(height: 10),
-					Row(
-					  children: [
-						Expanded(
-						  child: DropdownButtonFormField<String?>(
-							initialValue: _selectedSubject,
-							decoration: InputDecoration(
-							  labelText: 'Subject',
-							  filled: true,
-							  fillColor: cs.surfaceContainerHighest.withValues(alpha: 0.45),
-							  border: OutlineInputBorder(borderRadius: BorderRadius.circular(16), borderSide: BorderSide(color: cs.outlineVariant)),
-							  enabledBorder: OutlineInputBorder(borderRadius: BorderRadius.circular(16), borderSide: BorderSide(color: cs.outlineVariant.withValues(alpha: 0.5))),
-							  isDense: true,
-							),
-							items: [
-							  const DropdownMenuItem<String?>(value: null, child: Text('All subjects')),
-							  ...subjects.map((subject) => DropdownMenuItem<String?>(value: subject, child: Text(subject))),
-							],
-							onChanged: (value) => setState(() => _selectedSubject = value),
-						  ),
-						),
-						const SizedBox(width: 10),
-						Text('${filtered.length}/${entries.length}', style: TextStyle(color: cs.onSurfaceVariant, fontWeight: FontWeight.w600)),
-					  ],
+					const SizedBox(width: 10),
+					Text(
+					  _searchQuery.isEmpty && _selectedSubject == null
+						  ? '${entries.length} entries'
+						  : '${entries.length} results',
+					  style: TextStyle(color: cs.onSurfaceVariant, fontWeight: FontWeight.w600),
 					),
 				  ],
 				),
-			  ),
-			  Expanded(
-				child: filtered.isEmpty
-					? Center(
-						child: Text(
-						  entries.isEmpty ? 'No dictionary entries found' : 'No entries match your filter',
-						  style: TextStyle(color: cs.onSurfaceVariant),
+			  ],
+			),
+		  ),
+		  Expanded(
+			child: filtered.isEmpty
+				? Center(
+					child: Text(
+					  entries.isEmpty
+						  ? (_searchQuery.isEmpty && _selectedSubject == null ? 'No dictionary entries found' : 'No entries match your filter')
+						  : 'No dictionary entries found',
+					  style: TextStyle(color: cs.onSurfaceVariant),
+					),
+				  )
+				: ListView.separated(
+					controller: _scrollController,
+					padding: const EdgeInsets.fromLTRB(16, 8, 16, 20),
+					itemCount: filtered.length,
+					separatorBuilder: (_, _) => const SizedBox(height: 10),
+					itemBuilder: (context, index) {
+					  final entry = filtered[index];
+					  final difficultyColor = _difficultyColor(entry.difficulty, cs);
+					  return Card(
+						elevation: 0,
+						color: cs.surfaceContainerLow,
+						shape: RoundedRectangleBorder(
+						  borderRadius: BorderRadius.circular(20),
+						  side: BorderSide(color: cs.outlineVariant.withValues(alpha: 0.5)),
 						),
-					  )
-					: ListView.separated(
-						controller: _scrollController,
-						padding: const EdgeInsets.fromLTRB(16, 8, 16, 20),
-						itemCount: filtered.length,
-						separatorBuilder: (_, _) => const SizedBox(height: 10),
-						itemBuilder: (context, index) {
-						  final entry = filtered[index];
-						  final difficultyColor = _difficultyColor(entry.difficulty, cs);
-						  return Card(
-							elevation: 0,
-							color: cs.surfaceContainerLow,
-							shape: RoundedRectangleBorder(
-							  borderRadius: BorderRadius.circular(20),
-							  side: BorderSide(color: cs.outlineVariant.withValues(alpha: 0.5)),
-							),
-							child: InkWell(
-							  borderRadius: BorderRadius.circular(20),
-							  onTap: () => _openEntryDetails(context, entry, entries),
-							  child: Padding(
-								padding: const EdgeInsets.fromLTRB(16, 14, 16, 16),
-								child: Column(
+						child: InkWell(
+						  borderRadius: BorderRadius.circular(20),
+						  onTap: () => _openEntryDetails(context, entry, entries),
+						  child: Padding(
+							padding: const EdgeInsets.fromLTRB(16, 14, 16, 16),
+							child: Column(
+							  crossAxisAlignment: CrossAxisAlignment.start,
+							  children: [
+								Row(
 								  crossAxisAlignment: CrossAxisAlignment.start,
 								  children: [
-									Row(
-									  crossAxisAlignment: CrossAxisAlignment.start,
-									  children: [
-										Expanded(
-										  child: Text(entry.title, style: const TextStyle(fontWeight: FontWeight.w800, fontSize: 16)),
-										),
-										ShareButton(
-										  shareUrl: entry.route,
-										  contacts: _contactsForEntry(entry),
-										  emptyStateLabel: 'No chats yet',
-										  onShareToContact: (contact, _) => _shareToContact(contact, entry),
-										),
-									  ],
+									Expanded(
+									  child: Text(entry.title, style: const TextStyle(fontWeight: FontWeight.w800, fontSize: 16)),
 									),
-									const SizedBox(height: 6),
-									Wrap(
-									  spacing: 8,
-									  runSpacing: 8,
-									  crossAxisAlignment: WrapCrossAlignment.center,
-									  children: [
-										Chip(
-										  label: Text(entry.subject),
-										  visualDensity: VisualDensity.compact,
-										  materialTapTargetSize: MaterialTapTargetSize.shrinkWrap,
-										),
-										Container(
-										  padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 6),
-										  decoration: BoxDecoration(
-											color: difficultyColor.withValues(alpha: 0.16),
-											borderRadius: BorderRadius.circular(999),
-											border: Border.all(color: difficultyColor.withValues(alpha: 0.4)),
-										  ),
-										  child: Text(
-											'${_difficultyLabel(entry.difficulty)} · ${((entry.difficulty).clamp(0.0, 1.0) * 100).round()}%',
-											style: TextStyle(color: difficultyColor, fontSize: 12, fontWeight: FontWeight.w700),
-										  ),
-										),
-										Text('Quest #${entry.questId}', style: TextStyle(color: cs.onSurfaceVariant, fontSize: 12)),
-									  ],
+									ShareButton(
+									  shareUrl: entry.route,
+									  contacts: _contactsForEntry(entry),
+									  emptyStateLabel: 'No chats yet',
+									  onShareToContact: (contact, _) => _shareToContact(contact, entry),
 									),
 								  ],
 								),
-							  ),
-							));
-						},
-					  ),
-			  ),
-			],
-		  );
-		},
+								const SizedBox(height: 6),
+								Wrap(
+								  spacing: 8,
+								  runSpacing: 8,
+								  crossAxisAlignment: WrapCrossAlignment.center,
+								  children: [
+									Chip(
+									  label: Text(entry.subject),
+									  visualDensity: VisualDensity.compact,
+									  materialTapTargetSize: MaterialTapTargetSize.shrinkWrap,
+									),
+									Container(
+									  padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 6),
+									  decoration: BoxDecoration(
+										color: difficultyColor.withValues(alpha: 0.16),
+										borderRadius: BorderRadius.circular(999),
+										border: Border.all(color: difficultyColor.withValues(alpha: 0.4)),
+									  ),
+									  child: Text(
+										'${_difficultyLabel(entry.difficulty)} · ${((entry.difficulty).clamp(0.0, 1.0) * 100).round()}%',
+										style: TextStyle(color: difficultyColor, fontSize: 12, fontWeight: FontWeight.w700),
+									  ),
+									),
+									Text('Quest #${entry.questId}', style: TextStyle(color: cs.onSurfaceVariant, fontSize: 12)),
+								  ],
+								),
+							  ],
+							),
+						  ),
+						));
+					},
+				  ),
+		  ),
+		],
 	  ),
 	);
   }

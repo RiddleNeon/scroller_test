@@ -7,6 +7,7 @@ import 'package:lumox/logic/quests/quest.dart';
 import 'package:lumox/logic/quests/quest_change_manager.dart';
 import 'package:lumox/logic/quests/quest_system.dart';
 import 'package:lumox/logic/repositories/dictionary_repository.dart';
+import 'package:lumox/logic/repositories/quest_title_alias_repository.dart';
 import 'package:lumox/util/extensions/num_distance.dart';
 import 'package:lumox/ui/widgets/dictionary/dictionary_linkifier.dart';
 
@@ -215,6 +216,14 @@ class _QuestDetailScreenState extends State<QuestDetailScreen> {
                     editMode: _editMode,
                     controller: _descriptionCtrl,
                     description: _editedQuest.description,
+                  ),
+                ),
+                const SizedBox(height: 16),
+                _SectionCard(
+                  colorScheme: colorScheme,
+                  child: _AliasesSection(
+                    questId: _editedQuest.id,
+                    colorScheme: colorScheme,
                   ),
                 ),
                 const SizedBox(height: 16),
@@ -613,6 +622,140 @@ class _DescriptionSection extends StatelessWidget {
               },
             ),
           //Text(description, style: TextStyle(color: colorScheme.onSurface, fontSize: 15, height: 1.6)),
+        ],
+      ),
+    );
+  }
+}
+
+class _AliasesSection extends StatefulWidget {
+  final int questId;
+  final ColorScheme colorScheme;
+
+  const _AliasesSection({required this.questId, required this.colorScheme});
+
+  @override
+  State<_AliasesSection> createState() => _AliasesSectionState();
+}
+
+class _AliasesSectionState extends State<_AliasesSection> {
+  final TextEditingController _aliasController = TextEditingController();
+  bool _loading = true;
+  bool _saving = false;
+  List<String> _aliases = const [];
+  String? _errorMessage;
+
+  @override
+  void initState() {
+    super.initState();
+    _loadAliases();
+  }
+
+  @override
+  void dispose() {
+    _aliasController.dispose();
+    super.dispose();
+  }
+
+  Future<void> _loadAliases() async {
+    setState(() {
+      _loading = true;
+      _errorMessage = null;
+    });
+    try {
+      final aliases = await questTitleAliasRepository.fetchAliases(questId: widget.questId);
+      if (!mounted) return;
+      setState(() {
+        _aliases = aliases;
+        _loading = false;
+      });
+    } catch (_) {
+      if (!mounted) return;
+      setState(() {
+        _loading = false;
+        _errorMessage = 'Failed to load aliases.';
+      });
+    }
+  }
+
+  Future<void> _addAlias() async {
+    final alias = _aliasController.text.trim();
+    if (alias.isEmpty || _aliases.contains(alias)) {
+      _aliasController.clear();
+      return;
+    }
+
+    setState(() => _saving = true);
+    try {
+      await questTitleAliasRepository.addAlias(questId: widget.questId, alias: alias);
+      _aliasController.clear();
+      await _loadAliases();
+    } finally {
+      if (!mounted) return;
+      setState(() => _saving = false);
+    }
+  }
+
+  Future<void> _removeAlias(String alias) async {
+    setState(() => _saving = true);
+    try {
+      await questTitleAliasRepository.removeAlias(questId: widget.questId, alias: alias);
+      await _loadAliases();
+    } finally {
+      if (!mounted) return;
+      setState(() => _saving = false);
+    }
+  }
+
+  @override
+  Widget build(BuildContext context) {
+    final cs = widget.colorScheme;
+
+    return Padding(
+      padding: const EdgeInsets.all(20),
+      child: Column(
+        crossAxisAlignment: CrossAxisAlignment.start,
+        children: [
+          _SectionLabel(label: 'Aliases', colorScheme: cs),
+          const SizedBox(height: 10),
+          if (_loading)
+            const Center(child: CircularProgressIndicator())
+          else if (_aliases.isEmpty)
+            Text('No aliases yet', style: TextStyle(color: cs.onSurfaceVariant))
+          else
+            Wrap(
+              spacing: 8,
+              runSpacing: 8,
+              children: _aliases
+                  .map(
+                    (alias) => InputChip(
+                      label: Text(alias),
+                      onDeleted: _saving ? null : () => _removeAlias(alias),
+                    ),
+                  )
+                  .toList(),
+            ),
+          if (_errorMessage != null) ...[
+            const SizedBox(height: 8),
+            Text(_errorMessage!, style: TextStyle(color: cs.error, fontSize: 12)),
+          ],
+          const SizedBox(height: 12),
+          Row(
+            children: [
+              Expanded(
+                child: TextField(
+                  controller: _aliasController,
+                  decoration: _editInputDecoration(context, cs, hint: 'Add alias…'),
+                ),
+              ),
+              const SizedBox(width: 10),
+              FilledButton.icon(
+                onPressed: _saving ? null : _addAlias,
+                icon: const Icon(Icons.add_rounded),
+                label: const Text('Add'),
+              ),
+            ],
+          ),
         ],
       ),
     );

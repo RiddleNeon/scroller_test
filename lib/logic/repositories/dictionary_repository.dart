@@ -25,6 +25,16 @@ class DictionaryRepository {
     });
   }
 
+  Future<List<DictionaryEntry>> searchEntries({String? subject, String? query}) async {
+    final normalizedQuery = query?.trim();
+    if (normalizedQuery == null || normalizedQuery.isEmpty) {
+      return fetchEntries(subject: subject);
+    }
+
+    final rows = await _loadEntryRowsByQuery(subject: subject, query: normalizedQuery);
+    return _buildEntriesFromQuestRows(rows);
+  }
+
   Future<List<String>> fetchSubjects() async {
     final entries = await fetchEntries();
     final seen = <String>{};
@@ -58,14 +68,58 @@ class DictionaryRepository {
   }
 
   Future<List<DictionaryEntry>> _loadEntries({String? subject}) async {
-    final query = supabaseClient
+    final rows = await _loadQuestRows(subject: subject);
+    return _buildEntriesFromQuestRows(rows);
+  }
+
+  Future<List<dynamic>> _loadQuestRows({String? subject}) async {
+    final query = _buildQuestQuery(subject: subject);
+    return await query;
+  }
+
+  Future<List<dynamic>> _loadEntryRowsByQuery({String? subject, required String query}) async {
+    final textRows = await _buildQuestQuery(subject: subject).or(
+      'title.ilike.%$query%,description.ilike.%$query%,subject.ilike.%$query%',
+    );
+
+    final aliasRows = await supabaseClient
+        .from('quest_title_aliases')
+        .select('quest_id')
+        .ilike('alias', '%$query%');
+    final aliasQuestIds = (aliasRows as List<dynamic>)
+        .map<int>((row) => row['quest_id'] as int)
+        .toSet()
+        .toList();
+
+    final aliasQuestRows = aliasQuestIds.isEmpty
+        ? <dynamic>[]
+        : await _buildQuestQuery(subject: subject).inFilter('quest_id', aliasQuestIds);
+
+    final mergedRows = <int, Map<String, dynamic>>{};
+    for (final row in textRows as List<dynamic>) {
+      final map = Map<String, dynamic>.from(row as Map);
+      mergedRows[map['quest_id'] as int] = map;
+    }
+    for (final row in aliasQuestRows as List<dynamic>) {
+      final map = Map<String, dynamic>.from(row as Map);
+      mergedRows[map['quest_id'] as int] = map;
+    }
+
+    return mergedRows.values.toList();
+  }
+
+  dynamic _buildQuestQuery({String? subject}) {
+    final baseQuery = supabaseClient
         .from('quests_latest')
         .select('quest_id, title, description, subject, difficulty')
         .eq('is_deleted', false);
-    final rows = subject == null || subject.isEmpty ? await query : await query.eq('subject', subject);
+    if (subject == null || subject.isEmpty) return baseQuery;
+    return baseQuery.eq('subject', subject);
+  }
 
-    final baseEntries = (rows as List)
-        .map<Map<String, dynamic>>((row) => Map<String, dynamic>.from(row))
+  Future<List<DictionaryEntry>> _buildEntriesFromQuestRows(List<dynamic> rows) async {
+    final baseEntries = rows
+        .map<Map<String, dynamic>>((row) => Map<String, dynamic>.from(row as Map))
         .map(DictionaryEntry.fromQuestRow)
         .where((entry) => entry.title.isNotEmpty)
         .toList();
