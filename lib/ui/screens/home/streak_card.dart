@@ -26,10 +26,33 @@ class _StreakCardState extends State<StreakCard> {
   
   bool _isDoneExpanding = false;
 
+  final List<String> _messages = [
+    "Keep going, you're doing great!",
+    "Consistency beats motivation",
+    "Small steps every day!",
+    "You're building something amazing.",
+    "Every day counts, keep it up!",
+    "Your future self will thank you.",
+    "Streaks are the new black!",
+    "Don't break the chain!",
+    "One day at a time.",
+    "Your dedication is inspiring!",
+    "Keep the momentum going!",
+    "You're on fire, keep it up!",
+    "Streaks: the secret to success!",
+    "Your streak is your superpower!",
+    "Keep the streak alive, keep the dreams alive!",
+    "Your streak is a badge of honor, wear it proudly!",
+    "unleash the power of your streak, one day at a time!",
+  ];
+
+  late String _currentMessage;
+
   @override
   void initState() {
     super.initState();
     _scrollController = ScrollController();
+    _currentMessage = (_messages..shuffle()).first;
     WidgetsBinding.instance.addPostFrameCallback((_) => _setInitialScroll());
   }
 
@@ -119,33 +142,85 @@ class _StreakCardState extends State<StreakCard> {
           margin: const EdgeInsets.symmetric(horizontal: 16, vertical: 8),
           child: ClipRRect(
             borderRadius: BorderRadius.circular(13),
-            child: ScrollConfiguration(
-              behavior: const MaterialScrollBehavior().copyWith(scrollbars: _isDoneExpanding && expanded),
-              child: ListView.builder(
-                controller: _scrollController,
-                reverse: true,
-                padding: const EdgeInsets.symmetric(vertical: 20),
-                physics: expanded ? BouncingScrollPhysics() : NeverScrollableScrollPhysics(),
-                itemCount: totalItems,
-                itemBuilder: (context, index) {
-                  final day = firstShownDay + index + 1; 
-                  final isCompleted = day <= widget.completedDays;
-                  final isCurrent = day == widget.completedDays + 1;
-                  final isPrevCompleted = (day - 1) <= widget.completedDays && (day - 1) > 0;
-                      
-                  return StreakItem(
-                    index: index,
-                    day: day,
-                    isCompleted: isCompleted,
-                    isCurrent: isCurrent,
-                    isPrevCompleted: isPrevCompleted,
-                    itemHeight: _itemHeight,
-                  );
-                },
-              ),
+            child: Stack(
+              children: [
+                ScrollConfiguration(
+                  behavior: const MaterialScrollBehavior()
+                      .copyWith(scrollbars: _isDoneExpanding && expanded),
+                  child: ListView.builder(
+                    controller: _scrollController,
+                    reverse: true,
+                    padding: const EdgeInsets.symmetric(vertical: 20),
+                    physics: expanded
+                        ? const BouncingScrollPhysics()
+                        : const NeverScrollableScrollPhysics(),
+                    itemCount: totalItems,
+                    itemBuilder: (context, index) {
+                      final day = firstShownDay + index + 1;
+                      final isCompleted = day <= widget.completedDays;
+                      final isCurrent = day == widget.completedDays + 1;
+                      final isPrevCompleted =
+                          (day - 1) <= widget.completedDays && (day - 1) > 0;
+
+                      return StreakItem(
+                        index: index,
+                        day: day,
+                        isCompleted: isCompleted,
+                        isCurrent: isCurrent,
+                        isPrevCompleted: isPrevCompleted,
+                        itemHeight: _itemHeight,
+                      );
+                    },
+                  ),
+                ),
+
+                AnimatedPositioned(
+                  duration: const Duration(milliseconds: 300),
+                  curve: Curves.easeOutCubic,
+                  top: expanded ? 16 : 60,
+                  left: expanded ? -22 : 12,
+                  child: Align(
+                    alignment: expanded ? Alignment.topLeft : Alignment.topCenter,
+                    child: AnimatedScale(
+                      scale: expanded ? 0.8 : 1.0,
+                      duration: const Duration(milliseconds: 300),
+                      curve: Curves.easeOutBack,
+                      child: _buildOverlay(),
+                    ),
+                  ),
+                ),
+              ],
             ),
           ),
         ),
+      ),
+    );
+  }
+
+  Widget _buildOverlay() {
+    return Container(
+      padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 10),
+      child: Column(
+        crossAxisAlignment: CrossAxisAlignment.start,
+        mainAxisSize: MainAxisSize.min,
+        children: [
+          const Text(
+            "Your Streak",
+            style: TextStyle(
+              color: Colors.white,
+              fontSize: 24,
+              fontWeight: FontWeight.bold,
+            ),
+          ),
+          const SizedBox(height: 4),
+          Text(
+            _currentMessage,
+            style: const TextStyle(
+              color: Colors.white70,
+              fontSize: 18,
+            ),
+          ),
+        ],
       ),
     );
   }
