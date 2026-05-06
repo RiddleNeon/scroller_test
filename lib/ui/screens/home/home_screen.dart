@@ -10,6 +10,7 @@ import 'package:lumox/logic/repositories/video_repository.dart';
 import 'package:lumox/logic/users/user_model.dart';
 import 'package:lumox/logic/video/video.dart';
 import 'package:lumox/ui/misc/avatar.dart';
+import 'package:lumox/ui/screens/home/streak_card.dart';
 
 import '../../theme/theme_ui_values.dart';
 import '../search_screen/search_screen.dart';
@@ -269,6 +270,10 @@ class _HomeScreenState extends State<HomeScreen> {
                   child: _buildSectionTitle(cs, 'Your Path', ' Keep progressing'),
                 ),
               ),
+              SliverToBoxAdapter(child: Padding(
+                padding: const EdgeInsets.all(16.0),
+                child: _buildStreakCard(cs),
+              )),
               SliverToBoxAdapter(child: _buildHorizontalQuestsList(cs)),
 
               SliverToBoxAdapter(
@@ -675,13 +680,7 @@ class _HomeScreenState extends State<HomeScreen> {
     return Container(
       width: MediaQuery.of(context).size.width * 0.75,
       decoration: BoxDecoration(color: cs.secondaryContainer, borderRadius: BorderRadius.circular(context.uiRadiusLg)),
-      child: Center(
-        child: Text(
-          '🔥 Your current learning streak is 5 days! Keep it going! 🔥',
-          style: TextStyle(color: cs.onSecondaryContainer, fontWeight: FontWeight.w800, fontSize: 16),
-          textAlign: TextAlign.center,
-        ),
-      ),
+      child: const StreakCard(completedDays: 3)
     );
   }
   
@@ -785,7 +784,7 @@ class _AutoScrollRowState extends State<_AutoScrollRow>
               key: ValueKey('${video.id}-$index'),
               padding: const EdgeInsets.symmetric(horizontal: 8),
               child: SizedBox(
-                width: 140,
+                width: 160,
                 child: _VerticalVideoCard(
                   key: ValueKey('video-${video.id}-$index'),
                   video: video,
@@ -851,30 +850,34 @@ class _VerticalVideoCardState extends State<_VerticalVideoCard> {
               Expanded(
                 flex: 3,
                 child: Padding(
-                  padding: EdgeInsets.all(context.uiSpace(10)),
+                  padding: EdgeInsets.all(context.uiSpace(12)),
                   child: Column(
                     crossAxisAlignment: CrossAxisAlignment.start,
                     mainAxisAlignment: MainAxisAlignment.center,
                     children: [
-                      Text(
-                        widget.video.title,
-                        maxLines: 2,
-                        overflow: TextOverflow.ellipsis,
-                        style: TextStyle(color: cs.onSurface, fontWeight: FontWeight.w600, fontSize: 13, height: 1.2),
+                      Flexible(
+                        flex: 3,
+                        child: Text(
+                          widget.video.title,
+                          maxLines: 2,
+                          overflow: TextOverflow.ellipsis,
+                          style: TextStyle(color: cs.onSurface, fontWeight: FontWeight.w600, fontSize: 13, height: 1.2),
+                        ),
                       ),
-
                       SizedBox(height: context.uiSpace(4)),
-
-                      Text(
-                        widget.video.authorName,
-                        maxLines: 1,
-                        overflow: TextOverflow.ellipsis,
-                        style: TextStyle(color: cs.onSurfaceVariant, fontSize: 11),
+                      Flexible(
+                        child: Text(
+                          widget.video.authorName,
+                          maxLines: 1,
+                          overflow: TextOverflow.ellipsis,
+                          style: TextStyle(color: cs.onSurfaceVariant, fontSize: 9),
+                        ),
                       ),
                     ],
                   ),
                 ),
               ),
+
             ],
           ),
         ),

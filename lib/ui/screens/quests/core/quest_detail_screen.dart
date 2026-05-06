@@ -224,6 +224,7 @@ class _QuestDetailScreenState extends State<QuestDetailScreen> {
                   child: _AliasesSection(
                     questId: _editedQuest.id,
                     colorScheme: colorScheme,
+                    editMode: _editMode,
                   ),
                 ),
                 const SizedBox(height: 16),
@@ -631,8 +632,9 @@ class _DescriptionSection extends StatelessWidget {
 class _AliasesSection extends StatefulWidget {
   final int questId;
   final ColorScheme colorScheme;
+  final bool editMode;
 
-  const _AliasesSection({required this.questId, required this.colorScheme});
+  const _AliasesSection({required this.questId, required this.colorScheme, required this.editMode});
 
   @override
   State<_AliasesSection> createState() => _AliasesSectionState();
@@ -738,8 +740,8 @@ class _AliasesSectionState extends State<_AliasesSection> {
             const SizedBox(height: 8),
             Text(_errorMessage!, style: TextStyle(color: cs.error, fontSize: 12)),
           ],
-          const SizedBox(height: 12),
-          Row(
+          if(widget.editMode) const SizedBox(height: 12),
+          if(widget.editMode) Row(
             children: [
               Expanded(
                 child: TextField(
