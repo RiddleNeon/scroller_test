@@ -2,152 +2,365 @@
   "quests": [
     {
       "id": 1,
-      "name": "Addition Basics",
-      "description": "Learn addition",
-      "subject": "hehe",
-      "difficulty": 0.2,
+      "name": "Binary & Digital Logic",
+      "description": "# Binary & Digital Logic\n\nComputer arbeiten intern ausschließlich mit elektrischen Zuständen. Diese Zustände werden als `0` und `1` dargestellt.\n\n## Themen\n- Binärzahlen\n- Hexadezimalsystem\n- Bits & Bytes\n- Logische Operatoren (`AND`, `OR`, `NOT`, `XOR`)\n- Wahrheitstabellen\n\n## Warum wichtig?\nAlle höheren Konzepte der Informatik basieren auf diesen Grundlagen.\n\n## Lernziele\n- Zahlen zwischen Dezimal und Binär umwandeln\n- Einfache Logikschaltungen verstehen\n- Speichergrößen interpretieren",
+      "subject": "Computer Science",
+      "difficulty": 0.1,
       "posX": 100,
-      "posY": 200,
-      "sizeX": 200,
-      "sizeY": 100
+      "posY": 100,
+      "sizeX": 240,
+      "sizeY": 140
     },
     {
       "id": 2,
-      "name": "Subtraction Basics",
-      "description": "Learn subtraction",
-      "subject": "hehe",
-      "difficulty": 0.3,
-      "posX": 400,
-      "posY": 200,
-      "sizeX": 200,
-      "sizeY": 100
+      "name": "Computer Architecture",
+      "description": "# Computer Architecture\n\nLerne den Aufbau eines Computersystems kennen.\n\n## Komponenten\n- CPU\n- RAM\n- Storage\n- Bus-Systeme\n- Register\n- Cache\n\n## Konzepte\n- Von-Neumann-Architektur\n- Fetch-Decode-Execute-Cycle\n- Taktfrequenz\n\n## Lernziele\n- Verstehen wie Programme ausgeführt werden\n- Unterschied zwischen RAM und Speicher erklären\n- CPU-Auslastung interpretieren",
+      "subject": "Computer Science",
+      "difficulty": 0.18,
+      "posX": 450,
+      "posY": 100,
+      "sizeX": 240,
+      "sizeY": 140
     },
     {
       "id": 3,
-      "name": "Multiplication Basics",
-      "description": "Learn multiplication",
-      "subject": "hehe",
-      "difficulty": 0.4,
-      "posX": 700,
-      "posY": 200,
-      "sizeX": 200,
-      "sizeY": 100
+      "name": "Operating System Basics",
+      "description": "# Operating System Basics\n\nBetriebssysteme verwalten Hardware und Software.\n\n## Themen\n- Prozesse\n- Threads\n- Dateisysteme\n- Speicherverwaltung\n- Scheduling\n- Benutzerrechte\n\n## Beispiele\n- Linux\n- Windows\n- macOS\n\n## Lernziele\n- Prozesse verstehen\n- Unterschied zwischen Prozess und Thread erklären\n- Dateisystemnavigation beherrschen",
+      "subject": "Computer Science",
+      "difficulty": 0.25,
+      "posX": 800,
+      "posY": 100,
+      "sizeX": 260,
+      "sizeY": 150
     },
     {
       "id": 4,
-      "name": "Division Basics",
-      "description": "Learn division",
-      "subject": "hehe",
-      "difficulty": 0.5,
-      "posX": 1000,
-      "posY": 200,
-      "sizeX": 200,
-      "sizeY": 100
+      "name": "Command Line & Shell",
+      "description": "# Command Line & Shell\n\nDie Kommandozeile ist ein zentrales Werkzeug für Entwickler.\n\n## Themen\n- Shell-Befehle\n- Dateiverwaltung\n- Pipes\n- Umgebungsvariablen\n- Bash-Skripte\n\n## Typische Befehle\n```bash\nls\ncd\ngrep\ncat\nmkdir\n```\n\n## Lernziele\n- Terminal effizient nutzen\n- Einfache Shell-Skripte schreiben",
+      "subject": "Computer Science",
+      "difficulty": 0.22,
+      "posX": 800,
+      "posY": 320,
+      "sizeX": 240,
+      "sizeY": 150
     },
     {
       "id": 5,
-      "name": "Algebra Basics",
-      "description": "Learn algebra",
-      "subject": "hehe",
-      "difficulty": 0.6,
-      "posX": 1300,
-      "posY": 200,
-      "sizeX": 200,
-      "sizeY": 100
+      "name": "Programming Fundamentals",
+      "description": "# Programming Fundamentals\n\nGrundlagen des Programmierens.\n\n## Konzepte\n- Variablen\n- Datentypen\n- Bedingungen\n- Schleifen\n- Funktionen\n- Fehlerbehandlung\n\n## Beispiel\n```javascript\nfor(let i = 0; i < 5; i++) {\n  console.log(i)\n}\n```\n\n## Lernziele\n- Kleine Programme schreiben\n- Kontrollfluss verstehen",
+      "subject": "Computer Science",
+      "difficulty": 0.28,
+      "posX": 1150,
+      "posY": 100,
+      "sizeX": 260,
+      "sizeY": 160
     },
     {
       "id": 6,
-      "name": "Geometry Basics",
-      "description": "Learn geometry",
-      "subject": "hehe",
-      "difficulty": 0.7,
-      "posX": 1600,
-      "posY": 200,
-      "sizeX": 200,
-      "sizeY": 100
+      "name": "Object-Oriented Programming",
+      "description": "# Object-Oriented Programming\n\nOOP organisiert Code in Objekte und Klassen.\n\n## Konzepte\n- Klassen\n- Objekte\n- Vererbung\n- Polymorphismus\n- Kapselung\n\n## Lernziele\n- Klassen modellieren\n- Wiederverwendbaren Code schreiben",
+      "subject": "Computer Science",
+      "difficulty": 0.38,
+      "posX": 1500,
+      "posY": 100,
+      "sizeX": 260,
+      "sizeY": 150
     },
     {
       "id": 7,
-      "name": "Trigonometry Basics",
-      "description": "Learn trigonometry",
-      "subject": "hehe",
-      "difficulty": 0.8,
-      "posX": 1900,
-      "posY": 200,
-      "sizeX": 200,
-      "sizeY": 100
+      "name": "Data Structures",
+      "description": "# Data Structures\n\nDatenstrukturen organisieren Informationen effizient.\n\n## Themen\n- Arrays\n- Linked Lists\n- Stacks\n- Queues\n- Hash Maps\n- Trees\n- Graphs\n\n## Lernziele\n- Geeignete Datenstrukturen auswählen\n- Laufzeit analysieren",
+      "subject": "Computer Science",
+      "difficulty": 0.42,
+      "posX": 1500,
+      "posY": 320,
+      "sizeX": 260,
+      "sizeY": 160
     },
     {
       "id": 8,
-      "name": "Calculus Basics",
-      "description": "Learn calculus",
-      "subject": "hehe",
-      "difficulty": 0.9,
-      "posX": 2200,
-      "posY": 200,
-      "sizeX": 200,
-      "sizeY": 100
+      "name": "Algorithms",
+      "description": "# Algorithms\n\nAlgorithmen lösen Probleme systematisch.\n\n## Themen\n- Sortieralgorithmen\n- Suchalgorithmen\n- Rekursion\n- Divide & Conquer\n- Graphalgorithmen\n\n## Big-O\n- Zeitkomplexität\n- Speicherkomplexität\n\n## Lernziele\n- Effiziente Lösungen entwickeln\n- Komplexität bewerten",
+      "subject": "Computer Science",
+      "difficulty": 0.5,
+      "posX": 1850,
+      "posY": 320,
+      "sizeX": 260,
+      "sizeY": 160
     },
     {
       "id": 9,
-      "name": "Statistics Basics",
-      "description": "Learn statistics",
-      "subject": "hehe",
-      "difficulty": 1.0,
-      "posX": 2500,
-      "posY": 200,
-      "sizeX": 200,
-      "sizeY": 100
+      "name": "Databases & SQL",
+      "description": "# Databases & SQL\n\nDatenbanken speichern strukturierte Informationen.\n\n## Themen\n- Relationale Datenbanken\n- Tabellen\n- Beziehungen\n- SQL-Abfragen\n- Indizes\n- Normalisierung\n\n## Beispiel\n```sql\nSELECT * FROM users WHERE age > 18;\n```\n\n## Lernziele\n- Daten modellieren\n- SQL sicher anwenden",
+      "subject": "Computer Science",
+      "difficulty": 0.48,
+      "posX": 1850,
+      "posY": 100,
+      "sizeX": 270,
+      "sizeY": 160
+    },
+    {
+      "id": 10,
+      "name": "Networking Fundamentals",
+      "description": "# Networking Fundamentals\n\nComputer kommunizieren über Netzwerke.\n\n## Themen\n- TCP/IP\n- HTTP\n- DNS\n- Ports\n- Routing\n- Client-Server-Modell\n\n## Lernziele\n- Netzwerkrequests verstehen\n- APIs analysieren",
+      "subject": "Computer Science",
+      "difficulty": 0.45,
+      "posX": 2200,
+      "posY": 100,
+      "sizeX": 260,
+      "sizeY": 150
+    },
+    {
+      "id": 11,
+      "name": "Web Development Basics",
+      "description": "# Web Development Basics\n\nGrundlagen moderner Webanwendungen.\n\n## Technologien\n- HTML\n- CSS\n- JavaScript\n- Browser Rendering\n\n## Lernziele\n- Webseiten erstellen\n- DOM manipulieren\n- Formulare verarbeiten",
+      "subject": "Computer Science",
+      "difficulty": 0.52,
+      "posX": 2550,
+      "posY": 100,
+      "sizeX": 260,
+      "sizeY": 160
+    },
+    {
+      "id": 12,
+      "name": "Backend Development",
+      "description": "# Backend Development\n\nBackend-Systeme verarbeiten Daten und Business-Logik.\n\n## Themen\n- REST APIs\n- Authentifizierung\n- Sessions\n- Middleware\n- Serverlogik\n\n## Lernziele\n- APIs entwickeln\n- Datenbanken anbinden",
+      "subject": "Computer Science",
+      "difficulty": 0.62,
+      "posX": 2900,
+      "posY": 100,
+      "sizeX": 270,
+      "sizeY": 170
+    },
+    {
+      "id": 13,
+      "name": "Software Engineering",
+      "description": "# Software Engineering\n\nProfessionelle Entwicklung großer Softwaresysteme.\n\n## Themen\n- Clean Code\n- Design Patterns\n- Testing\n- Refactoring\n- Architekturprinzipien\n\n## Lernziele\n- Wartbaren Code schreiben\n- Softwareprojekte strukturieren",
+      "subject": "Computer Science",
+      "difficulty": 0.68,
+      "posX": 3250,
+      "posY": 320,
+      "sizeX": 270,
+      "sizeY": 170
+    },
+    {
+      "id": 14,
+      "name": "Version Control with Git",
+      "description": "# Version Control with Git\n\nGit ermöglicht kollaborative Softwareentwicklung.\n\n## Themen\n- Commits\n- Branches\n- Merge\n- Pull Requests\n- Konflikte\n\n## Lernziele\n- Projekte versionieren\n- Teamwork mit Git verstehen",
+      "subject": "Computer Science",
+      "difficulty": 0.4,
+      "posX": 2550,
+      "posY": 320,
+      "sizeX": 250,
+      "sizeY": 150
+    },
+    {
+      "id": 15,
+      "name": "Cybersecurity Fundamentals",
+      "description": "# Cybersecurity Fundamentals\n\nSicherheit ist ein zentraler Bestandteil moderner Systeme.\n\n## Themen\n- Verschlüsselung\n- Hashing\n- Authentifizierung\n- Sicherheitslücken\n- OWASP Top 10\n\n## Lernziele\n- Häufige Angriffe verstehen\n- Sichere Systeme entwickeln",
+      "subject": "Computer Science",
+      "difficulty": 0.7,
+      "posX": 3600,
+      "posY": 100,
+      "sizeX": 280,
+      "sizeY": 170
+    },
+    {
+      "id": 16,
+      "name": "Cloud Computing",
+      "description": "# Cloud Computing\n\nCloud-Plattformen skalieren moderne Anwendungen.\n\n## Themen\n- Virtualisierung\n- Container\n- Docker\n- Kubernetes\n- Serverless\n- Skalierung\n\n## Lernziele\n- Anwendungen deployen\n- Cloud-Infrastruktur verstehen",
+      "subject": "Computer Science",
+      "difficulty": 0.78,
+      "posX": 3950,
+      "posY": 100,
+      "sizeX": 280,
+      "sizeY": 180
+    },
+    {
+      "id": 17,
+      "name": "Distributed Systems",
+      "description": "# Distributed Systems\n\nVerteilte Systeme laufen auf mehreren Computern gleichzeitig.\n\n## Themen\n- Konsistenz\n- Replikation\n- Message Queues\n- Fault Tolerance\n- CAP-Theorem\n\n## Lernziele\n- Skalierbare Systeme verstehen\n- Verteilte Kommunikation modellieren",
+      "subject": "Computer Science",
+      "difficulty": 0.88,
+      "posX": 4300,
+      "posY": 100,
+      "sizeX": 290,
+      "sizeY": 180
+    },
+    {
+      "id": 18,
+      "name": "Artificial Intelligence Basics",
+      "description": "# Artificial Intelligence Basics\n\nEinführung in maschinelles Lernen und KI.\n\n## Themen\n- Supervised Learning\n- Neuronale Netze\n- Trainingsdaten\n- Overfitting\n- Modellevaluation\n\n## Lernziele\n- Grundprinzipien von ML verstehen\n- Einfache Modelle trainieren",
+      "subject": "Computer Science",
+      "difficulty": 0.82,
+      "posX": 3950,
+      "posY": 360,
+      "sizeX": 280,
+      "sizeY": 180
     }
   ],
   "connections": [
     {
-      "fromQuestId": 2,
-      "toQuestId": 1,
+      "fromQuestId": 1,
+      "toQuestId": 2,
       "type": "prerequisite",
-      "xpRequirement": 50
+      "xpRequirement": 40
+    },
+    {
+      "fromQuestId": 2,
+      "toQuestId": 3,
+      "type": "prerequisite",
+      "xpRequirement": 80
+    },
+    {
+      "fromQuestId": 2,
+      "toQuestId": 4,
+      "type": "prerequisite",
+      "xpRequirement": 70
     },
     {
       "fromQuestId": 3,
-      "toQuestId": 2,
+      "toQuestId": 5,
       "type": "prerequisite",
-      "xpRequirement": 100
+      "xpRequirement": 120
     },
     {
       "fromQuestId": 4,
-      "toQuestId": 3,
+      "toQuestId": 5,
+      "type": "support",
+      "xpRequirement": 60
+    },
+    {
+      "fromQuestId": 5,
+      "toQuestId": 6,
       "type": "prerequisite",
       "xpRequirement": 150
     },
     {
       "fromQuestId": 5,
-      "toQuestId": 4,
+      "toQuestId": 7,
+      "type": "prerequisite",
+      "xpRequirement": 150
+    },
+    {
+      "fromQuestId": 7,
+      "toQuestId": 8,
+      "type": "prerequisite",
+      "xpRequirement": 220
+    },
+    {
+      "fromQuestId": 5,
+      "toQuestId": 9,
+      "type": "prerequisite",
+      "xpRequirement": 180
+    },
+    {
+      "fromQuestId": 3,
+      "toQuestId": 10,
+      "type": "prerequisite",
+      "xpRequirement": 170
+    },
+    {
+      "fromQuestId": 5,
+      "toQuestId": 11,
       "type": "prerequisite",
       "xpRequirement": 200
     },
     {
-      "fromQuestId": 6,
-      "toQuestId": 5,
+      "fromQuestId": 10,
+      "toQuestId": 11,
+      "type": "support",
+      "xpRequirement": 120
+    },
+    {
+      "fromQuestId": 9,
+      "toQuestId": 12,
       "type": "prerequisite",
-      "xpRequirement": 250
+      "xpRequirement": 260
+    },
+    {
+      "fromQuestId": 11,
+      "toQuestId": 12,
+      "type": "prerequisite",
+      "xpRequirement": 240
+    },
+    {
+      "fromQuestId": 14,
+      "toQuestId": 13,
+      "type": "support",
+      "xpRequirement": 120
+    },
+    {
+      "fromQuestId": 6,
+      "toQuestId": 13,
+      "type": "prerequisite",
+      "xpRequirement": 260
+    },
+    {
+      "fromQuestId": 8,
+      "toQuestId": 13,
+      "type": "support",
+      "xpRequirement": 200
+    },
+    {
+      "fromQuestId": 11,
+      "toQuestId": 14,
+      "type": "recommended",
+      "xpRequirement": 100
+    },
+    {
+      "fromQuestId": 10,
+      "toQuestId": 15,
+      "type": "prerequisite",
+      "xpRequirement": 260
+    },
+    {
+      "fromQuestId": 12,
+      "toQuestId": 15,
+      "type": "support",
+      "xpRequirement": 240
+    },
+    {
+      "fromQuestId": 12,
+      "toQuestId": 16,
+      "type": "prerequisite",
+      "xpRequirement": 320
+    },
+    {
+      "fromQuestId": 13,
+      "toQuestId": 16,
+      "type": "support",
+      "xpRequirement": 280
+    },
+    {
+      "fromQuestId": 16,
+      "toQuestId": 17,
+      "type": "prerequisite",
+      "xpRequirement": 420
+    },
+    {
+      "fromQuestId": 8,
+      "toQuestId": 17,
+      "type": "support",
+      "xpRequirement": 350
     },
     {
       "fromQuestId": 7,
-      "toQuestId": 6,
+      "toQuestId": 18,
       "type": "prerequisite",
       "xpRequirement": 300
     },
     {
       "fromQuestId": 8,
-      "toQuestId": 7,
-      "type": "prerequisite",
-      "xpRequirement": 350
+      "toQuestId": 18,
+      "type": "support",
+      "xpRequirement": 320
     },
     {
-      "fromQuestId": 9,
-      "toQuestId": 8,
-      "type": "prerequisite",
-      "xpRequirement": 400
+      "fromQuestId": 13,
+      "toQuestId": 18,
+      "type": "recommended",
+      "xpRequirement": 240
     }
   ]
 }
